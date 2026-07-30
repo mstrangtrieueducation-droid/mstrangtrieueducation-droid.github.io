@@ -529,7 +529,7 @@
         activeLine = -1;
         doneThrough = -1;
         track.pause();
-        track.currentTime = lines[0].start;
+        track.currentTime = 0;
         track.playbackRate = practiceSpeed;
         stop.disabled = false;
         updateHighlight();
@@ -567,13 +567,6 @@
       }
 
       function tick() {
-        if (mode === "all" && track.currentTime >= lines[lines.length - 1].end) {
-          track.pause();
-          mode = "idle";
-          activeLine = -1;
-          stop.disabled = true;
-          status.textContent = "Xong bài";
-        }
         if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
           finishActiveLine();
         }
