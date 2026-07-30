@@ -157,6 +157,17 @@
       line-height: 1.35;
     }
 
+    .sync-waveform {
+      display: block;
+      width: 100%;
+      height: 120px;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf6;
+      cursor: crosshair;
+    }
+
     .sync-output {
       display: block;
       width: 100%;
@@ -417,6 +428,7 @@
         <button id="syncReset" type="button">Reset</button>
       </div>
       <div id="syncStatus" class="sync-status" aria-live="polite">Sync ready</div>
+      <canvas id="syncWaveform" class="sync-waveform" height="120"></canvas>
       <textarea id="syncOutput" class="sync-output" readonly spellcheck="false" hidden></textarea>
     </section>
 
@@ -467,116 +479,116 @@
       const lines = [
         {
           text: "Hi.",
-          start: 0.18,
-          end: 1.24,
+          start: 0.61,
+          end: 1.16,
           html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Hi.</span>"
         },
         {
           text: "I’m Tom.",
-          start: 2.06,
-          end: 3.18,
+          start: 2.13,
+          end: 3.09,
           html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">I’m Tom.</span>"
         },
         {
           text: "Let’s make a paper lion!",
-          start: 4.56,
-          end: 7.28,
+          start: 4.63,
+          end: 7.16,
           html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Let’s make a <strong>paper lion</strong>!</span>"
         },
         {
           text: "Colour the face,",
-          start: 8.56,
-          end: 10.10,
+          start: 8.64,
+          end: 9.99,
           html: "<span class=\"line-num\">1</span><span class=\"line-text\"><strong>Colour</strong> the <strong>face</strong>,</span>"
         },
         {
           text: "the body and the legs.",
-          start: 10.67,
-          end: 11.79,
+          start: 11.19,
+          end: 12.08,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">the <strong>body</strong> and the <strong>legs</strong>.</span>"
         },
         {
           text: "Then colour the paws and tail too.",
-          start: 12.61,
-          end: 14.49,
+          start: 13.15,
+          end: 14.84,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then colour the <strong>paws</strong> and <strong>tail</strong> too.</span>"
         },
         {
           text: "Cut out the body.",
-          start: 15.99,
-          end: 18.43,
+          start: 16.52,
+          end: 18.25,
           html: "<span class=\"line-num\">2</span><span class=\"line-text\"><strong>Cut out</strong> the body.</span>"
         },
         {
           text: "Now cut the face.",
-          start: 18.45,
-          end: 20.25,
+          start: 18.40,
+          end: 20.57,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">Now cut the face.</span>"
         },
         {
           text: "Fold the tail.",
-          start: 22.65,
-          end: 24.13,
+          start: 23.17,
+          end: 24.49,
           html: "<span class=\"line-num\">3</span><span class=\"line-text\"><strong>Fold</strong> the tail.</span>"
         },
         {
           text: "Fold the face.",
-          start: 25.73,
-          end: 27.69,
+          start: 26.25,
+          end: 28.06,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">Fold the face.</span>"
         },
         {
           text: "Cut out the four legs",
-          start: 29.79,
-          end: 31.37,
+          start: 30.48,
+          end: 31.71,
           html: "<span class=\"line-num\">4</span><span class=\"line-text\">Cut out the four <strong>legs</strong></span>"
         },
         {
           text: "and paws.",
-          start: 32.53,
-          end: 34.19,
+          start: 33.18,
+          end: 34.53,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">and <strong>paws</strong>.</span>"
         },
         {
           text: "Fold the legs.",
-          start: 36.17,
-          end: 39.39,
+          start: 36.70,
+          end: 39.74,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">Fold the legs.</span>"
         },
         {
           text: "Stick the paws",
-          start: 40.33,
-          end: 41.93,
+          start: 40.97,
+          end: 42.30,
           html: "<span class=\"line-num\">5</span><span class=\"line-text\"><strong>Stick</strong> the paws</span>"
         },
         {
           text: "on the legs.",
-          start: 43.90,
-          end: 46.21,
+          start: 44.44,
+          end: 46.57,
           html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">on the legs.</span>"
         },
         {
           text: "Stick the legs on the body.",
-          start: 46.89,
-          end: 49.55,
+          start: 47.42,
+          end: 49.91,
           html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">Stick the legs on the body.</span>"
         },
         {
           text: "Look!",
-          start: 51.19,
-          end: 52.09,
+          start: 51.72,
+          end: 52.41,
           html: "<span class=\"line-num\">6</span><span class=\"line-text\"><strong>Look!</strong></span>"
         },
         {
           text: "It’s a lion.",
-          start: 52.93,
-          end: 54.39,
+          start: 53.47,
+          end: 54.76,
           html: "<span class=\"line-num blank\">6</span><span class=\"line-text\">It’s a <strong>lion</strong>.</span>"
         }
       ];
 
       const practiceSpeed = 1;
-      const highlightLead = 0.18;
+      const highlightLead = 0.08;
       const reading = document.getElementById("reading");
       const track = document.getElementById("track");
       const play = document.getElementById("play");
@@ -584,7 +596,7 @@
       const bigScreen = document.getElementById("bigScreen");
       const status = document.getElementById("status");
       const syncEnabled = new URLSearchParams(window.location.search).has("sync");
-      const syncStorageKey = "unit-3-lesson-5-v7-sync";
+      const syncStorageKey = "unit-3-lesson-5-v7-sync-waveform-1";
       const syncPanel = document.getElementById("syncPanel");
       const syncStart = document.getElementById("syncStart");
       const syncTap = document.getElementById("syncTap");
@@ -593,6 +605,7 @@
       const syncReset = document.getElementById("syncReset");
       const syncStatus = document.getElementById("syncStatus");
       const syncOutput = document.getElementById("syncOutput");
+      const syncWaveform = document.getElementById("syncWaveform");
       let raf = 0;
       let mode = "idle";
       let activeLine = -1;
@@ -601,6 +614,9 @@
       let syncActive = false;
       let syncIndex = 0;
       let recordedStarts = [];
+      let waveformPeaks = [];
+      let waveformDuration = 0;
+      let waveformReady = false;
 
       function renderReading() {
         reading.innerHTML = "";
@@ -623,6 +639,8 @@
       function updateHighlight() {
         const time = track.currentTime;
         let activeIndex = -1;
+
+        drawSyncWaveform();
 
         if (mode === "all" || mode === "sync") {
           lines.forEach((line, index) => {
@@ -729,6 +747,149 @@
         raf = window.requestAnimationFrame(tick);
       }
 
+      function getWaveformDuration() {
+        return waveformDuration || track.duration || lines[lines.length - 1].end + 1;
+      }
+
+      function resizeSyncWaveform() {
+        if (!syncEnabled || !syncWaveform) {
+          return;
+        }
+        const ratio = window.devicePixelRatio || 1;
+        const width = Math.max(320, Math.round(syncWaveform.clientWidth * ratio));
+        const height = Math.max(90, Math.round(syncWaveform.clientHeight * ratio));
+        if (syncWaveform.width !== width || syncWaveform.height !== height) {
+          syncWaveform.width = width;
+          syncWaveform.height = height;
+        }
+      }
+
+      function drawSyncWaveform() {
+        if (!syncEnabled || !syncWaveform) {
+          return;
+        }
+
+        resizeSyncWaveform();
+        const ctx = syncWaveform.getContext("2d");
+        const width = syncWaveform.width;
+        const height = syncWaveform.height;
+        const middle = height / 2;
+        const duration = getWaveformDuration();
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = "#f8faf6";
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = "#d8e3d7";
+        ctx.beginPath();
+        ctx.moveTo(0, middle);
+        ctx.lineTo(width, middle);
+        ctx.stroke();
+
+        if (waveformReady && waveformPeaks.length) {
+          ctx.strokeStyle = "#2f8fc7";
+          ctx.lineWidth = Math.max(1, window.devicePixelRatio || 1);
+          for (let x = 0; x < width; x += 1) {
+            const peak = waveformPeaks[Math.floor((x / width) * waveformPeaks.length)] || 0;
+            const bar = Math.max(1, peak * height * 0.45);
+            ctx.beginPath();
+            ctx.moveTo(x, middle - bar);
+            ctx.lineTo(x, middle + bar);
+            ctx.stroke();
+          }
+        } else {
+          ctx.fillStyle = "#5d6c63";
+          ctx.font = `${Math.round(13 * (window.devicePixelRatio || 1))}px Segoe UI, Arial`;
+          ctx.fillText("Loading waveform", 12, middle - 8);
+        }
+
+        lines.forEach((line, index) => {
+          const triggerTime = Math.max(0, line.start - highlightLead);
+          const x = (triggerTime / duration) * width;
+          ctx.strokeStyle = index === syncIndex ? "#d94f86" : recordedStarts[index] ? "#2f855a" : "rgba(31, 104, 68, 0.45)";
+          ctx.lineWidth = index === syncIndex ? 3 : 1.5;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        });
+
+        const playheadX = (track.currentTime / duration) * width;
+        ctx.strokeStyle = "#1f2823";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, 0);
+        ctx.lineTo(playheadX, height);
+        ctx.stroke();
+      }
+
+      async function loadSyncWaveform() {
+        if (!syncEnabled || waveformReady) {
+          return;
+        }
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) {
+            return;
+          }
+          const response = await fetch(track.currentSrc || track.src);
+          const audioBytes = await response.arrayBuffer();
+          const audioContext = new AudioContextClass();
+          const audioBuffer = await audioContext.decodeAudioData(audioBytes);
+          const peakCount = 1200;
+          const peaks = [];
+          const samplesPerPeak = Math.max(1, Math.floor(audioBuffer.length / peakCount));
+          let maxPeak = 0;
+
+          for (let peakIndex = 0; peakIndex < peakCount; peakIndex += 1) {
+            const start = peakIndex * samplesPerPeak;
+            const end = Math.min(audioBuffer.length, start + samplesPerPeak);
+            let peak = 0;
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
+              const data = audioBuffer.getChannelData(channel);
+              for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
+                peak = Math.max(peak, Math.abs(data[sampleIndex]));
+              }
+            }
+            peaks.push(peak);
+            maxPeak = Math.max(maxPeak, peak);
+          }
+
+          waveformPeaks = peaks.map((peak) => (maxPeak ? peak / maxPeak : peak));
+          waveformDuration = audioBuffer.duration;
+          waveformReady = true;
+          if (audioContext.close) {
+            await audioContext.close();
+          }
+        } catch (error) {
+          waveformPeaks = [];
+          waveformReady = false;
+        }
+        drawSyncWaveform();
+      }
+
+      function setSyncMarkerFromTime(time) {
+        if (!syncEnabled) {
+          return;
+        }
+
+        const triggerTime = Math.max(0, time);
+        const cueStart = triggerTime + highlightLead;
+
+        if (syncIndex > 0) {
+          const previous = lines[syncIndex - 1];
+          const previousEnd = Math.max(previous.start + 0.2, triggerTime - 0.03);
+          previous.end = Number(previousEnd.toFixed(2));
+        }
+
+        lines[syncIndex].start = Number(cueStart.toFixed(2));
+        lines[syncIndex].end = Number(Math.max(lines[syncIndex].start + 0.6, lines[syncIndex].end).toFixed(2));
+        recordedStarts[syncIndex] = true;
+        saveSyncTimings();
+        updateSyncStatus();
+        paintSyncState();
+        updateHighlight();
+      }
+
       function getSyncPayload() {
         return lines.map((line) => ({
           text: line.text,
@@ -788,6 +949,7 @@
           row.classList.toggle("sync-target", index === syncIndex);
           row.classList.toggle("sync-recorded", recordedStarts[index] === true);
         });
+        drawSyncWaveform();
       }
 
       function updateSyncStatus() {
@@ -916,6 +1078,7 @@
         syncPanel.hidden = false;
         recordedStarts = lines.map(() => false);
         setSyncIndex(0);
+        loadSyncWaveform();
       }
 
       play.addEventListener("click", playWholeTrack);
@@ -926,6 +1089,17 @@
       syncBack.addEventListener("click", backSyncLine);
       syncCopy.addEventListener("click", writeSyncOutput);
       syncReset.addEventListener("click", resetSyncTimings);
+      syncWaveform.addEventListener("click", (event) => {
+        if (!syncEnabled) {
+          return;
+        }
+        const rect = syncWaveform.getBoundingClientRect();
+        const ratio = (event.clientX - rect.left) / rect.width;
+        const time = Math.max(0, Math.min(getWaveformDuration(), ratio * getWaveformDuration()));
+        setSyncMarkerFromTime(time);
+        track.currentTime = Math.max(0, time - 0.12);
+      });
+      window.addEventListener("resize", drawSyncWaveform);
 
       window.addEventListener("keydown", (event) => {
         if (!syncEnabled || syncPanel.hidden) {
