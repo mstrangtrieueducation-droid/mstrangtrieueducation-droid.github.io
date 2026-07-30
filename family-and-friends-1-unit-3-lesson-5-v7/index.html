@@ -113,6 +113,63 @@
       font-weight: 800;
     }
 
+    .sync-panel[hidden] {
+      display: none;
+    }
+
+    .sync-panel {
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .sync-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sync-toolbar button {
+      min-width: 86px;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .sync-toolbar button.primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .sync-status {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.96rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .sync-output {
+      display: block;
+      width: 100%;
+      min-height: 130px;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      font: 0.88rem/1.35 Consolas, monospace;
+      resize: vertical;
+    }
+
     .guide,
     .vocabulary,
     .reader {
@@ -198,6 +255,15 @@
       color: var(--ink);
       font-weight: 900;
       transform: translateX(2px);
+    }
+
+    .reading-line.sync-target {
+      outline: 3px solid var(--blue);
+      outline-offset: -3px;
+    }
+
+    .reading-line.sync-recorded:not(.active) {
+      box-shadow: inset 4px 0 0 var(--green);
     }
 
     .line-num {
@@ -342,6 +408,18 @@
       <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
     </section>
 
+    <section id="syncPanel" class="sync-panel" aria-label="Karaoke sync" hidden>
+      <div class="sync-toolbar">
+        <button id="syncStart" class="primary" type="button">Sync</button>
+        <button id="syncTap" type="button">Tap</button>
+        <button id="syncBack" type="button">Back</button>
+        <button id="syncCopy" type="button">Copy</button>
+        <button id="syncReset" type="button">Reset</button>
+      </div>
+      <div id="syncStatus" class="sync-status" aria-live="polite">Sync ready</div>
+      <textarea id="syncOutput" class="sync-output" readonly spellcheck="false" hidden></textarea>
+    </section>
+
     <section class="guide" aria-label="Vietnamese instructions">
       <h2>Hướng dẫn trả bài</h2>
       <ol>
@@ -413,86 +491,86 @@
         },
         {
           text: "the body and the legs.",
-          start: 11.12,
-          end: 12.24,
+          start: 10.67,
+          end: 11.79,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">the <strong>body</strong> and the <strong>legs</strong>.</span>"
         },
         {
           text: "Then colour the paws and tail too.",
-          start: 13.06,
-          end: 14.94,
+          start: 12.61,
+          end: 14.49,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then colour the <strong>paws</strong> and <strong>tail</strong> too.</span>"
         },
         {
           text: "Cut out the body.",
-          start: 16.44,
-          end: 18.88,
+          start: 15.99,
+          end: 18.43,
           html: "<span class=\"line-num\">2</span><span class=\"line-text\"><strong>Cut out</strong> the body.</span>"
         },
         {
           text: "Now cut the face.",
-          start: 18.90,
-          end: 20.70,
+          start: 18.45,
+          end: 20.25,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">Now cut the face.</span>"
         },
         {
           text: "Fold the tail.",
-          start: 23.10,
-          end: 24.58,
+          start: 22.65,
+          end: 24.13,
           html: "<span class=\"line-num\">3</span><span class=\"line-text\"><strong>Fold</strong> the tail.</span>"
         },
         {
           text: "Fold the face.",
-          start: 26.18,
-          end: 28.14,
+          start: 25.73,
+          end: 27.69,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">Fold the face.</span>"
         },
         {
           text: "Cut out the four legs",
-          start: 30.24,
-          end: 31.82,
+          start: 29.79,
+          end: 31.37,
           html: "<span class=\"line-num\">4</span><span class=\"line-text\">Cut out the four <strong>legs</strong></span>"
         },
         {
           text: "and paws.",
-          start: 32.98,
-          end: 34.64,
+          start: 32.53,
+          end: 34.19,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">and <strong>paws</strong>.</span>"
         },
         {
           text: "Fold the legs.",
-          start: 36.62,
-          end: 39.84,
+          start: 36.17,
+          end: 39.39,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">Fold the legs.</span>"
         },
         {
           text: "Stick the paws",
-          start: 40.78,
-          end: 42.38,
+          start: 40.33,
+          end: 41.93,
           html: "<span class=\"line-num\">5</span><span class=\"line-text\"><strong>Stick</strong> the paws</span>"
         },
         {
           text: "on the legs.",
-          start: 44.35,
-          end: 46.66,
+          start: 43.90,
+          end: 46.21,
           html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">on the legs.</span>"
         },
         {
           text: "Stick the legs on the body.",
-          start: 47.34,
-          end: 50.00,
+          start: 46.89,
+          end: 49.55,
           html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">Stick the legs on the body.</span>"
         },
         {
           text: "Look!",
-          start: 51.64,
-          end: 52.54,
+          start: 51.19,
+          end: 52.09,
           html: "<span class=\"line-num\">6</span><span class=\"line-text\"><strong>Look!</strong></span>"
         },
         {
           text: "It’s a lion.",
-          start: 53.38,
-          end: 54.84,
+          start: 52.93,
+          end: 54.39,
           html: "<span class=\"line-num blank\">6</span><span class=\"line-text\">It’s a <strong>lion</strong>.</span>"
         }
       ];
@@ -505,11 +583,24 @@
       const stop = document.getElementById("stop");
       const bigScreen = document.getElementById("bigScreen");
       const status = document.getElementById("status");
+      const syncEnabled = new URLSearchParams(window.location.search).has("sync");
+      const syncStorageKey = "unit-3-lesson-5-v7-sync";
+      const syncPanel = document.getElementById("syncPanel");
+      const syncStart = document.getElementById("syncStart");
+      const syncTap = document.getElementById("syncTap");
+      const syncBack = document.getElementById("syncBack");
+      const syncCopy = document.getElementById("syncCopy");
+      const syncReset = document.getElementById("syncReset");
+      const syncStatus = document.getElementById("syncStatus");
+      const syncOutput = document.getElementById("syncOutput");
       let raf = 0;
       let mode = "idle";
       let activeLine = -1;
       let doneThrough = -1;
       let lastScrolledLine = -1;
+      let syncActive = false;
+      let syncIndex = 0;
+      let recordedStarts = [];
 
       function renderReading() {
         reading.innerHTML = "";
@@ -518,7 +609,13 @@
           row.className = "reading-line clickable";
           row.dataset.index = String(index);
           row.innerHTML = line.html;
-          row.addEventListener("click", () => playOneLine(index));
+          row.addEventListener("click", () => {
+            if (syncEnabled) {
+              setSyncIndex(index);
+              return;
+            }
+            playOneLine(index);
+          });
           reading.append(row);
         });
       }
@@ -527,7 +624,7 @@
         const time = track.currentTime;
         let activeIndex = -1;
 
-        if (mode === "all") {
+        if (mode === "all" || mode === "sync") {
           lines.forEach((line, index) => {
             if (time >= line.start - highlightLead && time < line.end) {
               activeIndex = index;
@@ -542,7 +639,7 @@
           const index = Number(row.dataset.index);
           if (index === activeIndex) {
             row.classList.add("active");
-          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+          } else if ((mode === "all" || mode === "sync") ? time >= lines[index].end : index <= doneThrough) {
             row.classList.add("done");
           }
         });
@@ -572,8 +669,10 @@
         activeLine = -1;
         doneThrough = -1;
         lastScrolledLine = -1;
+        syncActive = false;
         stop.disabled = true;
         status.textContent = message;
+        updateSyncStatus();
         updateHighlight();
       }
 
@@ -630,8 +729,219 @@
         raf = window.requestAnimationFrame(tick);
       }
 
+      function getSyncPayload() {
+        return lines.map((line) => ({
+          text: line.text,
+          start: Number(line.start.toFixed(2)),
+          end: Number(line.end.toFixed(2))
+        }));
+      }
+
+      function saveSyncTimings() {
+        if (!syncEnabled) {
+          return;
+        }
+        localStorage.setItem(syncStorageKey, JSON.stringify(getSyncPayload()));
+      }
+
+      function applySavedSyncTimings() {
+        if (!syncEnabled) {
+          return;
+        }
+        const saved = localStorage.getItem(syncStorageKey);
+        if (!saved) {
+          return;
+        }
+        try {
+          const timings = JSON.parse(saved);
+          if (!Array.isArray(timings) || timings.length !== lines.length) {
+            return;
+          }
+          timings.forEach((timing, index) => {
+            const start = Number(timing.start);
+            const end = Number(timing.end);
+            if (Number.isFinite(start) && Number.isFinite(end) && start < end) {
+              lines[index].start = start;
+              lines[index].end = end;
+            }
+          });
+        } catch (error) {
+          localStorage.removeItem(syncStorageKey);
+        }
+      }
+
+      function setSyncIndex(index) {
+        if (!syncEnabled) {
+          return;
+        }
+        syncIndex = Math.max(0, Math.min(lines.length - 1, index));
+        paintSyncState();
+        updateSyncStatus();
+      }
+
+      function paintSyncState() {
+        if (!syncEnabled) {
+          return;
+        }
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          const index = Number(row.dataset.index);
+          row.classList.toggle("sync-target", index === syncIndex);
+          row.classList.toggle("sync-recorded", recordedStarts[index] === true);
+        });
+      }
+
+      function updateSyncStatus() {
+        if (!syncEnabled || !syncStatus) {
+          return;
+        }
+        const line = lines[syncIndex] || lines[lines.length - 1];
+        const current = Math.min(syncIndex + 1, lines.length);
+        const state = syncActive ? "Recording" : "Ready";
+        syncStatus.textContent = `${state}: ${current}/${lines.length} - ${line.text}`;
+      }
+
+      function startSyncRecording() {
+        if (!syncEnabled) {
+          return;
+        }
+        syncActive = true;
+        syncIndex = 0;
+        recordedStarts = [];
+        syncOutput.hidden = true;
+        mode = "sync";
+        activeLine = -1;
+        doneThrough = -1;
+        lastScrolledLine = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateSyncStatus();
+        paintSyncState();
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Tap Sync again";
+        });
+      }
+
+      function recordSyncTap() {
+        if (!syncEnabled) {
+          return;
+        }
+        if (!syncActive) {
+          startSyncRecording();
+          return;
+        }
+
+        const tapTime = track.currentTime;
+        const cueStart = Math.max(0, tapTime + highlightLead);
+
+        if (syncIndex > 0) {
+          const previous = lines[syncIndex - 1];
+          const previousEnd = Math.max(previous.start + 0.2, tapTime - 0.03);
+          previous.end = Number(previousEnd.toFixed(2));
+        }
+
+        lines[syncIndex].start = Number(cueStart.toFixed(2));
+        lines[syncIndex].end = Math.max(lines[syncIndex].start + 0.6, lines[syncIndex].end);
+        recordedStarts[syncIndex] = true;
+
+        if (syncIndex >= lines.length - 1) {
+          const fallbackEnd = lines[syncIndex].start + 1.6;
+          const audioEnd = Number.isFinite(track.duration) ? track.duration : fallbackEnd;
+          lines[syncIndex].end = Number(Math.max(lines[syncIndex].start + 0.6, Math.min(audioEnd, fallbackEnd)).toFixed(2));
+          finishSyncRecording();
+          return;
+        }
+
+        syncIndex += 1;
+        saveSyncTimings();
+        updateSyncStatus();
+        paintSyncState();
+        updateHighlight();
+      }
+
+      function finishSyncRecording() {
+        syncActive = false;
+        mode = "idle";
+        track.pause();
+        stop.disabled = true;
+        saveSyncTimings();
+        updateSyncStatus();
+        paintSyncState();
+        writeSyncOutput();
+      }
+
+      function backSyncLine() {
+        if (!syncEnabled) {
+          return;
+        }
+        if (syncIndex > 0) {
+          recordedStarts[syncIndex] = false;
+          syncIndex -= 1;
+          recordedStarts[syncIndex] = false;
+          track.currentTime = Math.max(0, lines[syncIndex].start - highlightLead - 0.3);
+          updateSyncStatus();
+          paintSyncState();
+          updateHighlight();
+        }
+      }
+
+      function writeSyncOutput() {
+        if (!syncEnabled) {
+          return;
+        }
+        const text = JSON.stringify(getSyncPayload(), null, 2);
+        syncOutput.value = text;
+        syncOutput.hidden = false;
+        syncOutput.focus();
+        syncOutput.select();
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).catch(() => {});
+        }
+      }
+
+      function resetSyncTimings() {
+        if (!syncEnabled) {
+          return;
+        }
+        localStorage.removeItem(syncStorageKey);
+        window.location.reload();
+      }
+
+      function initSyncMode() {
+        if (!syncEnabled) {
+          return;
+        }
+        syncPanel.hidden = false;
+        recordedStarts = lines.map(() => false);
+        setSyncIndex(0);
+      }
+
       play.addEventListener("click", playWholeTrack);
       stop.addEventListener("click", () => stopAudio());
+
+      syncStart.addEventListener("click", startSyncRecording);
+      syncTap.addEventListener("click", recordSyncTap);
+      syncBack.addEventListener("click", backSyncLine);
+      syncCopy.addEventListener("click", writeSyncOutput);
+      syncReset.addEventListener("click", resetSyncTimings);
+
+      window.addEventListener("keydown", (event) => {
+        if (!syncEnabled || syncPanel.hidden) {
+          return;
+        }
+        if (event.target === syncOutput) {
+          return;
+        }
+        if (event.code === "Space" || event.code === "Enter") {
+          event.preventDefault();
+          recordSyncTap();
+        } else if (event.code === "Backspace" || event.code === "ArrowLeft") {
+          event.preventDefault();
+          backSyncLine();
+        }
+      });
 
       bigScreen.addEventListener("click", async () => {
         document.body.classList.toggle("fullscreen");
@@ -650,6 +960,10 @@
       });
 
       track.addEventListener("ended", () => {
+        if (syncActive) {
+          finishSyncRecording();
+          return;
+        }
         mode = "idle";
         activeLine = -1;
         lastScrolledLine = -1;
@@ -662,7 +976,9 @@
         track.playbackRate = practiceSpeed;
       });
 
+      applySavedSyncTimings();
       renderReading();
+      initSyncMode();
       track.playbackRate = practiceSpeed;
       stop.disabled = true;
       raf = window.requestAnimationFrame(tick);
