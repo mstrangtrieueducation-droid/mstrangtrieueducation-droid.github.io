@@ -14,7 +14,7 @@
       --green: #2f855a;
       --green-dark: #1f6844;
       --yellow: #ffe36b;
-      --orange: #e87522;
+      --orange: #ff7a00;
       --pink: #d94f86;
       --blue: #2f8fc7;
       --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
@@ -264,8 +264,9 @@
       color: var(--pink);
     }
 
-    .poem-line strong.orange {
-      color: var(--orange);
+    .poem-line strong.orange,
+    .orange-word {
+      color: var(--orange) !important;
     }
 
     .poem-line strong.green {
@@ -376,7 +377,7 @@
         <li data-en="toy" data-vi="đồ chơi" data-tip="Đồ vật trẻ em dùng để chơi."><span>toy</span> - đồ chơi. <em>favourite toy = đồ chơi yêu thích</em></li>
         <li data-en="scooter" data-vi="xe trượt scooter" data-tip="Xe nhỏ có tay cầm, đứng lên và đẩy chân để đi."><span>scooter</span> - xe trượt scooter. <em>my scooter = xe scooter của mình</em></li>
         <li data-en="doll" data-vi="búp bê" data-tip="Đồ chơi hình em bé hoặc người."><span>doll</span> - búp bê. <em>my doll = búp bê của mình</em></li>
-        <li data-en="orange ball" data-vi="quả bóng màu cam" data-tip="orange ở đây là màu cam, không phải quả cam."><span>orange ball</span> - quả bóng màu cam. <em>orange = màu cam</em></li>
+        <li data-en="orange ball" data-vi="quả bóng màu cam" data-tip="orange ở đây là màu cam, không phải quả cam."><span class="orange-word">orange ball</span> - quả bóng màu cam. <em>orange = màu cam</em></li>
         <li data-en="colour" data-vi="màu sắc" data-tip="Từ Anh - Anh; có thể gặp cách viết color trong Anh - Mỹ."><span>colour</span> - màu sắc. <em>favourite colour = màu yêu thích</em></li>
         <li data-en="pink" data-vi="màu hồng" data-tip="Tên một màu sắc."><span>pink</span> - màu hồng. <em>the colour pink = màu hồng</em></li>
         <li data-en="animal" data-vi="con vật" data-tip="Chỉ các loài vật nói chung."><span>animal</span> - con vật. <em>favourite animal = con vật yêu thích</em></li>
@@ -399,7 +400,7 @@
         { text: "What's my favourite toy?", start: 2.88, end: 4.45 },
         { text: "My favourite one of all.", start: 5.46, end: 7.22 },
         { text: "Is it my scooter? Is it my doll?", start: 8.22, end: 11.60 },
-        { text: "No, it's my orange ball.", start: 12.63, end: 15.45, html: "No, it's my <strong class=\"orange\">orange ball</strong>." },
+        { text: "No, it's my orange ball.", start: 12.63, end: 15.45, html: "No, it's my <strong class=\"orange orange-word\" style=\"color: #ff7a00 !important;\">orange ball</strong>." },
         { text: "", start: 15.45, end: 17.46 },
         { text: "What's my favourite colour?", start: 17.46, end: 19.28 },
         { text: "What do you think?", start: 20.34, end: 21.50 },
