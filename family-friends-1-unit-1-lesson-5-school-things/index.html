@@ -215,6 +215,10 @@
       font-weight: 900;
     }
 
+    .line-num.blank {
+      visibility: hidden;
+    }
+
     .line-text {
       min-width: 0;
     }
@@ -377,52 +381,76 @@
       </ul>
     </section>
 
-    <audio id="track" src="assets/track-18-reading-only.mp3" preload="auto"></audio>
+    <audio id="track" src="assets/track-18-sentences-only-v2.mp3" preload="auto"></audio>
   </main>
 
   <script>
     (() => {
       const lines = [
         {
-          text: "My name’s Emma. This is my school bag.",
+          text: "My name’s Emma.",
           start: 0.00,
-          end: 3.70,
-          html: "<span class=\"line-num\">1</span><span class=\"line-text\">My name’s Emma. This is my <strong>school bag</strong>.</span>"
+          end: 0.65,
+          html: "<span class=\"line-num\">1</span><span class=\"line-text\">My name’s Emma.</span>"
         },
         {
-          text: "This is my pencil case. It’s green.",
-          start: 4.75,
-          end: 10.30,
-          html: "<span class=\"line-num\">2</span><span class=\"line-text\">This is my <strong>pencil case</strong>. It’s <strong class=\"green\">green</strong>.</span>"
+          text: "This is my school bag.",
+          start: 1.10,
+          end: 1.94,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">This is my <strong>school bag</strong>.</span>"
+        },
+        {
+          text: "This is my pencil case.",
+          start: 2.39,
+          end: 4.02,
+          html: "<span class=\"line-num\">2</span><span class=\"line-text\">This is my <strong>pencil case</strong>.</span>"
+        },
+        {
+          text: "It’s green.",
+          start: 4.47,
+          end: 5.76,
+          html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">It’s <strong class=\"green\">green</strong>.</span>"
         },
         {
           text: "And this is my pencil.",
-          start: 11.55,
-          end: 13.10,
+          start: 6.21,
+          end: 7.25,
           html: "<span class=\"line-num\">3</span><span class=\"line-text\">And this is my <strong>pencil</strong>.</span>"
         },
         {
-          text: "This is my blue pen. And this is my pink pen.",
-          start: 14.55,
-          end: 20.00,
-          html: "<span class=\"line-num\">4</span><span class=\"line-text\">This is my <strong class=\"blue\">blue pen</strong>. And this is my <strong class=\"pink\">pink pen</strong>.</span>"
+          text: "This is my blue pen.",
+          start: 7.70,
+          end: 9.25,
+          html: "<span class=\"line-num\">4</span><span class=\"line-text\">This is my <strong class=\"blue\">blue pen</strong>.</span>"
         },
         {
-          text: "Look at this! It’s a rubber.",
-          start: 21.00,
-          end: 23.35,
-          html: "<span class=\"line-num\">5</span><span class=\"line-text\">Look at this! It’s a <strong>rubber</strong>.</span>"
+          text: "And this is my pink pen.",
+          start: 9.70,
+          end: 11.04,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">And this is my <strong class=\"pink\">pink pen</strong>.</span>"
+        },
+        {
+          text: "Look at this!",
+          start: 11.49,
+          end: 12.53,
+          html: "<span class=\"line-num\">5</span><span class=\"line-text\">Look at this!</span>"
+        },
+        {
+          text: "It’s a rubber.",
+          start: 12.98,
+          end: 13.94,
+          html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">It’s a <strong>rubber</strong>.</span>"
         },
         {
           text: "Can I see your bag?",
-          start: 24.45,
-          end: 30.25,
+          start: 14.39,
+          end: 15.87,
           html: "<span class=\"line-num\">6</span><span class=\"line-text\">Can I see your <strong>bag</strong>?</span>"
         }
       ];
 
       const practiceSpeed = 0.8;
-      const highlightLead = 0.12;
+      const highlightLead = 0;
       const reading = document.getElementById("reading");
       const track = document.getElementById("track");
       const play = document.getElementById("play");
