@@ -381,46 +381,94 @@
       </ul>
     </section>
 
-    <audio id="track" src="assets/track-50-full-0p8-v1.mp3?v=1" preload="auto"></audio>
+    <audio id="track" src="assets/track-50-full-0p8-v1.mp3?v=2" preload="auto"></audio>
   </main>
 
   <script>
     (() => {
       const lines = [
         {
-          text: "My name’s Milly. I’m seven. This is my family.",
-          start: 2.14,
-          end: 8.33,
-          html: "<span class=\"line-num\">1</span><span class=\"line-text\">My name’s Milly.<br>I’m seven.<br>This is my <strong>family</strong>.</span>"
+          text: "My name’s Milly.",
+          start: 5.69,
+          end: 7.35,
+          html: "<span class=\"line-num\">1</span><span class=\"line-text\">My name’s Milly.</span>"
         },
         {
-          text: "This is my dad. He’s a fireman.",
+          text: "I’m seven.",
           start: 8.33,
-          end: 14.54,
-          html: "<span class=\"line-num\">2</span><span class=\"line-text\">This is my <strong>dad</strong>.<br>He’s a <strong>fireman</strong>.</span>"
+          end: 9.43,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I’m seven.</span>"
         },
         {
-          text: "This is my mum. She’s a nurse.",
+          text: "This is my family.",
+          start: 10.75,
+          end: 12.53,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">This is my <strong>family</strong>.</span>"
+        },
+        {
+          text: "This is my dad.",
           start: 14.54,
-          end: 20.32,
-          html: "<span class=\"line-num\">3</span><span class=\"line-text\">This is my <strong>mum</strong>.<br>She’s a <strong>nurse</strong>.</span>"
+          end: 15.86,
+          html: "<span class=\"line-num\">2</span><span class=\"line-text\">This is my <strong>dad</strong>.</span>"
         },
         {
-          text: "This is my grandpa. He’s a doctor.",
+          text: "He’s a fireman.",
+          start: 17.24,
+          end: 18.65,
+          html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">He’s a <strong>fireman</strong>.</span>"
+        },
+        {
+          text: "This is my mum.",
           start: 20.32,
-          end: 26.40,
-          html: "<span class=\"line-num\">4</span><span class=\"line-text\">This is my <strong>grandpa</strong>.<br>He’s a <strong>doctor</strong>.</span>"
+          end: 21.54,
+          html: "<span class=\"line-num\">3</span><span class=\"line-text\">This is my <strong>mum</strong>.</span>"
         },
         {
-          text: "This is me with my brother. His name’s Joe. He’s ten. We’re pupils.",
+          text: "She’s a nurse.",
+          start: 22.98,
+          end: 24.43,
+          html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">She’s a <strong>nurse</strong>.</span>"
+        },
+        {
+          text: "This is my grandpa.",
           start: 26.40,
-          end: 36.13,
-          html: "<span class=\"line-num\">5</span><span class=\"line-text\">This is me with my <strong>brother</strong>.<br>His name’s Joe.<br>He’s ten. We’re <strong>pupils</strong>.</span>"
+          end: 27.98,
+          html: "<span class=\"line-num\">4</span><span class=\"line-text\">This is my <strong>grandpa</strong>.</span>"
+        },
+        {
+          text: "He’s a doctor.",
+          start: 29.42,
+          end: 30.71,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">He’s a <strong>doctor</strong>.</span>"
+        },
+        {
+          text: "This is me with my brother.",
+          start: 32.55,
+          end: 35.10,
+          html: "<span class=\"line-num\">5</span><span class=\"line-text\">This is me with my <strong>brother</strong>.</span>"
+        },
+        {
+          text: "His name’s Joe.",
+          start: 36.13,
+          end: 37.65,
+          html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">His name’s Joe.</span>"
+        },
+        {
+          text: "He’s ten.",
+          start: 38.63,
+          end: 39.50,
+          html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">He’s ten.</span>"
+        },
+        {
+          text: "We’re pupils.",
+          start: 40.48,
+          end: 41.84,
+          html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">We’re <strong>pupils</strong>.</span>"
         },
         {
           text: "We’re a happy family.",
-          start: 36.13,
-          end: 43.13,
+          start: 43.12,
+          end: 45.04,
           html: "<span class=\"line-num\">6</span><span class=\"line-text\">We’re a <strong>happy family</strong>.</span>"
         }
       ];
