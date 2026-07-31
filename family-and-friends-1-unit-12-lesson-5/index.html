@@ -6,13 +6,13 @@
   <title>Family &amp; Friends 1 - Unit 12 - Lesson 5</title>
   <meta name="description" content="Family &amp; Friends 1 - Unit 12 - Lesson 5. Nghe - &#272;&#7885;c - D&#7883;ch.">
   <meta property="og:title" content="Family &amp; Friends 1 - Unit 12 - Lesson 5">
-  <meta property="og:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo d&#242;ng m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
+  <meta property="og:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo t&#7915;ng t&#7915; m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-12-lesson-5/">
   <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-12-lesson-5/assets/skills-time-lesson-five-family-friends-cafe.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Family &amp; Friends 1 - Unit 12 - Lesson 5">
-  <meta name="twitter:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo d&#242;ng m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
+  <meta name="twitter:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo t&#7915;ng t&#7915; m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
   <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-12-lesson-5/">
   <style>
     :root {
@@ -195,10 +195,25 @@
     }
 
     .reading-line.active {
-      background: var(--yellow);
+      background: rgba(255, 227, 107, 0.2);
       color: var(--ink);
       font-weight: 900;
       transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
     }
 
     .line-num {
@@ -339,7 +354,7 @@
         <section class="guide" aria-label="Vietnamese instructions">
       <h2>H&#432;&#7899;ng d&#7851;n tr&#7843; b&#224;i</h2>
       <ol>
-        <li>B&#7845;m <strong>Nghe</strong> &#273;&#7875; luy&#7879;n &#273;&#7885;c theo d&#242;ng m&#224;u v&#224;ng.</li>
+        <li>B&#7845;m <strong>Nghe</strong> &#273;&#7875; luy&#7879;n &#273;&#7885;c theo t&#7915;ng t&#7915; m&#224;u v&#224;ng.</li>
         <li>Nghe nhi&#7873;u l&#7847;n &#273;&#7875; luy&#7879;n ph&#225;t &#226;m &#273;&#250;ng, ng&#7919; &#273;i&#7879;u bi&#7875;u c&#7843;m.</li>
         <li>Khi tr&#7843; b&#224;i, con c&#243; th&#7875; quay m&#224;n h&#236;nh v&#224; &#273;&#7885;c theo.</li>
         <li>Sau &#273;&#243;, con d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t - D&#7883;ch s&#225;t ngh&#297;a - t&#7889;c &#273;&#7897; &#273;&#7911; nhanh.</li>
@@ -396,112 +411,126 @@
     <audio id="track" src="assets/track-127-unit12-clean-1p0-v2.mp3?v=2" preload="auto"></audio>
   </main>
 
+  <script src="assets/word-timings.js?v=1"></script>
   <script>
     (() => {
       const lines = [
         {
           text: "I'm hungry.",
-          start: 0.56,
-          end: 1.87,
+          start: 0.52,
+          end: 1.94,
           html: "<span class=\"line-num\">1</span><span class=\"line-text\">I'm <strong>hungry</strong>.</span>"
         },
         {
           text: "Let's look at the menu.",
-          start: 2.56,
-          end: 3.93,
+          start: 2.54,
+          end: 4.02,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Let's look at the <strong>menu</strong>.</span>"
         },
         {
           text: "I like meat and rice.",
-          start: 5.24,
-          end: 6.36,
+          start: 5.44,
+          end: 6.61,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like <strong>meat</strong> and <strong>rice</strong>.</span>"
         },
         {
           text: "I like carrots too.",
-          start: 6.70,
-          end: 7.56,
+          start: 6.88,
+          end: 7.81,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like <strong>carrots</strong> too.</span>"
         },
         {
           text: "I don't like fish or eggs.",
-          start: 8.30,
-          end: 9.88,
+          start: 8.49,
+          end: 10.12,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I don't like <strong>fish</strong> or <strong>eggs</strong>.</span>"
         },
         {
           text: "I like ice cream.",
-          start: 10.86,
-          end: 12.76,
+          start: 11.05,
+          end: 13.03,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like <strong>ice cream</strong>.</span>"
         },
         {
           text: "I like apple juice",
-          start: 13.64,
-          end: 14.94,
+          start: 13.84,
+          end: 15.18,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like <strong>apple juice</strong></span>"
         },
         {
           text: "but I don't like milk.",
-          start: 16.16,
-          end: 17.70,
+          start: 16.36,
+          end: 17.95,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">but I don't like <strong>milk</strong>.</span>"
         },
         {
           text: "What do you like, Emma?",
-          start: 18.36,
-          end: 20.05,
+          start: 18.57,
+          end: 20.24,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">What do you like, Emma?</span>"
         },
         {
           text: "I like ice cream, too.",
-          start: 25.53,
-          end: 27.22,
+          start: 25.51,
+          end: 27.30,
           html: "<span class=\"line-num\">2</span><span class=\"line-text\">I like <strong>ice cream</strong>, too.</span>"
         },
         {
           text: "And I like fish and eggs.",
-          start: 27.99,
-          end: 30.38,
+          start: 27.96,
+          end: 30.25,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">And I like <strong>fish</strong> and <strong>eggs</strong>.</span>"
         },
         {
           text: "I like rice",
-          start: 31.33,
-          end: 32.35,
+          start: 31.30,
+          end: 32.43,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">I like <strong>rice</strong></span>"
         },
         {
           text: "but I don't like carrots.",
-          start: 33.06,
-          end: 34.47,
+          start: 33.04,
+          end: 34.55,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">but I don't like <strong>carrots</strong>.</span>"
         },
         {
           text: "I like bananas",
-          start: 35.73,
-          end: 36.92,
+          start: 35.71,
+          end: 37.00,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">I like <strong>bananas</strong></span>"
         },
         {
           text: "but I don't like grapes.",
-          start: 37.67,
-          end: 39.07,
+          start: 37.65,
+          end: 39.15,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">but I don't like <strong>grapes</strong>.</span>"
         },
         {
           text: "I like milk",
-          start: 40.31,
-          end: 41.14,
+          start: 40.28,
+          end: 41.20,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">I like <strong>milk</strong></span>"
         },
         {
           text: "but I don't like apple juice.",
-          start: 42.08,
-          end: 43.64,
+          start: 42.06,
+          end: 43.73,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">but I don't like <strong>apple juice</strong>.</span>"
         }
       ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
 
       const practiceSpeed = 1;
       const highlightLead = 0;
@@ -516,15 +545,82 @@
       let activeLine = -1;
       let doneThrough = -1;
 
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
       function renderReading() {
         reading.innerHTML = "";
         lines.forEach((line, index) => {
           const row = document.createElement("p");
-          row.className = "reading-line clickable";
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
           row.dataset.index = String(index);
           row.innerHTML = line.html;
-          row.addEventListener("click", () => playOneLine(index));
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
           reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
         });
       }
 
@@ -551,6 +647,8 @@
             row.classList.add("done");
           }
         });
+
+        updateWordHighlight(time, activeIndex);
 
         if (mode === "idle") {
           status.textContent = "S\u1eb5n s\u00e0ng";
@@ -648,6 +746,7 @@
       track.addEventListener("ended", () => {
         mode = "idle";
         activeLine = -1;
+        doneThrough = lines.length - 1;
         stop.disabled = true;
         status.textContent = "Xong b\u00e0i";
         updateHighlight();
