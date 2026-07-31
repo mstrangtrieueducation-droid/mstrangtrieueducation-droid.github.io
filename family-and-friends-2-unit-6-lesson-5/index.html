@@ -1,0 +1,698 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 6 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 6 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 6 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-6-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-6-lesson-5/assets/skills-time-ff2-unit6-after-school.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 6 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-6-lesson-5/">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: var(--yellow);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 6 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo dòng màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit6-after-school.png" alt="Skills Time Lesson Five after school worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>after school</span> - sau giờ học; sau khi tan học.</li>
+        <li><span>do homework</span> - làm bài tập về nhà.</li>
+        <li><span>park</span> - công viên.</li>
+        <li><span>play football</span> - chơi bóng đá.</li>
+        <li><span>friend</span> - bạn.</li>
+        <li><span>watch TV</span> - xem ti vi.</li>
+        <li><span>art</span> - môn Mĩ thuật; nghệ thuật.</li>
+        <li><span>draw</span> - vẽ.</li>
+        <li><span>paint</span> - tô màu; vẽ màu.</li>
+        <li><span>picture</span> - bức tranh.</li>
+        <li><span>write stories</span> - viết truyện.</li>
+        <li><span>bedroom wall</span> - tường phòng ngủ.</li>
+        <li><span>help my mum and dad</span> - giúp bố mẹ của mình.</li>
+        <li><span>listen to CDs</span> - nghe đĩa CD.</li>
+        <li><span>sing songs</span> - hát các bài hát.</li>
+        <li><span>music</span> - âm nhạc.</li>
+        <li><span>sport</span> - thể thao.</li>
+        <li><span>go swimming</span> - đi bơi.</li>
+        <li><span>play tennis</span> - chơi quần vợt/tennis.</li>
+        <li><span>skate</span> - trượt pa-tanh; trượt patin.</li>
+        <li><span>What do they do after school?</span> - Các bạn ấy làm gì sau giờ học?</li>
+        <li><span>My name's ...</span> - Tên của mình là...</li>
+        <li><span>I'm ...</span> - Mình là...</li>
+        <li><span>After school, I ...</span> - Sau giờ học, mình...</li>
+        <li><span>Then I ...</span> - Sau đó mình...</li>
+        <li><span>I play ... with ...</span> - Mình chơi... với... <em>I play football with my friends = Mình chơi bóng đá với các bạn.</em></li>
+        <li><span>I put ... on ...</span> - Mình đặt/dán/để... lên... <em>on my bedroom wall = trên tường phòng ngủ của mình.</em></li>
+        <li><span>I really like ...</span> - Mình thật sự rất thích...</li>
+        <li><span>every Monday / Tuesday / Thursday</span> - vào mỗi thứ Hai / thứ Ba / thứ Năm.</li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-66-ff2-unit6-clean-0p8-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "What do they do after school?",
+          start: 5.72,
+          end: 7.54,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>What do they do after school?</strong></span>"
+        },
+        {
+          text: "My name's Max.",
+          start: 8.25,
+          end: 9.38,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">My name's <strong>Max</strong>.</span>"
+        },
+        {
+          text: "After school, I do my homework.",
+          start: 9.87,
+          end: 11.45,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>After school</strong>, I <strong>do my homework</strong>.</span>"
+        },
+        {
+          text: "Then I go to the park.",
+          start: 12.28,
+          end: 14.01,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then I go to the <strong>park</strong>.</span>"
+        },
+        {
+          text: "I play football with my friends.",
+          start: 14.86,
+          end: 17.53,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I <strong>play football</strong> with my <strong>friends</strong>.</span>"
+        },
+        {
+          text: "Then I watch TV.",
+          start: 17.97,
+          end: 19.61,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then I <strong>watch TV</strong>.</span>"
+        },
+        {
+          text: "I'm Julia.",
+          start: 22.30,
+          end: 23.66,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I'm <strong>Julia</strong>.</span>"
+        },
+        {
+          text: "I love art.",
+          start: 24.53,
+          end: 26.29,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I love <strong>art</strong>.</span>"
+        },
+        {
+          text: "After school, I draw and paint pictures.",
+          start: 27.19,
+          end: 31.60,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>After school</strong>, I <strong>draw</strong> and <strong>paint pictures</strong>.</span>"
+        },
+        {
+          text: "Then I write stories.",
+          start: 32.64,
+          end: 34.77,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then I <strong>write stories</strong>.</span>"
+        },
+        {
+          text: "I put the stories and pictures on my bedroom wall.",
+          start: 35.50,
+          end: 40.16,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I put the stories and pictures on my <strong>bedroom wall</strong>.</span>"
+        },
+        {
+          text: "I'm Luke.",
+          start: 43.14,
+          end: 44.50,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I'm <strong>Luke</strong>.</span>"
+        },
+        {
+          text: "After school, I help my mum and dad.",
+          start: 45.55,
+          end: 49.39,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>After school</strong>, I <strong>help my mum and dad</strong>.</span>"
+        },
+        {
+          text: "Then I listen to my CDs.",
+          start: 50.68,
+          end: 53.18,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then I <strong>listen to my CDs</strong>.</span>"
+        },
+        {
+          text: "I sing the songs.",
+          start: 54.28,
+          end: 56.02,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I <strong>sing the songs</strong>.</span>"
+        },
+        {
+          text: "I really like music.",
+          start: 56.78,
+          end: 58.63,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I really like <strong>music</strong>.</span>"
+        },
+        {
+          text: "My name's Sara.",
+          start: 60.95,
+          end: 62.68,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">My name's <strong>Sara</strong>.</span>"
+        },
+        {
+          text: "I like sport.",
+          start: 63.53,
+          end: 65.25,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like <strong>sport</strong>.</span>"
+        },
+        {
+          text: "I go swimming every Monday.",
+          start: 66.39,
+          end: 69.05,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I <strong>go swimming</strong> every <strong>Monday</strong>.</span>"
+        },
+        {
+          text: "I play tennis with my brother every Tuesday.",
+          start: 70.52,
+          end: 74.12,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I <strong>play tennis</strong> with my brother every <strong>Tuesday</strong>.</span>"
+        },
+        {
+          text: "And every Thursday I skate in the park with my sister.",
+          start: 75.26,
+          end: 80.18,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">And every <strong>Thursday</strong> I <strong>skate</strong> in the park with my sister.</span>"
+        }
+      ];
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = "reading-line clickable";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          row.addEventListener("click", () => playOneLine(index));
+          reading.append(row);
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
+
