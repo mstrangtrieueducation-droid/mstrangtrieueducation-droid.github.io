@@ -1,0 +1,830 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 9 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 9 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 9 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-9-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-9-lesson-5/assets/skills-time-ff2-unit9-zoo.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 9 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-9-lesson-5/">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: rgba(255, 227, 107, 0.2);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 9 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit9-zoo.png" alt="Skills Time Lesson Five She works at a zoo worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ và cấu trúc để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>zoo</span> - sở thú.</li>
+        <li><span>work</span> - làm việc; công việc.</li>
+        <li><span>work at</span> - làm việc tại một nơi nào đó.</li>
+        <li><span>with</span> - cùng với.</li>
+        <li><span>Molly</span> - tên riêng Molly.</li>
+        <li><span>look after</span> - chăm sóc, trông nom.</li>
+        <li><span>big</span> - to, lớn.</li>
+        <li><span>animal</span> - động vật. <em>animals = các con vật.</em></li>
+        <li><span>elephant</span> - con voi.</li>
+        <li><span>giraffe</span> - hươu cao cổ.</li>
+        <li><span>lion</span> - sư tử.</li>
+        <li><span>tiger</span> - con hổ.</li>
+        <li><span>favourite</span> - yêu thích nhất.</li>
+        <li><span>at the moment</span> - lúc này, hiện tại.</li>
+        <li><span>have got / 've got</span> - có. <em>we've got = we have got.</em></li>
+        <li><span>six / two / seven / three</span> - sáu / hai / bảy / ba.</li>
+        <li><span>baby / babies</span> - con non, em bé / các con non, các em bé.</li>
+        <li><span>cute</span> - đáng yêu.</li>
+        <li><span>very</span> - rất.</li>
+        <li><span>get up</span> - thức dậy.</li>
+        <li><span>every day</span> - mỗi ngày.</li>
+        <li><span>start work</span> - bắt đầu làm việc.</li>
+        <li><span>first</span> - đầu tiên, trước hết.</li>
+        <li><span>feed / feeds</span> - cho ăn.</li>
+        <li><span>eat</span> - ăn.</li>
+        <li><span>meat</span> - thịt.</li>
+        <li><span>then</span> - sau đó, tiếp theo.</li>
+        <li><span>vegetable / vegetables</span> - rau / các loại rau.</li>
+        <li><span>all</span> - tất cả.</li>
+        <li><span>drink</span> - uống.</li>
+        <li><span>water</span> - nước.</li>
+        <li><span>say / says</span> - nói.</li>
+        <li><span>go home</span> - về nhà.</li>
+        <li><span>o'clock</span> - giờ đúng. <em>three o'clock = ba giờ đúng.</em></li>
+        <li><span>six / seven / three o'clock</span> - sáu / bảy / ba giờ đúng.</li>
+        <li><span>always</span> - luôn luôn.</li>
+        <li><span>happy</span> - vui vẻ, hạnh phúc.</li>
+        <li><span>love</span> - yêu, rất thích.</li>
+        <li><span>job</span> - nghề nghiệp, công việc.</li>
+        <li><span>as</span> - vì, bởi vì.</li>
+        <li><span>my</span> - của tôi, của mình.</li>
+        <li><span>she / they / we / I</span> - cô ấy / họ / chúng tôi / tôi.</li>
+        <li><span>She works at a zoo.</span> - Cô ấy làm việc tại một sở thú.</li>
+        <li><span>I'm at + nơi chốn</span> - Mình đang ở ... <em>I'm = I am.</em></li>
+        <li><span>... with + người</span> - ... cùng với ai. <em>I'm at the zoo with Molly.</em></li>
+        <li><span>work at + nơi chốn</span> - làm việc tại ... <em>Molly works at the zoo.</em></li>
+        <li><span>She + động từ thêm -s/-es</span> - hiện tại đơn với chủ ngữ she. <em>works, looks, gets, starts, feeds, says.</em></li>
+        <li><span>She looks after + người/con vật</span> - Cô ấy chăm sóc ...</li>
+        <li><span>big + danh từ số nhiều</span> - các ... to lớn. <em>the big animals.</em></li>
+        <li><span>My favourite + danh từ số nhiều + are ...</span> - Những ... mình thích nhất là ...</li>
+        <li><span>At the moment, ...</span> - Lúc này/Hiện tại, ...</li>
+        <li><span>We've got + danh từ</span> - Chúng tôi có ... <em>We've = we have.</em></li>
+        <li><span>số đếm + danh từ số nhiều</span> - <em>six elephants, two elephants.</em></li>
+        <li><span>Two of the + danh từ số nhiều</span> - Hai trong số những ...</li>
+        <li><span>They're + tính từ</span> - Họ/Chúng ... <em>They're = They are; They're very cute.</em></li>
+        <li><span>chủ ngữ + động từ + every day</span> - diễn tả thói quen mỗi ngày.</li>
+        <li><span>at + giờ cụ thể</span> - dùng <strong>at</strong> trước giờ. <em>at six o'clock.</em></li>
+        <li><span>First ..., then ...</span> - Đầu tiên ..., sau đó ...</li>
+        <li><span>She feeds + con vật</span> - Cô ấy cho ... ăn.</li>
+        <li><span>They + động từ nguyên mẫu</span> - hiện tại đơn với they. <em>They eat / drink ...</em></li>
+        <li><span>All the + danh từ số nhiều + động từ</span> - Tất cả các ... đều ...</li>
+        <li><span>Molly says, "..."</span> - Molly nói: "..."; dùng để dẫn lời nói trực tiếp.</li>
+        <li><span>I go home at + giờ.</span> - Mình về nhà lúc ...</li>
+        <li><span>be + always + tính từ</span> - luôn ở trạng thái ... <em>I'm always happy.</em></li>
+        <li><span>..., as ...</span> - ..., bởi vì ... <em>I'm happy as I love my job.</em></li>
+        <li><span>love + danh từ</span> - yêu/rất thích ... <em>I love my job.</em></li>
+        <li><span>danh từ số nhiều</span> - thường thêm <strong>-s/-es</strong>; <em>baby đổi thành babies.</em></li>
+        <li><span>Hiện tại đơn</span> - dùng cho công việc và thói quen lặp lại trong bài.</li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-98-ff2-unit9-user-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script src="assets/word-timings.js?v=1"></script>
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "She works at a zoo!",
+          start: 0.440,
+          end: 2.155,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>She works at a zoo!</strong></span>"
+        },
+        {
+          text: "I'm at the zoo with Molly.",
+          start: 3.535,
+          end: 5.495,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>I'm at the zoo</strong> with Molly.</span>"
+        },
+        {
+          text: "Molly works at the zoo.",
+          start: 6.680,
+          end: 8.425,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Molly <strong>works at the zoo</strong>.</span>"
+        },
+        {
+          text: "She looks after the big animals:",
+          start: 9.340,
+          end: 11.515,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">She <strong>looks after</strong> the big animals:</span>"
+        },
+        {
+          text: "elephants, giraffes, lions and tigers.",
+          start: 12.385,
+          end: 16.780,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>elephants, giraffes, lions and tigers</strong>.</span>"
+        },
+        {
+          text: "Molly says,",
+          start: 16.955,
+          end: 18.055,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Molly says,</span>"
+        },
+        {
+          text: "My favourite animals are the elephants.",
+          start: 18.605,
+          end: 21.095,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">&ldquo;My <strong>favourite animals</strong> are the elephants.</span>"
+        },
+        {
+          text: "At the moment we've got six elephants at the zoo.",
+          start: 21.780,
+          end: 25.310,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>At the moment we've got</strong> six elephants at the zoo.</span>"
+        },
+        {
+          text: "Two of the elephants are babies.",
+          start: 26.075,
+          end: 28.135,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Two of the elephants</strong> are babies.</span>"
+        },
+        {
+          text: "They're very cute.",
+          start: 28.630,
+          end: 29.965,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>They're very cute</strong>.&rdquo;</span>"
+        },
+        {
+          text: "Molly gets up every day at six o'clock.",
+          start: 31.850,
+          end: 35.390,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Molly <strong>gets up every day at six o'clock</strong>.</span>"
+        },
+        {
+          text: "She starts work at seven o'clock.",
+          start: 35.800,
+          end: 38.345,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">She <strong>starts work at seven o'clock</strong>.</span>"
+        },
+        {
+          text: "First she feeds the lions and tigers.",
+          start: 39.215,
+          end: 42.200,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>First</strong> she <strong>feeds the lions and tigers</strong>.</span>"
+        },
+        {
+          text: "They eat meat.",
+          start: 43.275,
+          end: 44.360,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">They <strong>eat meat</strong>.</span>"
+        },
+        {
+          text: "Then she feeds the giraffes and the elephants.",
+          start: 45.485,
+          end: 48.215,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Then</strong> she <strong>feeds the giraffes and the elephants</strong>.</span>"
+        },
+        {
+          text: "They eat vegetables.",
+          start: 48.925,
+          end: 50.345,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">They <strong>eat vegetables</strong>.</span>"
+        },
+        {
+          text: "All the animals drink water.",
+          start: 51.565,
+          end: 53.570,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>All the animals drink water</strong>.</span>"
+        },
+        {
+          text: "Molly says,",
+          start: 54.365,
+          end: 55.485,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Molly says,</span>"
+        },
+        {
+          text: "I go home at three o'clock.",
+          start: 56.175,
+          end: 58.230,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">&ldquo;I <strong>go home at three o'clock</strong>.</span>"
+        },
+        {
+          text: "I'm always happy as I love my job!",
+          start: 58.795,
+          end: 61.670,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">I'm <strong>always happy</strong> as I <strong>love my job</strong>!&rdquo;</span>"
+        }
+      ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
+          reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        updateWordHighlight(time, activeIndex);
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = lines.length - 1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
+
