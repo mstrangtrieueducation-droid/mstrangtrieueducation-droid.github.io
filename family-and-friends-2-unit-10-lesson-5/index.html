@@ -1,0 +1,828 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 10 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 10 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 10 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-10-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-10-lesson-5/assets/skills-time-ff2-unit10-weather.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 10 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-10-lesson-5/">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: rgba(255, 227, 107, 0.2);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 10 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit10-weather.png" alt="Skills Time Lesson Five Here is the weather worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ và cấu trúc để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>weather</span> - thời tiết.</li>
+        <li><span>weather news</span> - bản tin thời tiết.</li>
+        <li><span>here</span> - ở đây; trong câu <em>Here is ...</em>: đây là ...</li>
+        <li><span>six / nine / two / seven</span> - sáu / chín / hai / bảy.</li>
+        <li><span>o'clock</span> - giờ đúng. <em>six o'clock = sáu giờ đúng.</em></li>
+        <li><span>morning</span> - buổi sáng.</li>
+        <li><span>afternoon</span> - buổi chiều.</li>
+        <li><span>very</span> - rất.</li>
+        <li><span>cold</span> - lạnh.</li>
+        <li><span>outside</span> - ở bên ngoài.</li>
+        <li><span>wear</span> - mặc, đội, đeo.</li>
+        <li><span>warm</span> - ấm, giữ ấm.</li>
+        <li><span>coat / coats</span> - áo khoác / những chiếc áo khoác.</li>
+        <li><span>hat / hats</span> - mũ / những chiếc mũ.</li>
+        <li><span>have</span> - có; trong lời chúc <em>Have a nice ...</em>: chúc có một ... vui vẻ.</li>
+        <li><span>nice</span> - tốt đẹp, vui vẻ.</li>
+        <li><span>at</span> - vào, lúc; dùng trước giờ cụ thể.</li>
+        <li><span>rain / raining</span> - mưa / đang mưa.</li>
+        <li><span>now</span> - bây giờ.</li>
+        <li><span>don't</span> - đừng, không được. <em>don't = do not.</em></li>
+        <li><span>forget</span> - quên.</li>
+        <li><span>your</span> - của bạn, của các bạn.</li>
+        <li><span>umbrella / umbrellas</span> - ô, dù / những chiếc ô, dù.</li>
+        <li><span>raincoat / raincoats</span> - áo mưa / những chiếc áo mưa.</li>
+        <li><span>get</span> - trở nên, bị; <em>get wet = bị ướt.</em></li>
+        <li><span>wet</span> - ướt.</li>
+        <li><span>sunny</span> - có nắng.</li>
+        <li><span>hot</span> - nóng.</li>
+        <li><span>sun</span> - mặt trời, ánh nắng.</li>
+        <li><span>sun hat / sun hats</span> - mũ che nắng / những chiếc mũ che nắng.</li>
+        <li><span>sunglasses</span> - kính râm, kính mát.</li>
+        <li><span>windy</span> - có gió, nhiều gió.</li>
+        <li><span>good</span> - tốt, thích hợp.</li>
+        <li><span>time</span> - thời gian, lúc.</li>
+        <li><span>fly</span> - bay; thả cho bay.</li>
+        <li><span>kite</span> - cái diều.</li>
+        <li><span>fly a kite</span> - thả diều.</li>
+        <li><span>let</span> - để, cho phép.</li>
+        <li><span>away</span> - đi xa, khỏi chỗ này.</li>
+        <li><span>fly away</span> - bay đi mất.</li>
+        <li><span>but</span> - nhưng.</li>
+        <li><span>and</span> - và; nối từ hoặc ý cùng loại.</li>
+        <li><span>look at</span> - nhìn vào.</li>
+        <li><span>picture / pictures</span> - bức tranh, hình ảnh / các bức tranh, hình ảnh.</li>
+        <li><span>listen and read</span> - nghe và đọc.</li>
+        <li><span>What is the weather like?</span> - Thời tiết như thế nào?</li>
+        <li><span>What is + danh từ + like?</span> - hỏi đặc điểm hoặc tình trạng của ... như thế nào.</li>
+        <li><span>Here is + danh từ số ít</span> - đây là ... <em>Here is the weather.</em></li>
+        <li><span>Here is the weather at + giờ</span> - đây là tình hình thời tiết lúc ...</li>
+        <li><span>It's = It is</span> - dạng viết tắt của <em>It is</em>.</li>
+        <li><span>It's + giờ</span> - bây giờ là ... giờ. <em>It's six o'clock.</em></li>
+        <li><span>at + giờ cụ thể</span> - vào lúc ... <em>at nine o'clock.</em></li>
+        <li><span>in the morning</span> - vào buổi sáng.</li>
+        <li><span>in the afternoon</span> - vào buổi chiều.</li>
+        <li><span>It's + tính từ thời tiết</span> - thời tiết ... <em>It's cold / sunny / hot / windy.</em></li>
+        <li><span>very + tính từ</span> - rất ... <em>very cold, very windy.</em></li>
+        <li><span>It's raining now.</span> - Bây giờ trời đang mưa; dùng hiện tại tiếp diễn.</li>
+        <li><span>The weather now is + tính từ</span> - thời tiết bây giờ ...</li>
+        <li><span>tính từ + and + tính từ</span> - nối hai đặc điểm. <em>sunny and hot.</em></li>
+        <li><span>Wear + quần áo/phụ kiện</span> - hãy mặc/đội/đeo ... <em>Wear warm coats and hats.</em></li>
+        <li><span>Have a nice + buổi trong ngày</span> - chúc một buổi ... vui vẻ.</li>
+        <li><span>Don't = Do not</span> - dạng viết tắt dùng trong câu mệnh lệnh phủ định.</li>
+        <li><span>Don't + động từ nguyên mẫu</span> - đừng làm ...</li>
+        <li><span>Don't forget + danh từ</span> - đừng quên ...</li>
+        <li><span>Don't get + tính từ</span> - đừng để bị/trở nên ... <em>Don't get wet!</em></li>
+        <li><span>your + danh từ</span> - ... của bạn. <em>your umbrellas, your hats.</em></li>
+        <li><span>danh từ số nhiều</span> - thường thêm <strong>-s/-es</strong>. <em>coats, hats, umbrellas, raincoats.</em></li>
+        <li><span>Câu mệnh lệnh khẳng định</span> - bắt đầu bằng động từ nguyên mẫu. <em>Wear ...; Have ...</em></li>
+        <li><span>Câu mệnh lệnh phủ định</span> - bắt đầu bằng <strong>Don't + động từ nguyên mẫu</strong>.</li>
+        <li><span>It's a good time to + động từ</span> - đây là lúc thích hợp để làm gì.</li>
+        <li><span>to + động từ nguyên mẫu</span> - để làm gì. <em>to fly a kite.</em></li>
+        <li><span>let + người/vật + động từ nguyên mẫu</span> - để/cho ai hoặc vật gì làm gì.</li>
+        <li><span>Don't let + người/vật + động từ</span> - đừng để/cho ... làm gì.</li>
+        <li><span>But + mệnh đề</span> - nhưng ...; nối với ý tương phản phía trước.</li>
+        <li><span>six / nine o'clock in the morning</span> - sáu / chín giờ sáng.</li>
+        <li><span>two o'clock in the afternoon</span> - hai giờ chiều.</li>
+        <li><span>seven o'clock</span> - bảy giờ.</li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-110-ff2-unit10-user-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script src="assets/word-timings.js?v=1"></script>
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "Here is the weather ...",
+          start: 2.150,
+          end: 3.555,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Here is the weather ...</strong></span>"
+        },
+        {
+          text: "It's six o'clock in the morning.",
+          start: 5.875,
+          end: 7.900,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>six o'clock in the morning</strong>.</span>"
+        },
+        {
+          text: "Here is the weather news.",
+          start: 8.555,
+          end: 10.080,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Here is the <strong>weather news</strong>.</span>"
+        },
+        {
+          text: "It's very cold outside.",
+          start: 11.045,
+          end: 13.050,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>very cold outside</strong>.</span>"
+        },
+        {
+          text: "Wear warm coats and hats.",
+          start: 13.905,
+          end: 16.340,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Wear warm coats and hats</strong>.</span>"
+        },
+        {
+          text: "Have a nice morning.",
+          start: 17.190,
+          end: 18.450,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Have a nice morning</strong>.</span>"
+        },
+        {
+          text: "Here is the weather at nine o'clock.",
+          start: 25.540,
+          end: 27.820,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Here is the weather <strong>at nine o'clock</strong>.</span>"
+        },
+        {
+          text: "It's raining now.",
+          start: 28.880,
+          end: 30.200,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>It's raining now</strong>.</span>"
+        },
+        {
+          text: "Don't forget your umbrellas and your raincoats.",
+          start: 30.900,
+          end: 34.070,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Don't forget</strong> your umbrellas and your raincoats.</span>"
+        },
+        {
+          text: "Don't get wet!",
+          start: 34.665,
+          end: 35.860,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Don't get wet!</strong></span>"
+        },
+        {
+          text: "It's two o'clock in the afternoon.",
+          start: 44.145,
+          end: 46.160,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>two o'clock in the afternoon</strong>.</span>"
+        },
+        {
+          text: "The weather now is sunny and hot.",
+          start: 46.830,
+          end: 50.090,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The weather now is <strong>sunny and hot</strong>.</span>"
+        },
+        {
+          text: "Don't forget your sun hats and sunglasses.",
+          start: 50.930,
+          end: 54.030,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Don't forget</strong> your sun hats and sunglasses.</span>"
+        },
+        {
+          text: "Have a nice afternoon in the sun.",
+          start: 54.830,
+          end: 57.140,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Have a nice afternoon</strong> in the sun.</span>"
+        },
+        {
+          text: "It's seven o'clock and here is the weather.",
+          start: 65.510,
+          end: 68.330,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>seven o'clock</strong> and here is the weather.</span>"
+        },
+        {
+          text: "It's very windy outside now.",
+          start: 69.520,
+          end: 72.035,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>very windy outside now</strong>.</span>"
+        },
+        {
+          text: "It's a good time to fly a kite.",
+          start: 72.635,
+          end: 74.890,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>a good time to fly a kite</strong>.</span>"
+        },
+        {
+          text: "But don't let your hats fly away!",
+          start: 75.640,
+          end: 77.995,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">But <strong>don't let your hats fly away!</strong></span>"
+        }
+      ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
+          reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        updateWordHighlight(time, activeIndex);
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = lines.length - 1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
+
