@@ -6,13 +6,13 @@
   <title>Family &amp; Friends 2 - Unit 3 - Lesson 5</title>
   <meta name="description" content="Family &amp; Friends 2 - Unit 3 - Lesson 5. Nghe - Đọc - Dịch.">
   <meta property="og:title" content="Family &amp; Friends 2 - Unit 3 - Lesson 5">
-  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-3-lesson-5/">
   <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-3-lesson-5/assets/skills-time-ff2-unit3-outdoor-toys.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 3 - Lesson 5">
-  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
   <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-3-lesson-5/">
   <style>
     :root {
@@ -194,10 +194,25 @@
     }
 
     .reading-line.active {
-      background: var(--yellow);
+      background: rgba(255, 227, 107, 0.2);
       color: var(--ink);
       font-weight: 900;
       transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
     }
 
     .line-num {
@@ -345,7 +360,7 @@
     <section class="guide" aria-label="Vietnamese instructions">
       <h2>Hướng dẫn trả bài</h2>
       <ol>
-        <li>Bấm <strong>Nghe</strong> để luyện đọc theo dòng màu vàng.</li>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
         <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
         <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
         <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
@@ -400,118 +415,132 @@
     <audio id="track" src="assets/track-34-ff2-unit3-user-0p9-v3.mp3?v=3" preload="auto"></audio>
   </main>
 
+  <script src="assets/word-timings.js?v=1"></script>
   <script>
     (() => {
       const lines = [
         {
           text: "Outdoor Toys",
-          start: 3.20,
-          end: 3.73,
+          start: 1.00,
+          end: 3.62,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>Outdoor Toys</strong></span>"
         },
         {
           text: "This is a perfect bike for children aged 7 to 10.",
-          start: 4.10,
-          end: 7.28,
+          start: 4.06,
+          end: 7.34,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">This is a <strong>perfect bike</strong> for children aged 7 to 10.</span>"
         },
         {
           text: "It has got big wheels.",
-          start: 8.50,
-          end: 11.16,
+          start: 8.47,
+          end: 11.22,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">It has got big <strong>wheels</strong>.</span>"
         },
         {
           text: "You can ride it on grass or sand,",
-          start: 12.48,
-          end: 16.59,
+          start: 12.44,
+          end: 16.65,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">You can <strong>ride</strong> it on <strong>grass</strong> or <strong>sand</strong>,</span>"
         },
         {
           text: "so take it to the beach",
-          start: 17.25,
-          end: 19.49,
+          start: 17.23,
+          end: 19.55,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">so <strong>take it to</strong> the <strong>beach</strong></span>"
         },
         {
           text: "or park.",
-          start: 19.78,
-          end: 20.78,
+          start: 19.74,
+          end: 20.66,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">or <strong>park</strong>.</span>"
         },
         {
           text: "Scooters are really good fun.",
-          start: 23.24,
-          end: 26.72,
+          start: 23.21,
+          end: 26.78,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\"><strong>Scooters</strong> are really <strong>good fun</strong>.</span>"
         },
         {
           text: "This scooter is fast and easy to ride.",
-          start: 27.80,
-          end: 30.39,
+          start: 27.76,
+          end: 30.45,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">This <strong>scooter</strong> is <strong>fast</strong> and <strong>easy to ride</strong>.</span>"
         },
         {
           text: "It has two small wheels.",
-          start: 30.86,
-          end: 32.87,
+          start: 30.83,
+          end: 32.93,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">It has two small <strong>wheels</strong>.</span>"
         },
         {
           text: "It is available in pink, green or blue.",
-          start: 34.50,
-          end: 37.80,
+          start: 34.46,
+          end: 37.86,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">It is <strong>available</strong> in pink, green or blue.</span>"
         },
         {
           text: "Are you or your friend learning to skate?",
-          start: 39.16,
-          end: 41.88,
+          start: 39.11,
+          end: 41.94,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">Are you or your friend <strong>learning to skate</strong>?</span>"
         },
         {
           text: "These skates have four wheels on each skate,",
-          start: 42.64,
-          end: 44.92,
+          start: 42.61,
+          end: 44.97,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">These <strong>skates</strong> have four <strong>wheels</strong> on each skate,</span>"
         },
         {
           text: "so they are easy and safe for new skaters.",
-          start: 47.90,
-          end: 51.94,
+          start: 47.86,
+          end: 52.00,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">so they are easy and <strong>safe</strong> for new skaters.</span>"
         },
         {
           text: "They look fantastic, too!",
-          start: 53.57,
-          end: 58.68,
+          start: 53.53,
+          end: 58.74,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">They look <strong>fantastic</strong>, too!</span>"
         },
         {
           text: "This swing is perfect for fun in your garden.",
-          start: 59.26,
-          end: 63.91,
+          start: 59.24,
+          end: 63.98,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">This <strong>swing</strong> is perfect for fun in your <strong>garden</strong>.</span>"
         },
         {
           text: "Two children can play together",
-          start: 65.31,
-          end: 68.10,
+          start: 65.27,
+          end: 68.16,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">Two children can play <strong>together</strong></span>"
         },
         {
           text: "as there are two swings.",
-          start: 70.36,
-          end: 75.66,
+          start: 70.32,
+          end: 75.73,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">as <strong>there are</strong> two <strong>swings</strong>.</span>"
         },
         {
           text: "The seats are blue and yellow.",
-          start: 77.05,
-          end: 88.10,
+          start: 77.02,
+          end: 88.16,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">The <strong>seats</strong> are blue and yellow.</span>"
         }
       ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
 
       const practiceSpeed = 1;
       const highlightLead = 0;
@@ -526,15 +555,82 @@
       let activeLine = -1;
       let doneThrough = -1;
 
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
       function renderReading() {
         reading.innerHTML = "";
         lines.forEach((line, index) => {
           const row = document.createElement("p");
-          row.className = "reading-line clickable";
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
           row.dataset.index = String(index);
           row.innerHTML = line.html;
-          row.addEventListener("click", () => playOneLine(index));
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
           reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
         });
       }
 
@@ -561,6 +657,8 @@
             row.classList.add("done");
           }
         });
+
+        updateWordHighlight(time, activeIndex);
 
         if (mode === "idle") {
           status.textContent = "Sẵn sàng";
@@ -658,6 +756,7 @@
       track.addEventListener("ended", () => {
         mode = "idle";
         activeLine = -1;
+        doneThrough = lines.length - 1;
         stop.disabled = true;
         status.textContent = "Xong bài";
         updateHighlight();
