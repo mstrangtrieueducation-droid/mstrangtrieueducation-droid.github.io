@@ -1,0 +1,889 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 13 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 13 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 13 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-13-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-13-lesson-5/assets/skills-time-ff2-unit13-apple-farm-letter.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 13 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-13-lesson-5/">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: rgba(255, 227, 107, 0.2);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 13 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit13-apple-farm-letter.png" alt="Skills Time Lesson Five Apple Farm school trip letter worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ và cấu trúc để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>dear</span> - thân gửi, thân mến; dùng ở đầu thư.</li>
+        <li><span>parent / parents</span> - phụ huynh / các phụ huynh.</li>
+        <li><span>Dear Parents</span> - kính gửi quý phụ huynh.</li>
+        <li><span>happy</span> - vui, hạnh phúc.</li>
+        <li><span>say</span> - nói, cho biết.</li>
+        <li><span>there</span> - ở đó; trong <em>There is / There are</em>: có.</li>
+        <li><span>trip</span> - chuyến đi.</li>
+        <li><span>trip to + địa điểm</span> - chuyến đi đến đâu.</li>
+        <li><span>Apple Farm</span> - Nông trại Apple; tên địa điểm.</li>
+        <li><span>all</span> - tất cả.</li>
+        <li><span>child / children</span> - một đứa trẻ / những đứa trẻ.</li>
+        <li><span>class</span> - lớp học.</li>
+        <li><span>Class 2S</span> - lớp 2S.</li>
+        <li><span>Wednesday</span> - thứ Tư.</li>
+        <li><span>on this trip</span> - trong chuyến đi này.</li>
+        <li><span>learn</span> - học, tìm hiểu.</li>
+        <li><span>learn about</span> - tìm hiểu về.</li>
+        <li><span>farm</span> - nông trại.</li>
+        <li><span>life</span> - cuộc sống.</li>
+        <li><span>farm life</span> - cuộc sống ở nông trại.</li>
+        <li><span>have fun</span> - vui chơi.</li>
+        <li><span>open</span> - mở, thoáng.</li>
+        <li><span>air</span> - không khí.</li>
+        <li><span>open air</span> - không khí ngoài trời.</li>
+        <li><span>in the open air</span> - ở ngoài trời.</li>
+        <li><span>lots of</span> - nhiều, rất nhiều.</li>
+        <li><span>animal / animals</span> - con vật / những con vật.</li>
+        <li><span>morning</span> - buổi sáng.</li>
+        <li><span>in the morning</span> - vào buổi sáng.</li>
+        <li><span>feed</span> - cho ăn.</li>
+        <li><span>hen / hens</span> - gà mái / những con gà mái.</li>
+        <li><span>duck / ducks</span> - con vịt / những con vịt.</li>
+        <li><span>also</span> - cũng, còn.</li>
+        <li><span>cow / cows</span> - con bò / những con bò.</li>
+        <li><span>horse / horses</span> - con ngựa / những con ngựa.</li>
+        <li><span>goat / goats</span> - con dê / những con dê.</li>
+        <li><span>farmer</span> - người nông dân.</li>
+        <li><span>Mr + họ/tên</span> - ông/ngài ... <em>Mr James.</em></li>
+        <li><span>friendly</span> - thân thiện.</li>
+        <li><span>teach / teaches</span> - dạy; <em>teaches</em> dùng với chủ ngữ số ít ngôi thứ ba.</li>
+        <li><span>where</span> - ở đâu, nơi mà.</li>
+        <li><span>food</span> - thức ăn.</li>
+        <li><span>come / comes</span> - đến, bắt nguồn; <em>comes</em> dùng với chủ ngữ số ít.</li>
+        <li><span>come from</span> - đến từ, có nguồn gốc từ.</li>
+        <li><span>ride</span> - đi/cưỡi trên phương tiện hoặc con vật.</li>
+        <li><span>ride in</span> - ngồi và đi trong một phương tiện.</li>
+        <li><span>his</span> - của anh ấy/ông ấy.</li>
+        <li><span>big</span> - lớn, to.</li>
+        <li><span>tractor</span> - máy kéo.</li>
+        <li><span>always</span> - luôn luôn.</li>
+        <li><span>very</span> - rất.</li>
+        <li><span>popular</span> - phổ biến, được yêu thích.</li>
+        <li><span>travel / travelling</span> - đi lại, du lịch / đang di chuyển.</li>
+        <li><span>school bus</span> - xe buýt trường học.</li>
+        <li><span>coach</span> - xe khách, xe buýt đường dài.</li>
+        <li><span>go / goes</span> - đi, chạy; <em>goes</em> dùng với chủ ngữ số ít.</li>
+        <li><span>o'clock</span> - giờ đúng.</li>
+        <li><span>at 9 o'clock</span> - lúc 9 giờ.</li>
+        <li><span>so</span> - vì vậy, cho nên.</li>
+        <li><span>please</span> - vui lòng, làm ơn.</li>
+        <li><span>don't</span> - đừng, không; dạng viết tắt của <em>do not</em>.</li>
+        <li><span>late</span> - muộn, trễ.</li>
+        <li><span>be late</span> - đến muộn.</li>
+        <li><span>bring</span> - mang theo, đem đến.</li>
+        <li><span>lunch</span> - bữa trưa.</li>
+        <li><span>lunch box / lunch boxes</span> - hộp đựng bữa trưa / những hộp đựng bữa trưa.</li>
+        <li><span>drink / drinks</span> - đồ uống / các đồ uống.</li>
+        <li><span>boot / boots</span> - chiếc ủng / đôi ủng.</li>
+        <li><span>as</span> - vì, bởi vì; nêu lý do.</li>
+        <li><span>muddy</span> - lầy lội, nhiều bùn.</li>
+        <li><span>sunny</span> - có nắng.</li>
+        <li><span>sun</span> - mặt trời, ánh nắng.</li>
+        <li><span>hat</span> - chiếc mũ.</li>
+        <li><span>sun hat</span> - mũ che nắng.</li>
+        <li><span>too</span> - cũng; thường đặt ở cuối câu.</li>
+        <li><span>here</span> - ở đây.</li>
+        <li><span>some</span> - một số, vài.</li>
+        <li><span>photo / photos</span> - bức ảnh / những bức ảnh.</li>
+        <li><span>last</span> - trước, vừa qua; cuối cùng.</li>
+        <li><span>year</span> - năm.</li>
+        <li><span>last year</span> - năm ngoái.</li>
+        <li><span>last year's trip</span> - chuyến đi của năm ngoái.</li>
+        <li><span>Best wishes</span> - lời chúc tốt đẹp; cách kết thư.</li>
+        <li><span>Mrs + họ/tên</span> - bà/cô ... <em>Mrs Evans.</em></li>
+        <li><span>teacher</span> - giáo viên.</li>
+        <li><span>class teacher</span> - giáo viên chủ nhiệm.</li>
+        <li><span>picture / pictures</span> - bức tranh/ảnh / những bức tranh/ảnh.</li>
+        <li><span>look at the pictures</span> - nhìn vào những bức tranh.</li>
+        <li><span>What animals can you see?</span> - Con có thể nhìn thấy những con vật nào?</li>
+        <li><span>listen and read</span> - nghe và đọc.</li>
+        <li><span>be happy to + động từ nguyên mẫu</span> - vui khi làm/thông báo việc gì. <em>We are happy to say ...</em></li>
+        <li><span>say that + mệnh đề</span> - nói/thông báo rằng ...</li>
+        <li><span>There is + danh từ số ít</span> - có một ... <em>There is a trip.</em></li>
+        <li><span>There are + danh từ số nhiều</span> - có nhiều ... <em>There are lots of animals.</em></li>
+        <li><span>a + danh từ số ít</span> - một ... <em>a trip, a farm, a sun hat.</em></li>
+        <li><span>for + người</span> - dành cho ai. <em>for all the children.</em></li>
+        <li><span>all the + danh từ số nhiều</span> - tất cả những ...</li>
+        <li><span>in + lớp/địa điểm</span> - ở trong lớp/nơi nào. <em>in Class 2S.</em></li>
+        <li><span>be on + thứ/ngày</span> - diễn ra vào ngày nào. <em>The trip is on Wednesday.</em></li>
+        <li><span>learn about + danh từ</span> - tìm hiểu về điều gì.</li>
+        <li><span>have fun in/at + địa điểm</span> - vui chơi ở đâu.</li>
+        <li><span>lots of + danh từ số nhiều</span> - rất nhiều ... <em>lots of animals.</em></li>
+        <li><span>can + động từ nguyên mẫu</span> - có thể làm gì. <em>can feed, can see, can ride.</em></li>
+        <li><span>feed + con vật</span> - cho con vật nào ăn.</li>
+        <li><span>can also + động từ nguyên mẫu</span> - cũng có thể làm gì.</li>
+        <li><span>liệt kê: A, B and C</span> - liệt kê nhiều người/vật, dùng <em>and</em> trước mục cuối.</li>
+        <li><span>danh từ, tên riêng, + động từ</span> - tên riêng bổ sung cho danh từ. <em>The farmer, Mr James, is ...</em></li>
+        <li><span>be + tính từ</span> - miêu tả đặc điểm. <em>is friendly, be muddy, is sunny.</em></li>
+        <li><span>chủ ngữ số ít + động từ-s/-es</span> - hiện tại đơn. <em>He teaches; food comes; the coach goes.</em></li>
+        <li><span>teach + người + about + danh từ</span> - dạy ai về điều gì.</li>
+        <li><span>about where + mệnh đề</span> - về nơi/nguồn mà ... <em>about where food comes from.</em></li>
+        <li><span>ride in + tính từ sở hữu + phương tiện</span> - đi trong phương tiện của ai. <em>ride in his tractor.</em></li>
+        <li><span>tính từ sở hữu + tính từ + danh từ</span> - <em>his big tractor.</em></li>
+        <li><span>This is ...</span> - điều này/cái này là ...</li>
+        <li><span>be + always + tính từ</span> - luôn luôn có đặc điểm gì. <em>This is always very popular.</em></li>
+        <li><span>am / is / are + động từ-ing</span> - thì hiện tại tiếp diễn. <em>We are travelling.</em></li>
+        <li><span>travel by + phương tiện</span> - đi bằng phương tiện gì.</li>
+        <li><span>by + phương tiện</span> - bằng ... <em>by school bus.</em></li>
+        <li><span>at + giờ</span> - vào lúc mấy giờ. <em>at 9 o'clock.</em></li>
+        <li><span>mệnh đề 1, so + mệnh đề 2</span> - vì vậy/cho nên; nêu kết quả.</li>
+        <li><span>please + động từ nguyên mẫu</span> - vui lòng làm gì; câu yêu cầu lịch sự.</li>
+        <li><span>don't + động từ nguyên mẫu</span> - đừng làm gì. <em>don't be late.</em></li>
+        <li><span>bring + đồ vật</span> - mang theo thứ gì.</li>
+        <li><span>Also + động từ nguyên mẫu</span> - cũng hãy làm gì. <em>Also bring boots.</em></li>
+        <li><span>as + mệnh đề</span> - vì/bởi vì ...; nêu nguyên nhân.</li>
+        <li><span>can be + tính từ</span> - có thể có đặc điểm gì. <em>can be muddy.</em></li>
+        <li><span>It is + tính từ + at + địa điểm</span> - thời tiết/đặc điểm ở một nơi. <em>It is sunny at the farm.</em></li>
+        <li><span>... too</span> - ... cũng vậy; <em>too</em> đặt cuối câu.</li>
+        <li><span>Here are + danh từ số nhiều</span> - đây là những ... <em>Here are some photos.</em></li>
+        <li><span>some + danh từ số nhiều</span> - một vài/một số ...</li>
+        <li><span>danh từ sở hữu + 's</span> - của ai/của thời điểm nào. <em>last year's trip.</em></li>
+        <li><span>danh từ số nhiều</span> - thường thêm <strong>-s/-es</strong>. <em>animals, hens, ducks, horses, boxes.</em></li>
+        <li><span>danh từ số nhiều bất quy tắc</span> - <em>child → children.</em></li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-142-ff2-unit13-user-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script src="assets/word-timings.js?v=1"></script>
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "Dear Parents,",
+          start: 0.965,
+          end: 2.365,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Dear Parents</strong>,</span>"
+        },
+        {
+          text: "We are happy to say that there is a trip to Apple Farm for all the children in Class 2S.",
+          start: 3.430,
+          end: 12.225,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">We are happy to say that <strong>there is a trip to Apple Farm</strong> for all the children in Class 2S.</span>"
+        },
+        {
+          text: "The trip is on Wednesday.",
+          start: 13.250,
+          end: 15.390,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>The trip is on Wednesday</strong>.</span>"
+        },
+        {
+          text: "On this trip, the children learn about farm life and have fun in the open air.",
+          start: 16.915,
+          end: 24.460,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">On this trip, the children <strong>learn about farm life</strong> and <strong>have fun in the open air</strong>.</span>"
+        },
+        {
+          text: "There are lots of animals on the farm.",
+          start: 26.040,
+          end: 29.215,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>There are lots of animals</strong> on the farm.</span>"
+        },
+        {
+          text: "In the morning, the children can feed the hens and the ducks.",
+          start: 30.390,
+          end: 35.955,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">In the morning, the children can <strong>feed the hens and the ducks</strong>.</span>"
+        },
+        {
+          text: "They can also see the cows, horses and goats.",
+          start: 37.315,
+          end: 42.800,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">They <strong>can also see</strong> the cows, horses and goats.</span>"
+        },
+        {
+          text: "The farmer, Mr James, is very friendly.",
+          start: 44.815,
+          end: 49.555,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The farmer, Mr James, <strong>is very friendly</strong>.</span>"
+        },
+        {
+          text: "He teaches the children about life on the farm and about where food comes from.",
+          start: 50.715,
+          end: 58.045,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">He <strong>teaches the children about</strong> life on the farm and about <strong>where food comes from</strong>.</span>"
+        },
+        {
+          text: "The children can also ride in his big tractor.",
+          start: 59.510,
+          end: 63.715,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The children <strong>can also ride in his big tractor</strong>.</span>"
+        },
+        {
+          text: "This is always very popular.",
+          start: 64.680,
+          end: 67.410,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>This is always very popular</strong>.</span>"
+        },
+        {
+          text: "We are travelling by school bus.",
+          start: 69.475,
+          end: 72.315,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>We are travelling by school bus</strong>.</span>"
+        },
+        {
+          text: "The coach goes at 9 o'clock, so please don't be late.",
+          start: 73.355,
+          end: 79.040,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The coach <strong>goes at 9 o'clock</strong>, so please <strong>don't be late</strong>.</span>"
+        },
+        {
+          text: "Please bring lunch boxes and drinks.",
+          start: 80.615,
+          end: 83.815,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Please bring</strong> lunch boxes and drinks.</span>"
+        },
+        {
+          text: "Also bring boots, as the farm can be muddy!",
+          start: 85.525,
+          end: 90.740,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Also bring boots</strong>, as the farm <strong>can be muddy</strong>!</span>"
+        },
+        {
+          text: "It is also sunny at the farm, so bring a sun hat too.",
+          start: 92.375,
+          end: 98.010,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It is also <strong>sunny at the farm</strong>, so <strong>bring a sun hat</strong> too.</span>"
+        },
+        {
+          text: "Here are some photos of last year's trip.",
+          start: 99.555,
+          end: 102.895,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Here are some photos</strong> of last year's trip.</span>"
+        },
+        {
+          text: "Best wishes,",
+          start: 104.485,
+          end: 105.525,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Best wishes</strong>,</span>"
+        },
+        {
+          text: "Mrs Evans, Class Teacher (Class 2S)",
+          start: 105.960,
+          end: 111.110,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Mrs Evans</strong>, Class Teacher (Class 2S)</span>"
+        }
+      ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
+          reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        updateWordHighlight(time, activeIndex);
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = lines.length - 1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
