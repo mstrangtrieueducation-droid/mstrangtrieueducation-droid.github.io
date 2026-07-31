@@ -6,13 +6,13 @@
   <title>Family &amp; Friends 1 - Unit 13 - Lesson 5</title>
   <meta name="description" content="Family &amp; Friends 1 - Unit 13 - Lesson 5. Nghe - &#272;&#7885;c - D&#7883;ch.">
   <meta property="og:title" content="Family &amp; Friends 1 - Unit 13 - Lesson 5">
-  <meta property="og:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo d&#242;ng m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
+  <meta property="og:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo t&#7915;ng t&#7915; m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-13-lesson-5/">
   <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-13-lesson-5/assets/skills-time-lesson-five-bedroom-letter.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Family &amp; Friends 1 - Unit 13 - Lesson 5">
-  <meta name="twitter:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo d&#242;ng m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
+  <meta name="twitter:description" content="Nghe - &#272;&#7885;c - D&#7883;ch. Luy&#7879;n &#273;&#7885;c theo t&#7915;ng t&#7915; m&#224;u v&#224;ng v&#224; t&#7921; d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t.">
   <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-13-lesson-5/">
   <style>
     :root {
@@ -195,10 +195,25 @@
     }
 
     .reading-line.active {
-      background: var(--yellow);
+      background: rgba(255, 227, 107, 0.2);
       color: var(--ink);
       font-weight: 900;
       transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
     }
 
     .line-num {
@@ -344,7 +359,7 @@
         <section class="guide" aria-label="Vietnamese instructions">
       <h2>H&#432;&#7899;ng d&#7851;n tr&#7843; b&#224;i</h2>
       <ol>
-        <li>B&#7845;m <strong>Nghe</strong> &#273;&#7875; luy&#7879;n &#273;&#7885;c theo d&#242;ng m&#224;u v&#224;ng.</li>
+        <li>B&#7845;m <strong>Nghe</strong> &#273;&#7875; luy&#7879;n &#273;&#7885;c theo t&#7915;ng t&#7915; m&#224;u v&#224;ng.</li>
         <li>Nghe nhi&#7873;u l&#7847;n &#273;&#7875; luy&#7879;n ph&#225;t &#226;m &#273;&#250;ng, ng&#7919; &#273;i&#7879;u bi&#7875;u c&#7843;m.</li>
         <li>Khi tr&#7843; b&#224;i, con c&#243; th&#7875; quay m&#224;n h&#236;nh v&#224; &#273;&#7885;c theo.</li>
         <li>Sau &#273;&#243;, con d&#7883;ch b&#224;i sang Ti&#7871;ng Vi&#7879;t - D&#7883;ch s&#225;t ngh&#297;a - t&#7889;c &#273;&#7897; &#273;&#7911; nhanh.</li>
@@ -399,118 +414,132 @@
     <audio id="track" src="assets/track-139-unit13-clean-1p0-v2.mp3?v=2" preload="auto"></audio>
   </main>
 
+  <script src="assets/word-timings.js?v=1"></script>
   <script>
     (() => {
       const lines = [
         {
           text: "Dear Junior Magazine,",
-          start: 0.85,
-          end: 2.52,
+          start: 0.82,
+          end: 2.61,
           html: "<span class=\"line-num\">1</span><span class=\"line-text\">Dear Junior Magazine,</span>"
         },
         {
           text: "This is a picture of my bedroom.",
-          start: 4.10,
-          end: 6.61,
+          start: 4.07,
+          end: 6.67,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">This is a <strong>picture</strong> of my <strong>bedroom</strong>.</span>"
         },
         {
           text: "There is a bed in my bedroom.",
-          start: 7.98,
-          end: 9.88,
+          start: 7.96,
+          end: 9.96,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">There is a <strong>bed</strong> in my <strong>bedroom</strong>.</span>"
         },
         {
           text: "There are lots of footballs on my blanket and pillow.",
-          start: 11.40,
-          end: 15.08,
+          start: 11.37,
+          end: 15.15,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">There are <strong>lots of footballs</strong> on my <strong>blanket</strong> and <strong>pillow</strong>.</span>"
         },
         {
           text: "There is a book shelf.",
-          start: 16.64,
-          end: 17.82,
+          start: 16.61,
+          end: 17.83,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">There is a <strong>book shelf</strong>.</span>"
         },
         {
           text: "I have got twelve books on my shelf.",
-          start: 19.67,
-          end: 22.12,
+          start: 19.64,
+          end: 22.20,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I have got twelve books on my <strong>shelf</strong>.</span>"
         },
         {
           text: "Four books are about football.",
-          start: 23.58,
-          end: 25.46,
+          start: 23.61,
+          end: 25.53,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Four books are about <strong>football</strong>.</span>"
         },
         {
           text: "My clothes are in my cupboard.",
-          start: 27.37,
-          end: 29.47,
+          start: 27.34,
+          end: 29.55,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">My <strong>clothes</strong> are in my <strong>cupboard</strong>.</span>"
         },
         {
           text: "My favourite clothes are my red shorts",
-          start: 30.62,
-          end: 32.30,
+          start: 30.83,
+          end: 32.56,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">My favourite clothes are my <span class=\"red-word\">red shorts</span></span>"
         },
         {
           text: "and red T-shirt for football.",
-          start: 32.86,
-          end: 34.40,
+          start: 33.03,
+          end: 34.67,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">and <span class=\"red-word\">red T-shirt</span> for <strong>football</strong>.</span>"
         },
         {
           text: "I have got lots of toys",
-          start: 35.00,
-          end: 36.28,
+          start: 35.18,
+          end: 36.54,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I have got lots of <strong>toys</strong></span>"
         },
         {
           text: "and a big toy box.",
-          start: 36.66,
-          end: 37.58,
+          start: 36.84,
+          end: 37.83,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">and a big <strong>toy box</strong>.</span>"
         },
         {
           text: "There is a blue rug next to my bed.",
-          start: 39.30,
-          end: 41.65,
+          start: 39.52,
+          end: 41.91,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">There is a blue <strong>rug</strong> <strong>next to</strong> my <strong>bed</strong>.</span>"
         },
         {
           text: "There are footballs on my rug too!",
-          start: 42.15,
-          end: 44.02,
+          start: 42.36,
+          end: 44.25,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">There are footballs on my <strong>rug</strong> <strong>too</strong>!</span>"
         },
         {
           text: "I like my bedroom and",
-          start: 45.30,
-          end: 47.35,
+          start: 45.53,
+          end: 47.65,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like my <strong>bedroom</strong> and</span>"
         },
         {
           text: "I like football!",
-          start: 48.72,
-          end: 50.75,
+          start: 48.95,
+          end: 51.05,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">I like <strong>football</strong>!</span>"
         },
         {
           text: "Bye!",
-          start: 52.48,
-          end: 53.95,
+          start: 52.70,
+          end: 54.23,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Bye!</span>"
         },
         {
           text: "From Jamie (age 7).",
-          start: 54.62,
-          end: 60.95,
+          start: 54.85,
+          end: 61.20,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">From Jamie (age 7).</span>"
         }
       ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
 
       const practiceSpeed = 1;
       const highlightLead = 0;
@@ -525,15 +554,82 @@
       let activeLine = -1;
       let doneThrough = -1;
 
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
       function renderReading() {
         reading.innerHTML = "";
         lines.forEach((line, index) => {
           const row = document.createElement("p");
-          row.className = "reading-line clickable";
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
           row.dataset.index = String(index);
           row.innerHTML = line.html;
-          row.addEventListener("click", () => playOneLine(index));
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
           reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
         });
       }
 
@@ -560,6 +656,8 @@
             row.classList.add("done");
           }
         });
+
+        updateWordHighlight(time, activeIndex);
 
         if (mode === "idle") {
           status.textContent = "S\u1eb5n s\u00e0ng";
@@ -657,6 +755,7 @@
       track.addEventListener("ended", () => {
         mode = "idle";
         activeLine = -1;
+        doneThrough = lines.length - 1;
         stop.disabled = true;
         status.textContent = "Xong b\u00e0i";
         updateHighlight();
