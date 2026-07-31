@@ -404,12 +404,6 @@
     (() => {
       const lines = [
         {
-          text: "Track 34. Listen and read.",
-          start: 0.00,
-          end: 3.45,
-          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Track 34. <strong>Listen and read.</strong></span>"
-        },
-        {
           text: "Outdoor Toys",
           start: 3.60,
           end: 4.20,
@@ -599,7 +593,7 @@
         activeLine = -1;
         doneThrough = -1;
         track.pause();
-        track.currentTime = lines[0].start;
+        track.currentTime = 0;
         track.playbackRate = practiceSpeed;
         stop.disabled = false;
         updateHighlight();
