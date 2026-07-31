@@ -1,0 +1,662 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 5 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 5 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 5 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-5-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-5-lesson-5/assets/skills-time-ff2-unit5-computer-room.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 5 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-5-lesson-5/">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: var(--yellow);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 5 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo dòng màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit5-computer-room.png" alt="Skills Time Lesson Five computer room worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>computer room</span> - phòng máy tính.</li>
+        <li><span>computer</span> - máy tính.</li>
+        <li><span>headphones</span> - tai nghe.</li>
+        <li><span>pupil</span> - học sinh.</li>
+        <li><span>listen</span> - nghe.</li>
+        <li><span>speak</span> - nói.</li>
+        <li><span>study</span> - học.</li>
+        <li><span>English</span> - môn Tiếng Anh.</li>
+        <li><span>music</span> - môn Âm nhạc.</li>
+        <li><span>maths</span> - môn Toán.</li>
+        <li><span>science</span> - môn Khoa học.</li>
+        <li><span>art</span> - môn Mĩ thuật.</li>
+        <li><span>draw</span> - vẽ.</li>
+        <li><span>colour</span> - tô màu.</li>
+        <li><span>read and write</span> - đọc và viết.</li>
+        <li><span>Primary 2</span> - lớp 2 tiểu học.</li>
+        <li><span>Tuesday</span> - thứ Ba.</li>
+        <li><span>Thursday</span> - thứ Năm.</li>
+        <li><span>Everyone</span> - mọi người; tất cả mọi người.</li>
+        <li><span>at our school</span> - ở trường của chúng em/chúng mình.</li>
+        <li><span>We've got ...</span> - Chúng mình/trường mình có... <em>We've got 12 computers = Chúng mình có 12 máy tính.</em></li>
+        <li><span>have got ...</span> - có... <em>The computers have got headphones = Các máy tính có tai nghe.</em></li>
+        <li><span>one for every pupil</span> - mỗi học sinh một cái.</li>
+        <li><span>so ...</span> - vì vậy... <em>so the pupils can listen and speak = vì vậy học sinh có thể nghe và nói.</em></li>
+        <li><span>can + động từ</span> - có thể làm gì. <em>can study = có thể học.</em></li>
+        <li><span>help ... to ...</span> - giúp ai làm gì. <em>help the pupils to read and write = giúp học sinh đọc và viết.</em></li>
+        <li><span>come to ...</span> - đến... <em>come to the computer room = đến phòng máy tính.</em></li>
+        <li><span>here too</span> - ở đây nữa.</li>
+        <li><span>every Tuesday and Thursday</span> - vào mỗi thứ Ba và thứ Năm.</li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-56-ff2-unit5-clean-0p8-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "Our Computer Room",
+          start: 3.78,
+          end: 4.93,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>Our Computer Room</strong></span>"
+        },
+        {
+          text: "At our school we've got a big computer room.",
+          start: 5.59,
+          end: 8.22,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">At our school we've got a big <strong>computer room</strong>.</span>"
+        },
+        {
+          text: "We've got 12 computers in the room, one for every pupil.",
+          start: 9.17,
+          end: 12.62,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">We've got 12 <strong>computers</strong> in the room, one for every <strong>pupil</strong>.</span>"
+        },
+        {
+          text: "The computers have got headphones,",
+          start: 13.49,
+          end: 16.06,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">The computers have got <strong>headphones</strong>,</span>"
+        },
+        {
+          text: "so the pupils can listen and speak.",
+          start: 17.38,
+          end: 19.96,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">so the pupils can <strong>listen</strong> and <strong>speak</strong>.</span>"
+        },
+        {
+          text: "In the computer room, the pupils can study",
+          start: 20.63,
+          end: 23.81,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">In the computer room, the pupils can <strong>study</strong></span>"
+        },
+        {
+          text: "English, music, maths and science.",
+          start: 25.50,
+          end: 29.63,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>English</strong>, <strong>music</strong>, <strong>maths</strong> and <strong>science</strong>.</span>"
+        },
+        {
+          text: "They do art here too.",
+          start: 30.36,
+          end: 32.90,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">They do <strong>art</strong> here too.</span>"
+        },
+        {
+          text: "They can draw and colour",
+          start: 33.88,
+          end: 35.15,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">They can <strong>draw</strong> and <strong>colour</strong></span>"
+        },
+        {
+          text: "pictures with the computer.",
+          start: 36.34,
+          end: 38.24,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">pictures with the <strong>computer</strong>.</span>"
+        },
+        {
+          text: "The computers also help the pupils to read and write.",
+          start: 39.49,
+          end: 43.45,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">The computers also help the pupils to <strong>read and write</strong>.</span>"
+        },
+        {
+          text: "In Primary 2,",
+          start: 44.91,
+          end: 45.88,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">In <strong>Primary 2</strong>,</span>"
+        },
+        {
+          text: "the children come to the computer room",
+          start: 46.21,
+          end: 49.96,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">the children come to the <strong>computer room</strong></span>"
+        },
+        {
+          text: "every Tuesday and Thursday.",
+          start: 51.78,
+          end: 59.41,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">every <strong>Tuesday</strong> and <strong>Thursday</strong>.</span>"
+        },
+        {
+          text: "Everyone likes these lessons.",
+          start: 60.76,
+          end: 63.23,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>Everyone</strong> likes these lessons.</span>"
+        }
+      ];
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = "reading-line clickable";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          row.addEventListener("click", () => playOneLine(index));
+          reading.append(row);
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
+
