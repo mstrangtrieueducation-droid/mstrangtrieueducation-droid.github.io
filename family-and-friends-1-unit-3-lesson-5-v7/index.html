@@ -113,6 +113,21 @@
       font-weight: 800;
     }
 
+    .fine-tune {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-left: auto;
+    }
+
+    .fine-tune-label {
+      min-width: 92px;
+      color: var(--muted);
+      font-weight: 900;
+      text-align: center;
+    }
+
     .sync-panel[hidden] {
       display: none;
     }
@@ -419,6 +434,13 @@
       <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
     </section>
 
+    <section class="controls fine-tune" aria-label="Highlight timing">
+      <span id="offsetLabel" class="fine-tune-label">Sync 0.00s</span>
+      <button id="offsetEarlier" type="button">Vàng sớm hơn</button>
+      <button id="offsetLater" type="button">Vàng muộn hơn</button>
+      <button id="offsetReset" type="button">Reset</button>
+    </section>
+
     <section id="syncPanel" class="sync-panel" aria-label="Karaoke sync" hidden>
       <div class="sync-toolbar">
         <button id="syncStart" class="primary" type="button">Sync</button>
@@ -595,6 +617,11 @@
       const stop = document.getElementById("stop");
       const bigScreen = document.getElementById("bigScreen");
       const status = document.getElementById("status");
+      const offsetStorageKey = "unit-3-lesson-5-v7-highlight-offset";
+      const offsetLabel = document.getElementById("offsetLabel");
+      const offsetEarlier = document.getElementById("offsetEarlier");
+      const offsetLater = document.getElementById("offsetLater");
+      const offsetReset = document.getElementById("offsetReset");
       const syncEnabled = new URLSearchParams(window.location.search).has("sync");
       const syncStorageKey = "unit-3-lesson-5-v7-sync-waveform-1";
       const syncPanel = document.getElementById("syncPanel");
@@ -617,6 +644,41 @@
       let waveformPeaks = [];
       let waveformDuration = 0;
       let waveformReady = false;
+      let highlightOffset = getStoredHighlightOffset();
+
+      function getStoredHighlightOffset() {
+        try {
+          const value = Number(localStorage.getItem(offsetStorageKey));
+          return Number.isFinite(value) ? Math.max(-1.5, Math.min(1.5, value)) : 0;
+        } catch (error) {
+          return 0;
+        }
+      }
+
+      function formatOffset(value) {
+        return `${value >= 0 ? "+" : ""}${value.toFixed(2)}s`;
+      }
+
+      function updateOffsetLabel() {
+        offsetLabel.textContent = `Sync ${formatOffset(highlightOffset)}`;
+        offsetEarlier.title = "Make yellow highlight earlier";
+        offsetLater.title = "Make yellow highlight later";
+      }
+
+      function setHighlightOffset(value) {
+        highlightOffset = Math.max(-1.5, Math.min(1.5, Number(value) || 0));
+        try {
+          localStorage.setItem(offsetStorageKey, highlightOffset.toFixed(2));
+        } catch (error) {
+          // Local storage can be unavailable in private browsing.
+        }
+        updateOffsetLabel();
+        updateHighlight();
+      }
+
+      function nudgeHighlightOffset(delta) {
+        setHighlightOffset(Number((highlightOffset + delta).toFixed(2)));
+      }
 
       function renderReading() {
         reading.innerHTML = "";
@@ -637,7 +699,7 @@
       }
 
       function updateHighlight() {
-        const time = track.currentTime;
+        const time = track.currentTime + highlightOffset;
         let activeIndex = -1;
 
         drawSyncWaveform();
@@ -803,7 +865,7 @@
         }
 
         lines.forEach((line, index) => {
-          const triggerTime = Math.max(0, line.start - highlightLead);
+          const triggerTime = Math.max(0, line.start - highlightLead - highlightOffset);
           const x = (triggerTime / duration) * width;
           ctx.strokeStyle = index === syncIndex ? "#d94f86" : recordedStarts[index] ? "#2f855a" : "rgba(31, 104, 68, 0.45)";
           ctx.lineWidth = index === syncIndex ? 3 : 1.5;
@@ -873,7 +935,7 @@
         }
 
         const triggerTime = Math.max(0, time);
-        const cueStart = triggerTime + highlightLead;
+        const cueStart = triggerTime + highlightLead + highlightOffset;
 
         if (syncIndex > 0) {
           const previous = lines[syncIndex - 1];
@@ -959,7 +1021,7 @@
         const line = lines[syncIndex] || lines[lines.length - 1];
         const current = Math.min(syncIndex + 1, lines.length);
         const state = syncActive ? "Recording" : "Ready";
-        syncStatus.textContent = `${state}: ${current}/${lines.length} - ${line.text}`;
+        syncStatus.textContent = `${state}: ${current}/${lines.length} - ${line.text} - offset ${formatOffset(highlightOffset)}`;
       }
 
       function startSyncRecording() {
@@ -996,7 +1058,7 @@
         }
 
         const tapTime = track.currentTime;
-        const cueStart = Math.max(0, tapTime + highlightLead);
+        const cueStart = Math.max(0, tapTime + highlightLead + highlightOffset);
 
         if (syncIndex > 0) {
           const previous = lines[syncIndex - 1];
@@ -1042,7 +1104,7 @@
           recordedStarts[syncIndex] = false;
           syncIndex -= 1;
           recordedStarts[syncIndex] = false;
-          track.currentTime = Math.max(0, lines[syncIndex].start - highlightLead - 0.3);
+          track.currentTime = Math.max(0, lines[syncIndex].start - highlightLead - highlightOffset - 0.3);
           updateSyncStatus();
           paintSyncState();
           updateHighlight();
@@ -1083,6 +1145,10 @@
 
       play.addEventListener("click", playWholeTrack);
       stop.addEventListener("click", () => stopAudio());
+
+      offsetEarlier.addEventListener("click", () => nudgeHighlightOffset(0.10));
+      offsetLater.addEventListener("click", () => nudgeHighlightOffset(-0.10));
+      offsetReset.addEventListener("click", () => setHighlightOffset(0));
 
       syncStart.addEventListener("click", startSyncRecording);
       syncTap.addEventListener("click", recordSyncTap);
@@ -1151,6 +1217,7 @@
       });
 
       applySavedSyncTimings();
+      updateOffsetLabel();
       renderReading();
       initSyncMode();
       track.playbackRate = practiceSpeed;
