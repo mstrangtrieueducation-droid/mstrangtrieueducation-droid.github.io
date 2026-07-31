@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 1 - Unit 10 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 1 - Unit 10 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 1 - Unit 10 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-10-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-10-lesson-5/assets/skills-time-lesson-five-four-friends.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 1 - Unit 10 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-10-lesson-5/">
+  <style>
+    :root {
+      --bg: #eef4fb;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e0ea;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --blue: #24579a;
+      --blue-soft: #cbdcf2;
+      --yellow: #ffe36b;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(36, 87, 154, 0.16), rgba(47, 133, 90, 0.10)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e8edf4;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 54px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.16rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: var(--yellow);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-size: 0.95rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue-word {
+      color: var(--blue);
+      font-weight: 900;
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.5rem;
+      min-height: 62px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 1 - Unit 10 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo dòng màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-lesson-five-four-friends.png" alt="Skills Time Lesson Five four friends worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>photo</span> - bức ảnh.</li>
+        <li><span>friends</span> - những người bạn.</li>
+        <li><span>roundabout</span> - vòng xoay trong sân chơi/công viên.</li>
+        <li><span>park</span> - công viên.</li>
+        <li><span>great</span> - tuyệt vời.</li>
+        <li><span>best friend</span> - bạn thân nhất.</li>
+        <li><span>brown hair</span> - tóc nâu.</li>
+        <li><span>long</span> - dài.</li>
+        <li><span>curly</span> - xoăn.</li>
+        <li><span>little brother</span> - em trai.</li>
+        <li><span>quite short</span> - khá thấp; khá lùn.</li>
+        <li><span>black, short hair</span> - tóc đen, ngắn.</li>
+        <li><span>tall</span> - cao.</li>
+        <li><span>blond hair</span> - tóc vàng hoe.</li>
+        <li><span>eyes</span> - đôi mắt.</li>
+        <li><span>cousin</span> - anh/chị/em họ.</li>
+        <li><span>straight hair</span> - tóc thẳng.</li>
+        <li><span>write soon</span> - sớm viết thư lại nhé.</li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-109-unit10-clean-0p8-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "Dear Beth,",
+          start: 0.70,
+          end: 2.05,
+          html: "<span class=\"line-num\">1</span><span class=\"line-text\">Dear Beth,</span>"
+        },
+        {
+          text: "This is a photo of me with my four friends.",
+          start: 3.20,
+          end: 7.30,
+          html: "<span class=\"line-num\">2</span><span class=\"line-text\">This is a <strong>photo</strong> of me<br>with my four <strong>friends</strong>.</span>"
+        },
+        {
+          text: "We are on a roundabout at the park.",
+          start: 8.60,
+          end: 11.75,
+          html: "<span class=\"line-num\">3</span><span class=\"line-text\">We are on a <strong>roundabout</strong><br>at the <strong>park</strong>.</span>"
+        },
+        {
+          text: "All my friends are great.",
+          start: 13.45,
+          end: 15.75,
+          html: "<span class=\"line-num\">4</span><span class=\"line-text\">All my friends are <strong>great</strong>.</span>"
+        },
+        {
+          text: "Emily is my best friend.",
+          start: 17.75,
+          end: 20.85,
+          html: "<span class=\"line-num\">5</span><span class=\"line-text\">Emily is my <strong>best friend</strong>.</span>"
+        },
+        {
+          text: "She's got brown hair.",
+          start: 21.95,
+          end: 24.05,
+          html: "<span class=\"line-num\">6</span><span class=\"line-text\">She's got <strong>brown hair</strong>.</span>"
+        },
+        {
+          text: "It's long and curly.",
+          start: 24.75,
+          end: 27.50,
+          html: "<span class=\"line-num\">7</span><span class=\"line-text\">It's <strong>long</strong> and <strong>curly</strong>.</span>"
+        },
+        {
+          text: "Charlie is Emily's little brother.",
+          start: 29.10,
+          end: 32.10,
+          html: "<span class=\"line-num\">8</span><span class=\"line-text\">Charlie is Emily's <strong>little brother</strong>.</span>"
+        },
+        {
+          text: "He's five.",
+          start: 33.35,
+          end: 34.90,
+          html: "<span class=\"line-num\">9</span><span class=\"line-text\">He's five.</span>"
+        },
+        {
+          text: "He's quite short",
+          start: 36.15,
+          end: 38.05,
+          html: "<span class=\"line-num\">10</span><span class=\"line-text\">He's <strong>quite short</strong></span>"
+        },
+        {
+          text: "and he's got black, short hair.",
+          start: 38.55,
+          end: 42.10,
+          html: "<span class=\"line-num blank\">10</span><span class=\"line-text\">and he's got <strong>black, short hair</strong>.</span>"
+        },
+        {
+          text: "Isabel is a good friend, too.",
+          start: 44.10,
+          end: 46.90,
+          html: "<span class=\"line-num\">11</span><span class=\"line-text\">Isabel is a <strong>good friend</strong>, too.</span>"
+        },
+        {
+          text: "She's tall",
+          start: 47.90,
+          end: 49.35,
+          html: "<span class=\"line-num\">12</span><span class=\"line-text\">She's <strong>tall</strong></span>"
+        },
+        {
+          text: "and she's got long, blond hair.",
+          start: 49.45,
+          end: 52.80,
+          html: "<span class=\"line-num blank\">12</span><span class=\"line-text\">and she's got <strong>long, blond hair</strong>.</span>"
+        },
+        {
+          text: "Her eyes are blue.",
+          start: 54.00,
+          end: 55.85,
+          html: "<span class=\"line-num\">13</span><span class=\"line-text\">Her <strong>eyes</strong> are <span class=\"blue-word\">blue</span>.</span>"
+        },
+        {
+          text: "Danny is my cousin.",
+          start: 57.85,
+          end: 59.95,
+          html: "<span class=\"line-num\">14</span><span class=\"line-text\">Danny is my <strong>cousin</strong>.</span>"
+        },
+        {
+          text: "He's in the photo, too.",
+          start: 60.75,
+          end: 63.00,
+          html: "<span class=\"line-num\">15</span><span class=\"line-text\">He's in the <strong>photo</strong>, too.</span>"
+        },
+        {
+          text: "He's tall",
+          start: 64.05,
+          end: 65.35,
+          html: "<span class=\"line-num\">16</span><span class=\"line-text\">He's <strong>tall</strong></span>"
+        },
+        {
+          text: "and he's got brown hair and brown eyes.",
+          start: 65.55,
+          end: 69.70,
+          html: "<span class=\"line-num blank\">16</span><span class=\"line-text\">and he's got <strong>brown hair</strong><br>and <strong>brown eyes</strong>.</span>"
+        },
+        {
+          text: "Can you see him?",
+          start: 70.95,
+          end: 72.70,
+          html: "<span class=\"line-num\">17</span><span class=\"line-text\">Can you see him?</span>"
+        },
+        {
+          text: "He's got a blue T-shirt.",
+          start: 74.40,
+          end: 76.80,
+          html: "<span class=\"line-num\">18</span><span class=\"line-text\">He's got a <span class=\"blue-word\">blue</span> T-shirt.</span>"
+        },
+        {
+          text: "I'm in the photo, too.",
+          start: 79.35,
+          end: 81.75,
+          html: "<span class=\"line-num\">19</span><span class=\"line-text\">I'm in the <strong>photo</strong>, too.</span>"
+        },
+        {
+          text: "I have very long, straight hair and brown eyes.",
+          start: 82.85,
+          end: 87.95,
+          html: "<span class=\"line-num\">20</span><span class=\"line-text\">I have very <strong>long, straight hair</strong><br>and <strong>brown eyes</strong>.</span>"
+        },
+        {
+          text: "Can you see me?",
+          start: 89.35,
+          end: 91.05,
+          html: "<span class=\"line-num\">21</span><span class=\"line-text\">Can you see me?</span>"
+        },
+        {
+          text: "Have you got a photo of you and your friends?",
+          start: 92.90,
+          end: 97.35,
+          html: "<span class=\"line-num\">22</span><span class=\"line-text\">Have you got a <strong>photo</strong><br>of you and your <strong>friends</strong>?</span>"
+        },
+        {
+          text: "Please write soon.",
+          start: 98.40,
+          end: 100.35,
+          html: "<span class=\"line-num\">23</span><span class=\"line-text\">Please <strong>write soon</strong>.</span>"
+        },
+        {
+          text: "From, Katie.",
+          start: 101.10,
+          end: 103.10,
+          html: "<span class=\"line-num\">24</span><span class=\"line-text\">From,<br>Katie.</span>"
+        }
+      ];
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = "reading-line clickable";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          row.addEventListener("click", () => playOneLine(index));
+          reading.append(row);
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
