@@ -121,6 +121,10 @@
       margin-left: auto;
     }
 
+    .fine-tune[hidden] {
+      display: none;
+    }
+
     .fine-tune-label {
       min-width: 92px;
       color: var(--muted);
@@ -434,7 +438,7 @@
       <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
     </section>
 
-    <section class="controls fine-tune" aria-label="Highlight timing">
+    <section class="controls fine-tune" aria-label="Highlight timing" hidden>
       <span id="offsetLabel" class="fine-tune-label">Sync 0.00s</span>
       <button id="offsetEarlier" type="button">Vàng sớm hơn</button>
       <button id="offsetLater" type="button">Vàng muộn hơn</button>
@@ -560,16 +564,10 @@
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">Fold the face.</span>"
         },
         {
-          text: "Cut out the four legs",
+          text: "Cut out the four legs and paws.",
           start: 36.70,
-          end: 38.67,
-          html: "<span class=\"line-num\">4</span><span class=\"line-text\">Cut out the four <strong>legs</strong></span>"
-        },
-        {
-          text: "and paws.",
-          start: 38.67,
           end: 39.76,
-          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">and <strong>paws</strong>.</span>"
+          html: "<span class=\"line-num\">4</span><span class=\"line-text\">Cut out the four <strong>legs</strong> and <strong>paws</strong>.</span>"
         },
         {
           text: "Fold the legs.",
@@ -578,16 +576,10 @@
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">Fold the legs.</span>"
         },
         {
-          text: "Stick the paws",
+          text: "Stick the paws on the legs.",
           start: 44.43,
-          end: 45.44,
-          html: "<span class=\"line-num\">5</span><span class=\"line-text\"><strong>Stick</strong> the paws</span>"
-        },
-        {
-          text: "on the legs.",
-          start: 45.44,
           end: 46.59,
-          html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">on the legs.</span>"
+          html: "<span class=\"line-num\">5</span><span class=\"line-text\"><strong>Stick</strong> the paws on the legs.</span>"
         },
         {
           text: "Stick the legs on the body.",
@@ -617,13 +609,13 @@
       const stop = document.getElementById("stop");
       const bigScreen = document.getElementById("bigScreen");
       const status = document.getElementById("status");
-      const offsetStorageKey = "unit-3-lesson-5-v7-highlight-offset-2";
+      const offsetStorageKey = "unit-3-lesson-5-v7-highlight-offset-3";
       const offsetLabel = document.getElementById("offsetLabel");
       const offsetEarlier = document.getElementById("offsetEarlier");
       const offsetLater = document.getElementById("offsetLater");
       const offsetReset = document.getElementById("offsetReset");
       const syncEnabled = new URLSearchParams(window.location.search).has("sync");
-      const syncStorageKey = "unit-3-lesson-5-v7-sync-waveform-2";
+      const syncStorageKey = "unit-3-lesson-5-v7-sync-waveform-3";
       const syncPanel = document.getElementById("syncPanel");
       const syncStart = document.getElementById("syncStart");
       const syncTap = document.getElementById("syncTap");
