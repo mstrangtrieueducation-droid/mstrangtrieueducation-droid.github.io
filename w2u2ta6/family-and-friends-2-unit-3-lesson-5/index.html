@@ -1,0 +1,778 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 3 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 3 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 3 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-3-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-3-lesson-5/assets/skills-time-ff2-unit3-outdoor-toys.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 3 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-3-lesson-5/">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: rgba(255, 227, 107, 0.2);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 3 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit3-outdoor-toys.png" alt="Skills Time Lesson Five Outdoor Toys reading worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>outdoor toys</span> - đồ chơi ngoài trời.</li>
+        <li><span>perfect</span> - hoàn hảo; rất phù hợp.</li>
+        <li><span>bike</span> - xe đạp.</li>
+        <li><span>children aged 7 to 10</span> - trẻ em từ 7 đến 10 tuổi.</li>
+        <li><span>wheel</span> - bánh xe.</li>
+        <li><span>ride</span> - đi; cưỡi; lái.</li>
+        <li><span>grass</span> - cỏ.</li>
+        <li><span>sand</span> - cát.</li>
+        <li><span>beach</span> - bãi biển.</li>
+        <li><span>park</span> - công viên.</li>
+        <li><span>scooter</span> - xe trượt scooter.</li>
+        <li><span>good fun</span> - rất vui; rất thú vị.</li>
+        <li><span>fast</span> - nhanh.</li>
+        <li><span>easy to ride</span> - dễ đi; dễ lái.</li>
+        <li><span>available</span> - có sẵn.</li>
+        <li><span>skate</span> - trượt patin; giày trượt.</li>
+        <li><span>safe</span> - an toàn.</li>
+        <li><span>fantastic</span> - tuyệt vời.</li>
+        <li><span>swing</span> - xích đu.</li>
+        <li><span>garden</span> - khu vườn.</li>
+        <li><span>together</span> - cùng nhau.</li>
+        <li><span>seat</span> - chỗ ngồi; ghế ngồi.</li>
+        <li><span>It has got ...</span> - Nó có... <em>It has got big wheels = Nó có bánh xe lớn.</em></li>
+        <li><span>You can ...</span> - Con có thể... <em>You can ride it = Con có thể đi nó.</em></li>
+        <li><span>take it to ...</span> - mang nó đến... <em>take it to the beach = mang nó đến bãi biển.</em></li>
+        <li><span>Are you learning to ...?</span> - Bạn có đang học ... không?</li>
+        <li><span>There are ...</span> - Có... <em>There are two swings = Có hai chiếc xích đu.</em></li>
+        <li><span>It is available in ...</span> - Nó có các màu... <em>It is available in pink, green or blue = Nó có màu hồng, xanh lá hoặc xanh dương.</em></li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-34-ff2-unit3-user-0p9-v3.mp3?v=3" preload="auto"></audio>
+  </main>
+
+  <script src="assets/word-timings.js?v=1"></script>
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "Outdoor Toys",
+          start: 1.00,
+          end: 3.62,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\"><strong>Outdoor Toys</strong></span>"
+        },
+        {
+          text: "This is a perfect bike for children aged 7 to 10.",
+          start: 4.06,
+          end: 7.34,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">This is a <strong>perfect bike</strong> for children aged 7 to 10.</span>"
+        },
+        {
+          text: "It has got big wheels.",
+          start: 8.47,
+          end: 11.22,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">It has got big <strong>wheels</strong>.</span>"
+        },
+        {
+          text: "You can ride it on grass or sand,",
+          start: 12.44,
+          end: 16.65,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">You can <strong>ride</strong> it on <strong>grass</strong> or <strong>sand</strong>,</span>"
+        },
+        {
+          text: "so take it to the beach",
+          start: 17.23,
+          end: 19.55,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">so <strong>take it to</strong> the <strong>beach</strong></span>"
+        },
+        {
+          text: "or park.",
+          start: 19.74,
+          end: 20.66,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">or <strong>park</strong>.</span>"
+        },
+        {
+          text: "Scooters are really good fun.",
+          start: 23.21,
+          end: 26.78,
+          html: "<span class=\"line-num blank\">2</span><span class=\"line-text\"><strong>Scooters</strong> are really <strong>good fun</strong>.</span>"
+        },
+        {
+          text: "This scooter is fast and easy to ride.",
+          start: 27.76,
+          end: 30.45,
+          html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">This <strong>scooter</strong> is <strong>fast</strong> and <strong>easy to ride</strong>.</span>"
+        },
+        {
+          text: "It has two small wheels.",
+          start: 30.83,
+          end: 32.93,
+          html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">It has two small <strong>wheels</strong>.</span>"
+        },
+        {
+          text: "It is available in pink, green or blue.",
+          start: 34.46,
+          end: 37.86,
+          html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">It is <strong>available</strong> in pink, green or blue.</span>"
+        },
+        {
+          text: "Are you or your friend learning to skate?",
+          start: 39.11,
+          end: 41.94,
+          html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">Are you or your friend <strong>learning to skate</strong>?</span>"
+        },
+        {
+          text: "These skates have four wheels on each skate,",
+          start: 42.61,
+          end: 44.97,
+          html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">These <strong>skates</strong> have four <strong>wheels</strong> on each skate,</span>"
+        },
+        {
+          text: "so they are easy and safe for new skaters.",
+          start: 47.86,
+          end: 52.00,
+          html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">so they are easy and <strong>safe</strong> for new skaters.</span>"
+        },
+        {
+          text: "They look fantastic, too!",
+          start: 53.53,
+          end: 58.74,
+          html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">They look <strong>fantastic</strong>, too!</span>"
+        },
+        {
+          text: "This swing is perfect for fun in your garden.",
+          start: 59.24,
+          end: 63.98,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">This <strong>swing</strong> is perfect for fun in your <strong>garden</strong>.</span>"
+        },
+        {
+          text: "Two children can play together",
+          start: 65.27,
+          end: 68.16,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">Two children can play <strong>together</strong></span>"
+        },
+        {
+          text: "as there are two swings.",
+          start: 70.32,
+          end: 75.73,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">as <strong>there are</strong> two <strong>swings</strong>.</span>"
+        },
+        {
+          text: "The seats are blue and yellow.",
+          start: 77.02,
+          end: 88.16,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">The <strong>seats</strong> are blue and yellow.</span>"
+        }
+      ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
+          reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        updateWordHighlight(time, activeIndex);
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = lines.length - 1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
+

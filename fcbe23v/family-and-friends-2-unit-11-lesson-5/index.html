@@ -1,0 +1,860 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 11 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 11 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 11 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-11-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-11-lesson-5/assets/skills-time-ff2-unit11-airport.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 11 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-11-lesson-5/">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: rgba(255, 227, 107, 0.2);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 11 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit11-airport.png" alt="Skills Time Lesson Five At the airport poem worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ và cấu trúc để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>airport</span> - sân bay.</li>
+        <li><span>at the airport</span> - ở sân bay.</li>
+        <li><span>arrival / arrivals</span> - chuyến đến / các chuyến đến.</li>
+        <li><span>plane / planes</span> - máy bay / những chiếc máy bay.</li>
+        <li><span>come</span> - đến.</li>
+        <li><span>go</span> - đi.</li>
+        <li><span>come and go</span> - đến rồi đi, qua lại.</li>
+        <li><span>where</span> - ở đâu, đến đâu.</li>
+        <li><span>go / going</span> - đi / đang đi.</li>
+        <li><span>always</span> - luôn luôn.</li>
+        <li><span>know</span> - biết.</li>
+        <li><span>there</span> - ở đó; trong <em>There are ...</em>: có ...</li>
+        <li><span>lots of</span> - nhiều, rất nhiều.</li>
+        <li><span>person / people</span> - một người / nhiều người.</li>
+        <li><span>some</span> - một số, vài người/vật.</li>
+        <li><span>short</span> - thấp, ngắn.</li>
+        <li><span>tall</span> - cao.</li>
+        <li><span>adult / adults</span> - người lớn / những người lớn.</li>
+        <li><span>child / children</span> - trẻ em / những trẻ em.</li>
+        <li><span>can / can't</span> - có thể / không thể. <em>can't = cannot.</em></li>
+        <li><span>count</span> - đếm.</li>
+        <li><span>them</span> - họ, chúng; tân ngữ của <em>they</em>.</li>
+        <li><span>all</span> - tất cả.</li>
+        <li><span>have got / 've got</span> - có.</li>
+        <li><span>they've</span> - dạng viết tắt của <em>they have</em>.</li>
+        <li><span>red</span> - màu đỏ.</li>
+        <li><span>green</span> - màu xanh lá cây.</li>
+        <li><span>yellow</span> - màu vàng.</li>
+        <li><span>blue</span> - màu xanh dương.</li>
+        <li><span>coat / coats</span> - áo khoác / những chiếc áo khoác.</li>
+        <li><span>long</span> - dài.</li>
+        <li><span>hair</span> - tóc.</li>
+        <li><span>long hair</span> - tóc dài.</li>
+        <li><span>short hair</span> - tóc ngắn.</li>
+        <li><span>curly hair</span> - tóc xoăn.</li>
+        <li><span>too</span> - cũng; thường đặt ở cuối câu.</li>
+        <li><span>look</span> - nhìn.</li>
+        <li><span>through</span> - xuyên qua, qua.</li>
+        <li><span>look through</span> - nhìn qua.</li>
+        <li><span>window</span> - cửa sổ.</li>
+        <li><span>up</span> - lên.</li>
+        <li><span>down</span> - xuống.</li>
+        <li><span>go up / go down</span> - đi lên / đi xuống.</li>
+        <li><span>not</span> - không.</li>
+        <li><span>move / moving</span> - di chuyển / đang di chuyển.</li>
+        <li><span>turn / turning</span> - quay, rẽ / đang quay, đang rẽ.</li>
+        <li><span>around</span> - xung quanh, vòng lại.</li>
+        <li><span>turn around</span> - quay lại, quay vòng.</li>
+        <li><span>here</span> - ở đây.</li>
+        <li><span>now</span> - bây giờ.</li>
+        <li><span>half</span> - một nửa.</li>
+        <li><span>past</span> - qua; dùng khi nói giờ đã qua bao nhiêu phút.</li>
+        <li><span>half past two</span> - hai giờ rưỡi.</li>
+        <li><span>cousin / cousins</span> - anh/chị/em họ / những người anh/chị/em họ.</li>
+        <li><span>aunt</span> - cô, dì, thím, mợ.</li>
+        <li><span>uncle</span> - chú, bác, cậu, dượng.</li>
+        <li><span>my</span> - của tôi, của mình.</li>
+        <li><span>and</span> - và; nối từ hoặc ý cùng loại.</li>
+        <li><span>look at</span> - nhìn vào.</li>
+        <li><span>picture</span> - bức tranh, hình ảnh.</li>
+        <li><span>listen and read</span> - nghe và đọc.</li>
+        <li><span>What can you see?</span> - Con có thể nhìn thấy gì?</li>
+        <li><span>can + động từ nguyên mẫu</span> - có thể làm gì. <em>can see, can count.</em></li>
+        <li><span>at + địa điểm</span> - ở/tại một địa điểm. <em>at the airport.</em></li>
+        <li><span>chủ ngữ số nhiều + động từ nguyên mẫu</span> - hiện tại đơn. <em>Planes come; planes go.</em></li>
+        <li><span>Where are + chủ ngữ + động từ-ing?</span> - hỏi ai/vật đang đi đâu hoặc làm gì ở đâu.</li>
+        <li><span>Where are they going?</span> - Họ đang đi đâu?</li>
+        <li><span>am / is / are + động từ-ing</span> - thì hiện tại tiếp diễn.</li>
+        <li><span>don't = do not</span> - dạng viết tắt của <em>do not</em>.</li>
+        <li><span>I don't + động từ nguyên mẫu</span> - tôi không làm/không biết ...</li>
+        <li><span>don't always + động từ</span> - không phải lúc nào cũng ...</li>
+        <li><span>There are + danh từ số nhiều</span> - có nhiều ...</li>
+        <li><span>lots of + danh từ số nhiều</span> - rất nhiều ... <em>lots of people.</em></li>
+        <li><span>Some are ..., some are ...</span> - một số người/vật thì ..., một số khác thì ...</li>
+        <li><span>be + tính từ</span> - miêu tả đặc điểm. <em>are short, are tall.</em></li>
+        <li><span>danh từ số nhiều bất quy tắc</span> - <em>person → people; child → children.</em></li>
+        <li><span>can't + động từ nguyên mẫu</span> - không thể làm gì. <em>I can't count ...</em></li>
+        <li><span>động từ + tân ngữ</span> - động từ tác động lên ai/vật. <em>count them.</em></li>
+        <li><span>They've got + danh từ</span> - họ có ... <em>They've = They have.</em></li>
+        <li><span>màu sắc + danh từ</span> - danh từ có màu ... <em>red coats, green coats.</em></li>
+        <li><span>tính từ + hair</span> - miêu tả mái tóc. <em>long / short / curly hair.</em></li>
+        <li><span>And ... too.</span> - và ... nữa/cũng vậy.</li>
+        <li><span>look through + danh từ</span> - nhìn qua ... <em>look through the window.</em></li>
+        <li><span>go + trạng từ chỉ hướng</span> - di chuyển theo hướng ... <em>go up, go down.</em></li>
+        <li><span>be + not + động từ-ing</span> - đang không làm gì. <em>Some are not moving.</em></li>
+        <li><span>be + động từ-ing</span> - đang làm gì. <em>Some are turning around.</em></li>
+        <li><span>The plane is here now.</span> - Bây giờ chiếc máy bay đang ở đây.</li>
+        <li><span>It's = It is</span> - dạng viết tắt của <em>It is</em>.</li>
+        <li><span>It's half past + giờ</span> - bây giờ là ... giờ rưỡi.</li>
+        <li><span>Here come + danh từ số nhiều</span> - ... đang đến đây; đảo <em>come</em> lên trước chủ ngữ.</li>
+        <li><span>my + danh từ gia đình</span> - người thân của tôi. <em>my cousins, my aunt, my uncle.</em></li>
+        <li><span>danh từ số nhiều</span> - thường thêm <strong>-s/-es</strong>. <em>planes, coats, adults, cousins.</em></li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-120-ff2-unit11-user-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script src="assets/word-timings.js?v=1"></script>
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "At the airport",
+          start: 0.505,
+          end: 1.705,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>At the airport</strong></span>"
+        },
+        {
+          text: "At the airport,",
+          start: 2.855,
+          end: 4.170,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>At the airport</strong>,</span>"
+        },
+        {
+          text: "Planes come and planes go.",
+          start: 4.170,
+          end: 7.270,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Planes <strong>come</strong> and planes <strong>go</strong>.</span>"
+        },
+        {
+          text: "Where are they going?",
+          start: 8.070,
+          end: 9.680,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Where are they going?</strong></span>"
+        },
+        {
+          text: "I don't always know.",
+          start: 9.890,
+          end: 11.750,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">I <strong>don't always know</strong>.</span>"
+        },
+        {
+          text: "There are lots of people.",
+          start: 13.185,
+          end: 14.955,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>There are lots of people</strong>.</span>"
+        },
+        {
+          text: "Some are short, some are tall.",
+          start: 15.390,
+          end: 17.865,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Some are short, some are tall</strong>.</span>"
+        },
+        {
+          text: "Adults and children,",
+          start: 18.485,
+          end: 20.070,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Adults and children</strong>,</span>"
+        },
+        {
+          text: "I can't count them all.",
+          start: 20.330,
+          end: 22.200,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">I <strong>can't count them all</strong>.</span>"
+        },
+        {
+          text: "They've got red coats, green coats,",
+          start: 23.955,
+          end: 27.085,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>They've got</strong> red coats, green coats,</span>"
+        },
+        {
+          text: "Yellow coats, blue.",
+          start: 27.510,
+          end: 29.535,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Yellow coats, blue</strong>.</span>"
+        },
+        {
+          text: "They've got long hair, short hair,",
+          start: 30.215,
+          end: 33.100,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>They've got</strong> long hair, short hair,</span>"
+        },
+        {
+          text: "And curly hair too.",
+          start: 33.430,
+          end: 35.425,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">And <strong>curly hair</strong> too.</span>"
+        },
+        {
+          text: "I look through the window.",
+          start: 37.065,
+          end: 38.755,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">I <strong>look through the window</strong>.</span>"
+        },
+        {
+          text: "Planes go up, planes go down.",
+          start: 39.215,
+          end: 42.050,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Planes <strong>go up</strong>, planes <strong>go down</strong>.</span>"
+        },
+        {
+          text: "Some are not moving.",
+          start: 42.630,
+          end: 44.175,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Some are <strong>not moving</strong>.</span>"
+        },
+        {
+          text: "Some are turning around.",
+          start: 44.700,
+          end: 47.085,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Some are <strong>turning around</strong>.</span>"
+        },
+        {
+          text: "The plane is here now.",
+          start: 48.695,
+          end: 50.320,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The plane is <strong>here now</strong>.</span>"
+        },
+        {
+          text: "It's half past two.",
+          start: 50.720,
+          end: 52.615,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">It's <strong>half past two</strong>.</span>"
+        },
+        {
+          text: "And here come my cousins,",
+          start: 52.880,
+          end: 54.730,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">And <strong>here come my cousins</strong>,</span>"
+        },
+        {
+          text: "My aunt and my uncle too.",
+          start: 55.110,
+          end: 57.565,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>My aunt and my uncle</strong> too.</span>"
+        }
+      ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
+          reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        updateWordHighlight(time, activeIndex);
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = lines.length - 1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>

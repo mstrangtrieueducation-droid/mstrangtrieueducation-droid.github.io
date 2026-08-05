@@ -1,0 +1,14 @@
+{
+  "set": "FF2",
+  "unit": 4,
+  "expectedWords": 91,
+  "matchedWords": 91,
+  "matchRate": 1,
+  "finalCost": 1.35,
+  "unmatchedWords": [],
+  "rawShortWords": 19,
+  "repairedShortWords": 0,
+  "monotonic": true,
+  "alignmentModel": "small",
+  "waveformDtw": true
+}

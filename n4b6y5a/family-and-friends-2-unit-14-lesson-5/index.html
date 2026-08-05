@@ -1,0 +1,877 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family &amp; Friends 2 - Unit 14 - Lesson 5</title>
+  <meta name="description" content="Family &amp; Friends 2 - Unit 14 - Lesson 5. Nghe - Đọc - Dịch.">
+  <meta property="og:title" content="Family &amp; Friends 2 - Unit 14 - Lesson 5">
+  <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-14-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-14-lesson-5/assets/skills-time-ff2-unit14-class-play.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Family &amp; Friends 2 - Unit 14 - Lesson 5">
+  <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo từng từ màu vàng và tự dịch bài sang Tiếng Việt.">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-2-unit-14-lesson-5/">
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --bg: #f4f7f0;
+      --ink: #1f2823;
+      --muted: #5d6c63;
+      --panel: #fffdf8;
+      --line: #d8e3d7;
+      --green: #2f855a;
+      --green-dark: #1f6844;
+      --yellow: #ffe36b;
+      --blue: #2f8fc7;
+      --pink: #d94f86;
+      --shadow: 0 16px 36px rgba(34, 48, 39, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 133, 90, 0.14), rgba(47, 143, 199, 0.12)),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .tag {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 1.12rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .tag span {
+      display: block;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .controls button {
+      min-width: 100px;
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      background: #e9efe8;
+      color: var(--green-dark);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .controls button.primary {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(47, 133, 90, 0.18);
+    }
+
+    .controls button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .status {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .guide,
+    .vocabulary,
+    .reader {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .guide {
+      margin-bottom: 16px;
+      padding: 16px 20px;
+    }
+
+    .guide h2,
+    .reader h2 {
+      margin: 0 0 10px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .guide ol {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .study-area {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .worksheet {
+      margin: 0;
+    }
+
+    .worksheet img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .reader {
+      overflow: hidden;
+    }
+
+    .reading {
+      padding: 16px 18px 18px;
+    }
+
+    .reading-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 0;
+      min-height: 56px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 1.3rem;
+      line-height: 1.45;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+    }
+
+    .reading-line.clickable {
+      cursor: pointer;
+    }
+
+    .reading-line.done {
+      color: var(--green-dark);
+      font-weight: 800;
+    }
+
+    .reading-line.active {
+      background: rgba(255, 227, 107, 0.2);
+      color: var(--ink);
+      font-weight: 900;
+      transform: translateX(2px);
+    }
+
+    .karaoke-word {
+      border-radius: 4px;
+      transition: background-color 80ms linear, color 80ms linear, box-shadow 80ms linear;
+    }
+
+    .karaoke-word.word-done {
+      color: var(--green-dark);
+    }
+
+    .karaoke-word.word-active {
+      background: var(--yellow);
+      color: var(--ink);
+      box-shadow: 0 0 0 3px var(--yellow);
+    }
+
+    .line-num {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin-top: 3px;
+      border-radius: 999px;
+      background: #bde8a9;
+      color: var(--green-dark);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
+    .line-num.blank {
+      visibility: hidden;
+    }
+
+    .line-text {
+      min-width: 0;
+    }
+
+    .line-text strong {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .no-karaoke {
+      color: var(--muted);
+      font-size: 0.72em;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .line-text .blue {
+      color: var(--blue);
+    }
+
+    .line-text .green {
+      color: var(--green);
+    }
+
+    .line-text .pink {
+      color: var(--pink);
+    }
+
+    .vocabulary {
+      margin-top: 16px;
+      padding: 16px 20px;
+    }
+
+    .vocabulary h2 {
+      margin: 0 0 6px;
+      color: var(--green-dark);
+      font-size: 1.24rem;
+      line-height: 1.2;
+    }
+
+    .vocab-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .vocab-list {
+      columns: 2;
+      column-gap: 34px;
+      margin: 0;
+      padding-left: 24px;
+      color: var(--ink);
+      font-size: 1.03rem;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+
+    .vocab-list li {
+      break-inside: avoid;
+      margin: 5px 0;
+    }
+
+    .vocab-list span {
+      color: var(--green-dark);
+      font-weight: 900;
+    }
+
+    .vocab-list em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 750;
+    }
+
+    body.fullscreen .page {
+      width: min(1320px, calc(100% - 28px));
+    }
+
+    body.fullscreen .reading-line {
+      font-size: 1.7rem;
+      min-height: 70px;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100% - 16px, 720px);
+        padding-top: 14px;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .study-area {
+        grid-template-columns: 1fr;
+      }
+
+      .reading-line {
+        font-size: 1.08rem;
+        min-height: 48px;
+      }
+
+      .vocab-list {
+        columns: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-label="Lesson">
+      <div class="tag">
+        <span>Family &amp; Friends 2 - Unit 14 - Lesson 5</span>
+        <span>Nghe - Đọc - Dịch</span>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Controls">
+      <button id="play" class="primary" type="button">Nghe</button>
+      <button id="stop" type="button">Dừng</button>
+      <button id="bigScreen" type="button">Màn hình lớn</button>
+      <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
+    </section>
+
+    <section class="guide" aria-label="Vietnamese instructions">
+      <h2>Hướng dẫn trả bài</h2>
+      <ol>
+        <li>Bấm <strong>Nghe</strong> để luyện đọc theo từng từ màu vàng.</li>
+        <li>Nghe nhiều lần để luyện phát âm đúng, ngữ điệu biểu cảm.</li>
+        <li>Khi trả bài, con có thể quay màn hình và đọc theo.</li>
+        <li>Sau đó, con dịch bài sang Tiếng Việt - Dịch sát nghĩa - tốc độ đủ nhanh.</li>
+      </ol>
+    </section>
+
+    <section class="study-area">
+      <figure class="worksheet" aria-label="Worksheet image">
+        <img src="assets/skills-time-ff2-unit14-class-play.png" alt="Skills Time Lesson Five Class 2L play article worksheet">
+      </figure>
+
+      <section class="reader" aria-label="Reading practice">
+        <div id="reading" class="reading"></div>
+      </section>
+    </section>
+
+    <section class="vocabulary" aria-label="Vocabulary support">
+      <h2>Từ mới cần nhớ</h2>
+      <p class="vocab-note">Con xem nghĩa của từ và cấu trúc để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
+      <ul class="vocab-list">
+        <li><span>class</span> - lớp học.</li>
+        <li><span>Class 2L</span> - lớp 2L.</li>
+        <li><span>play</span> - vở kịch; diễn kịch, chơi.</li>
+        <li><span>class play</span> - vở kịch của lớp.</li>
+        <li><span>great</span> - tuyệt vời, rất tốt.</li>
+        <li><span>success</span> - sự thành công.</li>
+        <li><span>a great success</span> - một thành công lớn.</li>
+        <li><span>by + tác giả</span> - do ai viết. <em>by Lucy Grant.</em></li>
+        <li><span>Lucy Grant</span> - tên tác giả của bài viết.</li>
+        <li><span>this year</span> - năm nay.</li>
+        <li><span>vet</span> - bác sĩ thú y.</li>
+        <li><span>story</span> - câu chuyện.</li>
+        <li><span>Vet Story</span> - Câu chuyện bác sĩ thú y; tên vở kịch.</li>
+        <li><span>classroom</span> - phòng học.</li>
+        <li><span>Tuesday</span> - thứ Ba.</li>
+        <li><span>morning</span> - buổi sáng.</li>
+        <li><span>Tuesday morning</span> - sáng thứ Ba.</li>
+        <li><span>Jack / Ruby</span> - tên hai bạn trong bài.</li>
+        <li><span>ill</span> - bị ốm, bị bệnh.</li>
+        <li><span>animal / animals</span> - con vật / những con vật.</li>
+        <li><span>rabbit</span> - con thỏ.</li>
+        <li><span>cat</span> - con mèo.</li>
+        <li><span>costume</span> - trang phục biểu diễn, hóa trang.</li>
+        <li><span>coat</span> - áo khoác.</li>
+        <li><span>white</span> - màu trắng.</li>
+        <li><span>white coat</span> - áo khoác trắng.</li>
+        <li><span>fluffy</span> - mềm và xù lông.</li>
+        <li><span>tail</span> - cái đuôi.</li>
+        <li><span>ear / ears</span> - tai / đôi tai.</li>
+        <li><span>rabbit ears</span> - tai thỏ.</li>
+        <li><span>head</span> - cái đầu.</li>
+        <li><span>cat's head</span> - đầu mèo.</li>
+        <li><span>scared</span> - sợ hãi.</li>
+        <li><span>be scared of</span> - sợ ai/cái gì.</li>
+        <li><span>in the end</span> - cuối cùng.</li>
+        <li><span>brave</span> - dũng cảm.</li>
+        <li><span>old</span> - già, cũ.</li>
+        <li><span>tired</span> - mệt mỏi.</li>
+        <li><span>happy</span> - vui, hạnh phúc.</li>
+        <li><span>well</span> - khỏe, ổn; tốt.</li>
+        <li><span>fun</span> - niềm vui, vui nhộn.</li>
+        <li><span>lots of fun</span> - rất nhiều niềm vui, rất vui.</li>
+        <li><span>family / families</span> - gia đình / các gia đình.</li>
+        <li><span>proud</span> - tự hào.</li>
+        <li><span>be proud of</span> - tự hào về ai/điều gì.</li>
+        <li><span>thank you</span> - cảm ơn.</li>
+        <li><span>English</span> - tiếng Anh; thuộc về nước Anh.</li>
+        <li><span>teacher</span> - giáo viên.</li>
+        <li><span>English teacher</span> - giáo viên tiếng Anh.</li>
+        <li><span>Miss + họ/tên</span> - cô ...; cách gọi phụ nữ chưa kết hôn.</li>
+        <li><span>Miss Green</span> - cô Green.</li>
+        <li><span>work</span> - công việc, sự làm việc.</li>
+        <li><span>mum / mums</span> - mẹ / các bà mẹ.</li>
+        <li><span>dad / dads</span> - bố / các ông bố.</li>
+        <li><span>Primary 2 / Primary 3</span> - lớp Hai / lớp Ba bậc tiểu học.</li>
+        <li><span>brilliant</span> - xuất sắc, tuyệt vời.</li>
+        <li><span>really</span> - thực sự, rất.</li>
+        <li><span>look</span> - nhìn; trông có vẻ.</li>
+        <li><span>forward</span> - về phía trước.</li>
+        <li><span>look forward to</span> - mong chờ điều gì.</li>
+        <li><span>wear / wearing</span> - mặc, đeo / đang mặc, đang đeo.</li>
+        <li><span>child / children</span> - một đứa trẻ / những đứa trẻ.</li>
+        <li><span>picture / pictures</span> - bức tranh/ảnh / những bức tranh/ảnh.</li>
+        <li><span>our</span> - của chúng tôi/chúng ta.</li>
+        <li><span>my</span> - của tôi.</li>
+        <li><span>her</span> - của cô ấy; cô ấy.</li>
+        <li><span>us</span> - chúng tôi/chúng ta; tân ngữ.</li>
+        <li><span>very</span> - rất.</li>
+        <li><span>and</span> - và.</li>
+        <li><span>but</span> - nhưng.</li>
+        <li><span>for</span> - cho, dành cho; vì.</li>
+        <li><span>of</span> - của, về.</li>
+        <li><span>in</span> - trong, ở trong.</li>
+        <li><span>on</span> - trên; vào một ngày/buổi cụ thể.</li>
+        <li><span>was</span> - đã là/đã ở; dạng quá khứ số ít của <em>be</em>.</li>
+        <li><span>were</span> - đã là/đã ở; dạng quá khứ số nhiều của <em>be</em>.</li>
+        <li><span>look at the pictures</span> - nhìn vào những bức tranh.</li>
+        <li><span>What are the children wearing?</span> - Những đứa trẻ đang mặc gì?</li>
+        <li><span>listen and read</span> - nghe và đọc.</li>
+        <li><span>danh từ + 's + danh từ</span> - danh từ sở hữu: cái gì của ai. <em>Class 2L's play; Ruby's costume.</em></li>
+        <li><span>Class 2L's play</span> - vở kịch của lớp 2L.</li>
+        <li><span>a vet's white coat</span> - một chiếc áo khoác trắng của bác sĩ thú y.</li>
+        <li><span>Jack's / Ruby's</span> - của Jack / của Ruby.</li>
+        <li><span>Jack's was ...</span> - đồ/trang phục của Jack là ...; danh từ đã biết được lược bỏ.</li>
+        <li><span>tính từ sở hữu + danh từ</span> - <em>our classroom, my costume, her work.</em></li>
+        <li><span>be ở quá khứ: was / were</span> - diễn tả người, vật, trạng thái hoặc địa điểm trong quá khứ.</li>
+        <li><span>I / he / she / it + was</span> - chủ ngữ số ít dùng <em>was</em>.</li>
+        <li><span>we / you / they + were</span> - chủ ngữ số nhiều dùng <em>were</em>.</li>
+        <li><span>danh từ số ít + was</span> - <em>The play was; Jack was; the rabbit was.</em></li>
+        <li><span>danh từ số nhiều + were</span> - <em>Jack and Ruby were; our families were.</em></li>
+        <li><span>was / were + danh từ</span> - nói ai/cái gì đã là gì. <em>I was the vet.</em></li>
+        <li><span>was / were + tính từ</span> - miêu tả trạng thái trong quá khứ. <em>were ill; was brave.</em></li>
+        <li><span>was / were + cụm nơi chốn</span> - nói đã ở đâu. <em>The play was in our classroom.</em></li>
+        <li><span>This year, + mệnh đề</span> - năm nay ...</li>
+        <li><span>in + địa điểm</span> - ở trong đâu. <em>in our classroom.</em></li>
+        <li><span>on + ngày/buổi cụ thể</span> - vào lúc nào. <em>on Tuesday morning.</em></li>
+        <li><span>nơi chốn + thời gian</span> - thường nói nơi trước, thời gian sau. <em>in our classroom on Tuesday morning.</em></li>
+        <li><span>A and B</span> - nối hai người/vật. <em>Jack and Ruby; mums and dads.</em></li>
+        <li><span>mệnh đề 1, but + mệnh đề 2</span> - nối hai ý tương phản bằng <em>nhưng</em>.</li>
+        <li><span>in the story</span> - trong câu chuyện.</li>
+        <li><span>be scared of + danh từ</span> - sợ ai/cái gì. <em>was scared of the vet.</em></li>
+        <li><span>but in the end</span> - nhưng cuối cùng.</li>
+        <li><span>be + very + tính từ</span> - rất ... <em>was very brave; were very happy.</em></li>
+        <li><span>be + tính từ + and + tính từ</span> - có hai đặc điểm. <em>old and tired; happy and well.</em></li>
+        <li><span>lots of + danh từ</span> - rất nhiều ... <em>lots of fun.</em></li>
+        <li><span>be happy and proud of + người</span> - vui và tự hào về ai.</li>
+        <li><span>proud of + đại từ tân ngữ</span> - tự hào về ai. <em>proud of us.</em></li>
+        <li><span>Thank you to + người</span> - cảm ơn ai. <em>Thank you to our teacher.</em></li>
+        <li><span>Thank you ... for + danh từ</span> - cảm ơn vì điều gì. <em>for her work; for the costumes.</em></li>
+        <li><span>And thank you to ...</span> - và xin cảm ơn ...</li>
+        <li><span>look forward to + danh từ</span> - mong chờ điều gì. <em>look forward to Primary 3.</em></li>
+        <li><span>be really looking forward to</span> - đang thực sự mong chờ.</li>
+        <li><span>to trong look forward to</span> - là giới từ; theo sau bởi danh từ hoặc động từ-ing.</li>
+        <li><span>am / is / are + động từ-ing</span> - hiện tại tiếp diễn. <em>are looking; are wearing.</em></li>
+        <li><span>What + am/is/are + chủ ngữ + động từ-ing?</span> - hỏi đang làm/mặc gì.</li>
+        <li><span>mệnh lệnh: động từ nguyên mẫu</span> - câu yêu cầu. <em>Look; Listen and read.</em></li>
+        <li><span>a / an + danh từ số ít</span> - một ... <em>a play, a rabbit, a cat.</em></li>
+        <li><span>the + danh từ đã xác định</span> - người/vật đã biết. <em>the play, the vet, the costumes.</em></li>
+        <li><span>danh từ làm bổ nghĩa</span> - danh từ đứng trước mô tả danh từ sau. <em>class play, rabbit ears.</em></li>
+        <li><span>danh từ số nhiều + -s/-es</span> - <em>animals, ears, costumes, mums, dads.</em></li>
+        <li><span>phụ âm + y → -ies</span> - đổi <em>y</em> thành <em>ies</em>. <em>family → families.</em></li>
+        <li><span>danh từ số nhiều bất quy tắc</span> - <em>child → children.</em></li>
+      </ul>
+    </section>
+
+    <audio id="track" src="assets/track-152-ff2-unit14-user-v1.mp3?v=1" preload="auto"></audio>
+  </main>
+
+  <script src="assets/word-timings.js?v=1"></script>
+  <script>
+    (() => {
+      const lines = [
+        {
+          text: "Class 2L play was a great success! by Lucy Grant (2L)",
+          start: 0.700,
+          end: 5.750,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Class 2L play was a great success</strong>! by Lucy Grant<span class=\"no-karaoke\"> (2L)</span></span>"
+        },
+        {
+          text: "This year, Class 2L's play was Vet Story.",
+          start: 7.200,
+          end: 11.205,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">This year, <strong>Class 2L's play was Vet Story</strong>.</span>"
+        },
+        {
+          text: "The play was in our classroom on Tuesday morning.",
+          start: 12.015,
+          end: 15.290,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The play <strong>was in our classroom on Tuesday morning</strong>.</span>"
+        },
+        {
+          text: "I was the vet in the play.",
+          start: 16.315,
+          end: 17.845,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>I was the vet</strong> in the play.</span>"
+        },
+        {
+          text: "Jack and Ruby were ill animals.",
+          start: 18.690,
+          end: 21.220,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Jack and Ruby <strong>were ill animals</strong>.</span>"
+        },
+        {
+          text: "Jack was a rabbit and Ruby was a cat.",
+          start: 21.935,
+          end: 25.310,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Jack <strong>was a rabbit</strong> and Ruby <strong>was a cat</strong>.</span>"
+        },
+        {
+          text: "My costume was a vet's white coat.",
+          start: 26.725,
+          end: 29.620,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">My costume was <strong>a vet's white coat</strong>.</span>"
+        },
+        {
+          text: "Jack's was a fluffy tail and big rabbit ears.",
+          start: 30.965,
+          end: 35.725,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Jack's was</strong> a fluffy tail and big rabbit ears.</span>"
+        },
+        {
+          text: "Ruby's costume was a big cat's head.",
+          start: 36.665,
+          end: 39.990,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Ruby's costume was</strong> a big cat's head.</span>"
+        },
+        {
+          text: "In the story, the rabbit was scared of the vet, but in the end he was very brave.",
+          start: 41.030,
+          end: 47.887,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">In the story, the rabbit <strong>was scared of the vet</strong>, but <strong>in the end he was very brave</strong>.</span>"
+        },
+        {
+          text: "The cat was very old and tired, but in the end it was happy and well.",
+          start: 49.010,
+          end: 55.035,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">The cat <strong>was very old and tired</strong>, but in the end it <strong>was happy and well</strong>.</span>"
+        },
+        {
+          text: "The play was lots of fun.",
+          start: 56.165,
+          end: 57.895,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>The play was lots of fun</strong>.</span>"
+        },
+        {
+          text: "Our families were very happy and proud of us.",
+          start: 58.395,
+          end: 61.290,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Our families <strong>were very happy and proud of us</strong>.</span>"
+        },
+        {
+          text: "Thank you to our English teacher, Miss Green, for her work.",
+          start: 62.175,
+          end: 66.075,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Thank you to our English teacher, Miss Green</strong>, for her work.</span>"
+        },
+        {
+          text: "And thank you to our mums and dads for the costumes.",
+          start: 66.795,
+          end: 70.310,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>And thank you to our mums and dads</strong> for the costumes.</span>"
+        },
+        {
+          text: "Primary 2 was brilliant.",
+          start: 71.050,
+          end: 72.925,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>Primary 2 was brilliant</strong>.</span>"
+        },
+        {
+          text: "We are really looking forward to Primary 3!",
+          start: 73.485,
+          end: 76.365,
+          html: "<span class=\"line-num blank\">0</span><span class=\"line-text\"><strong>We are really looking forward to Primary 3</strong>!</span>"
+        }
+      ];
+
+      const alignedWordTimings = Array.isArray(window.alignedWordTimings) ? window.alignedWordTimings : [];
+      lines.forEach((line, index) => {
+        const timings = alignedWordTimings[index];
+        line.wordTimes = Array.isArray(timings) ? timings : [];
+        if (line.wordTimes.length) {
+          line.start = line.wordTimes[0][0];
+          line.end = line.wordTimes[line.wordTimes.length - 1][1];
+        } else if (Array.isArray(timings)) {
+          line.start = 0;
+          line.end = 0;
+        }
+      });
+
+      const practiceSpeed = 1;
+      const highlightLead = 0;
+      const reading = document.getElementById("reading");
+      const track = document.getElementById("track");
+      const play = document.getElementById("play");
+      const stop = document.getElementById("stop");
+      const bigScreen = document.getElementById("bigScreen");
+      const status = document.getElementById("status");
+      let raf = 0;
+      let mode = "idle";
+      let activeLine = -1;
+      let doneThrough = -1;
+
+      function wrapWords(container, lineIndex) {
+        if (!container) {
+          return 0;
+        }
+
+        const wordPattern = /[A-Za-z0-9]+(?:[-'\u2019][A-Za-z0-9]+)*/g;
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        const textNodes = [];
+        let currentNode;
+        let wordIndex = 0;
+
+        while ((currentNode = walker.nextNode())) {
+          textNodes.push(currentNode);
+        }
+
+        textNodes.forEach((textNode) => {
+          if (textNode.parentElement?.closest(".no-karaoke")) {
+            return;
+          }
+
+          const text = textNode.nodeValue || "";
+          const fragment = document.createDocumentFragment();
+          let cursor = 0;
+          let match;
+
+          wordPattern.lastIndex = 0;
+          while ((match = wordPattern.exec(text))) {
+            fragment.append(text.slice(cursor, match.index));
+            const word = document.createElement("span");
+            word.className = "karaoke-word";
+            word.dataset.lineIndex = String(lineIndex);
+            word.dataset.wordIndex = String(wordIndex);
+            word.textContent = match[0];
+            fragment.append(word);
+            wordIndex += 1;
+            cursor = match.index + match[0].length;
+          }
+
+          fragment.append(text.slice(cursor));
+          textNode.replaceWith(fragment);
+        });
+
+        return wordIndex;
+      }
+
+      function renderReading() {
+        reading.innerHTML = "";
+        lines.forEach((line, index) => {
+          const row = document.createElement("p");
+          row.className = line.wordTimes.length ? "reading-line clickable" : "reading-line";
+          row.dataset.index = String(index);
+          row.innerHTML = line.html;
+          wrapWords(row.querySelector(".line-text") || row, index);
+          if (line.wordTimes.length) {
+            row.addEventListener("click", () => playOneLine(index));
+          }
+          reading.append(row);
+        });
+      }
+
+      function updateWordHighlight(time, activeIndex) {
+        document.querySelectorAll(".karaoke-word").forEach((word) => {
+          word.classList.remove("word-active", "word-done");
+          const lineIndex = Number(word.dataset.lineIndex);
+          const wordIndex = Number(word.dataset.wordIndex);
+          const timing = lines[lineIndex].wordTimes[wordIndex];
+
+          if (!timing) {
+            return;
+          }
+
+          if (lineIndex === activeIndex && time >= timing[0] && time < timing[1]) {
+            word.classList.add("word-active");
+          } else if (
+            (mode === "all" && time >= timing[1]) ||
+            lineIndex <= doneThrough ||
+            (lineIndex === activeIndex && time >= timing[1])
+          ) {
+            word.classList.add("word-done");
+          }
+        });
+      }
+
+      function updateHighlight() {
+        const time = track.currentTime + highlightLead;
+        let activeIndex = -1;
+
+        if (mode === "all") {
+          lines.forEach((line, index) => {
+            if (time >= line.start && time < line.end) {
+              activeIndex = index;
+            }
+          });
+        } else if (activeLine >= 0) {
+          activeIndex = activeLine;
+        }
+
+        document.querySelectorAll(".reading-line").forEach((row) => {
+          row.classList.remove("active", "done");
+          const index = Number(row.dataset.index);
+          if (index === activeIndex) {
+            row.classList.add("active");
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
+            row.classList.add("done");
+          }
+        });
+
+        updateWordHighlight(time, activeIndex);
+
+        if (mode === "idle") {
+          status.textContent = "Sẵn sàng";
+          return;
+        }
+
+        if (activeIndex >= 0) {
+          const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
+          status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (track.paused) {
+          status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
+        } else {
+          status.textContent = "Đang nghe";
+        }
+      }
+
+      function stopAudio(message = "Sẵn sàng") {
+        track.pause();
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = -1;
+        stop.disabled = true;
+        status.textContent = message;
+        updateHighlight();
+      }
+
+      function playWholeTrack() {
+        mode = "all";
+        activeLine = -1;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = 0;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function playOneLine(index) {
+        mode = "one-line";
+        activeLine = index;
+        doneThrough = -1;
+        track.pause();
+        track.currentTime = lines[index].start;
+        track.playbackRate = practiceSpeed;
+        stop.disabled = false;
+        updateHighlight();
+        track.play().catch(() => {
+          status.textContent = "Bấm lại để nghe";
+        });
+      }
+
+      function finishActiveLine() {
+        if (activeLine < 0) {
+          return;
+        }
+        const finishedLine = activeLine;
+        track.pause();
+        activeLine = -1;
+        doneThrough = finishedLine;
+        mode = "idle";
+        stop.disabled = true;
+        status.textContent = "Xong dòng";
+        updateHighlight();
+      }
+
+      function tick() {
+        if (mode === "one-line" && activeLine >= 0 && track.currentTime >= lines[activeLine].end) {
+          finishActiveLine();
+        }
+        updateHighlight();
+        raf = window.requestAnimationFrame(tick);
+      }
+
+      play.addEventListener("click", playWholeTrack);
+      stop.addEventListener("click", () => stopAudio());
+
+      bigScreen.addEventListener("click", async () => {
+        document.body.classList.toggle("fullscreen");
+        bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
+        if (!document.fullscreenElement) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (error) {
+            // Some browsers block fullscreen outside direct user gestures.
+          }
+        } else {
+          await document.exitFullscreen();
+        }
+      });
+
+      track.addEventListener("ended", () => {
+        mode = "idle";
+        activeLine = -1;
+        doneThrough = lines.length - 1;
+        stop.disabled = true;
+        status.textContent = "Xong bài";
+        updateHighlight();
+      });
+
+      track.addEventListener("play", () => {
+        track.playbackRate = practiceSpeed;
+      });
+
+      renderReading();
+      track.playbackRate = practiceSpeed;
+      stop.disabled = true;
+      raf = window.requestAnimationFrame(tick);
+      window.addEventListener("beforeunload", () => window.cancelAnimationFrame(raf));
+    })();
+  </script>
+</body>
+</html>
