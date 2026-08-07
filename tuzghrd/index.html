@@ -8,12 +8,12 @@
   <meta property="og:title" content="Family &amp; Friends 1 - Unit 3 - Lesson 5">
   <meta property="og:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-3-lesson-5/">
-  <meta property="og:image" content="https://raw.githubusercontent.com/mstrangtrieueducation-droid/mstrangtrieueducation-droid.github.io/20ce3ccbdf57bef00c4e2f3133da36b959601a32/family-and-friends-1-unit-3-lesson-5-v7/assets/skills-time-lesson-five-paper-lion.png">
+  <meta property="og:url" content="https://mstrangtrieueducation-droid.github.io/family-friends-1-unit-3-lesson-5/">
+  <meta property="og:image" content="https://mstrangtrieueducation-droid.github.io/family-friends-1-unit-3-lesson-5/assets/skills-time-lesson-five-paper-lion.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Family &amp; Friends 1 - Unit 3 - Lesson 5">
   <meta name="twitter:description" content="Nghe - Đọc - Dịch. Luyện đọc theo dòng màu vàng và tự dịch bài sang Tiếng Việt.">
-  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-and-friends-1-unit-3-lesson-5/">
+  <link rel="canonical" href="https://mstrangtrieueducation-droid.github.io/family-friends-1-unit-3-lesson-5/">
   <style>
     :root {
       --bg: #f4f7f0;
@@ -113,93 +113,6 @@
       font-weight: 800;
     }
 
-    .fine-tune {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      margin-left: auto;
-    }
-
-    .fine-tune[hidden] {
-      display: none;
-    }
-
-    .fine-tune-label {
-      min-width: 92px;
-      color: var(--muted);
-      font-weight: 900;
-      text-align: center;
-    }
-
-    .sync-panel[hidden] {
-      display: none;
-    }
-
-    .sync-panel {
-      margin-bottom: 14px;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    .sync-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .sync-toolbar button {
-      min-width: 86px;
-      border: 0;
-      border-radius: 8px;
-      padding: 10px 12px;
-      background: #e9efe8;
-      color: var(--green-dark);
-      font-weight: 900;
-      cursor: pointer;
-    }
-
-    .sync-toolbar button.primary {
-      background: var(--blue);
-      color: #fff;
-    }
-
-    .sync-status {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 0.96rem;
-      font-weight: 800;
-      line-height: 1.35;
-    }
-
-    .sync-waveform {
-      display: block;
-      width: 100%;
-      height: 120px;
-      margin-top: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #f8faf6;
-      cursor: crosshair;
-    }
-
-    .sync-output {
-      display: block;
-      width: 100%;
-      min-height: 130px;
-      margin-top: 10px;
-      padding: 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      color: var(--ink);
-      font: 0.88rem/1.35 Consolas, monospace;
-      resize: vertical;
-    }
-
     .guide,
     .vocabulary,
     .reader {
@@ -268,7 +181,7 @@
       border-radius: 8px;
       font-size: 1.3rem;
       line-height: 1.45;
-      transition: color 80ms ease, transform 80ms ease;
+      transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
     }
 
     .reading-line.clickable {
@@ -285,15 +198,6 @@
       color: var(--ink);
       font-weight: 900;
       transform: translateX(2px);
-    }
-
-    .reading-line.sync-target {
-      outline: 3px solid var(--blue);
-      outline-offset: -3px;
-    }
-
-    .reading-line.sync-recorded:not(.active) {
-      box-shadow: inset 4px 0 0 var(--green);
     }
 
     .line-num {
@@ -421,6 +325,130 @@
       }
     }
   </style>
+  <style data-official-brand>
+    header:has(> .official-brand-signature),
+    section.hero:has(> .official-brand-signature) {
+      position: relative;
+      min-height: 98px;
+    }
+
+    .official-brand-signature {
+      width: 82px;
+      height: 82px;
+      flex: 0 0 auto;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      border-radius: 6px;
+      background: #0d1435;
+      box-shadow: 0 2px 8px rgba(13, 20, 53, 0.16);
+      pointer-events: none;
+    }
+
+    .official-brand-signature img {
+      display: block;
+      width: 103px;
+      max-width: none;
+      height: 103px;
+      transform: translate(-10px, -8px);
+    }
+
+    @media (max-width: 680px) {
+      .official-brand-signature {
+        width: 52px;
+        height: 52px;
+        position: static;
+        margin-left: auto;
+        transform: none;
+        border-radius: 6px;
+      }
+
+      .official-brand-signature img {
+        width: 65px;
+        height: 65px;
+        transform: translate(-6px, -5px);
+      }
+    }
+  </style>
+  <style data-google-form-submission>
+    .official-submission-bar {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 7px 16px;
+      border-bottom: 1px solid rgba(80, 92, 112, 0.18);
+      background: rgba(255, 255, 255, 0.97);
+      color: #17213a;
+      font-family: inherit;
+    }
+
+    .official-submission-code {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      font-weight: 700;
+    }
+
+    .official-submission-code small {
+      color: #657086;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .official-submission-button {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 15px;
+      border: 1px solid #111a3d;
+      border-radius: 7px;
+      background: #111a3d;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1;
+      text-decoration: none;
+      box-shadow: 0 2px 6px rgba(17, 26, 61, 0.16);
+    }
+
+    .official-submission-button:hover {
+      background: #202b54;
+    }
+
+    .official-submission-button:focus-visible {
+      outline: 3px solid rgba(17, 26, 61, 0.28);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 520px) {
+      .official-submission-bar {
+        min-height: 46px;
+        justify-content: space-between;
+        gap: 9px;
+        padding: 6px 12px;
+      }
+
+      .official-submission-code {
+        gap: 5px;
+        font-size: 13px;
+      }
+
+      .official-submission-code small {
+        font-size: 11px;
+      }
+
+      .official-submission-button {
+        min-height: 34px;
+        padding: 7px 12px;
+        font-size: 13px;
+      }
+    }
+  </style>
 </head>
 <body>
   <main class="page">
@@ -429,33 +457,20 @@
         <span>Family &amp; Friends 1 - Unit 3 - Lesson 5</span>
         <span>Nghe - Đọc - Dịch</span>
       </div>
+          <div class="official-brand-signature" role="img" aria-label="Ms. Trang Trieu Education">
+        <img src="assets/brand/logo-official.webp" alt="" width="1600" height="1600">
+      </div>
     </section>
+    <div class="official-submission-bar" data-assignment-code="FF1-Tiết 10">
+      <span class="official-submission-code"><small>Mã bài</small> FF1-Tiết 10</span>
+      <a class="official-submission-button" href="https://docs.google.com/forms/d/e/1FAIpQLSdvQD5KNNCo7B8LV14df5U0ABl9OraIXL8Bj3nr27rNsi-1sw/viewform?usp=pp_url&entry.365831245=FF1-Ti%E1%BA%BFt+10" target="_blank" rel="noopener">Nộp bài</a>
+    </div>
 
     <section class="controls" aria-label="Controls">
       <button id="play" class="primary" type="button">Nghe</button>
       <button id="stop" type="button">Dừng</button>
       <button id="bigScreen" type="button">Màn hình lớn</button>
       <div id="status" class="status" aria-live="polite">Sẵn sàng</div>
-    </section>
-
-    <section class="controls fine-tune" aria-label="Highlight timing" hidden>
-      <span id="offsetLabel" class="fine-tune-label">Sync 0.00s</span>
-      <button id="offsetEarlier" type="button">Vàng sớm hơn</button>
-      <button id="offsetLater" type="button">Vàng muộn hơn</button>
-      <button id="offsetReset" type="button">Reset</button>
-    </section>
-
-    <section id="syncPanel" class="sync-panel" aria-label="Karaoke sync" hidden>
-      <div class="sync-toolbar">
-        <button id="syncStart" class="primary" type="button">Sync</button>
-        <button id="syncTap" type="button">Tap</button>
-        <button id="syncBack" type="button">Back</button>
-        <button id="syncCopy" type="button">Copy</button>
-        <button id="syncReset" type="button">Reset</button>
-      </div>
-      <div id="syncStatus" class="sync-status" aria-live="polite">Sync ready</div>
-      <canvas id="syncWaveform" class="sync-waveform" height="120"></canvas>
-      <textarea id="syncOutput" class="sync-output" readonly spellcheck="false" hidden></textarea>
     </section>
 
     <section class="guide" aria-label="Vietnamese instructions">
@@ -470,7 +485,7 @@
 
     <section class="study-area">
       <figure class="worksheet" aria-label="Worksheet image">
-        <img src="https://raw.githubusercontent.com/mstrangtrieueducation-droid/mstrangtrieueducation-droid.github.io/20ce3ccbdf57bef00c4e2f3133da36b959601a32/family-and-friends-1-unit-3-lesson-5-v7/assets/skills-time-lesson-five-paper-lion.png" alt="Skills Time Lesson Five paper lion worksheet">
+        <img src="assets/skills-time-lesson-five-paper-lion.png" alt="Skills Time Lesson Five paper lion worksheet">
       </figure>
 
       <section class="reader" aria-label="Reading practice">
@@ -483,9 +498,7 @@
       <p class="vocab-note">Con xem nghĩa của từ để hiểu bài. Khi trả bài, con tự dịch bài bằng Tiếng Việt.</p>
       <ul class="vocab-list">
         <li><span>parts of the body</span> - các bộ phận cơ thể.</li>
-        <li><span>let’s</span> - chúng ta hãy; hãy cùng. <em>Let’s make ... = Hãy cùng làm ... nhé!</em></li>
-        <li><span>make</span> - làm; tạo ra. <em>make a paper lion = làm một con sư tử bằng giấy</em></li>
-        <li><span>paper lion</span> - con sư tử bằng giấy.</li>
+        <li><span>paper lion</span> - con sư tử bằng giấy. <em>make a paper lion = làm một con sư tử bằng giấy</em></li>
         <li><span>colour</span> - tô màu. <em>Colour the face = Tô màu khuôn mặt</em></li>
         <li><span>face</span> - khuôn mặt.</li>
         <li><span>body</span> - thân mình; cơ thể.</li>
@@ -499,7 +512,7 @@
       </ul>
     </section>
 
-    <audio id="track" src="https://raw.githubusercontent.com/mstrangtrieueducation-droid/mstrangtrieueducation-droid.github.io/20ce3ccbdf57bef00c4e2f3133da36b959601a32/family-and-friends-1-unit-3-lesson-5-v7/assets/track-38-clean-0p8-v7.mp3" preload="auto"></audio>
+    <audio id="track" src="assets/track-38-clean-0p8-v5.mp3?v=5" preload="auto"></audio>
   </main>
 
   <script>
@@ -507,98 +520,110 @@
       const lines = [
         {
           text: "Hi.",
-          start: 0.61,
-          end: 1.17,
+          start: 0.58,
+          end: 1.13,
           html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Hi.</span>"
         },
         {
           text: "I’m Tom.",
-          start: 2.13,
-          end: 3.11,
+          start: 2.11,
+          end: 3.08,
           html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">I’m Tom.</span>"
         },
         {
           text: "Let’s make a paper lion!",
-          start: 4.63,
-          end: 7.17,
+          start: 4.61,
+          end: 7.14,
           html: "<span class=\"line-num blank\">0</span><span class=\"line-text\">Let’s make a <strong>paper lion</strong>!</span>"
         },
         {
-          text: "Colour the face,",
-          start: 8.64,
-          end: 10.01,
-          html: "<span class=\"line-num\">1</span><span class=\"line-text\"><strong>Colour</strong> the <strong>face</strong>,</span>"
+          text: "Colour the face, the body",
+          start: 8.62,
+          end: 9.99,
+          html: "<span class=\"line-num\">1</span><span class=\"line-text\"><strong>Colour</strong> the <strong>face</strong>, the <strong>body</strong></span>"
         },
         {
-          text: "the body and the legs.",
-          start: 11.19,
-          end: 14.86,
-          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">the <strong>body</strong> and the <strong>legs</strong>.</span>"
+          text: "and the legs.",
+          start: 11.17,
+          end: 12.12,
+          html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">and the <strong>legs</strong>.</span>"
         },
         {
           text: "Then colour the paws and tail too.",
-          start: 16.52,
-          end: 20.62,
+          start: 13.13,
+          end: 14.83,
           html: "<span class=\"line-num blank\">1</span><span class=\"line-text\">Then colour the <strong>paws</strong> and <strong>tail</strong> too.</span>"
         },
         {
           text: "Cut out the body.",
-          start: 22.63,
-          end: 24.50,
+          start: 16.50,
+          end: 18.86,
           html: "<span class=\"line-num\">2</span><span class=\"line-text\"><strong>Cut out</strong> the body.</span>"
         },
         {
           text: "Now cut the face.",
-          start: 26.24,
-          end: 28.08,
+          start: 18.97,
+          end: 20.59,
           html: "<span class=\"line-num blank\">2</span><span class=\"line-text\">Now cut the face.</span>"
         },
         {
           text: "Fold the tail.",
-          start: 30.45,
-          end: 31.72,
+          start: 23.15,
+          end: 24.48,
           html: "<span class=\"line-num\">3</span><span class=\"line-text\"><strong>Fold</strong> the tail.</span>"
         },
         {
           text: "Fold the face.",
-          start: 33.12,
-          end: 34.56,
+          start: 26.22,
+          end: 28.06,
           html: "<span class=\"line-num blank\">3</span><span class=\"line-text\">Fold the face.</span>"
         },
         {
-          text: "Cut out the four legs and paws.",
-          start: 36.70,
-          end: 39.76,
-          html: "<span class=\"line-num\">4</span><span class=\"line-text\">Cut out the four <strong>legs</strong> and <strong>paws</strong>.</span>"
+          text: "Cut out the four legs",
+          start: 30.28,
+          end: 31.71,
+          html: "<span class=\"line-num\">4</span><span class=\"line-text\">Cut out the four <strong>legs</strong></span>"
+        },
+        {
+          text: "and paws.",
+          start: 33.04,
+          end: 34.54,
+          html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">and <strong>paws</strong>.</span>"
         },
         {
           text: "Fold the legs.",
-          start: 40.96,
-          end: 42.31,
+          start: 36.68,
+          end: 39.77,
           html: "<span class=\"line-num blank\">4</span><span class=\"line-text\">Fold the legs.</span>"
         },
         {
-          text: "Stick the paws on the legs.",
-          start: 44.43,
-          end: 46.59,
-          html: "<span class=\"line-num\">5</span><span class=\"line-text\"><strong>Stick</strong> the paws on the legs.</span>"
+          text: "Stick the paws",
+          start: 40.80,
+          end: 42.30,
+          html: "<span class=\"line-num\">5</span><span class=\"line-text\"><strong>Stick</strong> the paws</span>"
+        },
+        {
+          text: "on the legs.",
+          start: 44.40,
+          end: 46.57,
+          html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">on the legs.</span>"
         },
         {
           text: "Stick the legs on the body.",
-          start: 47.41,
-          end: 49.92,
+          start: 47.39,
+          end: 49.90,
           html: "<span class=\"line-num blank\">5</span><span class=\"line-text\">Stick the legs on the body.</span>"
         },
         {
           text: "Look!",
-          start: 51.71,
-          end: 52.47,
+          start: 51.69,
+          end: 52.45,
           html: "<span class=\"line-num\">6</span><span class=\"line-text\"><strong>Look!</strong></span>"
         },
         {
           text: "It’s a lion.",
-          start: 53.47,
-          end: 54.77,
+          start: 53.45,
+          end: 54.75,
           html: "<span class=\"line-num blank\">6</span><span class=\"line-text\">It’s a <strong>lion</strong>.</span>"
         }
       ];
@@ -611,68 +636,10 @@
       const stop = document.getElementById("stop");
       const bigScreen = document.getElementById("bigScreen");
       const status = document.getElementById("status");
-      const offsetStorageKey = "unit-3-lesson-5-highlight-offset-1";
-      const offsetLabel = document.getElementById("offsetLabel");
-      const offsetEarlier = document.getElementById("offsetEarlier");
-      const offsetLater = document.getElementById("offsetLater");
-      const offsetReset = document.getElementById("offsetReset");
-      const syncEnabled = new URLSearchParams(window.location.search).has("sync");
-      const syncStorageKey = "unit-3-lesson-5-sync-waveform-1";
-      const syncPanel = document.getElementById("syncPanel");
-      const syncStart = document.getElementById("syncStart");
-      const syncTap = document.getElementById("syncTap");
-      const syncBack = document.getElementById("syncBack");
-      const syncCopy = document.getElementById("syncCopy");
-      const syncReset = document.getElementById("syncReset");
-      const syncStatus = document.getElementById("syncStatus");
-      const syncOutput = document.getElementById("syncOutput");
-      const syncWaveform = document.getElementById("syncWaveform");
       let raf = 0;
       let mode = "idle";
       let activeLine = -1;
       let doneThrough = -1;
-      let lastScrolledLine = -1;
-      let syncActive = false;
-      let syncIndex = 0;
-      let recordedStarts = [];
-      let waveformPeaks = [];
-      let waveformDuration = 0;
-      let waveformReady = false;
-      let highlightOffset = getStoredHighlightOffset();
-
-      function getStoredHighlightOffset() {
-        try {
-          const value = Number(localStorage.getItem(offsetStorageKey));
-          return Number.isFinite(value) ? Math.max(-1.5, Math.min(1.5, value)) : 0;
-        } catch (error) {
-          return 0;
-        }
-      }
-
-      function formatOffset(value) {
-        return `${value >= 0 ? "+" : ""}${value.toFixed(2)}s`;
-      }
-
-      function updateOffsetLabel() {
-        offsetLabel.textContent = `Sync ${formatOffset(highlightOffset)}`;
-        offsetEarlier.title = "Make yellow highlight earlier";
-        offsetLater.title = "Make yellow highlight later";
-      }
-
-      function setHighlightOffset(value) {
-        highlightOffset = Math.max(-1.5, Math.min(1.5, Number(value) || 0));
-        try {
-          localStorage.setItem(offsetStorageKey, highlightOffset.toFixed(2));
-        } catch (error) {
-          // Local storage can be unavailable in private browsing.
-        }
-        updateOffsetLabel();
-        updateHighlight();
-      }
-
-      function nudgeHighlightOffset(delta) {
-        setHighlightOffset(Number((highlightOffset + delta).toFixed(2)));
-      }
 
       function renderReading() {
         reading.innerHTML = "";
@@ -681,26 +648,18 @@
           row.className = "reading-line clickable";
           row.dataset.index = String(index);
           row.innerHTML = line.html;
-          row.addEventListener("click", () => {
-            if (syncEnabled) {
-              setSyncIndex(index);
-              return;
-            }
-            playOneLine(index);
-          });
+          row.addEventListener("click", () => playOneLine(index));
           reading.append(row);
         });
       }
 
       function updateHighlight() {
-        const time = track.currentTime + highlightOffset;
+        const time = track.currentTime + highlightLead;
         let activeIndex = -1;
 
-        drawSyncWaveform();
-
-        if (mode === "all" || mode === "sync") {
+        if (mode === "all") {
           lines.forEach((line, index) => {
-            if (time >= line.start - highlightLead && time < line.end) {
+            if (time >= line.start && time < line.end) {
               activeIndex = index;
             }
           });
@@ -713,7 +672,7 @@
           const index = Number(row.dataset.index);
           if (index === activeIndex) {
             row.classList.add("active");
-          } else if ((mode === "all" || mode === "sync") ? time >= lines[index].end : index <= doneThrough) {
+          } else if (mode === "all" ? time >= lines[index].end : index <= doneThrough) {
             row.classList.add("done");
           }
         });
@@ -726,10 +685,7 @@
         if (activeIndex >= 0) {
           const activeRow = reading.querySelector(`[data-index="${activeIndex}"]`);
           status.textContent = `Đang đọc dòng ${activeIndex + 1}`;
-          if (activeIndex !== lastScrolledLine) {
-            activeRow.scrollIntoView({ behavior: "auto", block: "center" });
-            lastScrolledLine = activeIndex;
-          }
+          activeRow.scrollIntoView({ behavior: "smooth", block: "center" });
         } else if (track.paused) {
           status.textContent = time >= lines[lines.length - 1].end ? "Xong bài" : "Đã dừng";
         } else {
@@ -742,11 +698,8 @@
         mode = "idle";
         activeLine = -1;
         doneThrough = -1;
-        lastScrolledLine = -1;
-        syncActive = false;
         stop.disabled = true;
         status.textContent = message;
-        updateSyncStatus();
         updateHighlight();
       }
 
@@ -754,7 +707,6 @@
         mode = "all";
         activeLine = -1;
         doneThrough = -1;
-        lastScrolledLine = -1;
         track.pause();
         track.currentTime = 0;
         track.playbackRate = practiceSpeed;
@@ -769,7 +721,6 @@
         mode = "one-line";
         activeLine = index;
         doneThrough = -1;
-        lastScrolledLine = -1;
         track.pause();
         track.currentTime = lines[index].start;
         track.playbackRate = practiceSpeed;
@@ -789,7 +740,6 @@
         activeLine = -1;
         doneThrough = finishedLine;
         mode = "idle";
-        lastScrolledLine = -1;
         stop.disabled = true;
         status.textContent = "Xong dòng";
         updateHighlight();
@@ -803,384 +753,11 @@
         raf = window.requestAnimationFrame(tick);
       }
 
-      function getWaveformDuration() {
-        return waveformDuration || track.duration || lines[lines.length - 1].end + 1;
-      }
-
-      function resizeSyncWaveform() {
-        if (!syncEnabled || !syncWaveform) {
-          return;
-        }
-        const ratio = window.devicePixelRatio || 1;
-        const width = Math.max(320, Math.round(syncWaveform.clientWidth * ratio));
-        const height = Math.max(90, Math.round(syncWaveform.clientHeight * ratio));
-        if (syncWaveform.width !== width || syncWaveform.height !== height) {
-          syncWaveform.width = width;
-          syncWaveform.height = height;
-        }
-      }
-
-      function drawSyncWaveform() {
-        if (!syncEnabled || !syncWaveform) {
-          return;
-        }
-
-        resizeSyncWaveform();
-        const ctx = syncWaveform.getContext("2d");
-        const width = syncWaveform.width;
-        const height = syncWaveform.height;
-        const middle = height / 2;
-        const duration = getWaveformDuration();
-
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = "#f8faf6";
-        ctx.fillRect(0, 0, width, height);
-        ctx.strokeStyle = "#d8e3d7";
-        ctx.beginPath();
-        ctx.moveTo(0, middle);
-        ctx.lineTo(width, middle);
-        ctx.stroke();
-
-        if (waveformReady && waveformPeaks.length) {
-          ctx.strokeStyle = "#2f8fc7";
-          ctx.lineWidth = Math.max(1, window.devicePixelRatio || 1);
-          for (let x = 0; x < width; x += 1) {
-            const peak = waveformPeaks[Math.floor((x / width) * waveformPeaks.length)] || 0;
-            const bar = Math.max(1, peak * height * 0.45);
-            ctx.beginPath();
-            ctx.moveTo(x, middle - bar);
-            ctx.lineTo(x, middle + bar);
-            ctx.stroke();
-          }
-        } else {
-          ctx.fillStyle = "#5d6c63";
-          ctx.font = `${Math.round(13 * (window.devicePixelRatio || 1))}px Segoe UI, Arial`;
-          ctx.fillText("Loading waveform", 12, middle - 8);
-        }
-
-        lines.forEach((line, index) => {
-          const triggerTime = Math.max(0, line.start - highlightLead - highlightOffset);
-          const x = (triggerTime / duration) * width;
-          ctx.strokeStyle = index === syncIndex ? "#d94f86" : recordedStarts[index] ? "#2f855a" : "rgba(31, 104, 68, 0.45)";
-          ctx.lineWidth = index === syncIndex ? 3 : 1.5;
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
-          ctx.stroke();
-        });
-
-        const playheadX = (track.currentTime / duration) * width;
-        ctx.strokeStyle = "#1f2823";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(playheadX, 0);
-        ctx.lineTo(playheadX, height);
-        ctx.stroke();
-      }
-
-      async function loadSyncWaveform() {
-        if (!syncEnabled || waveformReady) {
-          return;
-        }
-        try {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          if (!AudioContextClass) {
-            return;
-          }
-          const response = await fetch(track.currentSrc || track.src);
-          const audioBytes = await response.arrayBuffer();
-          const audioContext = new AudioContextClass();
-          const audioBuffer = await audioContext.decodeAudioData(audioBytes);
-          const peakCount = 1200;
-          const peaks = [];
-          const samplesPerPeak = Math.max(1, Math.floor(audioBuffer.length / peakCount));
-          let maxPeak = 0;
-
-          for (let peakIndex = 0; peakIndex < peakCount; peakIndex += 1) {
-            const start = peakIndex * samplesPerPeak;
-            const end = Math.min(audioBuffer.length, start + samplesPerPeak);
-            let peak = 0;
-            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
-              const data = audioBuffer.getChannelData(channel);
-              for (let sampleIndex = start; sampleIndex < end; sampleIndex += 1) {
-                peak = Math.max(peak, Math.abs(data[sampleIndex]));
-              }
-            }
-            peaks.push(peak);
-            maxPeak = Math.max(maxPeak, peak);
-          }
-
-          waveformPeaks = peaks.map((peak) => (maxPeak ? peak / maxPeak : peak));
-          waveformDuration = audioBuffer.duration;
-          waveformReady = true;
-          if (audioContext.close) {
-            await audioContext.close();
-          }
-        } catch (error) {
-          waveformPeaks = [];
-          waveformReady = false;
-        }
-        drawSyncWaveform();
-      }
-
-      function setSyncMarkerFromTime(time) {
-        if (!syncEnabled) {
-          return;
-        }
-
-        const triggerTime = Math.max(0, time);
-        const cueStart = triggerTime + highlightLead + highlightOffset;
-
-        if (syncIndex > 0) {
-          const previous = lines[syncIndex - 1];
-          const previousEnd = Math.max(previous.start + 0.2, triggerTime - 0.03);
-          previous.end = Number(previousEnd.toFixed(2));
-        }
-
-        lines[syncIndex].start = Number(cueStart.toFixed(2));
-        lines[syncIndex].end = Number(Math.max(lines[syncIndex].start + 0.6, lines[syncIndex].end).toFixed(2));
-        recordedStarts[syncIndex] = true;
-        saveSyncTimings();
-        updateSyncStatus();
-        paintSyncState();
-        updateHighlight();
-      }
-
-      function getSyncPayload() {
-        return lines.map((line) => ({
-          text: line.text,
-          start: Number(line.start.toFixed(2)),
-          end: Number(line.end.toFixed(2))
-        }));
-      }
-
-      function saveSyncTimings() {
-        if (!syncEnabled) {
-          return;
-        }
-        localStorage.setItem(syncStorageKey, JSON.stringify(getSyncPayload()));
-      }
-
-      function applySavedSyncTimings() {
-        if (!syncEnabled) {
-          return;
-        }
-        const saved = localStorage.getItem(syncStorageKey);
-        if (!saved) {
-          return;
-        }
-        try {
-          const timings = JSON.parse(saved);
-          if (!Array.isArray(timings) || timings.length !== lines.length) {
-            return;
-          }
-          timings.forEach((timing, index) => {
-            const start = Number(timing.start);
-            const end = Number(timing.end);
-            if (Number.isFinite(start) && Number.isFinite(end) && start < end) {
-              lines[index].start = start;
-              lines[index].end = end;
-            }
-          });
-        } catch (error) {
-          localStorage.removeItem(syncStorageKey);
-        }
-      }
-
-      function setSyncIndex(index) {
-        if (!syncEnabled) {
-          return;
-        }
-        syncIndex = Math.max(0, Math.min(lines.length - 1, index));
-        paintSyncState();
-        updateSyncStatus();
-      }
-
-      function paintSyncState() {
-        if (!syncEnabled) {
-          return;
-        }
-        document.querySelectorAll(".reading-line").forEach((row) => {
-          const index = Number(row.dataset.index);
-          row.classList.toggle("sync-target", index === syncIndex);
-          row.classList.toggle("sync-recorded", recordedStarts[index] === true);
-        });
-        drawSyncWaveform();
-      }
-
-      function updateSyncStatus() {
-        if (!syncEnabled || !syncStatus) {
-          return;
-        }
-        const line = lines[syncIndex] || lines[lines.length - 1];
-        const current = Math.min(syncIndex + 1, lines.length);
-        const state = syncActive ? "Recording" : "Ready";
-        syncStatus.textContent = `${state}: ${current}/${lines.length} - ${line.text} - offset ${formatOffset(highlightOffset)}`;
-      }
-
-      function startSyncRecording() {
-        if (!syncEnabled) {
-          return;
-        }
-        syncActive = true;
-        syncIndex = 0;
-        recordedStarts = [];
-        syncOutput.hidden = true;
-        mode = "sync";
-        activeLine = -1;
-        doneThrough = -1;
-        lastScrolledLine = -1;
-        track.pause();
-        track.currentTime = 0;
-        track.playbackRate = practiceSpeed;
-        stop.disabled = false;
-        updateSyncStatus();
-        paintSyncState();
-        updateHighlight();
-        track.play().catch(() => {
-          status.textContent = "Tap Sync again";
-        });
-      }
-
-      function recordSyncTap() {
-        if (!syncEnabled) {
-          return;
-        }
-        if (!syncActive) {
-          startSyncRecording();
-          return;
-        }
-
-        const tapTime = track.currentTime;
-        const cueStart = Math.max(0, tapTime + highlightLead + highlightOffset);
-
-        if (syncIndex > 0) {
-          const previous = lines[syncIndex - 1];
-          const previousEnd = Math.max(previous.start + 0.2, tapTime - 0.03);
-          previous.end = Number(previousEnd.toFixed(2));
-        }
-
-        lines[syncIndex].start = Number(cueStart.toFixed(2));
-        lines[syncIndex].end = Math.max(lines[syncIndex].start + 0.6, lines[syncIndex].end);
-        recordedStarts[syncIndex] = true;
-
-        if (syncIndex >= lines.length - 1) {
-          const fallbackEnd = lines[syncIndex].start + 1.6;
-          const audioEnd = Number.isFinite(track.duration) ? track.duration : fallbackEnd;
-          lines[syncIndex].end = Number(Math.max(lines[syncIndex].start + 0.6, Math.min(audioEnd, fallbackEnd)).toFixed(2));
-          finishSyncRecording();
-          return;
-        }
-
-        syncIndex += 1;
-        saveSyncTimings();
-        updateSyncStatus();
-        paintSyncState();
-        updateHighlight();
-      }
-
-      function finishSyncRecording() {
-        syncActive = false;
-        mode = "idle";
-        track.pause();
-        stop.disabled = true;
-        saveSyncTimings();
-        updateSyncStatus();
-        paintSyncState();
-        writeSyncOutput();
-      }
-
-      function backSyncLine() {
-        if (!syncEnabled) {
-          return;
-        }
-        if (syncIndex > 0) {
-          recordedStarts[syncIndex] = false;
-          syncIndex -= 1;
-          recordedStarts[syncIndex] = false;
-          track.currentTime = Math.max(0, lines[syncIndex].start - highlightLead - highlightOffset - 0.3);
-          updateSyncStatus();
-          paintSyncState();
-          updateHighlight();
-        }
-      }
-
-      function writeSyncOutput() {
-        if (!syncEnabled) {
-          return;
-        }
-        const text = JSON.stringify(getSyncPayload(), null, 2);
-        syncOutput.value = text;
-        syncOutput.hidden = false;
-        syncOutput.focus();
-        syncOutput.select();
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(text).catch(() => {});
-        }
-      }
-
-      function resetSyncTimings() {
-        if (!syncEnabled) {
-          return;
-        }
-        localStorage.removeItem(syncStorageKey);
-        window.location.reload();
-      }
-
-      function initSyncMode() {
-        if (!syncEnabled) {
-          return;
-        }
-        syncPanel.hidden = false;
-        recordedStarts = lines.map(() => false);
-        setSyncIndex(0);
-        loadSyncWaveform();
-      }
-
       play.addEventListener("click", playWholeTrack);
       stop.addEventListener("click", () => stopAudio());
 
-      offsetEarlier.addEventListener("click", () => nudgeHighlightOffset(0.10));
-      offsetLater.addEventListener("click", () => nudgeHighlightOffset(-0.10));
-      offsetReset.addEventListener("click", () => setHighlightOffset(0));
-
-      syncStart.addEventListener("click", startSyncRecording);
-      syncTap.addEventListener("click", recordSyncTap);
-      syncBack.addEventListener("click", backSyncLine);
-      syncCopy.addEventListener("click", writeSyncOutput);
-      syncReset.addEventListener("click", resetSyncTimings);
-      syncWaveform.addEventListener("click", (event) => {
-        if (!syncEnabled) {
-          return;
-        }
-        const rect = syncWaveform.getBoundingClientRect();
-        const ratio = (event.clientX - rect.left) / rect.width;
-        const time = Math.max(0, Math.min(getWaveformDuration(), ratio * getWaveformDuration()));
-        setSyncMarkerFromTime(time);
-        track.currentTime = Math.max(0, time - 0.12);
-      });
-      window.addEventListener("resize", drawSyncWaveform);
-
-      window.addEventListener("keydown", (event) => {
-        if (!syncEnabled || syncPanel.hidden) {
-          return;
-        }
-        if (event.target === syncOutput) {
-          return;
-        }
-        if (event.code === "Space" || event.code === "Enter") {
-          event.preventDefault();
-          recordSyncTap();
-        } else if (event.code === "Backspace" || event.code === "ArrowLeft") {
-          event.preventDefault();
-          backSyncLine();
-        }
-      });
-
       bigScreen.addEventListener("click", async () => {
         document.body.classList.toggle("fullscreen");
-        lastScrolledLine = -1;
-        updateHighlight();
         bigScreen.textContent = document.body.classList.contains("fullscreen") ? "Màn hình thường" : "Màn hình lớn";
         if (!document.fullscreenElement) {
           try {
@@ -1194,13 +771,8 @@
       });
 
       track.addEventListener("ended", () => {
-        if (syncActive) {
-          finishSyncRecording();
-          return;
-        }
         mode = "idle";
         activeLine = -1;
-        lastScrolledLine = -1;
         stop.disabled = true;
         status.textContent = "Xong bài";
         updateHighlight();
@@ -1210,10 +782,7 @@
         track.playbackRate = practiceSpeed;
       });
 
-      applySavedSyncTimings();
-      updateOffsetLabel();
       renderReading();
-      initSyncMode();
       track.playbackRate = practiceSpeed;
       stop.disabled = true;
       raf = window.requestAnimationFrame(tick);
