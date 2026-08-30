@@ -9,7 +9,10 @@
 const storageKey=`ielts-nghe-w${DATA.week}`;
 function loadState(){try{const value=JSON.parse(localStorage.getItem(storageKey)||"{}");return value&&typeof value==="object"?value:{}}catch{return {}}}
 const state=loadState();
+const loadedSchemaVersion=state.schemaVersion;
 state.q||={};state.g||={};state.scores||={};state.studentName||="";state.studentClass||="";
+state.confirmations=loadedSchemaVersion===2&&state.confirmations&&typeof state.confirmations==="object"?state.confirmations:{};
+state.schemaVersion=2;
 const scoreParts=Object.freeze([
   {key:"1-2",label:()=>`Tuần ${DATA.week} · Sections 1–2`,a:1,b:2},
   {key:"3-4",label:()=>`Tuần ${DATA.week} · Sections 3–4`,a:3,b:4}
@@ -28,11 +31,13 @@ const identityPart=s=>String(s??"").normalize("NFKC").trim().toLowerCase().repla
 const identityKey=(name,studentClass)=>`${identityPart(name)}|${identityPart(studentClass)}`;
 const save=()=>localStorage.setItem(storageKey,JSON.stringify(state));
 const scoreKeys=()=>Array.from({length:4},(_,i)=>[`d${i+1}`,`i${i+1}`]).flat();
-const scoresReady=()=>scoreKeys().every(k=>Number.isInteger(state.scores[k]));
-const scoreFingerprint=()=>JSON.stringify({week:DATA.week,student:identityKey(state.studentName,state.studentClass),scores:scoreKeys().map(k=>state.scores[k])});
+const partConfirmed=k=>Number.isInteger(state.scores[k])&&typeof state.confirmations[k]==="string"&&!!state.confirmations[k];
+const scoresReady=()=>scoreKeys().every(partConfirmed);
+const scoreFingerprint=()=>JSON.stringify({week:DATA.week,student:identityKey(state.studentName,state.studentClass),scores:scoreKeys().map(k=>[state.scores[k],state.confirmations[k]])});
 function clearScoreRetry(){if(scoreRetryTimer){clearTimeout(scoreRetryTimer);scoreRetryTimer=null}}
 function resetSubmission(){clearScoreRetry();scoreRetryAttempt=0;state.submission=freshSubmission()}
-function invalidateScore(key){if(Object.prototype.hasOwnProperty.call(state.scores,key))delete state.scores[key];resetSubmission()}
+function currentScoreKey(){return(stage==="dictation"?"d":stage==="ielts"?"i":"")+(si+1)}
+function invalidateScore(key){if(Object.prototype.hasOwnProperty.call(state.scores,key))delete state.scores[key];if(Object.prototype.hasOwnProperty.call(state.confirmations,key))delete state.confirmations[key];resetSubmission()}
 function setQ(q,v){state.q[q]=v;invalidateScore(`i${si+1}`);save();gate();scorePanel()}
 function setGap(i,v){state.g[`${si+1}-${i}`]=v;invalidateScore(`d${si+1}`);save();gate();scorePanel()}
 function setGroup(key,v,box,max){let a=state.q[key]||[];if(box.checked&&!a.includes(v)&&a.length>=max){box.checked=false;return}a=box.checked?[...new Set([...a,v])]:a.filter(x=>x!==v);state.q[key]=a;invalidateScore(`i${si+1}`);save();gate();scorePanel()}
@@ -54,7 +59,7 @@ function complete(){
   for(let q=a;q<=b;q++){if(grouped.has(q))continue;if(!norm(state.q[q]))return false}
   return true;
 }
-function gate(){const b=$("#partSubmit");if(!b)return;b.disabled=!complete();b.textContent=complete()?"Nộp bài & xem kết quả":stage==="dictation"?"Điền đủ 20/20 chỗ để nộp":"Làm đủ 10/10 câu để nộp"}
+function gate(){const b=$("#partSubmit");if(!b)return;const done=complete(),submitted=partConfirmed(currentScoreKey());b.disabled=submitted||!done;b.textContent=submitted?"✓ ĐÃ XÁC NHẬN NỘP PHẦN NÀY":done?"Xác nhận & nộp bài":stage==="dictation"?"Điền đủ 20/20 chỗ để nộp":"Làm đủ 10/10 câu để nộp"}
 function vocab(){return `<div class="vocab-grid">${section().vocab.map(v=>`<article class="vocab-card"><button class="sound" onclick='speak(${JSON.stringify(v.word)})'>◖))</button><h3>${v.word}</h3><div class="ipa">${v.ipa}</div><div class="pos">${v.pos}</div><div class="meaning">${v.meaning}</div><p class="example">${v.example}</p><div class="translation">${v.exampleVi}</div></article>`).join("")}</div>`}
 function submissionMessage(){
   const fingerprint=scoreFingerprint();
@@ -89,16 +94,17 @@ function render(){
   if(stage==="score")$("#content").innerHTML=scoreView();
   restoreInputs();gate();scorePanel();if(stage==="score"&&scoresReady())void ensureScoresSubmitted();
 }
-function finishPart(){save();scorePanel();updateStageTabs();if(scoresReady()){stage="score";render()}}
+function confirmPart(total,label){return window.confirm(`Em đã làm đủ ${total} ${label}. Xác nhận nộp phần này để chấm điểm và khóa kết quả?`)}
+function finishPart(){save();gate();scorePanel();updateStageTabs();void ensureScoresSubmitted();if(scoresReady()){stage="score";render()}}
 function gradeDict(){
-  if(!complete())return;let ok=0;
+  if(!complete()||!confirmPart(20,"chỗ chính tả"))return;let ok=0;
   section().clozeAnswers.forEach((a,i)=>{const input=document.querySelector(`[data-gap="${i}"]`),good=norm(state.g[`${si+1}-${i}`])===norm(a);input.classList.toggle("good",good);input.classList.toggle("bad",!good);if(good)ok++});
-  state.scores[`d${si+1}`]=ok;
+  const scoreKey=`d${si+1}`;resetSubmission();state.scores[scoreKey]=ok;state.confirmations[scoreKey]=new Date().toISOString();
   $("#result").innerHTML=`<div class="result"><b>${ok}/20</b> · Sai ${20-ok} chỗ. Đáp án đã hiện trực tiếp trên phần sai sau khi nộp.</div>`;
   section().clozeAnswers.forEach((a,i)=>{const input=document.querySelector(`[data-gap="${i}"]`);if(input.classList.contains("bad"))input.value=a});finishPart();
 }
 function gradeIelts(){
-  if(!complete())return;const [a,b]=range();let ok=0,grouped=new Set();
+  if(!complete()||!confirmPart(10,"câu IELTS"))return;const [a,b]=range();let ok=0,grouped=new Set();
   for(const [key,nums] of questionGroups()){
     const chosen=state.q[key]||[],valid=new Set(nums.flatMap(q=>DATA.answers[q]).map(norm));
     ok+=chosen.filter(x=>valid.has(norm(x))).length;nums.forEach(q=>grouped.add(q));
@@ -108,11 +114,11 @@ function gradeIelts(){
     if(grouped.has(q))continue;const valid=DATA.answers[q].map(norm),good=valid.includes(norm(state.q[q]));if(good)ok++;
     document.querySelectorAll(`[data-q="${q}"]`).forEach(el=>el.closest("td,.question-item,.paper-option")?.classList.add(good?"good":"bad"));
   }
-  state.scores[`i${si+1}`]=ok;
+  const scoreKey=`i${si+1}`;resetSubmission();state.scores[scoreKey]=ok;state.confirmations[scoreKey]=new Date().toISOString();
   $("#result").innerHTML=`<div class="result"><b>${ok}/10</b> · Em làm sai ${10-ok} câu. Hãy nghe lại Section ${si+1} và đối chiếu phần vừa làm.</div>`;finishPart();
 }
 function scorePanel(){
-  const grid=$("#scoreGrid");if(grid)grid.innerHTML=scoreKeys().map(k=>`<div class="score"><small>${k[0]==="d"?"Chính tả":"IELTS"} · Section ${k.slice(1)}</small><br><b>${Number.isInteger(state.scores[k])?state.scores[k]:"—"}/${k[0]==="d"?20:10}</b></div>`).join("");
+  const grid=$("#scoreGrid");if(grid)grid.innerHTML=scoreKeys().map(k=>`<div class="score"><small>${k[0]==="d"?"Chính tả":"IELTS"} · Section ${k.slice(1)}</small><br><b>${partConfirmed(k)?state.scores[k]:"—"}/${k[0]==="d"?20:10}</b></div>`).join("");
   updateStageTabs();const status=$("#scoreStatus");if(status)status.innerHTML=submissionMessage();
 }
 function scorePayload(label,a,b){
@@ -155,7 +161,7 @@ function updateEntryGate(){const ready=entryName.value.trim()&&entryClass.value;
 function openTest(){
   const name=entryName.value.trim(),studentClass=entryClass.value;if(!name||!studentClass)return;
   const previousKey=state.studentKey||identityKey(state.studentName,state.studentClass),nextKey=identityKey(name,studentClass);
-  if(previousKey&&previousKey!==nextKey){state.q={};state.g={};state.scores={};resetSubmission()}
+  if(previousKey&&previousKey!==nextKey){state.q={};state.g={};state.scores={};state.confirmations={};resetSubmission()}
   state.studentName=name;state.studentClass=studentClass;state.studentKey=nextKey;save();$("#entryGate").hidden=true;$("#testApp").hidden=false;render();if(scoresReady())void ensureScoresSubmitted();
 }
 entryName.oninput=updateEntryGate;entryClass.onchange=updateEntryGate;enterTest.onclick=openTest;entryName.onkeydown=e=>{if(e.key==="Enter"&&!enterTest.disabled)openTest()};
