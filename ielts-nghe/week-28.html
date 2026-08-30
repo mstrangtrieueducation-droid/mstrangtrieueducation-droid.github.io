@@ -59,7 +59,7 @@ function complete(){
   for(let q=a;q<=b;q++){if(grouped.has(q))continue;if(!norm(state.q[q]))return false}
   return true;
 }
-function gate(){const b=$("#partSubmit");if(!b)return;const done=complete(),submitted=partConfirmed(currentScoreKey());b.disabled=submitted||!done;b.textContent=submitted?"✓ ĐÃ XÁC NHẬN NỘP PHẦN NÀY":done?"Xác nhận & nộp bài":stage==="dictation"?"Điền đủ 20/20 chỗ để nộp":"Làm đủ 10/10 câu để nộp"}
+function gate(){const b=$("#partSubmit");if(!b)return;const done=complete(),submitted=partConfirmed(currentScoreKey());if(submitted)document.querySelectorAll("#content input,#content select").forEach(control=>control.disabled=true);b.disabled=submitted||!done;b.textContent=submitted?"✓ ĐÃ XÁC NHẬN NỘP PHẦN NÀY":done?"Xác nhận & nộp bài":stage==="dictation"?"Điền đủ 20/20 chỗ để nộp":"Làm đủ 10/10 câu để nộp"}
 function vocab(){return `<div class="vocab-grid">${section().vocab.map(v=>`<article class="vocab-card"><button class="sound" onclick='speak(${JSON.stringify(v.word)})'>◖))</button><h3>${v.word}</h3><div class="ipa">${v.ipa}</div><div class="pos">${v.pos}</div><div class="meaning">${v.meaning}</div><p class="example">${v.example}</p><div class="translation">${v.exampleVi}</div></article>`).join("")}</div>`}
 function submissionMessage(){
   const fingerprint=scoreFingerprint();
