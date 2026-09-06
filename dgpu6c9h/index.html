@@ -4,6 +4,7 @@
 <meta name="referrer" content="no-referrer">
 <script>
 /* FIGHTER_PARENT_LINK_V1: a live server binding selects the sole learner. */
+/* FIGHTER_PARENT_LINK_V1: a live server binding selects the sole learner. */
 const fighterApi = (() => {
   const endpoint='https://script.google.com/macros/s/AKfycby1ePo10b3LcZaUG090RSDWiS3RB6fAa0WEJ1AbMpmajXS8xnegq8UNPPJP6NDt242y/exec', className='FIGHTER 7';
   const token=new URLSearchParams(window.location.hash.slice(1)).get('p')||'';
@@ -11,18 +12,23 @@ const fighterApi = (() => {
   const actions={getPublicDashboardData:'public',getDashboardData:'dashboard',getStudentDirectoryFastV1:'directory',getStudentProfileFastV1:'profile',getSelfStudyResultsForStudentV1:'selfStudy'};
   const terminalCodes=new Set(['PARENT_LINK_REVOKED','INVALID_TOKEN','LINK_REVOKED','PARENT_LINK_INVALID','TOKEN_REVOKED']);
   const pending=new Map(), controllers=new Set();
-  let status=validToken?'pending':'revoked', binding=null, checkJob=null;
+  let status=validToken?'pending':'revoked', binding=null, checkJob=null, selfStudyPrefetch=null;
   const key=value=>String(value||'').trim().normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g,' ');
   const clone=value=>value==null?null:JSON.parse(JSON.stringify(value));
   function error(message,code){const e=new Error(message);e.code=code;return e;}
   function signal(next){status=next;window.dispatchEvent(new CustomEvent('fighter-parent-access',{detail:{status:next}}));}
-  function revoke(){status='revoked';controllers.forEach(c=>c.abort());pending.clear();binding=null;signal('revoked');}
+  function revoke(){status='revoked';controllers.forEach(c=>c.abort());pending.clear();binding=null;selfStudyPrefetch=null;signal('revoked');}
   function validate(data,action){
     if(action==='check'){
       if(!data||data.className!==className||!String(data.studentName||'').trim()||!data.directory||data.directory.className!==className||!Array.isArray(data.directory.students)||data.directory.students.length!==1||key(data.directory.students[0].name)!==key(data.studentName)||binding&&key(binding.studentName)!==key(data.studentName))throw error('Hồ sơ chưa khớp. Vui lòng thử lại.','INVALID_SCOPE');
       return;
     }
     if(!binding)throw error('Đang kiểm tra hồ sơ.','AUTH_PENDING');
+    if(action==='bootstrap'){
+      if(!data||data.className!==className)throw error('Dữ liệu lớp chưa khớp.','INVALID_SCOPE');
+      validate(data.publicData,'public');validate(data.fullDashboard,'dashboard');validate(data.profile,'profile');
+      return;
+    }
     if(action==='selfStudy'){if(!Array.isArray(data))throw error('Kết quả chưa sẵn sàng.','INVALID_SCOPE');return;}
     if(!data||data.className!==className)throw error('Dữ liệu lớp chưa khớp.','INVALID_SCOPE');
     if(action==='profile'&&(!data.student||key(data.student.name)!==key(binding.studentName)))throw error('Hồ sơ chưa khớp.','INVALID_SCOPE');
@@ -64,18 +70,31 @@ const fighterApi = (() => {
     return checkJob;
   }
   function request(method,args){
+    if(status!=='authorized')return Promise.reject(error('Đang kiểm tra hồ sơ.','AUTH_PENDING'));
     const action=actions[method],personal=action==='profile'||action==='selfStudy';
     const requested=personal?String(action==='selfStudy'?(args[0]&&args[0].name||''):(args[0]||'')):'';
     if(personal&&(!binding||key(requested)!==key(binding.studentName)))return Promise.reject(error('Hồ sơ chưa khớp.','INVALID_SCOPE'));
+    if(action==='selfStudy'&&selfStudyPrefetch){
+      const prefetched=selfStudyPrefetch;selfStudyPrefetch=null;
+      return prefetched;
+    }
     const force=action==='profile'?Boolean(args[1]):personal||action==='directory'?false:Boolean(args[0]);
     return requestAction(action,force);
+  }
+  function prefetchSelfStudy(){
+    if(status!=='authorized')return;
+    const job=requestAction('selfStudy',false);selfStudyPrefetch=job;
+    // One-use, in-memory prefetch: the unchanged renderer takes this promise
+    // whether it is still loading or already complete. Failure before rendering
+    // clears it so the ordinary getter gets its normal retry opportunity.
+    job.catch(()=>{if(selfStudyPrefetch===job)selfStudyPrefetch=null;});
   }
   function runner(success,failure){
     const result={withSuccessHandler(fn){return runner(fn,failure);},withFailureHandler(fn){return runner(success,fn);}};
     Object.keys(actions).forEach(method=>{result[method]=(...args)=>request(method,args).then(data=>{if(status==='authorized'&&typeof success==='function')success(data);},err=>{if(typeof failure==='function')failure(err);});});
     return result;
   }
-  return {get run(){return runner();},readCache(){return null;},saveCache(){},parent:{get authorized(){return status==='authorized';},get revoked(){return status==='revoked';},get status(){return status;},get binding(){return status==='authorized'?clone(binding):null;},check,request:requestAction,revoke,suspend(){if(status!=='revoked')signal('pending');}}};
+  return {get run(){return runner();},readCache(){return null;},saveCache(){},parent:{get authorized(){return status==='authorized';},get revoked(){return status==='revoked';},get status(){return status;},get binding(){return status==='authorized'?clone(binding):null;},check,request:requestAction,prefetchSelfStudy,revoke,suspend(){selfStudyPrefetch=null;if(status!=='revoked')signal('pending');}}};
 })();
 
 </script>
@@ -2322,7 +2341,7 @@ function fighterOpenPendingHomeworkV15_(){
 // FIGHTER_PENDING_HOMEWORK_ALERT_UI_END_V15
 </script>
 <script id="fighter-parent-hooks">
-/* FIGHTER_PARENT_OPENING_V1: retain Fighter renderers with the Kids 7 opening. */
+/* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;
 function fighterParentIdentity_(){
   const binding=fighterApi.parent.binding;
@@ -2346,6 +2365,7 @@ function fighterParentGate_(message,retry){
 }
 function fighterParentClear_(){
   fighterParentGeneration_+=1;fighterParentPackage_=null;fighterParentLoading_=null;fighterParentPainted_=false;
+  delete document.documentElement.dataset.parentLastOpenMs;
   dashboard=null;studentDirectory_=[];studentDirectoryReady_=false;studentDataReady_=false;studentDataLoading_=false;studentDirectoryLoading_=false;
   studentProfileRequestV1_+=1;selfStudyResultRequestV1_+=1;fighterBootRequestV1_+=1;
   f9PortalSelectedStudentV2_=null;f9PortalSelfStudyItemsV2_=[];fighterPendingStudentV15_=null;fighterPendingSelfStudyItemsV15_=[];
@@ -2378,6 +2398,7 @@ function fighterParentApply_(){
   $('#student-input').value=binding.studentName;$('#student-input').disabled=true;
   $('#student-switch').hidden=false;
   fighterParentPainted_=true;fighterParentIdentity_();
+  document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));
   if(document.documentElement.dataset.parentFirstOpenMs===undefined)document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));
   return true;
 }
@@ -2385,12 +2406,13 @@ function fighterParentLoad_(force=false,quiet=false){
   if(!fighterApi.parent.authorized)return Promise.resolve(false);
   if(fighterParentLoading_)return fighterParentLoading_;
   const generation=fighterParentGeneration_;
+  document.documentElement.dataset.parentLoadStartedMs=String(Math.round(performance.now()));
+  delete document.documentElement.dataset.parentLastOpenMs;
   if(!quiet)fighterParentGate_('Đang tải lịch học, bài tập và kết quả của con…');
-  fighterParentLoading_=Promise.all([
-    fighterApi.parent.request('public',force).then(data=>{if(!quiet&&fighterApi.parent.authorized&&generation===fighterParentGeneration_)$('#parentOpeningMessage').textContent='Đã tải lịch học · Đang hoàn tất kết quả của con…';return data;}),
-    fighterApi.parent.request('dashboard',force),
-    fighterApi.parent.request('profile',force).then(data=>{if(!quiet&&fighterApi.parent.authorized&&generation===fighterParentGeneration_)$('#parentOpeningMessage').textContent='Đã tải hồ sơ của con · Đang hoàn tất lịch học và bài tập…';return data;})
-  ]).then(([publicData,fullDashboard,profile])=>{
+  // The backend constructs the class model once and derives the exact profile
+  // from it. Separate dashboard/profile requests rebuild that same model on
+  // cold or forced loads, delaying the entire opening behind redundant work.
+  fighterParentLoading_=fighterApi.parent.request('bootstrap',force).then(({publicData,fullDashboard,profile})=>{
     if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;
     if(!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments)||!Array.isArray(fullDashboard.scoreDefinitions)||!fullDashboard.classSummary||!Array.isArray(fullDashboard.classSummary.leaderboard)||!Array.isArray(profile.student.assignments)||!Array.isArray(profile.student.scoreDetails))throw new Error('Dữ liệu đang được cập nhật.');
     fighterParentPackage_={publicData,fullDashboard,profile};
@@ -2400,16 +2422,22 @@ function fighterParentLoad_(force=false,quiet=false){
     return true;
   }).catch(()=>{
     if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;
-    if(!quiet||!fighterParentPainted_)fighterParentGate_('Chưa tải đủ hồ sơ. Bố mẹ bấm tải lại nhé.',true);
+    if(!quiet||!fighterParentPainted_||!$('#student-gateway').hidden)fighterParentGate_('Chưa tải đủ hồ sơ. Bố mẹ bấm tải lại nhé.',true);
     else $('#updated').textContent='Đang hiển thị dữ liệu gần nhất · Bấm tải lại để kiểm tra cập nhật.';
     return false;
   }).finally(()=>{if(generation===fighterParentGeneration_)fighterParentLoading_=null;});
+  fighterApi.parent.prefetchSelfStudy();
   return fighterParentLoading_;
 }
 function fighterParentRecheck_(options={}){
+  if(options.refresh){document.documentElement.dataset.parentRefreshStartedMs=String(Math.round(performance.now()));delete document.documentElement.dataset.parentLastOpenMs;}
   return fighterApi.parent.check(options).then(ok=>{
     if(!ok)return false;
     fighterParentIdentity_();
+    // A current bootstrap owns the next paint. Revalidation must not restore
+    // the previous package while that load is pending or consume its prefetch.
+    // Foreground checks retain their gate; background checks keep ready UI.
+    if(fighterParentLoading_)return fighterParentLoading_;
     if(options.background&&fighterParentPainted_&&$('#student-gateway').hidden)return true;
     if(options.refresh)return fighterParentLoad_(true,false);
     if(fighterParentPackage_)return fighterParentApply_();
