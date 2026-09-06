@@ -1361,7 +1361,12 @@ html.vn-national-day-2026-root body .assignment.session {
   background: #f4f7f8;
 }
 #parentOpeningEyebrow { margin: 0; color: var(--muted); font-size: 13px; font-weight: 750; letter-spacing: .075em; text-transform: uppercase; }
-#parentOpeningName { margin: 10px 0 0; color: var(--navy); font-size: clamp(27px, 3.4vw, 40px); font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+.parent-opening-name-slot { position: relative; width: 100%; margin-top: 10px; min-height: 54px; display: grid; align-items: center; }
+#parentOpeningName { margin: 0; color: var(--navy); font-size: clamp(27px, 3.4vw, 40px); font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+#parentOpeningSkeleton { position: absolute; inset: 50% auto auto 50%; width: min(70%, 480px); height: 27px; border-radius: 8px; transform: translate(-50%, -50%); background: linear-gradient(90deg, #dce5e8 20%, #eaf0f2 50%, #dce5e8 80%); background-size: 200% 100%; animation: parent-name-pending 1.8s ease-in-out infinite; }
+#parentOpeningSkeleton[hidden] { display: none !important; }
+@keyframes parent-name-pending { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { #parentOpeningSkeleton { animation: none; } }
 #entryGate #entryMessage { max-width: 680px; margin-top: 16px !important; font-size: 15px; line-height: 1.6; color: var(--muted) !important; }
 #entryGate .entry-retry { min-height: 50px; padding-inline: 24px; font-size: 15px; }
 #parentOpeningIdentity[hidden], #parentPendingIdentity[hidden] { display: none !important; }
@@ -1381,6 +1386,8 @@ html.vn-national-day-2026-root body .assignment.session {
   .parent-opening-identity { margin-top: 22px; padding: 19px 14px; border-radius: 15px; }
   #parentOpeningEyebrow { font-size: 11px; }
   #parentOpeningName { font-size: 27px; }
+  .parent-opening-name-slot { min-height: 73px; }
+  #parentOpeningSkeleton { width: 80%; height: 24px; }
   #entryGate #entryMessage { font-size: 14px; }
   #pendingWorkGate .pending-work-gate__card { padding: 26px 22px; border-radius: 22px; }
   #parentPendingIdentity { font-size: 23px; }
@@ -1407,9 +1414,12 @@ html.vn-national-day-2026-root body .assignment.session {
       <p class="eyebrow">Ms. Trang Trieu Education</p>
       <h1 id="entryTitle">KIDS 7</h1>
       <p class="parent-opening-intro">Lịch học, bài tập và kết quả học tập của con.</p>
-      <div class="parent-opening-identity" id="parentOpeningIdentity" aria-live="polite" aria-atomic="true" hidden>
-        <p id="parentOpeningEyebrow"></p>
-        <h2 id="parentOpeningName"></h2>
+      <div class="parent-opening-identity" id="parentOpeningIdentity" data-state="pending" aria-live="polite" aria-atomic="true" aria-busy="true">
+        <p id="parentOpeningEyebrow">Đang mở hồ sơ của</p>
+        <div class="parent-opening-name-slot">
+          <h2 id="parentOpeningName"></h2>
+          <span id="parentOpeningSkeleton" aria-hidden="true"></span>
+        </div>
       </div>
       <form class="entry-form" id="entryForm">
         <label class="entry-label" for="entryName">Chọn tên của con</label>
@@ -4023,10 +4033,22 @@ html.vn-national-day-2026-root body .assignment.session {
       const opening = $('#parentOpeningIdentity');
       const eyebrow = $('#parentOpeningEyebrow');
       const name = $('#parentOpeningName');
+      const skeleton = $('#parentOpeningSkeleton');
       const pending = $('#parentPendingIdentity');
-      if (eyebrow) eyebrow.textContent = label ? 'Đang mở hồ sơ của' : '';
-      if (name) name.textContent = label;
-      if (opening) opening.hidden = !label;
+      const state = label ? 'authorized' : (kidsApi.parent.status === 'revoked' ? 'revoked' :
+        (kidsApi.parent.status === 'unavailable' ? 'unavailable' : 'pending'));
+      const checking = state === 'pending';
+      if (eyebrow) eyebrow.textContent = state === 'revoked' || state === 'unavailable' ? 'Trạng thái hồ sơ' : 'Đang mở hồ sơ của';
+      if (name) name.textContent = label || (state === 'revoked' ? 'Hồ sơ không còn hoạt động' :
+        (state === 'unavailable' ? 'Chưa thể kết nối hồ sơ' : ''));
+      if (skeleton) skeleton.hidden = !checking;
+      // One card and one identity slot exist from the first HTML paint.
+      // Authorization replaces only the neutral placeholder, never the card.
+      if (opening) {
+        opening.hidden = false;
+        opening.dataset.state = state;
+        opening.setAttribute('aria-busy', String(checking));
+      }
       const entries = app.directoryLoad && app.directoryLoad.ready ? arr(app.directoryAliases) : [];
       const fullLabelReady = label && entries.length === 1 && typeof entries[0] === 'object' &&
         text(pick(entries[0], ['label', 'displayName'], '')) &&
