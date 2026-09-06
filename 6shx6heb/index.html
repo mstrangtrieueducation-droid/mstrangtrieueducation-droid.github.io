@@ -74,7 +74,28 @@ const taParent = (() => {
     @media(max-width:520px){.brand strong{font-size:10px}.brand small{display:none}.student-gateway{padding:24px 0 48px}.gateway-card__head,.gateway-form{padding:24px 20px}.tab{padding:14px 15px}.profile-head{flex-direction:column}.notice{flex-direction:column}.session__head,.lesson,.tasks{padding-right:16px;padding-left:16px}.deadline,.closing{margin-right:16px;margin-left:16px}.slot{flex-direction:column;gap:2px}.slot strong{text-align:left}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
   .parent-eyebrow{color:var(--muted);font-size:12px;margin:20px 0 8px}.parent-identity{min-height:45px;display:flex;align-items:center}.parent-identity strong{font-size:clamp(20px,3.3vw,30px);line-height:1.35;color:var(--navy);overflow-wrap:anywhere}#parent-skeleton{height:28px;width:min(420px,82%);display:block;background:#e6edf5;border-radius:7px}.gateway-form{min-height:200px}
-  </style>
+  /* The welcome fills the viewport below the natural-height school header. */
+body.portal-locked{min-height:100svh;min-height:100dvh;display:flex;flex-direction:column}
+body.portal-locked .topbar{flex-shrink:0}
+body.portal-locked .student-gateway{display:flex;flex:1;width:100%;margin:0;padding:0}
+body.portal-locked .gateway-card{display:flex;flex:1;flex-direction:column;width:100%;margin:0;border:0;border-radius:0;box-shadow:none}
+body.portal-locked .gateway-card__head{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:clamp(32px,5vw,72px) clamp(24px,6vw,96px);text-align:center}
+body.portal-locked .gateway-kicker{margin-bottom:16px;font-size:14px;letter-spacing:.14em}
+body.portal-locked .gateway-card h1{max-width:1000px;font-size:clamp(36px,5.5vw,76px);line-height:1.12;text-wrap:balance}
+body.portal-locked .gateway-intro{max-width:800px;margin-top:20px;font-size:clamp(17px,1.65vw,22px);line-height:1.6;text-wrap:balance}
+body.portal-locked .gateway-program{max-width:760px;margin-top:20px;font-size:clamp(14px,1.2vw,17px);line-height:1.6;text-wrap:balance}
+body.portal-locked .gateway-form{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;min-height:280px;padding:clamp(28px,4vw,56px) clamp(24px,6vw,96px);text-align:center}
+body.portal-locked .gateway-class{margin:0 0 16px;padding:7px 16px;font-size:14px}
+body.portal-locked .parent-eyebrow{margin:0 0 14px;font-size:16px}
+body.portal-locked .parent-identity{justify-content:center;width:min(100%,1100px);min-height:64px}
+body.portal-locked .parent-identity strong{font-size:clamp(28px,4vw,56px);line-height:1.25;text-wrap:balance}
+body.portal-locked #parent-skeleton{width:min(520px,82%);height:44px;border-radius:10px}
+body.portal-locked #gateway-message{max-width:760px;margin-top:20px;font-size:16px;line-height:1.65;text-wrap:balance}
+body.portal-locked .gateway-actions{max-width:100%;margin-top:16px}
+body.portal-locked .gateway-actions .button{min-height:52px;font-size:16px}
+@media(max-width:520px){body.portal-locked .gateway-kicker{font-size:12px}body.portal-locked .gateway-form{min-height:260px}body.portal-locked .parent-identity{min-height:48px}}
+
+</style>
 </head>
 <body class="portal-locked">
   <a class="skip-link" href="#student-gateway">Bỏ qua để đến nội dung</a>
