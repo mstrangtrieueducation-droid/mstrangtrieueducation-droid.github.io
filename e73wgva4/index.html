@@ -57,15 +57,23 @@ const ieltsApi=(()=>{
 </script>
 <style>
 #student-gate,#change-student-button,#roster-button,#roster-modal,#app-loading{display:none!important}
-.parent-opening{width:min(960px,calc(100% - 32px));margin:40px auto;background:#fff;border:1px solid #dce4ed;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px #0b2a4f12}
-.parent-opening__hero{padding:30px 34px;background:#0b2a4f;color:white}
-.parent-opening__hero p{margin:0 0 10px;letter-spacing:.08em;font-size:13px;font-weight:700}
-.parent-opening__hero h1{margin:0;font-size:34px;line-height:1.2}
-.parent-opening__body{padding:30px 34px}.parent-opening__body>p{color:#68778b;margin:0 0 12px;font-size:15px}
-#parent-opening-name{font-size:24px;line-height:1.45;min-height:40px;color:#0b2a4f;display:block;overflow-wrap:anywhere}
-#parent-opening-status{color:#53647b;margin:18px 0 0;min-height:24px;font-size:16px}
-.is-waiting{color:#68778b!important}#parent-retry{margin-top:20px;background:#0b2a4f;border:0;border-radius:10px;color:#fff;padding:12px 22px;font:600 16px inherit;cursor:pointer}
-@media(max-width:600px){.parent-opening{margin:20px auto}.parent-opening__hero,.parent-opening__body{padding:24px}.parent-opening__hero h1{font-size:30px}#parent-opening-name{font-size:20px}}
+.parent-opening{position:fixed;inset:0;z-index:10000;display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);width:100%;min-height:100vh;min-height:100svh;margin:0;border:0;border-radius:0;background:#f7f4ed;overflow:auto;box-shadow:none;isolation:isolate}
+.parent-opening[hidden]{display:none!important}
+.parent-opening,.parent-opening *{box-sizing:border-box}
+.parent-opening__hero{position:relative;display:flex;flex-direction:column;justify-content:center;min-width:0;min-height:100%;padding:clamp(52px,6vw,112px);background:radial-gradient(ellipse at 0 0,#214a70 0,transparent 58%),#0b2a4f;color:#fff}
+.parent-opening__hero::after{content:'';display:block;width:88px;height:5px;margin-top:36px;background:#d6b66f;border-radius:3px}
+.parent-opening__hero>p:first-child{position:absolute;top:clamp(32px,4vw,64px);left:clamp(52px,6vw,112px);right:32px;margin:0;color:#e4eaf1;letter-spacing:.13em;font-size:clamp(12px,1vw,16px);font-weight:700;line-height:1.6}
+.parent-opening__hero h1{margin:0;font-size:clamp(64px,7.6vw,132px);font-weight:800;line-height:1.05;letter-spacing:-.045em;overflow-wrap:anywhere}
+.parent-opening__hero .parent-opening__intro{max-width:440px;margin:26px 0 0;color:#dce5ed;font-size:clamp(20px,1.9vw,30px);line-height:1.65;letter-spacing:0;font-weight:400}
+.parent-opening__body{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;min-width:0;padding:clamp(48px,6vw,112px);background:radial-gradient(ellipse at 100% 100%,#eee6d5 0,transparent 60%),#f7f4ed}
+.parent-opening__body>p{margin:0 0 24px;color:#806932;font-size:clamp(14px,1.15vw,18px);font-weight:700;letter-spacing:.13em;line-height:1.6}
+#parent-opening-name{display:block;width:100%;min-height:148px;padding:clamp(24px,2.5vw,40px);border:1px solid #dfdfd7;border-left:5px solid #d6b66f;border-radius:0 20px 20px 0;background:#ffffffb8;color:#0b2a4f;font-size:clamp(30px,3.1vw,52px);font-weight:700;line-height:1.35;letter-spacing:-.02em;overflow-wrap:anywhere}
+#parent-opening-status{max-width:640px;margin:28px 0 0;min-height:30px;color:#53647b;font-size:clamp(17px,1.4vw,22px);line-height:1.65;overflow-wrap:anywhere}
+#parent-opening-name.is-waiting{color:#68778b!important}
+#parent-retry{margin-top:28px;min-height:52px;background:#0b2a4f;border:0;border-radius:12px;color:#fff;padding:16px 30px;font-family:inherit;font-size:18px;font-weight:700;cursor:pointer}
+#parent-retry:hover{background:#18436b}#parent-retry:focus-visible{outline:3px solid #a78640;outline-offset:4px}
+@media(max-width:760px){.parent-opening{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(250px,.78fr) minmax(min-content,1fr)}.parent-opening__hero{min-height:250px;padding:80px 28px 36px}.parent-opening__hero>p:first-child{top:max(24px,env(safe-area-inset-top));left:28px;right:28px;font-size:12px}.parent-opening__hero h1{font-size:clamp(60px,13vw,94px)}.parent-opening__hero .parent-opening__intro{max-width:none;margin-top:16px;font-size:19px;line-height:1.5}.parent-opening__hero::after{width:64px;height:4px;margin-top:24px}.parent-opening__body{padding:36px 28px max(36px,env(safe-area-inset-bottom))}.parent-opening__body>p{margin-bottom:18px;font-size:13px;letter-spacing:.09em}#parent-opening-name{min-height:118px;padding:24px;font-size:clamp(27px,6.5vw,38px);border-radius:0 16px 16px 0}#parent-opening-status{margin-top:22px;font-size:17px}}
+@media(max-width:380px){.parent-opening__hero{padding-left:22px;padding-right:22px}.parent-opening__hero>p:first-child{left:22px;right:22px;font-size:11px}.parent-opening__body{padding-left:22px;padding-right:22px}#parent-opening-name{padding:20px;font-size:27px}}
 </style>
   <base target="_top">
   <meta charset="utf-8">
@@ -531,7 +539,7 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
     .ielts-shadowing-deadline{display:flex;justify-content:space-between;gap:16px;padding:16px 20px;border:1px solid #f0d29b;border-radius:14px;background:#fff6e7;color:#81500e}
     @media(max-width:680px){.ielts-shadowing-body{padding:20px 16px}.ielts-shadowing-task{align-items:flex-start;flex-direction:column}.ielts-shadowing-deadline{flex-wrap:wrap}.ielts-shadowing-card h2{overflow-wrap:anywhere}}
   </style></head>
-<body><section id="parent-opening" class="parent-opening" aria-label="Hồ sơ học viên"><div class="parent-opening__hero"><p>MS TRANG TRIEU EDUCATION</p><h1>IELTS 48</h1></div><div class="parent-opening__body"><p>HỒ SƠ HỌC TẬP CỦA CON</p><strong id="parent-opening-name" class="is-waiting">Đang xác nhận học viên…</strong><div id="parent-opening-status" role="status">Đang mở hồ sơ của con…</div><button id="parent-retry" hidden>Thử lại</button></div></section>
+<body><section id="parent-opening" class="parent-opening" aria-label="Hồ sơ học viên"><div class="parent-opening__hero"><p>MS TRANG TRIEU EDUCATION</p><h1>IELTS 48</h1><p class="parent-opening__intro">Lịch học · Bài tập<br>Kết quả học tập</p></div><div class="parent-opening__body"><p>HỒ SƠ HỌC TẬP CỦA CON</p><strong id="parent-opening-name" class="is-waiting">Đang xác nhận học viên…</strong><div id="parent-opening-status" role="status">Đang mở hồ sơ của con…</div><button id="parent-retry" hidden>Thử lại</button></div></section>
   <div id="app-loading"><div class="app-loading-inner"><div class="app-loading-spinner"></div><div>Đang tải thông tin học tập…</div></div></div>
   <aside id="ielts-mobile-embed-rescue" class="zalo-mobile-rescue" hidden aria-labelledby="zalo-mobile-rescue-title">
     <div class="zalo-mobile-rescue__card">
