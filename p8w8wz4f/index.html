@@ -848,6 +848,10 @@ body.fighter-pending-work-locked{overflow:hidden}.fighter-pending-work-gate{posi
 /* Same first-paint card and dimensions as the completed Kids 7 parent model. */
 #loading,.parent-hidden-selector {display:none!important}
 body.f9-portal-locked .topbar {display:none!important}
+body.f9-portal-ready #student-switch:not([hidden]) {display:inline-flex!important;flex-shrink:0;min-height:42px}
+body.f9-portal-ready .topbar .shell {gap:12px;padding-inline:14px}
+body.f9-portal-ready .topbar .brand {min-width:0}
+body.f9-portal-ready .topbar .brand img {flex-shrink:0}
 body.f9-portal-locked #student-gateway {
   min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr);align-items:center;justify-items:center;
   padding:28px;background:#f4f7fb;border:0;
@@ -880,6 +884,10 @@ body.f9-portal-locked #student-gateway {
 #fighter-pending-work-gate .fighter-pending-work-gate__detail {margin-top:16px;font-size:16px}
 #fighter-pending-work-gate .fighter-pending-work-gate__button {margin-top:24px;min-height:58px;font-size:16px}
 @media(max-width:600px){
+ body.f9-portal-ready .topbar{height:auto;min-height:66px;padding-block:10px}
+ body.f9-portal-ready .topbar .brand{gap:9px}
+ body.f9-portal-ready .topbar .brand strong{font-size:11px;letter-spacing:.06em}
+ body.f9-portal-ready #student-switch{font-size:12px;padding:8px 12px}
  body.f9-portal-locked #student-gateway,#fighter-pending-work-gate{padding:18px 14px}
  #student-gateway .entry-card{min-height:450px;padding:28px 22px;border-radius:22px}
  #student-gateway .entry-logo{width:82px;height:82px}
