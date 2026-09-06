@@ -2022,6 +2022,9 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function switchTab(tabName) {
       app.activeTab = tabName;
+      if (tabName === 'lessons' && app.child) {
+        renderSafely_('tiết học và bài tập', renderLessons, '#lessonsPanel');
+      }
       $$('.tab-btn').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === tabName)));
       $$('.panel').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === tabName));
       const selected = $(`.tab-btn[data-tab="${tabName}"]`);
@@ -2148,11 +2151,29 @@ html.vn-national-day-2026-root body .assignment.session {
       window.setTimeout(() => $('#pendingWorkGateOpen').focus(), 30);
     }
 
+    // Class dates and lesson boundaries always use Vietnam time, regardless
+    // of the viewer's computer timezone.
+    const CLASS_TIME_ZONE = 'Asia/Ho_Chi_Minh';
+    const CLASS_UTC_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+    function classScheduleInstant(year, month, day, hour = 0, minute = 0) {
+      return new Date(Date.UTC(year, month, day, hour, minute) - CLASS_UTC_OFFSET_MS);
+    }
+
+    function classDateSerial(date) {
+      const local = new Date(date.getTime() + CLASS_UTC_OFFSET_MS);
+      return Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
+    }
+
+    function classWeekday(date) {
+      return new Date(date.getTime() + CLASS_UTC_OFFSET_MS).getUTCDay();
+    }
+
     function paperHomeworkReminderDaysUntil(value) {
       const dueSerial = dateValueSerial(value);
       if (!dueSerial) return null;
       const now = new Date();
-      const todaySerial = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+      const todaySerial = classDateSerial(now);
       return Math.round((dueSerial - todaySerial) / 86400000);
     }
 
@@ -2205,9 +2226,9 @@ html.vn-national-day-2026-root body .assignment.session {
         };
         const startClock = clock(pick(item, ['startTime'], '')) || { hour: 0, minute: 0 };
         const endClock = clock(pick(item, ['endTime'], ''));
-        const start = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), startClock.hour, startClock.minute, 0, 0);
+        const start = classScheduleInstant(Number(match[3]), Number(match[2]) - 1, Number(match[1]), startClock.hour, startClock.minute);
         const end = endClock
-          ? new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), endClock.hour, endClock.minute, 0, 0)
+          ? classScheduleInstant(Number(match[3]), Number(match[2]) - 1, Number(match[1]), endClock.hour, endClock.minute)
           : new Date(start.getTime() + 90 * 60000);
         return Object.assign({}, item, { _start: start, _end: end });
       }).filter(Boolean).sort((left, right) => left._start - right._start);
@@ -2224,13 +2245,13 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function fullScheduleDate(date) {
-      return new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+      return new Intl.DateTimeFormat('vi-VN', { timeZone: CLASS_TIME_ZONE, weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
     function fullDateLabel(value) {
       const match = text(value).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
       if (!match) return text(value);
-      return fullScheduleDate(new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1])));
+      return fullScheduleDate(classScheduleInstant(Number(match[3]), Number(match[2]) - 1, Number(match[1])));
     }
 
     function nextScheduleCard(item, now) {
@@ -2256,13 +2277,13 @@ html.vn-national-day-2026-root body .assignment.session {
     function officialScheduleSlots(rows) {
       const byWeekday = new Map();
       rows.forEach(item => {
-        const weekday = item._start.getDay();
+        const weekday = classWeekday(item._start);
         const previous = byWeekday.get(weekday);
         if (!previous || previous._start < item._start) byWeekday.set(weekday, item);
       });
       return Array.from(byWeekday.values()).sort((left, right) => {
         const order = day => day === 0 ? 7 : day;
-        return order(left._start.getDay()) - order(right._start.getDay());
+        return order(classWeekday(left._start)) - order(classWeekday(right._start));
       });
     }
 
@@ -2437,7 +2458,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const targetEvent = assessmentTargetEvent(item, rows);
       if (targetEvent && targetEvent._end && typeof targetEvent._end.getTime === 'function') return targetEvent._end >= current;
       if (!targetDate) return false;
-      const todaySerial = Date.UTC(current.getFullYear(), current.getMonth(), current.getDate());
+      const todaySerial = classDateSerial(current);
       return dateValueSerial(targetDate) >= todaySerial;
     }
 
@@ -2451,12 +2472,19 @@ html.vn-national-day-2026-root body .assignment.session {
       return source && source._start && typeof source._start.getTime === 'function' ? source._start.getTime() : Number.MAX_SAFE_INTEGER;
     }
 
+    function scheduleMinuteTick_() {
+      renderSchedule();
+      if (app.child && app.activeTab === 'lessons') {
+        renderSafely_('tiết học và bài tập', renderLessons, '#lessonsPanel');
+      }
+    }
+
     function renderSchedule() {
       if (app.scheduleTimer) window.clearTimeout(app.scheduleTimer);
       if (!validDashboardData(app.data)) {
         $('#schedulePanel').innerHTML = `<div class="section-head schedule-heading"><div><p class="label">Thời gian & địa điểm</p><h2>Lịch học</h2></div></div>
           <div class="empty">Đang tải lịch học chính thức của lớp…</div>`;
-        app.scheduleTimer = window.setTimeout(renderSchedule, 60000);
+        app.scheduleTimer = window.setTimeout(scheduleMinuteTick_, 60000);
         return;
       }
       const now = new Date();
@@ -2472,9 +2500,9 @@ html.vn-national-day-2026-root body .assignment.session {
       $('#schedulePanel').innerHTML = `<div class="section-head schedule-heading"><div><p class="label">Thời gian & địa điểm</p><h2>Lịch học</h2></div></div>
         ${next ? nextScheduleCard(next, now) : '<div class="empty">Chưa có tiết học tiếp theo trong lịch đã cập nhật.</div>'}
         ${assessmentEvent ? scheduleAssessmentAlert(assessmentEvent, rows) : ''}
-        ${slots.length ? `<div class="schedule-grid"><article class="schedule-card"><div class="schedule-card__head"><h3>Lịch học chính thức</h3>${firstDate ? `<span>Từ ${escapeHtml(firstDate)}</span>` : ''}</div>${slots.map(item => `<div class="schedule-slot"><strong>${escapeHtml(new Intl.DateTimeFormat('vi-VN',{weekday:'long'}).format(item._start))}</strong><span class="schedule-slot__time">${escapeHtml([item.startTime,item.endTime].filter(Boolean).join('–'))}</span><span class="schedule-slot__room">${escapeHtml(item.location)}</span></div>`).join('')}</article></div>` : '<div class="empty">Chưa có lịch học chính thức.</div>'}
+        ${slots.length ? `<div class="schedule-grid"><article class="schedule-card"><div class="schedule-card__head"><h3>Lịch học chính thức</h3>${firstDate ? `<span>Từ ${escapeHtml(firstDate)}</span>` : ''}</div>${slots.map(item => `<div class="schedule-slot"><strong>${escapeHtml(new Intl.DateTimeFormat('vi-VN',{timeZone:CLASS_TIME_ZONE,weekday:'long'}).format(item._start))}</strong><span class="schedule-slot__time">${escapeHtml([item.startTime,item.endTime].filter(Boolean).join('–'))}</span><span class="schedule-slot__room">${escapeHtml(item.location)}</span></div>`).join('')}</article></div>` : '<div class="empty">Chưa có lịch học chính thức.</div>'}
         ${campuses.length ? `<aside class="schedule-location"><div class="schedule-location__list">${campuses.map(item => `<div class="schedule-location__item"><span>Địa điểm học</span><strong>${escapeHtml(item.campus)}${item.campus === 'Cơ sở Hàm Nghi' ? ' · Tầng 1–4' : ''}</strong>${item.address ? `<small>${escapeHtml(item.address)}</small>` : ''}${item.rooms.size ? `<span class="schedule-location__rooms">Phòng theo lịch: ${escapeHtml(Array.from(item.rooms).join(' · '))}</span>` : ''}</div>`).join('')}</div>${campuses[0].mapUrl ? `<a class="map-link" href="${escapeHtml(campuses[0].mapUrl)}" target="_blank" rel="noopener">Xem bản đồ →</a>` : ''}</aside>` : ''}`;
-      app.scheduleTimer = window.setTimeout(renderSchedule, 60000);
+      app.scheduleTimer = window.setTimeout(scheduleMinuteTick_, 60000);
     }
 
     function sessions() {
@@ -2490,7 +2518,7 @@ html.vn-national-day-2026-root body .assignment.session {
       // useful without fabricating a class schedule from incomplete data.
       return arr((app.child || {}).lessons).filter(item => {
         const serial = dateValueSerial(pick(item, ['lessonDate', 'date'], ''));
-        return serial > 0 && serial <= Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+        return serial > 0 && serial <= classDateSerial(now);
       });
     }
 
