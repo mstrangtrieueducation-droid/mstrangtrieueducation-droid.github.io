@@ -18,6 +18,8 @@ const kidsApi = (() => {
   let status = validToken ? 'pending' : 'revoked';
   let boundAlias = '';
   let checkJob = null;
+  let verifiedDirectory = null;
+  let directoryVersion = 0;
   const norm = value => String(value || '').trim().toUpperCase();
   const keyOf = value => norm(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '');
   const aliasOf = item => norm(typeof item === 'string' ? item : (item || {}).alias || (item || {}).englishName || (item || {}).value);
@@ -32,6 +34,7 @@ const kidsApi = (() => {
     controllers.forEach(controller => controller.abort());
     pending.clear();
     boundAlias = '';
+    verifiedDirectory = null;
     signal('revoked');
   }
   function error(message, code) {
@@ -46,6 +49,8 @@ const kidsApi = (() => {
     if (action === 'check') {
       const alias = norm(data.alias || data.englishName || data.studentAlias || (data.studentAliases || [])[0] && aliasOf(data.studentAliases[0]));
       if (!alias || (boundAlias && keyOf(alias) !== keyOf(boundAlias))) throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
+      if (data.studentAliases !== undefined && (!Array.isArray(data.studentAliases) || data.studentAliases.length !== 1 ||
+          keyOf(aliasOf(data.studentAliases[0])) !== keyOf(alias))) throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
       return alias;
     }
     if (!boundAlias) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
@@ -114,6 +119,11 @@ const kidsApi = (() => {
     checkJob = requestAction('check', true).then(data => {
       if (status === 'revoked') return false;
       boundAlias = validateScope(data, 'check');
+      verifiedDirectory = Array.isArray(data.studentAliases) ? {
+        classNumber:expectedClass, className:'KIDS ' + expectedClass, directoryOnly:true, cacheStale:false,
+        studentAliases:JSON.parse(JSON.stringify(data.studentAliases)), parentMode:true
+      } : null;
+      directoryVersion += 1;
       if (document.visibilityState === 'hidden') return false;
       signal('authorized');
       return true;
@@ -150,6 +160,8 @@ const kidsApi = (() => {
       get revoked() { return status === 'revoked'; },
       get alias() { return boundAlias; },
       get status() { return status; },
+      get directoryHint() { return status === 'authorized' && verifiedDirectory ? JSON.parse(JSON.stringify(verifiedDirectory)) : null; },
+      get directoryVersion() { return directoryVersion; },
       check,
       suspend() { if (status !== 'revoked') signal('pending'); },
       revoke
@@ -1321,7 +1333,65 @@ html.vn-national-day-2026-root body .assignment.session {
 }
 /* VN_NATIONAL_DAY_THEME_2026_END */
   </style>
-<style id="kids7-parent-link-style">#entryForm{display:none!important}</style>
+<style id="kids7-parent-link-style">
+/* Larger parent opening panels with a clear, server-verified learner name. */
+#entryForm { display: none !important; }
+#entryGate { padding: 28px; }
+#entryGate .entry-card {
+  width: min(960px, 100%);
+  max-width: 960px;
+  min-height: 510px;
+  padding: 38px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 28px;
+}
+#entryGate .entry-logo { width: 100px; height: 100px; margin-bottom: 16px; }
+#entryGate .eyebrow { margin: 0 0 10px; font-size: 12px; }
+#entryGate h1 { margin: 0 0 10px; font-size: clamp(34px, 4vw, 44px); }
+#entryGate .parent-opening-intro { max-width: 660px; margin: 0; font-size: 16px; line-height: 1.6; }
+.parent-opening-identity {
+  width: 100%;
+  margin: 26px 0 10px;
+  padding: 22px 26px 24px;
+  border: 1px solid #dce5e8;
+  border-radius: 18px;
+  background: #f4f7f8;
+}
+#parentOpeningEyebrow { margin: 0; color: var(--muted); font-size: 13px; font-weight: 750; letter-spacing: .075em; text-transform: uppercase; }
+#parentOpeningName { margin: 10px 0 0; color: var(--navy); font-size: clamp(27px, 3.4vw, 40px); font-weight: 850; line-height: 1.35; overflow-wrap: anywhere; }
+#entryGate #entryMessage { max-width: 680px; margin-top: 16px !important; font-size: 15px; line-height: 1.6; color: var(--muted) !important; }
+#entryGate .entry-retry { min-height: 50px; padding-inline: 24px; font-size: 15px; }
+#parentOpeningIdentity[hidden], #parentPendingIdentity[hidden] { display: none !important; }
+#pendingWorkGate { align-items: center; padding: 28px; }
+#pendingWorkGate .pending-work-gate__card { width: min(860px, 100%); padding: 40px 46px; border-radius: 26px; }
+#parentPendingIdentity { margin: 0 0 20px; padding: 0 0 20px; border-bottom: 1px solid #eadfca; color: var(--navy); font-size: clamp(22px, 2.6vw, 29px); font-weight: 850; line-height: 1.4; overflow-wrap: anywhere; }
+#pendingWorkGate .pending-work-gate__label { font-size: 12px; margin-bottom: 9px; }
+#pendingWorkGate h2 { font-size: clamp(26px, 3.2vw, 36px); }
+#pendingWorkGate .pending-work-gate__detail { margin-top: 16px; font-size: 16px; }
+#pendingWorkGate .pending-work-gate__encourage { margin-top: 18px; padding: 14px 16px; font-size: 14px; }
+#pendingWorkGate .pending-work-gate__button { margin-top: 24px; min-height: 58px; font-size: 16px; }
+@media (max-width: 600px) {
+  #entryGate, #pendingWorkGate { padding: 18px 14px; }
+  #entryGate .entry-card { min-height: 450px; padding: 28px 22px; border-radius: 22px; }
+  #entryGate .entry-logo { width: 82px; height: 82px; }
+  #entryGate .parent-opening-intro { font-size: 14px; }
+  .parent-opening-identity { margin-top: 22px; padding: 19px 14px; border-radius: 15px; }
+  #parentOpeningEyebrow { font-size: 11px; }
+  #parentOpeningName { font-size: 27px; }
+  #entryGate #entryMessage { font-size: 14px; }
+  #pendingWorkGate .pending-work-gate__card { padding: 26px 22px; border-radius: 22px; }
+  #parentPendingIdentity { font-size: 23px; }
+  #pendingWorkGate .pending-work-gate__detail { font-size: 15px; }
+}
+@media (max-height: 640px) {
+  #entryGate, #pendingWorkGate { align-items: start; }
+  #entryGate .entry-card { min-height: auto; }
+}
+
+</style>
 </head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
@@ -1336,7 +1406,11 @@ html.vn-national-day-2026-root body .assignment.session {
       <img class="entry-logo" id="entryLogo" alt="Logo Ms. Trang Trieu Education">
       <p class="eyebrow">Ms. Trang Trieu Education</p>
       <h1 id="entryTitle">KIDS 7</h1>
-      <p>Đang mở hồ sơ của con từ liên kết phụ huynh.</p>
+      <p class="parent-opening-intro">Lịch học, bài tập và kết quả học tập của con.</p>
+      <div class="parent-opening-identity" id="parentOpeningIdentity" aria-live="polite" aria-atomic="true" hidden>
+        <p id="parentOpeningEyebrow"></p>
+        <h2 id="parentOpeningName"></h2>
+      </div>
       <form class="entry-form" id="entryForm">
         <label class="entry-label" for="entryName">Chọn tên của con</label>
         <select id="entryName" aria-label="Chọn tên của con" disabled>
@@ -1376,6 +1450,7 @@ html.vn-national-day-2026-root body .assignment.session {
     <section class="pending-work-gate" id="pendingWorkGate" role="dialog" aria-modal="true" aria-labelledby="pendingWorkGateTitle" aria-describedby="pendingWorkGateDetail" hidden>
       <div class="pending-work-gate__card">
         <span class="pending-work-gate__icon" aria-hidden="true">!</span>
+        <p id="parentPendingIdentity" aria-live="polite" hidden></p>
         <p class="pending-work-gate__label">Bài tập cần hoàn thành</p>
         <h2 id="pendingWorkGateTitle"></h2>
         <p class="pending-work-gate__detail" id="pendingWorkGateDetail"></p>
@@ -1527,6 +1602,7 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function setEntryState(message, loading, retryVisible = false) {
       if (!kidsApi.parent.authorized) { parentAccessGate_(); return; }
+      message = parentOpeningMessage_(message);
       $('#entryMessage').textContent = text(message);
       const selectedAlias = text($('#entryName').value).toUpperCase();
       const hasName = Boolean(selectedAlias);
@@ -1601,6 +1677,7 @@ html.vn-national-day-2026-root body .assignment.session {
       $('#activeChild').textContent = 'Hồ sơ · ' + displayName;
       $('#entryGate').hidden = true;
       $('#dashboardShell').hidden = false;
+      parentRecordFirstOpen_();
     }
 
     function validPublicData(data) {
@@ -3114,11 +3191,7 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function applyChildProfile(profile, requestedAlias, options) {
       if (kidsApi.parent.revoked || matchKey(requestedAlias) !== matchKey(kidsApi.parent.alias)) return false;
-      if (!kidsApi.parent.authorized) {
-        app.child = profile;
-        app.childAlias = requestedAlias;
-        return true;
-      }
+      if (parentDeferProfile_(profile, requestedAlias, options)) return true;
       const keepPosition = Boolean((options || {}).quiet && app.child &&
         matchKey(pick(app.child, ['englishName', 'alias'], '')) === matchKey(requestedAlias));
       const selectedTab = keepPosition ? app.activeTab : ((options || {}).tab || 'schedule');
@@ -3231,6 +3304,7 @@ html.vn-national-day-2026-root body .assignment.session {
         if (!kidsApi.parent.authorized) parentAccessGate_();
         return;
       }
+      if (parentReuseQueuedProfile_(alias, options)) return;
       const requestedAlias = text(alias).toUpperCase();
       if (!requestedAlias) {
         setEntryState('Bố mẹ chọn tên của con để tiếp tục.', false);
@@ -3860,9 +3934,120 @@ html.vn-national-day-2026-root body .assignment.session {
     // KIDS7_PARENT_LINK_V1: preserve all lesson/result renderers behind live authorization.
     let parentBootStarted_ = false;
     let parentAutoOpenTimer_ = null;
+    let parentDirectoryHintVersion_ = 0;
+    let parentQueuedProfile_ = null;
+    function parentRecordFirstOpen_() {
+      if (!kidsApi.parent.authorized || $('#dashboardShell').hidden || !parentDashboardReady_() ||
+          !validProfileData(app.child, kidsApi.parent.alias)) return;
+      if (document.documentElement.dataset.parentFirstOpenMs === undefined) {
+        document.documentElement.dataset.parentFirstOpenMs = String(Math.round(performance.now()));
+      }
+    }
+    function parentDashboardReady_() {
+      // A complete last-good class payload is usable after current token
+      // authorization. Its freshness refresh must not hold a matching child
+      // profile behind the opening panel.
+      return Boolean(validDashboardData(app.data) && app.dashboardLoad.ready);
+    }
+    function parentOpeningMessage_(message) {
+      if (text(message)) return text(message);
+      if (!app.directoryLoad.ready) return 'Đã xác nhận liên kết · Đang chuẩn bị hồ sơ của con…';
+      const profileReady = app.child && validProfileData(app.child, kidsApi.parent.alias);
+      if (!parentDashboardReady_()) return profileReady
+        ? 'Đã tải hồ sơ của con · Đang hoàn tất lịch học và bài tập…'
+        : 'Đang tải lịch học, bài tập và kết quả của con…';
+      return profileReady ? 'Đang mở đầy đủ hồ sơ của con…' : 'Đã tải lịch học · Đang hoàn tất kết quả của con…';
+    }
+    function parentUpdateOpeningStage_() {
+      if (!kidsApi.parent.authorized || $('#entryGate').hidden || !$('#entryRetry').hidden) return;
+      $('#entryMessage').textContent = parentOpeningMessage_('');
+    }
+    function parentConsumeDirectoryHint_() {
+      if (!kidsApi.parent.authorized || parentDirectoryHintVersion_ === kidsApi.parent.directoryVersion) return false;
+      const hint = kidsApi.parent.directoryHint;
+      if (!hint || !validPublicData(hint) || arr(hint.studentAliases).length !== 1) return false;
+      parentDirectoryHintVersion_ = kidsApi.parent.directoryVersion;
+      const state = app.directoryLoad;
+      clearLoadTimer(state, 'watchdog');
+      clearLoadTimer(state, 'resumeTimer');
+      state.request += 1;
+      state.inFlight = false;
+      state.ready = true;
+      state.retries = 0;
+      state.recoveryRound = 0;
+      app.directoryAliases = arr(hint.studentAliases);
+      if (!app.data || app.data.directoryOnly === true) app.data = hint;
+      populateEntryNames(app.childAlias);
+      parentRenderIdentity_();
+      parentUpdateOpeningStage_();
+      return true;
+    }
+    function parentDeferProfile_(profile, requestedAlias, options) {
+      if (kidsApi.parent.authorized && parentDashboardReady_()) {
+        if (parentQueuedProfile_ && matchKey(parentQueuedProfile_.alias) === matchKey(requestedAlias)) parentQueuedProfile_ = null;
+        return false;
+      }
+      parentQueuedProfile_ = {profile, alias:requestedAlias, options:options || {}};
+      app.child = profile;
+      app.childAlias = requestedAlias;
+      parentUpdateOpeningStage_();
+      return true;
+    }
+    function parentReuseQueuedProfile_(requestedAlias, options = {}) {
+      const queued = parentQueuedProfile_;
+      if (!queued || options.force || !kidsApi.parent.authorized || !parentDashboardReady_() ||
+          matchKey(queued.alias) !== matchKey(requestedAlias) || !validProfileData(queued.profile, requestedAlias) || responseHasErrors(queued.profile)) return false;
+      parentQueuedProfile_ = null;
+      app.profileLoad.busy = false;
+      applyChildProfile(queued.profile, queued.alias, Object.assign({}, queued.options, options));
+      setLoading(false);
+      if (app.data.cacheStale) queuePaintedSnapshotRefresh_(queued.alias);
+      return true;
+    }
+    function parentVerifiedIdentityLabel_() {
+      if (!kidsApi.parent.authorized) return '';
+      const alias = text(kidsApi.parent.alias);
+      if (!alias) return '';
+      // Only the live, token-scoped directory may upgrade the verified alias
+      // to the complete learner label. Never infer identity from local storage,
+      // the URL, a selector, or a previously painted profile.
+      const entries = app.directoryLoad && app.directoryLoad.ready ? arr(app.directoryAliases) : [];
+      if (entries.length !== 1) return alias;
+      const entry = entries[0];
+      const entryAlias = typeof entry === 'string' ? entry : pick(entry, ['alias', 'englishName', 'value'], '');
+      if (matchKey(entryAlias) !== matchKey(alias)) return alias;
+      return typeof entry === 'string' ? alias : text(pick(entry, ['label', 'displayName'], '')) || alias;
+    }
+    function parentRenderIdentity_() {
+      const label = parentVerifiedIdentityLabel_();
+      const opening = $('#parentOpeningIdentity');
+      const eyebrow = $('#parentOpeningEyebrow');
+      const name = $('#parentOpeningName');
+      const pending = $('#parentPendingIdentity');
+      if (eyebrow) eyebrow.textContent = label ? 'Đang mở hồ sơ của' : '';
+      if (name) name.textContent = label;
+      if (opening) opening.hidden = !label;
+      const entries = app.directoryLoad && app.directoryLoad.ready ? arr(app.directoryAliases) : [];
+      const fullLabelReady = label && entries.length === 1 && typeof entries[0] === 'object' &&
+        text(pick(entries[0], ['label', 'displayName'], '')) &&
+        matchKey(pick(entries[0], ['alias', 'englishName', 'value'], '')) === matchKey(kidsApi.parent.alias);
+      if (fullLabelReady && opening && name && !opening.hidden && !$('#entryGate').hidden &&
+          document.documentElement.dataset.parentIdentityReadyMs === undefined) {
+        document.documentElement.dataset.parentIdentityReadyMs = String(Math.round(performance.now()));
+      }
+      if (pending) {
+        pending.textContent = label ? 'Hồ sơ của ' + label : '';
+        pending.hidden = !label;
+      }
+    }
     function parentAccessGate_() {
       const revoked = kidsApi.parent.revoked;
+      parentRenderIdentity_();
       $('#dashboardShell').hidden = true;
+      if (!kidsApi.parent.authorized) {
+        const pendingGate = $('#pendingWorkGate');
+        if (pendingGate) pendingGate.hidden = true;
+      }
       $('#entryGate').hidden = false;
       $('#entryForm').hidden = true;
       $('#entryName').disabled = true;
@@ -3872,6 +4057,8 @@ html.vn-national-day-2026-root body .assignment.session {
       $('#entryRetry').hidden = revoked || kidsApi.parent.status !== 'unavailable';
       $('#entryRetry').disabled = false;
       if (revoked) {
+        parentQueuedProfile_ = null;
+        parentDirectoryHintVersion_ = 0;
         clearFirstPaintDeadline_();
         if (parentAutoOpenTimer_) window.clearTimeout(parentAutoOpenTimer_);
         parentAutoOpenTimer_ = null;
@@ -3910,13 +4097,16 @@ html.vn-national-day-2026-root body .assignment.session {
       }
     }
     function parentAutoOpen_() {
+      parentRenderIdentity_();
+      parentUpdateOpeningStage_();
       if (parentAutoOpenTimer_) return;
       parentAutoOpenTimer_ = window.setTimeout(() => {
         parentAutoOpenTimer_ = null;
-        if (!kidsApi.parent.authorized || !app.directoryLoad.ready || !validDashboardData(app.data) || !app.dashboardLoad.ready ||
-            app.child || app.profileLoad.inFlight || app.profileLoad.busy) return;
+        if (!kidsApi.parent.authorized || !app.directoryLoad.ready) return;
         const alias = kidsApi.parent.alias;
         if (!alias || !liveDirectoryContainsAlias_(alias)) return;
+        if (parentReuseQueuedProfile_(alias)) return;
+        if (app.child || app.profileLoad.inFlight || app.profileLoad.busy || app.profileLoad.resumeTimer) return;
         $('#entryName').value = alias;
         app.profileLoad.openStartedAt = performance.now();
         loadChild(alias, {tab:'schedule', skipBrowserCache:true, refreshCached:true});
@@ -3924,11 +4114,14 @@ html.vn-national-day-2026-root body .assignment.session {
     }
     function parentContinue_() {
       if (!kidsApi.parent.authorized) return;
+      parentConsumeDirectoryHint_();
+      parentRenderIdentity_();
       if (!parentBootStarted_) {
         parentBootStarted_ = true;
         installFirstPaintDeadline_();
-        loadClassDirectory();
+        if (!app.directoryLoad.ready) loadClassDirectory();
         loadDashboard(false);
+        parentAutoOpen_();
         return;
       }
       if (app.child && matchKey(app.childAlias) === matchKey(kidsApi.parent.alias)) {
@@ -3946,6 +4139,7 @@ html.vn-national-day-2026-root body .assignment.session {
     function parentStart_() {
       window.addEventListener('kids-parent-access', event => {
         if (event.detail.status !== 'authorized') parentAccessGate_();
+        else { parentConsumeDirectoryHint_(); parentRenderIdentity_(); }
       });
       window.addEventListener('pageshow', parentRecheck_);
       window.addEventListener('online', parentRecheck_);
