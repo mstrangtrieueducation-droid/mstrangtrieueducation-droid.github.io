@@ -5,54 +5,42 @@
   <meta charset="utf-8">
 <meta name="referrer" content="no-referrer">
 <script>
-const taApi = (() => {
-  const endpoint = 'https://script.google.com/macros/s/AKfycbyLDfj5_81fPF-2oFzDxoSPRz_cg1ACu3LHKT8U2CJcFYklJD0H0SksXxioyyLLG76X/exec', className = 'TA6';
-  const pending = new Map(), maxAge = 86400000;
-  const key = (action,name='') => 'ta-github-v1:'+className+':'+action+':'+encodeURIComponent(name);
-  function valid(action,data,name) {
-    if(action==='directory') return Boolean(data&&data.className===className&&Array.isArray(data.students));
-    return Boolean(data&&data.found===true&&data.dashboard&&data.dashboard.className===className&&data.student&&data.student.name===name);
+const taParent = (() => {
+  const endpoint='https://script.google.com/macros/s/AKfycbxyp5Wcy9lxs7i2YS4sLmNaM-iZx7eW_7wWNhLSPiNYgzeJR8N2AM4eGxyPhEfXhWFW/exec',className='TA6';
+  const tokens=new URLSearchParams(location.hash.slice(1)).getAll('p');
+  const token=tokens.length===1?tokens[0]:'';
+  const validToken=/^[A-Za-z0-9_-]{22}$/.test(token);
+  const pending=new Map(),controllers=new Set();
+  let identity=null,epoch=0,terminal=false,storageKey='';
+  const keyJob=validToken&&globalThis.crypto&&crypto.subtle?crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)).then(bytes=>{storageKey='ta6-parent-v1:'+Array.from(new Uint8Array(bytes)).map(x=>x.toString(16).padStart(2,'0')).join('')}):Promise.resolve();
+  function invalidate(revoked=false){epoch++;identity=null;terminal=terminal||revoked;controllers.forEach(x=>x.abort());pending.clear();if(revoked&&storageKey){try{localStorage.removeItem(storageKey)}catch(_){}}}
+  function matches(data){return Boolean(identity&&data&&data.found===true&&data.dashboard&&data.dashboard.className===className&&data.student&&data.student.name===identity.name&&String(data.student.englishName||'')===String(identity.englishName||''))}
+  async function cached(){await keyJob;if(!identity||!storageKey)return null;try{const item=JSON.parse(localStorage.getItem(storageKey)||'null'),age=Date.now()-Number(item&&item.savedAt);return item&&Number.isFinite(age)&&age>=0&&age<=86400000&&matches(item.data)?item.data:null}catch(_){return null}}
+  async function save(data,expectedEpoch){await keyJob;if(expectedEpoch!==epoch||!storageKey||!matches(data))return;const m=String(data.dashboard.generatedAt||'').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);if(!m)return;const savedAt=Date.UTC(+m[3],+m[2]-1,+m[1],+m[4]-7,+m[5],+m[6]);if(savedAt>Date.now()||Date.now()-savedAt>86400000)return;try{localStorage.setItem(storageKey,JSON.stringify({savedAt,data}))}catch(_){}}
+  function error(code){const e=new Error(code);e.code=code;return e}
+  function request(action){
+    if(!validToken||terminal)return Promise.reject(error('INVALID_TOKEN'));
+    if(action!=='check'&&!identity)return Promise.reject(error('AUTH_PENDING'));
+    if(pending.has(action))return pending.get(action);
+    const current=epoch,url=new URL(endpoint),controller=new AbortController();controllers.add(controller);
+    Object.entries({api:'parent1',class:className,action,token}).forEach(([k,v])=>url.searchParams.set(k,v));
+    const timer=setTimeout(()=>controller.abort(),action==='check'?30000:100000),started=performance.now();
+    const promise=fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal}).then(async response=>{
+      if(!response.ok)throw error('DATA_UNAVAILABLE');
+      const body=await response.json();if(current!==epoch)throw error('REQUEST_SUPERSEDED');
+      if(!body||!body.ok){const code=body&&(body.code||body.error&&body.error.code)||'DATA_UNAVAILABLE';if(['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(code))invalidate(true);throw error(code)}
+      if(body.className!==className||body.action!==action)throw error('IDENTITY_MISMATCH');
+      const data=body.data;
+      if(action==='check'){
+        if(!data||!data.name||(identity&&(identity.name!==data.name||String(identity.englishName||'')!==String(data.englishName||''))))throw error('IDENTITY_MISMATCH');
+        identity={name:data.name,englishName:data.englishName||''};
+      }else{if(!matches(data))throw error('IDENTITY_MISMATCH');await save(data,current);if(current!==epoch)throw error('REQUEST_SUPERSEDED')}
+      document.documentElement.dataset[action+'Ms']=String(Math.round(performance.now()-started));
+      return data;
+    }).finally(()=>{clearTimeout(timer);controllers.delete(controller);if(current===epoch)pending.delete(action)});
+    pending.set(action,promise);return promise;
   }
-  function read(action,name='') {
-    try {
-      const item=JSON.parse(localStorage.getItem(key(action,name))||'null'), age=Date.now()-Number(item&&item.savedAt);
-      return item&&Number.isFinite(age)&&age>=0&&age<=maxAge&&valid(action,item.data,name)?item.data:null;
-    }catch(error){return null}
-  }
-  function remove(action,name='') {try{localStorage.removeItem(key(action,name))}catch(error){}}
-  function write(action,data,name='') {
-    if(!valid(action,data,name)){remove(action,name);return}
-    let savedAt=Date.now();
-    if(action==='portal') {
-      const match=String(data.dashboard.generatedAt||'').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
-      if(!match)return;
-      savedAt=Date.UTC(+match[3],+match[2]-1,+match[1],+match[4]-7,+match[5],+match[6]);
-    }
-    if(savedAt>Date.now()||Date.now()-savedAt>maxAge)return;
-    try{localStorage.setItem(key(action,name),JSON.stringify({savedAt,data}))}catch(error){}
-  }
-  function request(method,args=[]) {
-    const action={getStudentDirectory:'directory',getStudentPortal:'portal'}[method];
-    if(!action)return Promise.reject(new Error('UNKNOWN_METHOD'));
-    const name=action==='portal'?String(args[0]||'').trim():'';
-    const id=key(action,name);
-    if(pending.has(id))return pending.get(id);
-    const url=new URL(endpoint);
-    Object.entries({api:'1',class:className,action}).forEach(([k,v])=>url.searchParams.set(k,v));
-    if(action==='portal')url.searchParams.set('name',name);
-    const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),90000);
-    const promise=fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',signal:controller.signal}).then(async response=>{
-      if(!response.ok)throw new Error('SOURCE_UNAVAILABLE');
-      const envelope=await response.json();
-      if(!envelope||envelope.ok!==true||envelope.className!==className||envelope.action!==action)throw new Error('INVALID_RESPONSE');
-      const data=envelope.data;
-      if(action==='portal'&&data&&data.found===false){remove(action,name);return data}
-      if(!valid(action,data,name))throw new Error('IDENTITY_MISMATCH');
-      write(action,data,name);return data;
-    }).finally(()=>{clearTimeout(timer);pending.delete(id)});
-    pending.set(id,promise);return promise;
-  }
-  return {request,read,remove};
+  return {request,cached,invalidate,get identity(){return identity},get validToken(){return validToken},get terminal(){return terminal}};
 })();
 
 </script>
@@ -64,7 +52,7 @@ const taApi = (() => {
     .skip-link{position:fixed;left:12px;top:10px;z-index:200;transform:translateY(-150%);border-radius:8px;background:#fff;color:var(--navy);padding:9px 12px;font-weight:800}.skip-link:focus{transform:translateY(0)}
     .topbar{min-height:72px;display:flex;align-items:center;border-bottom:1px solid var(--line);background:#fff}.topbar .shell{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:9px 0}.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand img{width:44px;height:44px;flex:0 0 auto;border:1px solid #d4dfec;border-radius:50%;object-fit:cover}.brand strong{display:block;color:var(--navy);font-size:13px;letter-spacing:.1em}.brand small{display:block;color:var(--muted);font-size:11px}
     .student-context{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:0}.student-context__name{min-width:0;margin-right:3px;padding-left:13px;border-left:3px solid var(--wine);text-align:right}.student-context__name small{display:block;color:var(--muted);font-size:10px}.student-context__name strong{display:block;max-width:270px;overflow:hidden;color:var(--navy);font-size:13px;text-overflow:ellipsis;white-space:nowrap}.header-button{min-height:40px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--navy);padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}.header-button--primary{border-color:var(--navy);background:var(--navy);color:#fff}.header-button:disabled,.button:disabled,select:disabled{opacity:.58;cursor:wait}
-    .student-gateway{padding:clamp(42px,8vw,90px) 0 80px}.gateway-card{width:min(690px,100%);margin:auto;overflow:hidden;border:1px solid #d4e0ee;border-radius:22px;background:#fff;box-shadow:0 22px 58px rgba(8,40,77,.13)}.gateway-card__head{position:relative;overflow:hidden;padding:clamp(28px,5vw,43px);background:linear-gradient(125deg,var(--navy),#0d3564 66%,#174d85);color:#fff}.gateway-card__head:after{content:"";position:absolute;width:230px;height:230px;right:-92px;top:-128px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 42px rgba(255,255,255,.03),0 0 0 84px rgba(255,255,255,.02)}.gateway-kicker{position:relative;z-index:1;margin:0 0 7px;color:#acd0ff;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.gateway-card h1{position:relative;z-index:1;margin:0;font-size:clamp(31px,6vw,47px);line-height:1.08;letter-spacing:-.035em}.gateway-intro{position:relative;z-index:1;max-width:560px;margin:12px 0 0;color:#dce9f8;font-size:16px}.gateway-program{position:relative;z-index:1;margin:18px 0 0;color:#b9d0ec;font-size:12px}
+    .student-gateway{padding:clamp(42px,8vw,90px) 0 80px}.gateway-card{width:min(960px,100%);margin:auto;overflow:hidden;border:1px solid #d4e0ee;border-radius:22px;background:#fff;box-shadow:0 22px 58px rgba(8,40,77,.13)}.gateway-card__head{position:relative;overflow:hidden;padding:clamp(28px,5vw,43px);background:linear-gradient(125deg,var(--navy),#0d3564 66%,#174d85);color:#fff}.gateway-card__head:after{content:"";position:absolute;width:230px;height:230px;right:-92px;top:-128px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 42px rgba(255,255,255,.03),0 0 0 84px rgba(255,255,255,.02)}.gateway-kicker{position:relative;z-index:1;margin:0 0 7px;color:#acd0ff;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.gateway-card h1{position:relative;z-index:1;margin:0;font-size:clamp(31px,6vw,47px);line-height:1.08;letter-spacing:-.035em}.gateway-intro{position:relative;z-index:1;max-width:560px;margin:12px 0 0;color:#dce9f8;font-size:16px}.gateway-program{position:relative;z-index:1;margin:18px 0 0;color:#b9d0ec;font-size:12px}
     .gateway-form{padding:clamp(24px,5vw,38px)}.gateway-class{display:inline-flex;margin-bottom:16px;border-radius:999px;background:var(--sky);color:#1558b2;padding:5px 10px;font-size:10px;font-weight:900}.gateway-form label{display:block;margin-bottom:7px;color:var(--navy);font-weight:900}.gateway-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}.gateway-row select{min-width:0;min-height:48px;border:1px solid #adbdcf;border-radius:10px;background:#fff;color:var(--ink);padding:10px 40px 10px 13px}.button{min-height:48px;border:0;border-radius:10px;background:var(--navy);color:#fff;padding:0 22px;font-weight:900;cursor:pointer;white-space:nowrap}.button--secondary{border:1px solid var(--line);background:#fff;color:var(--navy)}.gateway-actions{margin-top:12px}.hint{margin:8px 0 0;color:var(--muted);font-size:12px}.hint.is-error{color:var(--red);font-weight:700}
     body.portal-locked .portal-content{display:none!important}body.portal-ready #student-gateway{display:none!important}
     .hero{position:relative;overflow:hidden;background:linear-gradient(120deg,var(--navy),#0d3564 66%,#174d85);color:#fff}.hero:after{content:"";position:absolute;width:390px;height:390px;right:-100px;top:-215px;border:1px solid rgba(255,255,255,.08);border-radius:50%;box-shadow:0 0 0 55px rgba(255,255,255,.025),0 0 0 110px rgba(255,255,255,.02)}.hero .shell{position:relative;z-index:1;padding:38px 0 34px}.eyebrow{margin:0 0 6px;color:#acd0ff;font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.hero h1{margin:0;font-size:clamp(35px,6vw,56px);line-height:1;letter-spacing:-.04em}.tagline{margin:12px 0 4px;color:#f1f6fd;font-size:17px}.program{margin:0;color:#bcd0e8}.updated{position:absolute;right:0;bottom:35px;color:#a8bed8;font-size:11px}
@@ -85,18 +73,19 @@ const taApi = (() => {
     @media(max-width:680px){.topbar .shell{align-items:flex-start;flex-wrap:wrap}.student-context{width:100%;justify-content:flex-start;border-top:1px solid var(--line);padding-top:9px}.student-context__name{flex:1;text-align:left}.gateway-row{grid-template-columns:1fr}.button{width:100%}.tasks__head{flex-direction:column}.tasks__head small{text-align:left}}
     @media(max-width:520px){.brand strong{font-size:10px}.brand small{display:none}.student-gateway{padding:24px 0 48px}.gateway-card__head,.gateway-form{padding:24px 20px}.tab{padding:14px 15px}.profile-head{flex-direction:column}.notice{flex-direction:column}.session__head,.lesson,.tasks{padding-right:16px;padding-left:16px}.deadline,.closing{margin-right:16px;margin-left:16px}.slot{flex-direction:column;gap:2px}.slot strong{text-align:left}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  .parent-eyebrow{color:var(--muted);font-size:12px;margin:20px 0 8px}.parent-identity{min-height:45px;display:flex;align-items:center}.parent-identity strong{font-size:clamp(20px,3.3vw,30px);line-height:1.35;color:var(--navy);overflow-wrap:anywhere}#parent-skeleton{height:28px;width:min(420px,82%);display:block;background:#e6edf5;border-radius:7px}.gateway-form{min-height:200px}
   </style>
 </head>
 <body class="portal-locked">
   <a class="skip-link" href="#student-gateway">Bỏ qua để đến nội dung</a>
   <header class="topbar"><div class="shell">
     <div class="brand"><img id="logo" alt="Logo Ms. Trang Trieu Education" hidden><span><strong>MS TRANG TRIEU EDUCATION</strong><small>Cổng học tập dành cho gia đình</small></span></div>
-    <div id="student-context" class="student-context" hidden><div class="student-context__name"><small>Hồ sơ đang xem</small><strong id="selected-student"></strong></div><button id="refresh" class="header-button" type="button" aria-label="Làm mới hồ sơ đang xem">↻ Làm mới</button><button id="student-switch" class="header-button header-button--primary" type="button">Đổi học sinh</button></div>
+    <div id="student-context" class="student-context" hidden><div class="student-context__name"><small>Hồ sơ đang xem</small><strong id="selected-student"></strong></div><button id="refresh" class="header-button" type="button" aria-label="Làm mới hồ sơ đang xem">↻ Làm mới</button></div>
   </div></header>
 
-  <section id="student-gateway" class="student-gateway shell" aria-labelledby="gateway-title">
-    <div class="gateway-card"><div class="gateway-card__head"><p class="gateway-kicker">Cổng học tập của con</p><h1 id="gateway-title">Chọn học sinh</h1><p class="gateway-intro">Chọn tên con để xem bài học, tình trạng nộp bài, nhận xét và kết quả.</p><p class="gateway-program">Ôn thi vào lớp 6 THCS VĂN LANG · Môn Tiếng Anh</p></div>
-      <div class="gateway-form"><span id="gateway-class" class="gateway-class">Đang tải lớp…</span><label for="student-input">Họ tên học sinh</label><div class="gateway-row"><select id="student-input" aria-describedby="gateway-message" disabled><option value="">Đang tải danh sách…</option></select><button id="student-search" class="button" type="button" disabled>Mở hồ sơ</button></div><p id="gateway-message" class="hint" aria-live="polite">Đang tải danh sách học sinh…</p><div class="gateway-actions"><button id="gateway-recovery" class="button button--secondary" type="button" hidden>Thử lại</button></div></div>
+  <section id="student-gateway" class="student-gateway shell" aria-labelledby="gateway-title" aria-busy="true">
+    <div class="gateway-card"><div class="gateway-card__head"><p class="gateway-kicker">TA6 · Cổng học tập của con</p><h1 id="gateway-title">Hồ sơ học tập của con</h1><p class="gateway-intro">Lịch học, bài tập, nhận xét và kết quả trong một hồ sơ.</p><p class="gateway-program">Ôn thi vào lớp 6 THCS VĂN LANG · Môn Tiếng Anh</p></div>
+      <div class="gateway-form"><span id="gateway-class" class="gateway-class">TA6</span><p class="parent-eyebrow">Đang mở hồ sơ của</p><div class="parent-identity"><strong id="parent-name" hidden></strong><span id="parent-skeleton" aria-label="Đang xác nhận học sinh"></span></div><p id="gateway-message" class="hint" aria-live="polite">Đang kiểm tra liên kết riêng của gia đình…</p><div class="gateway-actions"><button id="gateway-recovery" class="button button--secondary" type="button" hidden>Thử lại</button></div></div>
     </div>
   </section>
 
@@ -136,72 +125,55 @@ const taApi = (() => {
     const dayLabel=date=>{const value=parseDate(date);return value?new Intl.DateTimeFormat('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Asia/Bangkok'}).format(value):date||'—'};
     const isoBangkok=date=>{const parts=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Bangkok'}).formatToParts(date),values=Object.fromEntries(parts.map(part=>[part.type,part.value]));return values.day+'/'+values.month+'/'+values.year};
 
-    async function callServer(method,args=[]){return taApi.request(method,args)}
+    let parentGeneration=0,parentBusy=false,parentOpened=false;
     function setLogo(url){const logo=$('#logo'),source=safeUrl(url);if(!source){logo.hidden=true;logo.removeAttribute('src');return}logo.hidden=false;logo.onerror=()=>{logo.hidden=true};logo.src=source}
-    function setGatewayMessage(message,isError=false){const target=$('#gateway-message');target.textContent=message;target.classList.toggle('is-error',isError)}
-    function setGatewayBusy(active,text){gatewayBusy=active;const select=$('#student-input'),button=$('#student-search');select.disabled=active||!directory;button.disabled=active||!directory||!select.value;button.textContent=text||'Mở hồ sơ';$('#student-gateway').setAttribute('aria-busy',String(active))}
-    function validDirectory(payload){return Boolean(payload&&payload.className===EXPECTED_CLASS&&payload.program===PROGRAM_LABEL&&Array.isArray(payload.students)&&payload.students.length)}
-
-    function applyDirectory(payload) {
-      const select=$('#student-input'),selected=select.value;
-      directory=payload;setLogo(payload.logoUrl);$('#gateway-class').textContent=payload.className;
-      if(!activeStudent)document.title=payload.className+' | Cổng học tập';
-      select.innerHTML='<option value="">Chọn tên học sinh</option>';
-      payload.students.forEach(student=>{const option=document.createElement('option');option.value=student.name;option.textContent=student.name;select.appendChild(option)});
-      if(payload.students.some(student=>student.name===selected))select.value=selected;
-      if(!gatewayBusy)setGatewayBusy(false);
-    }
-    async function loadDirectory(){
-      const token=++directoryRequestToken,select=$('#student-input');
-      $('#gateway-recovery').hidden=true;
-      const cached=taApi.read('directory'),hasCache=validDirectory(cached);
-      if(hasCache){gatewayBusy=false;applyDirectory(cached);setGatewayMessage('Chọn tên học sinh để bắt đầu. Đang kiểm tra danh sách mới…')}
-      else{directory=null;$('#gateway-class').textContent='Đang tải lớp…';select.innerHTML='<option value="">Đang tải danh sách…</option>';setGatewayMessage('Đang tải danh sách học sinh…');setGatewayBusy(true,'Đang tải…')}
-      try{
-        const payload=await callServer('getStudentDirectory');
-        if(token!==directoryRequestToken)return;if(!validDirectory(payload))throw new Error('INVALID_DIRECTORY');
-        if(!hasCache)gatewayBusy=false;
-        applyDirectory(payload);
-        if(activeStudent&&!payload.students.some(student=>student.name===activeStudent.name)){taApi.remove('portal',activeStudent.name);switchStudent()}
-        if(!gatewayBusy)setGatewayMessage('Chọn tên học sinh để bắt đầu.');
-      }catch(error){
-        if(token!==directoryRequestToken)return;
-        if(directory){if(!gatewayBusy)setGatewayMessage('Đang dùng danh sách đã lưu. Chưa kết nối được dữ liệu mới.');return}
-        gatewayBusy=false;select.innerHTML='<option value="">Chưa tải được danh sách</option>';select.disabled=true;$('#student-search').disabled=true;$('#student-search').textContent='Mở hồ sơ';$('#student-gateway').setAttribute('aria-busy','false');$('#gateway-recovery').hidden=false;setGatewayMessage('Chưa thể tải danh sách học sinh. Vui lòng thử lại.',true);
-      }
-    }
-    async function openSelectedStudent(){
-      if(gatewayBusy)return;const selectedName=$('#student-input').value;
-      if(!selectedName){setGatewayMessage('Vui lòng chọn tên học sinh.',true);$('#student-input').focus();return}
-      const token=++portalRequestToken;setGatewayMessage('Đang mở hồ sơ của con…');setGatewayBusy(true,'Đang mở…');
-      const cached=taApi.read('portal',selectedName);
-      if(validPortalPayload(cached,selectedName)){
-        dashboard=cached.dashboard;activeStudent=cached.student;renderPortal();unlockPortal();
-        $('#app-status').textContent='Đang hiển thị hồ sơ đã lưu và kiểm tra cập nhật mới…';$('#app-status').hidden=false;
-      }
-      try{
-        const payload=await callServer('getStudentPortal',[selectedName]);if(token!==portalRequestToken)return;
-        if(!payload||payload.found!==true){if(activeStudent)switchStudent();setGatewayBusy(false);setGatewayMessage(payload&&payload.message?payload.message:'Không tìm thấy hồ sơ phù hợp. Vui lòng chọn lại.',true);return}
-        if(!validPortalPayload(payload,selectedName))throw new Error('PORTAL_IDENTITY_MISMATCH');
-        const alreadyOpen=Boolean(activeStudent);dashboard=payload.dashboard;activeStudent=payload.student;renderPortal();
-        if(!alreadyOpen)unlockPortal();$('#app-status').hidden=true;
-      }catch(error){
-        if(token!==portalRequestToken)return;
-        if(activeStudent){$('#app-status').textContent='Đang hiển thị hồ sơ đã lưu. Chưa thể cập nhật, vui lòng bấm Làm mới để thử lại.';$('#app-status').hidden=false;return}
-        activeStudent=null;dashboard=null;clearPortalContent();setGatewayBusy(false);setGatewayMessage('Chưa thể mở hồ sơ. Vui lòng thử lại.',true);$('#gateway-recovery').hidden=false;
-      }
-    }
-
-    function validPortalPayload(payload,requestedName){if(!payload||payload.found!==true||!payload.dashboard||!payload.student||!directory)return false;const model=payload.dashboard;return model.className===directory.className&&model.program===directory.program&&model.program===PROGRAM_LABEL&&normalizedName(payload.student.name)===normalizedName(requestedName)}
-    function unlockPortal(){document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');$('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');setGatewayBusy(false);activateTab($('#tab-schedule'));$('#portal-announcer').textContent='Đã mở hồ sơ của '+activeStudent.name+'.';requestAnimationFrame(()=>$('#tab-schedule').focus())}
     function clearPortalContent(){clearTimeout(countdownTimer);countdownTimer=null;['#next-class','#schedule-notice','#schedule-grid','#assignment-list','#self-study-list','#student-profile','#leaderboard','#improvement'].forEach(selector=>{$(selector).innerHTML=''});$('#app-status').hidden=true;$('#app-status').textContent='';$('#selected-student').textContent=''}
-    function switchStudent(){portalRequestToken+=1;document.title=directory.className+' | Cổng học tập';activeStudent=null;dashboard=null;clearPortalContent();$('#student-context').hidden=true;$('#student-gateway').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#student-gateway');document.body.classList.remove('portal-ready');document.body.classList.add('portal-locked');$('#student-input').value='';$('#gateway-recovery').hidden=true;setGatewayBusy(false);setGatewayMessage('Chọn tên học sinh để bắt đầu.');$('#portal-announcer').textContent='Đã đóng hồ sơ học sinh.';requestAnimationFrame(()=>$('#student-input').focus())}
-    async function refreshPortal(){
-      if(!activeStudent)return;const name=activeStudent.name,token=++portalRequestToken,button=$('#refresh');button.disabled=true;$('#app-main').setAttribute('aria-busy','true');$('#app-status').hidden=true;
-      try{const payload=await callServer('getStudentPortal',[name]);if(token!==portalRequestToken||!activeStudent||normalizedName(activeStudent.name)!==normalizedName(name))return;if(!validPortalPayload(payload,name))throw new Error('INVALID_REFRESH_PAYLOAD');dashboard=payload.dashboard;activeStudent=payload.student;renderPortal();$('#portal-announcer').textContent='Hồ sơ đã được làm mới.'}
-      catch(error){if(token!==portalRequestToken||!activeStudent)return;console.error('Không thể làm mới hồ sơ.',error);$('#app-status').textContent='Chưa thể làm mới đầy đủ. Vui lòng thử lại.';$('#app-status').hidden=false}
-      finally{if(token===portalRequestToken&&activeStudent){button.disabled=false;$('#app-main').setAttribute('aria-busy','false')}}
+    function parentLock(message,pending=true){
+      activeStudent=null;dashboard=null;directory=null;clearPortalContent();
+      document.body.classList.remove('portal-ready');document.body.classList.add('portal-locked');
+      $('#student-gateway').hidden=false;$('#student-context').hidden=true;$('#refresh').disabled=true;
+      $('#parent-name').textContent='';$('#parent-skeleton').hidden=!pending;$('#parent-name').hidden=pending;
+      $('#gateway-message').textContent=message;$('#gateway-recovery').hidden=pending;
+      $('#student-gateway').setAttribute('aria-busy',String(pending));$('.skip-link').setAttribute('href','#student-gateway');
+      $('#portal-announcer').textContent='';
+      document.title='TA6 | Hồ sơ học tập của con';
     }
+    function parentPaint(payload){
+      const who=taParent.identity;
+      if(!who||!payload||!payload.found||payload.student.name!==who.name||String(payload.student.englishName||'')!==String(who.englishName||'')||payload.dashboard.className!==EXPECTED_CLASS||payload.dashboard.program!==PROGRAM_LABEL)throw new Error('IDENTITY_MISMATCH');
+      directory={className:EXPECTED_CLASS,program:PROGRAM_LABEL,logoUrl:payload.dashboard.logoUrl};dashboard=payload.dashboard;activeStudent=payload.student;
+      renderPortal();document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');
+      $('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');
+      if(!parentOpened){parentOpened=true;activateTab($('#tab-schedule'));document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()))}
+      $('#portal-announcer').textContent='Đã mở hồ sơ của '+who.name+'.';
+    }
+    function parentFailed(error){
+      const revoked=taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code);
+      taParent.invalidate(revoked);
+      const message=!taParent.validToken?'Vui lòng mở liên kết riêng cô gửi cho gia đình.':revoked?'Liên kết hồ sơ không còn hoạt động. Vui lòng liên hệ cô.':'Chưa thể kết nối hồ sơ. Vui lòng thử lại.';
+      parentLock(message,false);$('#parent-name').textContent=revoked?'Hồ sơ không còn hoạt động':'Chưa thể mở hồ sơ';$('#gateway-recovery').hidden=revoked||!taParent.validToken;
+    }
+    async function openParentPortal(){
+      if(parentBusy)return;parentBusy=true;const generation=++parentGeneration;
+      taParent.invalidate();parentLock('Đang kiểm tra liên kết riêng của gia đình…');
+      try{
+        const who=await taParent.request('check');if(generation!==parentGeneration)return;
+        $('#parent-skeleton').hidden=true;$('#parent-name').hidden=false;$('#parent-name').textContent=who.name+(who.englishName?' · '+who.englishName:'');
+        $('#gateway-message').textContent='Đã xác nhận liên kết · Đang tải lịch học, bài tập và kết quả của con…';
+        const cache=await taParent.cached();if(generation!==parentGeneration)return;
+        if(cache){parentPaint(cache);$('#app-status').textContent='Đang kiểm tra cập nhật mới…';$('#app-status').hidden=false}
+        const payload=await taParent.request('portal');if(generation!==parentGeneration)return;
+        parentPaint(payload);$('#app-status').hidden=true;
+      }catch(error){if(generation===parentGeneration)parentFailed(error)}
+      finally{if(generation===parentGeneration)parentBusy=false}
+    }
+    async function checkParentAccess(){
+      if(parentBusy||!activeStudent||document.hidden)return;
+      const generation=parentGeneration;
+      try{await taParent.request('check')}catch(error){if(generation!==parentGeneration)return;parentGeneration++;parentFailed(error)}
+    }
+    function parentSuspend(){parentGeneration++;parentBusy=false;taParent.invalidate();parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
+
     function renderPortal(){if(!dashboard||!activeStudent)throw new Error('MISSING_PORTAL_DATA');document.title=dashboard.className+' · '+activeStudent.name;$('#class-name').textContent=dashboard.className;$('#program').textContent=PROGRAM_LABEL;$('#updated').textContent=dashboard.generatedAt?'Cập nhật '+dashboard.generatedAt:'';$('#selected-student').textContent=activeStudent.englishName?activeStudent.name+' · '+activeStudent.englishName:activeStudent.name;setLogo(dashboard.logoUrl||directory.logoUrl);renderSchedule();renderAssignments(activeStudent);renderSelfStudy(activeStudent);renderStudentResults(activeStudent);renderOverview(activeStudent)}
 
     function renderSchedule(){
@@ -242,12 +214,15 @@ const taApi = (() => {
     function activateTab(button,moveFocus=false){if(!button)return;$$('.tab').forEach(item=>{const active=item===button;item.classList.toggle('is-active',active);item.setAttribute('aria-selected',String(active));item.tabIndex=active?0:-1});$$('.panel').forEach(panel=>{panel.hidden=panel.id!==button.dataset.tab});if(moveFocus)button.focus();if(document.body.classList.contains('portal-ready'))window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
 
     $$('.tab').forEach(button=>{button.addEventListener('click',()=>activateTab(button));button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=$$('.tab'),index=tabs.indexOf(button);let target=index;if(event.key==='ArrowLeft')target=(index-1+tabs.length)%tabs.length;if(event.key==='ArrowRight')target=(index+1)%tabs.length;if(event.key==='Home')target=0;if(event.key==='End')target=tabs.length-1;activateTab(tabs[target],true)})});
-    $('#student-input').addEventListener('change',()=>{if(!gatewayBusy){$('#student-search').disabled=!$('#student-input').value;setGatewayMessage($('#student-input').value?'Sẵn sàng mở hồ sơ.':'Chọn tên học sinh để bắt đầu.')}});
-    $('#student-input').addEventListener('keydown',event=>{if(event.key==='Enter')openSelectedStudent()});$('#student-search').addEventListener('click',openSelectedStudent);
-    $('#gateway-recovery').addEventListener('click',()=>{$('#gateway-recovery').hidden=true;if(!directory)loadDirectory();else openSelectedStudent()});
-    $('#student-switch').addEventListener('click',switchStudent);$('#refresh').addEventListener('click',refreshPortal);
-    window.addEventListener('online',()=>{if(!directory&&document.body.classList.contains('portal-locked'))loadDirectory()});
-    loadDirectory();
+    $('#gateway-recovery').addEventListener('click',openParentPortal);
+    $('#refresh').addEventListener('click',openParentPortal);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)parentSuspend();else openParentPortal()});
+    window.addEventListener('pagehide',parentSuspend);
+    window.addEventListener('pageshow',event=>{if(event.persisted)openParentPortal()});
+    window.addEventListener('online',()=>{if(!activeStudent&&!parentBusy)openParentPortal()});
+    window.addEventListener('hashchange',()=>{parentSuspend();location.reload()});
+    setInterval(checkParentAccess,60000);
+    openParentPortal();
   </script>
 </body>
 </html>
