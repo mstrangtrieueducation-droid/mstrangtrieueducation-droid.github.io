@@ -126,6 +126,7 @@ const fighterApi = (() => {
     .self-study-score-card__head strong{font-size:18px;color:var(--navy,#082b55)}
     .self-study-score-card__head span{color:#64748b;font-size:13px;text-align:right}
     .self-study-score-card__scores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .self-study-score-card__scores.is-reading{grid-template-columns:repeat(2,minmax(0,1fr))}
     .self-study-score-card__score{border-radius:12px;background:#f2f6fb;padding:11px 12px}
     .self-study-score-card__score span{display:block;color:#64748b;font-size:12px;margin-bottom:4px}
     .self-study-score-card__score strong{font-size:18px;color:var(--navy,#082b55)}
@@ -201,6 +202,7 @@ body.f9-portal-locked .hero,body.f9-portal-locked nav.tabs,body.f9-portal-locked
 .f9-inline-self-study-scores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:11px}
 .f9-inline-self-study-scores span{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:9px;background:#fff;color:var(--muted);font-size:12px}
 .f9-inline-self-study-scores strong{color:var(--navy)}
+.f9-inline-self-study-scores.is-reading{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:820px){.f9-inline-task-state{grid-column:2}.f9-inline-state-head{align-items:flex-start;flex-direction:column}.f9-inline-self-study{margin-left:16px;margin-right:16px}.f9-inline-self-study-scores{grid-template-columns:1fr}.student-switch{padding:8px 12px}.student-gateway__lookup .button{min-width:0}}
 /* FIGHTER9_STATUS_SIDEBAR_V3 */
 /* FIGHTER_PORTAL_TEMPLATE_V1_CLASS_9 */
@@ -1504,12 +1506,13 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
         const assignment=row.assignment||{};
         const result=row.result;
         const title=assignment.topic||assignment.session||row.code||'B\u00e0i t\u1ef1 luy\u1ec7n';
+        const isReading=result.kind==='reading'||Boolean(fighterReadingCodeUiV27_(row.code));
         const isShadowing=(result.kind||assignment.kind)==='shadowing';
         const complete=result.completed!==false;
         const status=result.status||(complete?'\u0110\u00e3 ho\u00e0n th\u00e0nh':'\u0110\u00e3 n\u1ed9p \u00b7 \u0111ang x\u1eed l\u00fd');
         const body=isShadowing
           ? ((result.submissionFiles&&result.submissionFiles.length)?'<div class="feedback-actions">'+submittedFileActions_(result).join('')+'</div>':'')
-          : '<div class="self-study-score-card__scores">'+
+          : isReading?fighterReadingScoreMarkupV27_(result,false):'<div class="self-study-score-card__scores">'+
             '<div class="self-study-score-card__score"><span>Listening</span><strong>'+esc(selfStudyScoreTextV1_(result.listening,25))+'</strong></div>'+
             '<div class="self-study-score-card__score"><span>Paraphrase</span><strong>'+esc(selfStudyScoreTextV1_(result.paraphrase,10))+'</strong></div>'+
             '<div class="self-study-score-card__score"><span>T\u1ed5ng</span><strong>'+esc(selfStudyScoreTextV1_(result.total,35))+'</strong></div>'+
@@ -1889,12 +1892,13 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
       if (!loaded) {
         panel.innerHTML = '<div class="f9-inline-state-head"><strong>Tình trạng bài làm</strong><span class="status neutral">Đang kiểm tra...</span></div>';
       } else if (result) {
+        var isReading = result.kind === 'reading' || Boolean(fighterReadingCodeUiV27_(code));
         var isShadowing = (result.kind || assignment.kind) === 'shadowing';
         var complete = result.completed !== false;
         var statusText = result.status || (complete ? 'Đã hoàn thành' : 'Đã nộp · đang xử lý');
         var body = isShadowing
           ? ((result.submissionFiles && result.submissionFiles.length) ? '<div class="feedback-actions">' + submittedFileActions_(result).join('') + '</div>' : '')
-          : '<div class="f9-inline-self-study-scores">' +
+          : isReading ? fighterReadingScoreMarkupV27_(result, true) : '<div class="f9-inline-self-study-scores">' +
             '<span>Listening <strong>' + esc(selfStudyScoreTextV1_(result.listening, 25)) + '</strong></span>' +
             '<span>Paraphrase <strong>' + esc(selfStudyScoreTextV1_(result.paraphrase, 10)) + '</strong></span>' +
             '<span>Tổng <strong>' + esc(selfStudyScoreTextV1_(result.total, 35)) + '</strong></span>' +
@@ -1986,7 +1990,28 @@ renderSelfStudyResultsForStudentV1_=function(target,items){f9PortalRenderSelfStu
       });
     }
 
+    // Reading scores use the actual question count; Listening retains its own score scale.
+    function fighterReadingCodeUiV27_(value) {
+      const raw=String(value==null?'':value).trim().toUpperCase().replace(/\s+/g,' ');
+      const match=raw.match(/^RI\s*([345])\s*-\s*U\s*0*(\d{1,2})$/)||raw.match(/^READING(?: INTENSIVE)?\s+([345])\s*[-·:–—]?\s*UNIT\s+0*(\d{1,2})$/);
+      if(!match)return '';
+      const unit=Number(match[2]);
+      return unit>=1&&unit<=12?'RI'+match[1]+'-U'+String(unit).padStart(2,'0'):'';
+    }
+
+    function fighterReadingScoreMarkupV27_(result,inline) {
+      const score=result&&result.score;
+      const maximum=result&&result.maxScore;
+      const percent=result&&result.percent;
+      const scoreText=Number.isFinite(score)&&Number.isFinite(maximum)&&maximum>0?score+'/'+maximum:'—';
+      const percentText=Number.isFinite(percent)?percent+'%':'—';
+      if(inline)return '<div class="f9-inline-self-study-scores is-reading"><span>Điểm <strong>'+esc(scoreText)+'</strong></span><span>Tỷ lệ <strong>'+esc(percentText)+'</strong></span></div>';
+      return '<div class="self-study-score-card__scores is-reading"><div class="self-study-score-card__score"><span>Điểm</span><strong>'+esc(scoreText)+'</strong></div><div class="self-study-score-card__score"><span>Tỷ lệ</span><strong>'+esc(percentText)+'</strong></div></div>';
+    }
+
     function selfStudyCanonicalCodeUiV4_(value){
+      const reading=fighterReadingCodeUiV27_(value);
+      if(reading)return reading;
       const match=String(value==null?'':value).toUpperCase().match(/\bFL\s*(\d+)\s*-?\s*P\s*0*(\d+)\b/);
       return match?'FL'+Number(match[1])+'-P'+String(Number(match[2])).padStart(2,'0'):String(value==null?'':value).trim().toUpperCase();
     }
