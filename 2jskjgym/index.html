@@ -1552,35 +1552,49 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function loadProfileSnapshot(requestedAlias) {
-      try {
-        const stored = JSON.parse(window.sessionStorage.getItem(profileSnapshotKey(requestedAlias)) || 'null');
+      // A saved profile is useful across visits only after today's live roster
+      // confirms the selected learner. Never extend the source's real age.
+      if (!app.directoryLoad.ready || !liveDirectoryContainsAlias_(requestedAlias)) return null;
+      const candidates = [];
+      ['localStorage', 'sessionStorage'].forEach(storageName => {
+        try {
+        const stored = JSON.parse(window[storageName].getItem(profileSnapshotKey(requestedAlias)) || 'null');
+        const savedAt = Number(stored && stored.savedAt);
+        const builtAt = Number(stored && stored.data && stored.data.snapshotBuiltAt);
+        const now = Date.now();
         if (!stored || Number(stored.classNumber) !== CLASS_NUMBER ||
             text(stored.className) !== CLASS_NAME || matchKey(stored.alias) !== matchKey(requestedAlias) ||
             !validProfileData(stored.data, requestedAlias) || responseHasErrors(stored.data) ||
-            Date.now() - Number(stored.savedAt || 0) < 0 ||
-            Date.now() - Number(stored.savedAt || 0) > PROFILE_SNAPSHOT_MAX_AGE) return null;
-        return Object.assign({}, stored.data, {
-          cacheStale: Boolean(stored.data.cacheStale || Date.now() - Number(stored.savedAt || 0) > PROFILE_SNAPSHOT_FRESH_AGE)
-        });
-      } catch (_) { return null; }
+            !Number.isFinite(savedAt) || savedAt <= 0 || savedAt > now ||
+            !Number.isFinite(builtAt) || builtAt <= 0 || builtAt > now ||
+            now - Math.min(savedAt, builtAt) > PROFILE_SNAPSHOT_MAX_AGE) return;
+        candidates.push(Object.assign({}, stored.data, {
+          cacheStale: Boolean(stored.data.cacheStale || now - Math.min(savedAt, builtAt) > PROFILE_SNAPSHOT_FRESH_AGE),
+          browserSnapshot: true
+        }));
+        } catch (_) { /* A blocked storage area must not disable the other. */ }
+      });
+      return candidates.sort((a, b) => b.snapshotBuiltAt - a.snapshotBuiltAt)[0] || null;
     }
 
     function saveProfileSnapshot(requestedAlias, profile) {
       if (!validProfileData(profile, requestedAlias) || responseHasErrors(profile)) return;
       const builtAt = Number(profile.snapshotBuiltAt || 0);
-      // Reusing durable last-good data must not extend its real lifetime.
-      if (profile.cacheStale && !builtAt) return;
-      const savedAt = builtAt || Date.now();
+      // Reusing last-good data must not extend its real lifetime.
+      if (!Number.isFinite(builtAt) || builtAt <= 0) return;
+      const savedAt = builtAt;
       if (Date.now() - savedAt > PROFILE_SNAPSHOT_MAX_AGE || savedAt > Date.now()) return;
-      try {
-        window.sessionStorage.setItem(profileSnapshotKey(requestedAlias), JSON.stringify({
+      ['localStorage', 'sessionStorage'].forEach(storageName => {
+        try {
+        window[storageName].setItem(profileSnapshotKey(requestedAlias), JSON.stringify({
           savedAt,
           classNumber: CLASS_NUMBER,
           className: CLASS_NAME,
           alias: text(requestedAlias).toUpperCase(),
           data: profile
         }));
-      } catch (_) { /* Private session cache is optional; live loading still works. */ }
+        } catch (_) { /* Device cache is optional; live loading still works. */ }
+      });
     }
 
     function hydratePublicSnapshot() {
@@ -3064,6 +3078,12 @@ html.vn-national-day-2026-root body .assignment.session {
         // reaches one renderer, the parent must never be left on a blank shell.
         renderAll();
         showDashboard();
+        if (profile.browserSnapshot) $('#metaLine').textContent = 'Dữ liệu gần nhất · Đang kiểm tra cập nhật…';
+        if (app.profileLoad.openStartedAt) {
+          document.documentElement.dataset.profileOpenMs = String(Math.round(performance.now() - app.profileLoad.openStartedAt));
+          document.documentElement.dataset.profileOpenSource = profile.browserSnapshot ? 'device' : 'server';
+          app.profileLoad.openStartedAt = 0;
+        }
         if (!keepPosition) {
           switchTab(selectedTab);
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3814,6 +3834,7 @@ html.vn-national-day-2026-root body .assignment.session {
         setEntryState('Hệ thống đang hoàn tất dữ liệu lớp. Bố mẹ chờ một chút nhé.', true);
         return;
       }
+      app.profileLoad.openStartedAt = performance.now();
       loadChild($('#entryName').value, { tab: 'schedule' });
     });
     $('#entryName').addEventListener('change', () => setEntryState('', false));
