@@ -7,52 +7,87 @@
 <script>
 const taApi = (() => {
   const endpoint = 'https://script.google.com/macros/s/AKfycbxnE8eT4d_Y1g5YsKXgi_bsPDBlaArFQ2rZPuT0L22BGfDkDplX0o1Rd19tdt7Nq0H5/exec', className = 'TA7';
-  const pending = new Map(), maxAge = 86400000;
+  const pending = new Map(), memory = new Map(), removed = new Set(), epochs = new Map(), maxAge = 21600000, freshAge = 60000;
   const key = (action,name='') => 'ta-github-v1:'+className+':'+action+':'+encodeURIComponent(name);
   function valid(action,data,name) {
     if(action==='directory') return Boolean(data&&data.className===className&&Array.isArray(data.students));
     return Boolean(data&&data.found===true&&data.dashboard&&data.dashboard.className===className&&data.student&&data.student.name===name);
   }
+  function snapshotBuiltAt(data) {
+    const stamp=Number(data&&(data.snapshotBuiltAt||(data.dashboard&&data.dashboard.snapshotBuiltAt)));
+    if(Number.isFinite(stamp)&&stamp>0)return stamp;
+    const match=String(data&&data.dashboard&&data.dashboard.generatedAt||'').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+    return match?Date.UTC(+match[3],+match[2]-1,+match[1],+match[4]-7,+match[5],+match[6]):0;
+  }
+  function isStale(data) {
+    const stamp=snapshotBuiltAt(data),age=Date.now()-stamp;
+    return Boolean(data&&(data.cacheStale||(data.dashboard&&data.dashboard.cacheStale)))||!stamp||age<0||age>freshAge;
+  }
+  function itemValid(action,item,name) {
+    const age=Date.now()-Number(item&&item.savedAt);
+    return Boolean(item&&Number.isFinite(age)&&age>=0&&age<=maxAge&&valid(action,item.data,name));
+  }
   function read(action,name='') {
+    const id=key(action,name),remembered=memory.get(id);
+    if(removed.has(id))return null;
+    if(itemValid(action,remembered,name))return remembered.data;
+    memory.delete(id);
     try {
-      const item=JSON.parse(localStorage.getItem(key(action,name))||'null'), age=Date.now()-Number(item&&item.savedAt);
-      return item&&Number.isFinite(age)&&age>=0&&age<=maxAge&&valid(action,item.data,name)?item.data:null;
-    }catch(error){return null}
+      const item=JSON.parse(localStorage.getItem(id)||'null');
+      if(itemValid(action,item,name)){memory.set(id,item);return item.data}
+    }catch(error){}
+    return null;
   }
-  function remove(action,name='') {try{localStorage.removeItem(key(action,name))}catch(error){}}
+  function remove(action,name='') {
+    const id=key(action,name);memory.delete(id);removed.add(id);epochs.set(id,(epochs.get(id)||0)+1);
+    try{localStorage.removeItem(id)}catch(error){}
+  }
   function write(action,data,name='') {
-    if(!valid(action,data,name)){remove(action,name);return}
-    let savedAt=Date.now();
-    if(action==='portal') {
-      const match=String(data.dashboard.generatedAt||'').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
-      if(!match)return;
-      savedAt=Date.UTC(+match[3],+match[2]-1,+match[1],+match[4]-7,+match[5],+match[6]);
-    }
-    if(savedAt>Date.now()||Date.now()-savedAt>maxAge)return;
-    try{localStorage.setItem(key(action,name),JSON.stringify({savedAt,data}))}catch(error){}
+    // Errors and incomplete updates never evict a complete earlier snapshot.
+    if(!valid(action,data,name))return;
+    const savedAt=action==='portal'?snapshotBuiltAt(data):Date.now();
+    if(!savedAt||savedAt>Date.now()||Date.now()-savedAt>maxAge)return;
+    const existing=read(action,name);
+    if(action==='portal'&&existing&&snapshotBuiltAt(existing)>savedAt)return;
+    const id=key(action,name),item={savedAt,data};removed.delete(id);memory.set(id,item);
+    try{localStorage.setItem(id,JSON.stringify(item))}catch(error){}
   }
-  function request(method,args=[]) {
+  function request(method,args=[],options={}) {
     const action={getStudentDirectory:'directory',getStudentPortal:'portal'}[method];
     if(!action)return Promise.reject(new Error('UNKNOWN_METHOD'));
     const name=action==='portal'?String(args[0]||'').trim():'';
-    const id=key(action,name);
+    const force=action==='portal'&&options.force===true;
+    const cacheId=key(action,name),id=cacheId+(force?':force':':normal');
     if(pending.has(id))return pending.get(id);
     const url=new URL(endpoint);
     Object.entries({api:'1',class:className,action}).forEach(([k,v])=>url.searchParams.set(k,v));
     if(action==='portal')url.searchParams.set('name',name);
-    const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),90000);
+    if(force)url.searchParams.set('force','1');
+    const epoch=epochs.get(cacheId)||0;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
     const promise=fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',signal:controller.signal}).then(async response=>{
       if(!response.ok)throw new Error('SOURCE_UNAVAILABLE');
       const envelope=await response.json();
-      if(!envelope||envelope.ok!==true||envelope.className!==className||envelope.action!==action)throw new Error('INVALID_RESPONSE');
-      const data=envelope.data;
+      if(!envelope||envelope.ok!==true){
+        const code=envelope&&(envelope.code||(typeof envelope.error==='string'?envelope.error:envelope.error&&envelope.error.code));
+        const error=new Error(code==='DATA_UPDATING'?'DATA_UPDATING':'INVALID_RESPONSE');
+        error.code=error.message;throw error;
+      }
+      if(envelope.className!==className||envelope.action!==action)throw new Error('INVALID_RESPONSE');
+      let data=envelope.data;
       if(action==='portal'&&data&&data.found===false){remove(action,name);return data}
       if(!valid(action,data,name))throw new Error('IDENTITY_MISMATCH');
-      write(action,data,name);return data;
+      if(action==='portal'){
+        data={...data};
+        if(data.cacheStale===undefined&&typeof envelope.cacheStale==='boolean')data.cacheStale=envelope.cacheStale;
+        if(data.snapshotBuiltAt===undefined&&typeof envelope.snapshotBuiltAt==='number')data.snapshotBuiltAt=envelope.snapshotBuiltAt;
+      }
+      if((epochs.get(cacheId)||0)===epoch)write(action,data,name);
+      return data;
     }).finally(()=>{clearTimeout(timer);pending.delete(id)});
     pending.set(id,promise);return promise;
   }
-  return {request,read,remove};
+  return {request,read,remove,isStale,snapshotBuiltAt};
 })();
 
 </script>
@@ -122,7 +157,7 @@ const taApi = (() => {
   <script>
     const PROGRAM_LABEL='Ôn thi vào lớp 6 THCS VĂN LANG · Môn Tiếng Anh';
     const EXPECTED_CLASS='TA7';
-    let directory=null,dashboard=null,activeStudent=null,countdownTimer=null,directoryRequestToken=0,portalRequestToken=0,gatewayBusy=false;
+    let directory=null,dashboard=null,activeStudent=null,countdownTimer=null,directoryRequestToken=0,portalRequestToken=0,gatewayBusy=false,portalSnapshotBuiltAt=0;
     const $=(selector,root=document)=>root.querySelector(selector);
     const $$=(selector,root=document)=>Array.from(root.querySelectorAll(selector));
     const list=value=>Array.isArray(value)?value:[];
@@ -136,7 +171,7 @@ const taApi = (() => {
     const dayLabel=date=>{const value=parseDate(date);return value?new Intl.DateTimeFormat('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric',timeZone:'Asia/Bangkok'}).format(value):date||'—'};
     const isoBangkok=date=>{const parts=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Bangkok'}).formatToParts(date),values=Object.fromEntries(parts.map(part=>[part.type,part.value]));return values.day+'/'+values.month+'/'+values.year};
 
-    async function callServer(method,args=[]){return taApi.request(method,args)}
+    async function callServer(method,args=[],options={}){return taApi.request(method,args,options)}
     function setLogo(url){const logo=$('#logo'),source=safeUrl(url);if(!source){logo.hidden=true;logo.removeAttribute('src');return}logo.hidden=false;logo.onerror=()=>{logo.hidden=true};logo.src=source}
     function setGatewayMessage(message,isError=false){const target=$('#gateway-message');target.textContent=message;target.classList.toggle('is-error',isError)}
     function setGatewayBusy(active,text){gatewayBusy=active;const select=$('#student-input'),button=$('#student-search');select.disabled=active||!directory;button.disabled=active||!directory||!select.value;button.textContent=text||'Mở hồ sơ';$('#student-gateway').setAttribute('aria-busy',String(active))}
@@ -170,37 +205,112 @@ const taApi = (() => {
         gatewayBusy=false;select.innerHTML='<option value="">Chưa tải được danh sách</option>';select.disabled=true;$('#student-search').disabled=true;$('#student-search').textContent='Mở hồ sơ';$('#student-gateway').setAttribute('aria-busy','false');$('#gateway-recovery').hidden=false;setGatewayMessage('Chưa thể tải danh sách học sinh. Vui lòng thử lại.',true);
       }
     }
+    async function requestPortalWithRetry(name,options,token){
+      const retryDelays=[1000,2500,5000,10000,15000];
+      for(let attempt=0;attempt<=retryDelays.length;attempt+=1){
+        if(token!==portalRequestToken)return null;
+        try{return await callServer('getStudentPortal',[name],options)}
+        catch(error){
+          if(token!==portalRequestToken)return null;
+          if((error.code||error.message)!=='DATA_UPDATING'||attempt===retryDelays.length)throw error;
+          await delay(retryDelays[attempt]);
+        }
+      }
+      return null;
+    }
+    function closeMissingPortal(payload,name,token){
+      if(token!==portalRequestToken)return;
+      taApi.remove('portal',name);
+      if(activeStudent)switchStudent();
+      else{activeStudent=null;dashboard=null;clearPortalContent();setGatewayBusy(false)}
+      setGatewayMessage(payload&&payload.message?payload.message:'Không tìm thấy hồ sơ phù hợp. Vui lòng chọn lại.',true);
+    }
+    function paintPortalSnapshot(payload,name,token){
+      if(token!==portalRequestToken)return false;
+      if(payload&&payload.found===false){closeMissingPortal(payload,name,token);return false}
+      if(!validPortalPayload(payload,name))throw new Error('PORTAL_IDENTITY_MISMATCH');
+      const builtAt=taApi.snapshotBuiltAt(payload);
+      if(activeStudent&&normalizedName(activeStudent.name)===normalizedName(name)&&portalSnapshotBuiltAt>builtAt)return false;
+      const alreadyOpen=Boolean(activeStudent);dashboard=payload.dashboard;activeStudent=payload.student;
+      portalSnapshotBuiltAt=builtAt;renderPortal();if(!alreadyOpen)unlockPortal();
+      $('#app-status').hidden=true;return true;
+    }
+    async function refreshPortalInBackground(name,token){
+      if(token!==portalRequestToken)return;
+      $('#app-status').textContent='Đang hiển thị hồ sơ đã lưu và cập nhật dữ liệu mới…';$('#app-status').hidden=false;
+      try{
+        const payload=await requestPortalWithRetry(name,{force:true},token);
+        if(token!==portalRequestToken)return;
+        if(!paintPortalSnapshot(payload,name,token))return token===portalRequestToken&&Boolean(activeStudent);
+        if(taApi.isStale(payload)){
+          $('#app-status').textContent='Đang hiển thị hồ sơ đã lưu. Dữ liệu mới chưa sẵn sàng, vui lòng bấm Làm mới để thử lại.';$('#app-status').hidden=false;
+          return false;
+        }
+        return true;
+      }catch(error){
+        if(token!==portalRequestToken||!activeStudent)return;
+        $('#app-status').textContent='Đang hiển thị hồ sơ đã lưu. Chưa thể cập nhật, vui lòng bấm Làm mới để thử lại.';$('#app-status').hidden=false;
+        return false;
+      }
+    }
     async function openSelectedStudent(){
       if(gatewayBusy)return;const selectedName=$('#student-input').value;
       if(!selectedName){setGatewayMessage('Vui lòng chọn tên học sinh.',true);$('#student-input').focus();return}
-      const token=++portalRequestToken;setGatewayMessage('Đang mở hồ sơ của con…');setGatewayBusy(true,'Đang mở…');
-      const cached=taApi.read('portal',selectedName);
+      const token=++portalRequestToken;portalSnapshotBuiltAt=0;
+      setGatewayMessage('Đang mở hồ sơ của con…');setGatewayBusy(true,'Đang mở…');
+      const cached=taApi.read('portal',selectedName);let backgroundStarted=false,backgroundFinished=false,backgroundFailed=false;
+      const finishStatus=()=>{
+        if(token!==portalRequestToken||!activeStudent)return;
+        if(backgroundFailed){$('#app-status').textContent='Đang hiển thị hồ sơ đã lưu. Chưa thể cập nhật, vui lòng bấm Làm mới để thử lại.';$('#app-status').hidden=false}
+        else $('#app-status').hidden=true;
+      };
+      const startBackground=()=>{
+        backgroundStarted=true;
+        void refreshPortalInBackground(selectedName,token).then(ok=>{
+          backgroundFinished=true;backgroundFailed=ok===false;finishStatus();
+        });
+      };
       if(validPortalPayload(cached,selectedName)){
-        dashboard=cached.dashboard;activeStudent=cached.student;renderPortal();unlockPortal();
+        paintPortalSnapshot(cached,selectedName,token);
         $('#app-status').textContent='Đang hiển thị hồ sơ đã lưu và kiểm tra cập nhật mới…';$('#app-status').hidden=false;
+        if(taApi.isStale(cached))startBackground();
       }
       try{
-        const payload=await callServer('getStudentPortal',[selectedName]);if(token!==portalRequestToken)return;
-        if(!payload||payload.found!==true){if(activeStudent)switchStudent();setGatewayBusy(false);setGatewayMessage(payload&&payload.message?payload.message:'Không tìm thấy hồ sơ phù hợp. Vui lòng chọn lại.',true);return}
-        if(!validPortalPayload(payload,selectedName))throw new Error('PORTAL_IDENTITY_MISMATCH');
-        const alreadyOpen=Boolean(activeStudent);dashboard=payload.dashboard;activeStudent=payload.student;renderPortal();
-        if(!alreadyOpen)unlockPortal();$('#app-status').hidden=true;
+        const payload=await requestPortalWithRetry(selectedName,{force:false},token);
+        if(token!==portalRequestToken)return;
+        if(!paintPortalSnapshot(payload,selectedName,token))return;
+        if(taApi.isStale(payload)){
+          if(backgroundFinished)finishStatus();
+          else{$('#app-status').textContent='Đang hiển thị hồ sơ đã lưu và cập nhật dữ liệu mới…';$('#app-status').hidden=false}
+          if(!backgroundStarted)startBackground();
+        }
       }catch(error){
         if(token!==portalRequestToken)return;
+        if(activeStudent&&backgroundFinished&&!backgroundFailed)return;
         if(activeStudent){$('#app-status').textContent='Đang hiển thị hồ sơ đã lưu. Chưa thể cập nhật, vui lòng bấm Làm mới để thử lại.';$('#app-status').hidden=false;return}
         activeStudent=null;dashboard=null;clearPortalContent();setGatewayBusy(false);setGatewayMessage('Chưa thể mở hồ sơ. Vui lòng thử lại.',true);$('#gateway-recovery').hidden=false;
       }
     }
-
     function validPortalPayload(payload,requestedName){if(!payload||payload.found!==true||!payload.dashboard||!payload.student||!directory)return false;const model=payload.dashboard;return model.className===directory.className&&model.program===directory.program&&model.program===PROGRAM_LABEL&&normalizedName(payload.student.name)===normalizedName(requestedName)}
     function unlockPortal(){document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');$('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');setGatewayBusy(false);activateTab($('#tab-schedule'));$('#portal-announcer').textContent='Đã mở hồ sơ của '+activeStudent.name+'.';requestAnimationFrame(()=>$('#tab-schedule').focus())}
     function clearPortalContent(){clearTimeout(countdownTimer);countdownTimer=null;['#next-class','#schedule-notice','#schedule-grid','#assignment-list','#self-study-list','#student-profile','#leaderboard','#improvement'].forEach(selector=>{$(selector).innerHTML=''});$('#app-status').hidden=true;$('#app-status').textContent='';$('#selected-student').textContent=''}
     function switchStudent(){portalRequestToken+=1;document.title=directory.className+' | Cổng học tập';activeStudent=null;dashboard=null;clearPortalContent();$('#student-context').hidden=true;$('#student-gateway').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#student-gateway');document.body.classList.remove('portal-ready');document.body.classList.add('portal-locked');$('#student-input').value='';$('#gateway-recovery').hidden=true;setGatewayBusy(false);setGatewayMessage('Chọn tên học sinh để bắt đầu.');$('#portal-announcer').textContent='Đã đóng hồ sơ học sinh.';requestAnimationFrame(()=>$('#student-input').focus())}
     async function refreshPortal(){
-      if(!activeStudent)return;const name=activeStudent.name,token=++portalRequestToken,button=$('#refresh');button.disabled=true;$('#app-main').setAttribute('aria-busy','true');$('#app-status').hidden=true;
-      try{const payload=await callServer('getStudentPortal',[name]);if(token!==portalRequestToken||!activeStudent||normalizedName(activeStudent.name)!==normalizedName(name))return;if(!validPortalPayload(payload,name))throw new Error('INVALID_REFRESH_PAYLOAD');dashboard=payload.dashboard;activeStudent=payload.student;renderPortal();$('#portal-announcer').textContent='Hồ sơ đã được làm mới.'}
-      catch(error){if(token!==portalRequestToken||!activeStudent)return;console.error('Không thể làm mới hồ sơ.',error);$('#app-status').textContent='Chưa thể làm mới đầy đủ. Vui lòng thử lại.';$('#app-status').hidden=false}
-      finally{if(token===portalRequestToken&&activeStudent){button.disabled=false;$('#app-main').setAttribute('aria-busy','false')}}
+      if(!activeStudent)return;const name=activeStudent.name,token=++portalRequestToken,button=$('#refresh');
+      button.disabled=true;$('#app-main').setAttribute('aria-busy','true');$('#app-status').hidden=true;
+      try{
+        const payload=await requestPortalWithRetry(name,{force:true},token);
+        if(token!==portalRequestToken||!activeStudent||normalizedName(activeStudent.name)!==normalizedName(name))return;
+        if(!paintPortalSnapshot(payload,name,token))return;
+        if(taApi.isStale(payload)){
+          $('#app-status').textContent='Đang hiển thị hồ sơ đã lưu. Dữ liệu mới chưa sẵn sàng, vui lòng thử lại.';$('#app-status').hidden=false;
+        }else $('#portal-announcer').textContent='Hồ sơ đã được làm mới.';
+      }catch(error){
+        if(token!==portalRequestToken||!activeStudent)return;
+        $('#app-status').textContent='Chưa thể làm mới đầy đủ. Đang giữ hồ sơ đã lưu, vui lòng thử lại.';$('#app-status').hidden=false;
+      }finally{
+        if(token===portalRequestToken&&activeStudent){button.disabled=false;$('#app-main').setAttribute('aria-busy','false')}
+      }
     }
     function renderPortal(){if(!dashboard||!activeStudent)throw new Error('MISSING_PORTAL_DATA');document.title=dashboard.className+' · '+activeStudent.name;$('#class-name').textContent=dashboard.className;$('#program').textContent=PROGRAM_LABEL;$('#updated').textContent=dashboard.generatedAt?'Cập nhật '+dashboard.generatedAt:'';$('#selected-student').textContent=activeStudent.englishName?activeStudent.name+' · '+activeStudent.englishName:activeStudent.name;setLogo(dashboard.logoUrl||directory.logoUrl);renderSchedule();renderAssignments(activeStudent);renderSelfStudy(activeStudent);renderStudentResults(activeStudent);renderOverview(activeStudent)}
 

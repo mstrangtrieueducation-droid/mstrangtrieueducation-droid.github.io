@@ -6,42 +6,82 @@
 <meta name="referrer" content="no-referrer">
 <script>
 const taParent = (() => {
-  const endpoint='https://script.google.com/macros/s/AKfycbxyp5Wcy9lxs7i2YS4sLmNaM-iZx7eW_7wWNhLSPiNYgzeJR8N2AM4eGxyPhEfXhWFW/exec',className='TA6';
+  const endpoint='https://script.google.com/macros/s/AKfycbxyp5Wcy9lxs7i2YS4sLmNaM-iZx7eW_7wWNhLSPiNYgzeJR8N2AM4eGxyPhEfXhWFW/exec',className='TA6',program='Ôn thi vào lớp 6 THCS VĂN LANG · Môn Tiếng Anh';
   const tokens=new URLSearchParams(location.hash.slice(1)).getAll('p');
   const token=tokens.length===1?tokens[0]:'';
   const validToken=/^[A-Za-z0-9_-]{22}$/.test(token);
-  const pending=new Map(),controllers=new Set();
-  let identity=null,epoch=0,terminal=false,storageKey='';
-  const keyJob=validToken&&globalThis.crypto&&crypto.subtle?crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)).then(bytes=>{storageKey='ta6-parent-v1:'+Array.from(new Uint8Array(bytes)).map(x=>x.toString(16).padStart(2,'0')).join('')}):Promise.resolve();
-  function invalidate(revoked=false){epoch++;identity=null;terminal=terminal||revoked;controllers.forEach(x=>x.abort());pending.clear();if(revoked&&storageKey){try{localStorage.removeItem(storageKey)}catch(_){}}}
-  function matches(data){return Boolean(identity&&data&&data.found===true&&data.dashboard&&data.dashboard.className===className&&data.student&&data.student.name===identity.name&&String(data.student.englishName||'')===String(identity.englishName||''))}
-  async function cached(){await keyJob;if(!identity||!storageKey)return null;try{const item=JSON.parse(localStorage.getItem(storageKey)||'null'),age=Date.now()-Number(item&&item.savedAt);return item&&Number.isFinite(age)&&age>=0&&age<=86400000&&matches(item.data)?item.data:null}catch(_){return null}}
-  async function save(data,expectedEpoch){await keyJob;if(expectedEpoch!==epoch||!storageKey||!matches(data))return;const m=String(data.dashboard.generatedAt||'').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);if(!m)return;const savedAt=Date.UTC(+m[3],+m[2]-1,+m[1],+m[4]-7,+m[5],+m[6]);if(savedAt>Date.now()||Date.now()-savedAt>86400000)return;try{localStorage.setItem(storageKey,JSON.stringify({savedAt,data}))}catch(_){}}
+  const pending=new Map(),controllers=new Map();
+  let identity=null,binding=null,epoch=0,authorizationEpoch=0,terminal=false,storageKey='',lastGood=null;
+  const keyJob=validToken&&globalThis.crypto&&crypto.subtle?crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)).then(bytes=>{storageKey='ta6-parent-v1:'+Array.from(new Uint8Array(bytes)).map(x=>x.toString(16).padStart(2,'0')).join('');if(terminal){try{localStorage.removeItem(storageKey)}catch(_){}}}).catch(()=>{}):Promise.resolve();
   function error(code){const e=new Error(code);e.code=code;return e}
-  function request(action){
+  function same(left,right){return Boolean(left&&right&&left.name===right.name&&String(left.englishName||'')===String(right.englishName||''))}
+  function matches(data,who=identity){return Boolean(who&&data&&data.found===true&&data.dashboard&&data.dashboard.className===className&&data.dashboard.program===program&&data.student&&same(data.student,who)&&['schedule','assignments'].every(key=>Array.isArray(data.dashboard[key]))&&(data.dashboard.selfStudyAssignments===undefined||Array.isArray(data.dashboard.selfStudyAssignments))&&['assignments','scoreDetails'].every(key=>Array.isArray(data.student[key])))}
+  function sourceTime(data){
+    const model=data&&data.dashboard;if(!model)return NaN;
+    const stamp=Number(model.snapshotBuiltAt);if(Number.isFinite(stamp)&&stamp>0)return stamp;
+    const m=String(model.generatedAt||'').match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+    return m?Date.UTC(+m[3],+m[2]-1,+m[1],+m[4]-7,+m[5],+m[6]):NaN;
+  }
+  function usable(item,who=identity){const age=Date.now()-Number(item&&item.savedAt),sourceAge=Date.now()-sourceTime(item&&item.data);return Boolean(item&&Number.isFinite(age)&&age>=0&&age<=86400000&&Number.isFinite(sourceAge)&&sourceAge>=0&&sourceAge<=86400000&&matches(item.data,who))}
+  function fresh(data){const age=Date.now()-sourceTime(data);return Boolean(data&&data.dashboard&&data.dashboard.cacheStale!==true&&Number.isFinite(age)&&age>=0&&age<=60000)}
+  function suspend(){
+    authorizationEpoch++;identity=null;
+    const check=controllers.get('check');if(check)check.abort();
+    controllers.delete('check');pending.delete('check');
+  }
+  function invalidate(revoked=false){
+    epoch++;suspend();terminal=terminal||revoked;
+    controllers.forEach(controller=>controller.abort());controllers.clear();pending.clear();
+    if(revoked){lastGood=null;binding=null;if(storageKey){try{localStorage.removeItem(storageKey)}catch(_){}}}
+  }
+  async function cached(){
+    if(!identity||terminal)return null;
+    if(usable(lastGood)){document.documentElement.dataset.parentCache='memory';return lastGood.data}
+    const current=authorizationEpoch;await keyJob;
+    if(current!==authorizationEpoch||!identity||terminal)return null;
+    if(!storageKey){document.documentElement.dataset.parentCache='unavailable';return null}
+    try{const item=JSON.parse(localStorage.getItem(storageKey)||'null');if(usable(item)){lastGood=item;document.documentElement.dataset.parentCache='storage';return item.data}document.documentElement.dataset.parentCache=item?'expired-or-mismatched':'missing'}catch(_){document.documentElement.dataset.parentCache='unavailable'}
+    return null;
+  }
+  async function save(data,expectedEpoch,who){
+    if(expectedEpoch!==epoch||terminal||!matches(data,who))return;
+    const item={savedAt:sourceTime(data),data};if(!usable(item,who))return;
+    if(!usable(lastGood,who)||lastGood.savedAt<=item.savedAt)lastGood=item;
+    await keyJob;if(expectedEpoch!==epoch||terminal||!storageKey)return;
+    try{if(usable(lastGood,who))localStorage.setItem(storageKey,JSON.stringify(lastGood))}catch(_){}
+  }
+  function request(action,force=false){
     if(!validToken||terminal)return Promise.reject(error('INVALID_TOKEN'));
-    if(action!=='check'&&!identity)return Promise.reject(error('AUTH_PENDING'));
+    if(!['check','portal'].includes(action))return Promise.reject(error('INVALID_REQUEST'));
+    if(action==='portal'&&!identity)return Promise.reject(error('AUTH_PENDING'));
+    // Normal and forced callers share one healthy portal request across visibility changes.
     if(pending.has(action))return pending.get(action);
-    const current=epoch,url=new URL(endpoint),controller=new AbortController();controllers.add(controller);
+    const current=epoch,checkEpoch=authorizationEpoch,who=identity&&{...identity},url=new URL(endpoint),controller=new AbortController();controllers.set(action,controller);
     Object.entries({api:'parent1',class:className,action,token}).forEach(([k,v])=>url.searchParams.set(k,v));
+    if(action==='portal'&&force)url.searchParams.set('force','1');
     const timer=setTimeout(()=>controller.abort(),action==='check'?30000:100000),started=performance.now();
     const promise=fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal}).then(async response=>{
       if(!response.ok)throw error('DATA_UNAVAILABLE');
-      const body=await response.json();if(current!==epoch)throw error('REQUEST_SUPERSEDED');
+      const body=await response.json();if(current!==epoch||action==='check'&&checkEpoch!==authorizationEpoch)throw error('REQUEST_SUPERSEDED');
       if(!body||!body.ok){const code=body&&(body.code||body.error&&body.error.code)||'DATA_UNAVAILABLE';if(['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(code))invalidate(true);throw error(code)}
       if(body.className!==className||body.action!==action)throw error('IDENTITY_MISMATCH');
       const data=body.data;
       if(action==='check'){
-        if(!data||!data.name||(identity&&(identity.name!==data.name||String(identity.englishName||'')!==String(data.englishName||''))))throw error('IDENTITY_MISMATCH');
-        identity={name:data.name,englishName:data.englishName||''};
-      }else{if(!matches(data))throw error('IDENTITY_MISMATCH');await save(data,current);if(current!==epoch)throw error('REQUEST_SUPERSEDED')}
+        if(!data||!data.name||binding&&!same(binding,data))throw error('IDENTITY_MISMATCH');
+        if(document.hidden)throw error('REQUEST_SUPERSEDED');
+        identity={name:data.name,englishName:data.englishName||''};binding={...identity};
+      }else{
+        if(!matches(data,who))throw error('IDENTITY_MISMATCH');
+        await save(data,current,who);if(current!==epoch||terminal)throw error('REQUEST_SUPERSEDED');
+      }
       document.documentElement.dataset[action+'Ms']=String(Math.round(performance.now()-started));
       return data;
-    }).finally(()=>{clearTimeout(timer);controllers.delete(controller);if(current===epoch)pending.delete(action)});
+    }).finally(()=>{clearTimeout(timer);if(controllers.get(action)===controller){controllers.delete(action);pending.delete(action)}});
     pending.set(action,promise);return promise;
   }
-  return {request,cached,invalidate,get identity(){return identity},get validToken(){return validToken},get terminal(){return terminal}};
+  return {request,cached,fresh,sourceTime,suspend,invalidate,get identity(){return identity},get validToken(){return validToken},get terminal(){return terminal},get portalPending(){return pending.has('portal')}};
 })();
+
 
 </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -147,6 +187,7 @@ body.portal-locked .gateway-actions .button{min-height:52px;font-size:16px}
     const isoBangkok=date=>{const parts=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Bangkok'}).formatToParts(date),values=Object.fromEntries(parts.map(part=>[part.type,part.value]));return values.day+'/'+values.month+'/'+values.year};
 
     let parentGeneration=0,parentBusy=false,parentOpened=false;
+    const parentWaits=new Map();
     function setLogo(url){const logo=$('#logo'),source=safeUrl(url);if(!source){logo.hidden=true;logo.removeAttribute('src');return}logo.hidden=false;logo.onerror=()=>{logo.hidden=true};logo.src=source}
     function clearPortalContent(){clearTimeout(countdownTimer);countdownTimer=null;['#next-class','#schedule-notice','#schedule-grid','#assignment-list','#self-study-list','#student-profile','#leaderboard','#improvement'].forEach(selector=>{$(selector).innerHTML=''});$('#app-status').hidden=true;$('#app-status').textContent='';$('#selected-student').textContent=''}
     function parentLock(message,pending=true){
@@ -156,44 +197,90 @@ body.portal-locked .gateway-actions .button{min-height:52px;font-size:16px}
       $('#parent-name').textContent='';$('#parent-skeleton').hidden=!pending;$('#parent-name').hidden=pending;
       $('#gateway-message').textContent=message;$('#gateway-recovery').hidden=pending;
       $('#student-gateway').setAttribute('aria-busy',String(pending));$('.skip-link').setAttribute('href','#student-gateway');
-      $('#portal-announcer').textContent='';
-      document.title='TA6 | Hồ sơ học tập của con';
+      $('#portal-announcer').textContent='';document.title='TA6 | Hồ sơ học tập của con';
     }
     function parentPaint(payload){
       const who=taParent.identity;
-      if(!who||!payload||!payload.found||payload.student.name!==who.name||String(payload.student.englishName||'')!==String(who.englishName||'')||payload.dashboard.className!==EXPECTED_CLASS||payload.dashboard.program!==PROGRAM_LABEL)throw new Error('IDENTITY_MISMATCH');
+      if(document.hidden||!who||!payload||!payload.found||payload.student.name!==who.name||String(payload.student.englishName||'')!==String(who.englishName||'')||payload.dashboard.className!==EXPECTED_CLASS||payload.dashboard.program!==PROGRAM_LABEL)throw new Error('IDENTITY_MISMATCH');
       directory={className:EXPECTED_CLASS,program:PROGRAM_LABEL,logoUrl:payload.dashboard.logoUrl};dashboard=payload.dashboard;activeStudent=payload.student;
       renderPortal();document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');
       $('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');
       if(!parentOpened){parentOpened=true;activateTab($('#tab-schedule'));document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()))}
       $('#portal-announcer').textContent='Đã mở hồ sơ của '+who.name+'.';
     }
+    function parentCurrent(generation){return generation===parentGeneration&&!document.hidden}
+    function parentCancelWaits(){parentWaits.forEach((resolve,timer)=>{clearTimeout(timer);resolve(false)});parentWaits.clear()}
+    function parentWait(delay,generation){return new Promise(resolve=>{const timer=setTimeout(()=>{parentWaits.delete(timer);resolve(parentCurrent(generation))},delay);parentWaits.set(timer,resolve)})}
+    function parentStatus(message){$('#app-status').textContent=message;$('#app-status').hidden=!message}
     function parentFailed(error){
       const revoked=taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code);
-      taParent.invalidate(revoked);
+      parentCancelWaits();taParent.invalidate(revoked);parentBusy=false;
       const message=!taParent.validToken?'Vui lòng mở liên kết riêng cô gửi cho gia đình.':revoked?'Liên kết hồ sơ không còn hoạt động. Vui lòng liên hệ cô.':'Chưa thể kết nối hồ sơ. Vui lòng thử lại.';
       parentLock(message,false);$('#parent-name').textContent=revoked?'Hồ sơ không còn hoạt động':'Chưa thể mở hồ sơ';$('#gateway-recovery').hidden=revoked||!taParent.validToken;
     }
-    async function openParentPortal(){
-      if(parentBusy)return;parentBusy=true;const generation=++parentGeneration;
-      taParent.invalidate();parentLock('Đang kiểm tra liên kết riêng của gia đình…');
+    async function parentKeepAfterRefreshFailure(error,generation){
+      if(!parentCurrent(generation))return;
+      const code=error&&(error.code||error.message);
+      if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','IDENTITY_MISMATCH','INVALID_REQUEST'].includes(code)){parentFailed(error);return}
+      // A saved profile is never permission: even an ordinary academic failure
+      // requires a new successful live check before keeping the last good data.
+      parentBusy=true;taParent.suspend();parentLock('Đang kiểm tra lại liên kết hồ sơ…');
       try{
-        const who=await taParent.request('check');if(generation!==parentGeneration)return;
+        await taParent.request('check');if(!parentCurrent(generation))return;
+        const cache=await taParent.cached();if(!parentCurrent(generation))return;
+        if(!cache){parentFailed(error);return}
+        parentPaint(cache);parentStatus('Chưa cập nhật được dữ liệu mới · Đang hiển thị dữ liệu gần nhất.');
+      }catch(checkError){if(parentCurrent(generation))parentFailed(checkError)}
+      finally{if(generation===parentGeneration)parentBusy=false}
+    }
+    async function parentUpdate(generation,force=false){
+      let retries=0;
+      while(parentCurrent(generation)){
+        try{
+          const payload=await taParent.request('portal',force);if(!parentCurrent(generation))return;
+          const retained=await taParent.cached();if(!parentCurrent(generation))return;
+          const newest=retained&&taParent.sourceTime(retained)>taParent.sourceTime(payload)?retained:payload;
+          parentPaint(newest);
+          if(newest.dashboard.cacheStale!==true){parentStatus('');return}
+          parentStatus('Đang hiển thị dữ liệu gần nhất · Đang cập nhật lịch học, bài tập và kết quả…');
+          if(!force){force=true;continue}
+          if(retries>=5){await parentKeepAfterRefreshFailure(new Error('DATA_UPDATING'),generation);return}
+        }catch(error){
+          if(!parentCurrent(generation))return;
+          if(error&&error.code==='DATA_UPDATING'&&retries<5){force=true}
+          else{await parentKeepAfterRefreshFailure(error,generation);return}
+        }
+        const delay=[1000,2500,5000,10000,15000][retries++];
+        if(!await parentWait(delay,generation))return;
+      }
+    }
+    async function openParentPortal(options={}){
+      if(parentBusy||document.hidden)return;
+      parentBusy=true;const generation=++parentGeneration;
+      parentCancelWaits();taParent.suspend();parentLock('Đang kiểm tra liên kết riêng của gia đình…');
+      try{
+        const who=await taParent.request('check');if(!parentCurrent(generation))return;
         $('#parent-skeleton').hidden=true;$('#parent-name').hidden=false;$('#parent-name').textContent=who.name+(who.englishName?' · '+who.englishName:'');
+        document.documentElement.dataset.parentIdentityReadyMs=String(Math.round(performance.now()));
         $('#gateway-message').textContent='Đã xác nhận liên kết · Đang tải lịch học, bài tập và kết quả của con…';
-        const cache=await taParent.cached();if(generation!==parentGeneration)return;
-        if(cache){parentPaint(cache);$('#app-status').textContent='Đang kiểm tra cập nhật mới…';$('#app-status').hidden=false}
-        const payload=await taParent.request('portal');if(generation!==parentGeneration)return;
-        parentPaint(payload);$('#app-status').hidden=true;
-      }catch(error){if(generation===parentGeneration)parentFailed(error)}
+        const cache=await taParent.cached();if(!parentCurrent(generation))return;
+        if(cache)parentPaint(cache);
+        parentBusy=false;
+        if(cache&&taParent.fresh(cache)&&!options.force&&!taParent.portalPending){parentStatus('');document.documentElement.dataset.parentResume='fresh-cache';return}
+        if(cache)parentStatus('Đang hiển thị dữ liệu gần nhất · Đang kiểm tra cập nhật mới…');
+        document.documentElement.dataset.parentResume=taParent.portalPending?'reuse-request':cache?'refresh-cache':'cold';
+        await parentUpdate(generation,Boolean(options.force||cache&&cache.dashboard.cacheStale));
+      }catch(error){if(parentCurrent(generation))parentFailed(error)}
       finally{if(generation===parentGeneration)parentBusy=false}
     }
     async function checkParentAccess(){
       if(parentBusy||!activeStudent||document.hidden)return;
       const generation=parentGeneration;
-      try{await taParent.request('check')}catch(error){if(generation!==parentGeneration)return;parentGeneration++;parentFailed(error)}
+      try{await taParent.request('check')}catch(error){if(!parentCurrent(generation))return;parentGeneration++;parentFailed(error)}
     }
-    function parentSuspend(){parentGeneration++;parentBusy=false;taParent.invalidate();parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
+    function parentSuspend(){parentGeneration++;parentBusy=false;parentCancelWaits();taParent.suspend();parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
+    function parentDispose(){parentGeneration++;parentBusy=false;parentCancelWaits();taParent.invalidate(true);parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
+
 
     function renderPortal(){if(!dashboard||!activeStudent)throw new Error('MISSING_PORTAL_DATA');document.title=dashboard.className+' · '+activeStudent.name;$('#class-name').textContent=dashboard.className;$('#program').textContent=PROGRAM_LABEL;$('#updated').textContent=dashboard.generatedAt?'Cập nhật '+dashboard.generatedAt:'';$('#selected-student').textContent=activeStudent.englishName?activeStudent.name+' · '+activeStudent.englishName:activeStudent.name;setLogo(dashboard.logoUrl||directory.logoUrl);renderSchedule();renderAssignments(activeStudent);renderSelfStudy(activeStudent);renderStudentResults(activeStudent);renderOverview(activeStudent)}
 
@@ -236,12 +323,12 @@ body.portal-locked .gateway-actions .button{min-height:52px;font-size:16px}
 
     $$('.tab').forEach(button=>{button.addEventListener('click',()=>activateTab(button));button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=$$('.tab'),index=tabs.indexOf(button);let target=index;if(event.key==='ArrowLeft')target=(index-1+tabs.length)%tabs.length;if(event.key==='ArrowRight')target=(index+1)%tabs.length;if(event.key==='Home')target=0;if(event.key==='End')target=tabs.length-1;activateTab(tabs[target],true)})});
     $('#gateway-recovery').addEventListener('click',openParentPortal);
-    $('#refresh').addEventListener('click',openParentPortal);
+    $('#refresh').addEventListener('click',()=>openParentPortal({force:true}));
     document.addEventListener('visibilitychange',()=>{if(document.hidden)parentSuspend();else openParentPortal()});
     window.addEventListener('pagehide',parentSuspend);
     window.addEventListener('pageshow',event=>{if(event.persisted)openParentPortal()});
-    window.addEventListener('online',()=>{if(!activeStudent&&!parentBusy)openParentPortal()});
-    window.addEventListener('hashchange',()=>{parentSuspend();location.reload()});
+    window.addEventListener('online',()=>{if(!parentBusy)openParentPortal({force:Boolean(activeStudent)})});
+    window.addEventListener('hashchange',()=>{parentDispose();location.reload()});
     setInterval(checkParentAccess,60000);
     openParentPortal();
   </script>
