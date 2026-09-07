@@ -2624,10 +2624,12 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
     var received=times.length>0,complete=received&&options.complete!==false;
     var completedAt=options.completedAt?time(options.completedAt,false):received?Math.min.apply(null,times):0;
     var now=typeof options.now==='number'?options.now:Date.now();
+    var pending=Boolean(assigned>=cutover&&assigned<=now&&options.verified===true&&!complete);
     return {eligible:eligible,assignedAt:assigned,dueAt:due,received:received,complete:complete,
       late:Boolean(eligible&&complete&&completedAt>due),
+      pending:pending,
       missing:Boolean(eligible&&options.verified===true&&!complete&&now>due),
-      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':eligible&&options.verified===true?(now>due?'Chưa nộp · Quá hạn':'Chưa đến hạn nộp'):''};
+      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':pending?(eligible&&now>due?'Chưa nộp · Quá hạn':'Cần nộp bài'):''};
   }
   var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
@@ -2662,6 +2664,138 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
   }
   var api={assignedAt:assignedAt,windowFor:windowFor,contains:contains};
   root.DirectSubmissionAssignmentWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_HISTORY_V1: reconcile legacy display rows with source receipts. */
+(function(root){
+  'use strict';
+  function list(value){return Array.isArray(value)?value:[];}
+  function text(value){return String(value==null?'':value).trim();}
+  function timestamp(item){
+    item=item||{};
+    var policy=root.DirectSubmissionDeadlinePolicy,value=item.submittedAt,ms=typeof item.submittedAtMs==='number'?policy.time(item.submittedAtMs):0;
+    if(ms)return {start:ms,end:ms};
+    if(typeof value==='number'){ms=policy.time(value);return ms?{start:ms,end:ms}:null;}
+    var s=text(value),m;
+    // Intl vi-VN also produces clock-first timestamps. These are display
+    // formats of the same source time, never a reason to create another attempt.
+    if((m=s.match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*[,·]?\s+(\d{1,2}[/.]\d{1,2}[/.]\d{4})$/)))s=m[2]+' '+m[1];
+    ms=policy.time(s);
+    if(!ms||!/[ T·,\s]\d{1,2}:\d{2}/.test(s))return null;
+    var resolution=/\d{1,2}:\d{2}:\d{2}\.\d+/.test(s)?1:/\d{1,2}:\d{2}:\d{2}/.test(s)?1000:60000;
+    return {start:ms,end:ms+resolution-1};
+  }
+  function fileKey(value){
+    try{
+      var u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return '';
+      var match=null,id='';
+      if(u.hostname==='drive.google.com'||u.hostname==='drive.usercontent.google.com'){
+        match=u.pathname.match(/^\/file\/d\/([^/]+)/);id=match?match[1]:u.searchParams.get('id');
+      }else if(u.hostname==='docs.google.com'){
+        match=u.pathname.match(/^\/(?:document|spreadsheets|presentation|drawings)\/d\/([^/]+)/);id=match?match[1]:'';
+      }
+      if(id)return 'drive:'+id;
+      // Forms response/edit URLs are distinct evidence URLs, even when their
+      // parent form ID is the same. Never treat a form as a Drive upload.
+      u.hash='';return u.href;
+    }catch(_){return '';}
+  }
+  function evidence(item){
+    var values=[item.viewUrl,item.reviewUrl,item.fileUrl,item.url].concat(list(item.evidenceUrls),list(item.links).map(function(x){return x&&x.url;}),list(item.submissionFiles).map(function(x){return x&&x.url;}));
+    var found=new Set();
+    values.forEach(function(value){
+      var key=fileKey(value);if(key)found.add(key);
+    });return found;
+  }
+  function evidenceText(value){return text(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');}
+  function genericEvidence(value){return /^(?:file|document|video|pdf|link|upload|attachment|unknown|tep|tai lieu|tep dinh kem|mo bai|xem bai|mo bai da nop|xem bai da nop)$/.test(evidenceText(value));}
+  function genericEvidenceType(value){return /^(?:file|document|link|upload|attachment|unknown|tep|tai lieu)$/.test(evidenceText(value));}
+  function mergeEvidenceItem(before,after){
+    if(typeof before==='string'&&typeof after==='string')return after;
+    var result=Object.assign({},typeof before==='object'?before:{url:before});
+    var next=typeof after==='object'?after:{url:after};
+    Object.keys(next).forEach(function(key){
+      var value=next[key];if(value===undefined||value===null||value==='')return;
+      var previous=result[key],available=previous!==undefined&&previous!==null&&previous!=='';
+      // Prefer the current URL for an identical file, retain a specific legacy
+      // caption/type, and add metadata that was previously unavailable.
+      if(key==='url'||!available)result[key]=value;
+      else if(key==='label'&&genericEvidence(previous)&&!genericEvidence(value))result[key]=value;
+      else if(key==='type'&&genericEvidenceType(previous)&&!genericEvidenceType(value))result[key]=value;
+    });
+    return result;
+  }
+  function mergeEvidenceArrays(before,after){
+    var rows=[],byKey=new Map();
+    list(before).concat(list(after)).forEach(function(value){
+      if(value===undefined||value===null||value==='')return;
+      var url=typeof value==='string'?value:value&&value.url;
+      var key=fileKey(url)||'metadata:'+JSON.stringify(value);
+      if(byKey.has(key)){var index=byKey.get(key);rows[index]=mergeEvidenceItem(rows[index],value);}
+      else{byKey.set(key,rows.length);rows.push(typeof value==='object'?Object.assign({},value):value);}
+    });
+    return rows;
+  }
+  function enrich(before,after){
+    var result=Object.assign({},before);
+    Object.keys(after).forEach(function(key){
+      var value=after[key];
+      if(value===undefined||value===null||value===''||Array.isArray(value)&&!value.length)return;
+      if(['evidenceUrls','links','submissionFiles'].includes(key)&&Array.isArray(value)){result[key]=mergeEvidenceArrays(result[key],value);return;}
+      result[key]=value;
+    });
+    return result;
+  }
+  function merge(existing,incoming,options){
+    options=options||{};
+    var scope=typeof options.scope==='function'?function(item){return text(options.scope(item));}:function(){return 'bound-task';};
+    var rows=[],ids=new Map();
+    list(existing).concat(list(incoming)).forEach(function(item){
+      if(!item||typeof item!=='object')return;
+      var copy=Object.assign({},item),id=text(copy.receiptId),lane=scope(copy),key=lane+'\u0000'+id;
+      if(id&&ids.has(key)){var index=ids.get(key);rows[index]=enrich(rows[index],copy);}
+      else{if(id)ids.set(key,rows.length);rows.push(copy);}
+    });
+    function compatible(legacy,direct){
+      var lane=scope(legacy);if(!lane||lane!==scope(direct))return false;
+      for(var k of ['family','part'])if(text(legacy[k])&&text(direct[k])&&text(legacy[k])!==text(direct[k]))return false;
+      var a=timestamp(legacy),b=timestamp(direct);
+      if(!a||!b||a.start>b.end||b.start>a.end)return false;
+      var left=evidence(legacy),right=evidence(direct);
+      if(left.size&&right.size&&!Array.from(left).some(function(key){return right.has(key);}))return false;
+      return true;
+    }
+    // Match one legacy row to one source receipt. Ambiguous same-minute rows
+    // are preserved; distinct native IDs are never collapsed by clock or file.
+    var direct=[],legacy=[],candidates=new Map(),reverse=new Map(),removed=new Set();
+    rows.forEach(function(row,index){(text(row.receiptId)?direct:legacy).push(index);});
+    legacy.forEach(function(index){
+      var matches=direct.filter(function(other){return compatible(rows[index],rows[other]);});
+      candidates.set(index,matches);
+      matches.forEach(function(other){reverse.set(other,(reverse.get(other)||0)+1);});
+    });
+    legacy.forEach(function(index){
+      var matches=candidates.get(index);
+      if(matches.length!==1||reverse.get(matches[0])!==1)return;
+      var other=matches[0];rows[other]=enrich(rows[index],rows[other]);removed.add(index);
+    });
+    var result=rows.filter(function(_,index){return !removed.has(index);});
+    result.sort(function(a,b){
+      var left=timestamp(a),right=timestamp(b);
+      if(left&&right&&left.start!==right.start)return left.start-right.start;
+      if(left&&!right)return -1;if(!left&&right)return 1;
+      return text(a.receiptId).localeCompare(text(b.receiptId));
+    });
+    if(options.numbered!==false)result=result.map(function(row,index){
+      var item=Object.assign({},row);
+      if(item.sourceAttempt===undefined)item.sourceAttempt=item.attempt===undefined?null:item.attempt;
+      item.attempt=index+1;if(Object.prototype.hasOwnProperty.call(item,'label'))item.label='Lần '+item.attempt;
+      return item;
+    });
+    return result;
+  }
+  var api={merge:merge,timestamp:timestamp,fileKey:fileKey};root.DirectSubmissionHistory=api;
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
@@ -2928,8 +3062,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
     function received(target,found){
       if(!found.length)return;
       target.submitted=true;target.submittedAt=target.submittedAt||found[0].submittedAt;if(!target.completed)target.status='Đã nộp bài';
-      const existing=list(target.submissionAttempts),ids=new Set(existing.map(x=>x.receiptId).filter(Boolean));
-      target.submissionAttempts=existing.concat(found.filter(r=>!ids.has(r.id)).map((r,i)=>({receiptId:r.id,submittedAt:r.submittedAt,attempt:i+1})));
+      target.submissionAttempts=root.DirectSubmissionHistory.merge(target.submissionAttempts,found.map((r,i)=>({receiptId:r.id,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),attempt:i+1,sourceAttempt:r.attempt||i+1,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,links:r.links,family:r.family,part:r.part})));
       // A receipt proves an upload; it does not silently complete a second
       // required PDF/video/notebook component or replace a teacher comment.
       const types=new Set(found.flatMap(r=>list(r.evidenceTypes)));
@@ -2969,10 +3102,19 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index])&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
         const redo=tasks.map((task,index)=>m.submissionTaskFactsV7_(task).redo?index:-1).filter(index=>index>=0);
         if(redo.length===1)receipts.filter(r=>retakeMatches(r,assignment)&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peersFor(r))).forEach(receipt=>matched.push({receipt,index:redo[0]}));
-        if(!record&&matched.length){record={assignmentId:assignment.id,tasks:tasks.map(()=>({tracked:false,completed:false,missing:false,status:''})),missingCount:0,tracked:false,status:''};student.assignments.push(record);}
+        // A published assignment and fresh source proof are sufficient to represent
+        // unfinished online work, even before its Toan dien column has been created.
+        // Manual preparation never creates a direct-source negative.
+        const pendingProofs=tasks.map((task,index)=>{
+          if(!ticket||!guard.isCurrent(ticket)||!fresh||manual(task))return false;
+          const coverage=taskCoverage(payload,assignment,task,index);if(!guard.isVerifiedProof(proof(coverage)))return false;
+          const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};
+          return root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending;
+        });
+        if(!record&&(matched.length||pendingProofs.some(Boolean))){record={assignmentId:assignment.id,tasks:tasks.map(()=>({tracked:false,completed:false,missing:false,status:''})),missingCount:0,tracked:pendingProofs.some(Boolean),status:''};student.assignments.push(record);}
         if(!record)return;record.tasks=list(record.tasks);
         tasks.forEach((task,index)=>{
-          let state=record.tasks[index];if(!state&&matched.some(row=>row.index===index)){state={tracked:false,completed:false,missing:false,status:''};record.tasks[index]=state;}
+          let state=record.tasks[index];if(!state&&(pendingProofs[index]||matched.some(row=>row.index===index))){state={tracked:false,completed:false,missing:false,status:''};record.tasks[index]=state;}
           if(!state)return;
           if(manual(task)){state.submissionManualAuthority=fresh;return;}
           const found=matched.filter(row=>row.index===index).map(row=>row.receipt).sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b));received(state,found);
@@ -2990,8 +3132,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
             if(summary){
               summary.retakeScore=latest.scoreOutOfTen;summary.done=true;summary.submittedAt=latest.submittedAt;
               summary.difference=Number.isFinite(summary.originalScore)?Math.round((summary.retakeScore-summary.originalScore)*10)/10:null;
-              const previous=list(summary.attempts),ids=new Set(previous.map(a=>a.receiptId));
-              summary.attempts=previous.concat(scored.filter(r=>!ids.has(r.id)&&!previous.some(a=>!a.receiptId&&a.submittedAt===r.submittedAt)).map(r=>({receiptId:r.id,submittedAt:r.submittedAt,score:r.scoreOutOfTen,rawScore:r.score,maximum:r.maximum})));
+              summary.attempts=root.DirectSubmissionHistory.merge(summary.attempts,scored.map(r=>({receiptId:r.id,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),score:r.scoreOutOfTen,rawScore:r.score,maximum:r.maximum,sourceAttempt:r.attempt,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,family:r.family,part:r.part})));
             }
           }
           let coverage=taskCoverage(payload,assignment,task,index);
@@ -3002,8 +3143,13 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
             if(deadline.late)state.status='Nộp muộn';
             else if(/^(?:nop muon|lam muon)(?: |$)/.test(m.normalizeSearchText_(state.status)))state.status=components.known&&!components.complete?'Đã nộp một phần':'Đã nộp bài';
           }
-          if(deadline.missing)grant(guard,ticket,state,coverage,fresh);
+          if(deadline.pending){
+            grant(guard,ticket,state,coverage,fresh);
+            if(pendingProofs[index]&&guard.can(state)&&!state.completed&&!state.submitted&&!state.submittedAt){state.tracked=true;state.missing=true;state.isOverdue=Boolean(deadline.missing);state.status=deadline.missing?'Chưa hoàn thành':'Cần nộp';}
+          }
         });
+        const verifiedMissing=record.tasks.filter(state=>state&&state.missing===true&&!state.completed&&guard.can(state)).length;
+        if(verifiedMissing){record.tracked=true;record.missingCount=Math.max(Number(record.missingCount)||0,verifiedMissing);}
         const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>manual(task)?fresh:record.tasks[index]&&(record.tasks[index].completed===true||guard.can(record.tasks[index])));
         if(all){
           record.missingCount=record.tasks.filter(state=>state&&state.missing===true&&!state.completed).length;
@@ -3017,12 +3163,12 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         const family=/^SHADOW-/.test(code)?'FIGHTER_SHADOWING':/^FL/.test(code)?'FIGHTER_LISTENING':/^RI[345]-/.test(code)?'FIGHTER_READING':'';
         const peers=list(value.publicData.selfStudyAssignments).filter(a=>m.canonicalSelfStudyResultCodeV1_(a.sourceCode||a.code||'')===code&&String(a.scheduleClassName||'')===String(assignment.scheduleClassName||''));
         const found=receipts.filter(r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers));
-        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).missing)grant(guard,ticket,assignment,coverage,fresh);
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,fresh);
         if(!found.length)return;assignment.submissionReceived=true;
         const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{complete:true});
         assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=false;
         found.forEach(r=>{
-          const item={receiptId:r.id,code,submittedAt:r.submittedAt,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
+          const item={receiptId:r.id,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
           if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
             Object.assign(item,{total:r.score,score:r.score,maximum:r.maximum,maxScore:r.maximum,percent:r.percentage,completed:true,status:'Đã có kết quả'});
             if(Number.isFinite(r.listening))item.listening=r.listening;if(Number.isFinite(r.paraphrase))item.paraphrase=r.paraphrase;
@@ -3062,15 +3208,61 @@ function fighterSubmissionProfile_(){return fighterSubmissionProjected_&&fighter
 function fighterSubmissionAggregate_(){return submissionCan_(fighterSubmissionProfile_());}
 function fighterSubmissionRender_(){if(fighterApi.parent.authorized&&fighterParentPackage_)fighterParentApply_();}
 function fighterSubmissionMergeSelfStudy_(items){
-  const rows=Array.isArray(items)?items.slice():[];
-  for(const item of fighterSubmissionProjected_&&fighterSubmissionProjected_.directSelfStudyItems||[]){
-    const same=rows.find(row=>row.receiptId===item.receiptId||row.code===item.code&&row.submittedAt===item.submittedAt);
-    if(!same)rows.push(item);
-  }return rows;
+  return DirectSubmissionHistory.merge(items,fighterSubmissionProjected_&&fighterSubmissionProjected_.directSelfStudyItems||[],{numbered:false,scope:row=>{
+    const code=String(row.code||row.assignmentCode||'').trim().toUpperCase().replace(/[_\s]+/g,'-');
+    return code?code+'|'+String(row.part||''):'';
+  }});
 }
 const fighterSubmissionOriginalSelfStudy_=renderSelfStudyResultsForStudentV1_;
 renderSelfStudyResultsForStudentV1_=function(target,items,student){return fighterSubmissionOriginalSelfStudy_.call(this,target,fighterSubmissionMergeSelfStudy_(items),student);};
 window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==='revoked'){submissionOwner_.clear();fighterSubmissionProjected_=null;}else if(event.detail.status!=='authorized')fighterSubmissionReset_();});
+
+/* FIGHTER_SUBMITTED_FILE_DEDUPE_V1: one file button per source occurrence. */
+function fighterSubmissionFileGroups_(state,fallbackType){
+  const list=value=>Array.isArray(value)?value:[],specific=type=>type==='pdf'||type==='video';
+  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set();
+  const history=DirectSubmissionHistory.merge([],list(state.submissionAttempts));
+  function typed(file){
+    const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return null;
+    const hint=types.get(key),type=file.type||fallbackType||(state.kind==='shadowing'?'video':'file');
+    return {key,file:Object.assign({},file,{type:!specific(type)&&hint?hint:type})};
+  }
+  flat.forEach(file=>{const key=DirectSubmissionHistory.fileKey(file&&file.url);if(key&&specific(file.type)&&!types.has(key))types.set(key,file.type);});
+  function add(group,file){
+    const item=typed(file);if(!item)return;
+    const old=group.files.get(item.key);
+    if(!old||!specific(old.type)&&specific(item.file.type))group.files.set(item.key,item.file);
+  }
+  history.forEach((attempt,index)=>{
+    const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map()};groups.push(group);
+    if(group.receiptId)byReceipt.set(group.receiptId,group);
+    list(attempt.submissionFiles).forEach(file=>add(group,file));
+    list(attempt.evidenceUrls).forEach(url=>add(group,{url}));
+    list(attempt.links).forEach(link=>add(group,link));
+    if(attempt.viewUrl)add(group,{url:attempt.viewUrl});
+  });
+  // Flat rows may enrich a known occurrence. Distinct receipt IDs are never
+  // collapsed merely because a learner submitted the same file again.
+  flat.filter(file=>file&&file.receiptId).forEach(file=>{
+    let group=byReceipt.get(file.receiptId);
+    if(!group){group={receiptId:file.receiptId,attempt:Number.isInteger(file.attempt)&&file.attempt>0?file.attempt:null,files:new Map()};groups.push(group);byReceipt.set(file.receiptId,group);}
+    add(group,file);
+  });
+  groups.forEach(group=>group.files.forEach((_,key)=>claimed.add(key)));
+  const unassigned={receiptId:'',attempt:null,files:new Map()};
+  flat.filter(file=>file&&!file.receiptId).forEach(file=>{const key=DirectSubmissionHistory.fileKey(file.url);if(key&&!claimed.has(key))add(unassigned,file);});
+  if(!flat.length&&state.submissionUrl&&!claimed.has(DirectSubmissionHistory.fileKey(state.submissionUrl)))add(unassigned,{url:state.submissionUrl});
+  if(unassigned.files.size)groups.push(unassigned);
+  return groups.filter(group=>group.files.size).map(group=>({receiptId:group.receiptId,attempt:group.attempt,files:Array.from(group.files.values())}));
+}
+const fighterSubmittedFileActionsBeforeDedupe_=submittedFileActions_;
+submittedFileActions_=function(state,fallbackType){
+  if(!state)return fighterSubmittedFileActionsBeforeDedupe_.call(this,state,fallbackType);
+  return fighterSubmissionFileGroups_(state,fallbackType).flatMap(group=>{
+    const actions=fighterSubmittedFileActionsBeforeDedupe_.call(this,Object.assign({},state,{submissionFiles:group.files,submissionUrl:''}),fallbackType);
+    return group.attempt?actions.map(action=>action.replace(' →</a>',' · Lần '+group.attempt+' →</a>')):actions;
+  });
+};
 
 /* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;

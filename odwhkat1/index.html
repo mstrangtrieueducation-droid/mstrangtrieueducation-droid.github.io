@@ -4227,10 +4227,12 @@ function createStudentLearningPrefill(options) {
     var received=times.length>0,complete=received&&options.complete!==false;
     var completedAt=options.completedAt?time(options.completedAt,false):received?Math.min.apply(null,times):0;
     var now=typeof options.now==='number'?options.now:Date.now();
+    var pending=Boolean(assigned>=cutover&&assigned<=now&&options.verified===true&&!complete);
     return {eligible:eligible,assignedAt:assigned,dueAt:due,received:received,complete:complete,
       late:Boolean(eligible&&complete&&completedAt>due),
+      pending:pending,
       missing:Boolean(eligible&&options.verified===true&&!complete&&now>due),
-      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':eligible&&options.verified===true?(now>due?'Chưa nộp · Quá hạn':'Chưa đến hạn nộp'):''};
+      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':pending?(eligible&&now>due?'Chưa nộp · Quá hạn':'Cần nộp bài'):''};
   }
   var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
@@ -4265,6 +4267,138 @@ function createStudentLearningPrefill(options) {
   }
   var api={assignedAt:assignedAt,windowFor:windowFor,contains:contains};
   root.DirectSubmissionAssignmentWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_HISTORY_V1: reconcile legacy display rows with source receipts. */
+(function(root){
+  'use strict';
+  function list(value){return Array.isArray(value)?value:[];}
+  function text(value){return String(value==null?'':value).trim();}
+  function timestamp(item){
+    item=item||{};
+    var policy=root.DirectSubmissionDeadlinePolicy,value=item.submittedAt,ms=typeof item.submittedAtMs==='number'?policy.time(item.submittedAtMs):0;
+    if(ms)return {start:ms,end:ms};
+    if(typeof value==='number'){ms=policy.time(value);return ms?{start:ms,end:ms}:null;}
+    var s=text(value),m;
+    // Intl vi-VN also produces clock-first timestamps. These are display
+    // formats of the same source time, never a reason to create another attempt.
+    if((m=s.match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*[,·]?\s+(\d{1,2}[/.]\d{1,2}[/.]\d{4})$/)))s=m[2]+' '+m[1];
+    ms=policy.time(s);
+    if(!ms||!/[ T·,\s]\d{1,2}:\d{2}/.test(s))return null;
+    var resolution=/\d{1,2}:\d{2}:\d{2}\.\d+/.test(s)?1:/\d{1,2}:\d{2}:\d{2}/.test(s)?1000:60000;
+    return {start:ms,end:ms+resolution-1};
+  }
+  function fileKey(value){
+    try{
+      var u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return '';
+      var match=null,id='';
+      if(u.hostname==='drive.google.com'||u.hostname==='drive.usercontent.google.com'){
+        match=u.pathname.match(/^\/file\/d\/([^/]+)/);id=match?match[1]:u.searchParams.get('id');
+      }else if(u.hostname==='docs.google.com'){
+        match=u.pathname.match(/^\/(?:document|spreadsheets|presentation|drawings)\/d\/([^/]+)/);id=match?match[1]:'';
+      }
+      if(id)return 'drive:'+id;
+      // Forms response/edit URLs are distinct evidence URLs, even when their
+      // parent form ID is the same. Never treat a form as a Drive upload.
+      u.hash='';return u.href;
+    }catch(_){return '';}
+  }
+  function evidence(item){
+    var values=[item.viewUrl,item.reviewUrl,item.fileUrl,item.url].concat(list(item.evidenceUrls),list(item.links).map(function(x){return x&&x.url;}),list(item.submissionFiles).map(function(x){return x&&x.url;}));
+    var found=new Set();
+    values.forEach(function(value){
+      var key=fileKey(value);if(key)found.add(key);
+    });return found;
+  }
+  function evidenceText(value){return text(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');}
+  function genericEvidence(value){return /^(?:file|document|video|pdf|link|upload|attachment|unknown|tep|tai lieu|tep dinh kem|mo bai|xem bai|mo bai da nop|xem bai da nop)$/.test(evidenceText(value));}
+  function genericEvidenceType(value){return /^(?:file|document|link|upload|attachment|unknown|tep|tai lieu)$/.test(evidenceText(value));}
+  function mergeEvidenceItem(before,after){
+    if(typeof before==='string'&&typeof after==='string')return after;
+    var result=Object.assign({},typeof before==='object'?before:{url:before});
+    var next=typeof after==='object'?after:{url:after};
+    Object.keys(next).forEach(function(key){
+      var value=next[key];if(value===undefined||value===null||value==='')return;
+      var previous=result[key],available=previous!==undefined&&previous!==null&&previous!=='';
+      // Prefer the current URL for an identical file, retain a specific legacy
+      // caption/type, and add metadata that was previously unavailable.
+      if(key==='url'||!available)result[key]=value;
+      else if(key==='label'&&genericEvidence(previous)&&!genericEvidence(value))result[key]=value;
+      else if(key==='type'&&genericEvidenceType(previous)&&!genericEvidenceType(value))result[key]=value;
+    });
+    return result;
+  }
+  function mergeEvidenceArrays(before,after){
+    var rows=[],byKey=new Map();
+    list(before).concat(list(after)).forEach(function(value){
+      if(value===undefined||value===null||value==='')return;
+      var url=typeof value==='string'?value:value&&value.url;
+      var key=fileKey(url)||'metadata:'+JSON.stringify(value);
+      if(byKey.has(key)){var index=byKey.get(key);rows[index]=mergeEvidenceItem(rows[index],value);}
+      else{byKey.set(key,rows.length);rows.push(typeof value==='object'?Object.assign({},value):value);}
+    });
+    return rows;
+  }
+  function enrich(before,after){
+    var result=Object.assign({},before);
+    Object.keys(after).forEach(function(key){
+      var value=after[key];
+      if(value===undefined||value===null||value===''||Array.isArray(value)&&!value.length)return;
+      if(['evidenceUrls','links','submissionFiles'].includes(key)&&Array.isArray(value)){result[key]=mergeEvidenceArrays(result[key],value);return;}
+      result[key]=value;
+    });
+    return result;
+  }
+  function merge(existing,incoming,options){
+    options=options||{};
+    var scope=typeof options.scope==='function'?function(item){return text(options.scope(item));}:function(){return 'bound-task';};
+    var rows=[],ids=new Map();
+    list(existing).concat(list(incoming)).forEach(function(item){
+      if(!item||typeof item!=='object')return;
+      var copy=Object.assign({},item),id=text(copy.receiptId),lane=scope(copy),key=lane+'\u0000'+id;
+      if(id&&ids.has(key)){var index=ids.get(key);rows[index]=enrich(rows[index],copy);}
+      else{if(id)ids.set(key,rows.length);rows.push(copy);}
+    });
+    function compatible(legacy,direct){
+      var lane=scope(legacy);if(!lane||lane!==scope(direct))return false;
+      for(var k of ['family','part'])if(text(legacy[k])&&text(direct[k])&&text(legacy[k])!==text(direct[k]))return false;
+      var a=timestamp(legacy),b=timestamp(direct);
+      if(!a||!b||a.start>b.end||b.start>a.end)return false;
+      var left=evidence(legacy),right=evidence(direct);
+      if(left.size&&right.size&&!Array.from(left).some(function(key){return right.has(key);}))return false;
+      return true;
+    }
+    // Match one legacy row to one source receipt. Ambiguous same-minute rows
+    // are preserved; distinct native IDs are never collapsed by clock or file.
+    var direct=[],legacy=[],candidates=new Map(),reverse=new Map(),removed=new Set();
+    rows.forEach(function(row,index){(text(row.receiptId)?direct:legacy).push(index);});
+    legacy.forEach(function(index){
+      var matches=direct.filter(function(other){return compatible(rows[index],rows[other]);});
+      candidates.set(index,matches);
+      matches.forEach(function(other){reverse.set(other,(reverse.get(other)||0)+1);});
+    });
+    legacy.forEach(function(index){
+      var matches=candidates.get(index);
+      if(matches.length!==1||reverse.get(matches[0])!==1)return;
+      var other=matches[0];rows[other]=enrich(rows[index],rows[other]);removed.add(index);
+    });
+    var result=rows.filter(function(_,index){return !removed.has(index);});
+    result.sort(function(a,b){
+      var left=timestamp(a),right=timestamp(b);
+      if(left&&right&&left.start!==right.start)return left.start-right.start;
+      if(left&&!right)return -1;if(!left&&right)return 1;
+      return text(a.receiptId).localeCompare(text(b.receiptId));
+    });
+    if(options.numbered!==false)result=result.map(function(row,index){
+      var item=Object.assign({},row);
+      if(item.sourceAttempt===undefined)item.sourceAttempt=item.attempt===undefined?null:item.attempt;
+      item.attempt=index+1;if(Object.prototype.hasOwnProperty.call(item,'label'))item.label='Lần '+item.attempt;
+      return item;
+    });
+    return result;
+  }
+  var api={merge:merge,timestamp:timestamp,fileKey:fileKey};root.DirectSubmissionHistory=api;
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
@@ -4451,14 +4585,13 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       if(coverage.some(rows=>!rows.length||rows.some(c=>c.complete!==true||c.freshRead!==true)))return null;
       return {schema:1,complete:true,freshRead:true,verifiedAt:Math.min(...coverage.flat().map(c=>Number(c.verifiedAt)||0))};
     }
-    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,submittedAt:r.submittedAt,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
+    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,sourceAttempt:r.attempt||index+1,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),family:r.family,part:r.part,evidenceUrls:r.evidenceUrls,links:r.links,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
     function receive(target,found){
       if(!found.length)return;
       const sorted=found.slice().sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b)),last=sorted[sorted.length-1];
-      const prior=list(target.submissionAttempts),ids=new Set(prior.map(x=>x.receiptId).filter(Boolean));
-      const added=attempts(sorted).filter(x=>!ids.has(x.receiptId)&&!prior.some(p=>!p.receiptId&&p.submittedAt===x.submittedAt));
+      const history=root.DirectSubmissionHistory.merge(target.submissionAttempts,attempts(sorted));
       target.submitted=true;target.submittedAt=target.submittedAt||sorted[0].submittedAt;target.lastSubmittedAt=last.submittedAt;
-      target.submissionAttempts=prior.concat(added);target.isOverdue=false;
+      target.submissionAttempts=history;target.isOverdue=false;
       if(last.viewUrl){try{const url=new URL(last.viewUrl);if(url.protocol==='https:'&&!url.username&&!url.password)target.viewUrl=url.href;}catch(_){} }
       target.state=target.teacherComment||target.comment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';
       target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':'Đã nộp bài';
@@ -4482,10 +4615,12 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
           const feedback=task.feedback||(task.feedback={}),proof=window.known?proofFor(payload,maps):null;
           receive(feedback,found);
           const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(proof),complete:true});
-          const eligible=deadline.missing;
+          const eligible=deadline.pending;
           if(found.length){feedback.isLate=Boolean(deadline.late);receivedTiming.set(task,deadline);if(deadline.late)feedback.stateLabel='Đã nộp · Muộn';}
-          if(ticket&&proof&&eligible){guard.authorize(ticket,task,proof,{complete:true,stale:!fresh});guard.authorize(ticket,feedback,proof,{complete:true,stale:!fresh});}
-          if(mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&deadline.eligible)checks.push(Boolean(feedback.submitted||proof&&eligible));
+          if(ticket&&proof&&eligible){guard.authorize(ticket,task,proof,{complete:true,stale:!fresh});guard.authorize(ticket,feedback,proof,{complete:true,stale:!fresh});if(guard.can(feedback)&&!feedback.submitted)feedback.isOverdue=Boolean(deadline.missing);}
+          // Already-assigned required work contributes to the unfinished aggregate.
+          // Its due date controls late status, not whether a fresh reminder may appear.
+          if(mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
         });
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
@@ -4507,9 +4642,9 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       // The original summary counts online assignments, never paper marks.
       // Rebuild its existing reminders only when every relevant task was read.
       if(ticket&&fresh&&checks.length&&checks.every(Boolean)){
-        const missing=assignments.filter(a=>!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&!(t.feedback&&t.feedback.submitted)));
+        const missing=assignments.filter(a=>!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).pending&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&!(t.feedback&&t.feedback.submitted)));
         profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
-        profile.privateReminders=missing.slice(0,8).map(a=>{const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:a.isOverdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:a.isOverdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
+        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
       }
