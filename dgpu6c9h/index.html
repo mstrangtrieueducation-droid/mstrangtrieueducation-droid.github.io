@@ -1248,7 +1248,7 @@ body.f9-portal-locked #student-gateway {
       $('#assignment-list').innerHTML=orderedAssignments().map(sessionCard).join('')||'<div class="empty">Chưa có buổi học nào.</div>';
     }
     function assignmentIsNew_(a){return newsAssignments_&&Array.isArray(newsState_.newAssignmentIds)&&newsState_.newAssignmentIds.includes(assignmentNewsId_(a))}
-    function sessionCard(a){const state=dueState(a.dueDate);const isNew=assignmentIsNew_(a);return `<article class="session"><header class="session-head"><div><span class="program-pill">${esc(a.program)}</span>${isNew?`<span class="assignment-new-pill">BÀI MỚI</span>`:''}<strong class="session-no">${esc(a.session)}</strong><div class="session-date">${esc(fullDate(a.lessonDate))}</div></div><div class="session-topic"><span>Chủ đề</span><h3>${esc(a.topic)}</h3></div></header><section class="lesson"><strong class="content-label">Nội dung buổi học</strong><p>${esc(a.lessonSummary)}</p></section><section class="tasks"><strong class="content-label">Bài tập về nhà</strong>${a.tasks.map((t,i)=>`<div class="task"><span class="task-num">${i+1}</span><div><h4>${esc(t.title)}</h4><p>${esc(t.instructions)}</p></div>${t.url?`<a class="action" href="${esc(t.url)}" target="_blank" rel="noopener">Mở bài</a>`:''}</div>`).join('')}</section><div class="deadline ${state==='overdue'?'is-overdue':''}"><strong>Hạn nộp bài</strong><span>${esc(fullDate(a.dueDate))}</span></div>${a.closingNote?`<p class="closing">${esc(a.closingNote)}</p>`:''}</article>`}
+    function sessionCard(a){const state=dueState(a.dueDate);const isNew=assignmentIsNew_(a);return `<article class="session"><header class="session-head"><div><span class="program-pill">${esc(a.program)}</span>${isNew?`<span class="assignment-new-pill">BÀI MỚI</span>`:''}<strong class="session-no">${esc(a.session)}</strong><div class="session-date">${esc(fullDate(a.lessonDate))}</div></div><div class="session-topic"><span>Chủ đề</span><h3>${esc(a.topic)}</h3></div></header><section class="lesson"><strong class="content-label">Nội dung buổi học</strong><p>${esc(a.lessonSummary)}</p></section><section class="tasks"><strong class="content-label">Bài tập về nhà</strong>${a.tasks.map((t,i)=>`<div class="task"><span class="task-num">${i+1}</span><div><h4>${esc(t.title)}</h4><p>${esc(t.instructions)}</p></div>${t.url?`<a class="action" href="${esc(parentLearningUrl_(t.url))}" target="_blank" rel="noopener">Mở bài</a>`:''}</div>`).join('')}</section><div class="deadline ${state==='overdue'?'is-overdue':''}"><strong>Hạn nộp bài</strong><span>${esc(fullDate(a.dueDate))}</span></div>${a.closingNote?`<p class="closing">${esc(a.closingNote)}</p>`:''}</article>`}
 
     function ensureStudentData_(){
       const personal=$('#personal');
@@ -1282,7 +1282,7 @@ body.f9-portal-locked #student-gateway {
     function taskFollowup(task,index,state,showPartNumber){
       state=state||{status:'Chưa ghi nhận',completed:false};
       const result=[];if(state.submittedAt)result.push('Ghi nhận '+esc(state.submittedAt));if(Number.isFinite(state.score))result.push('Điểm '+score(state.score));
-      const actions=[];if(!state.completed&&task.url)actions.push(`<a class="makeup" href="${esc(task.url)}" target="_blank" rel="noopener">${showPartNumber?'Làm / nộp phần này':'Làm / nộp bài'} →</a>`);actions.push(...submittedFileActions_(state));
+      const actions=[];if(!state.completed&&task.url)actions.push(`<a class="makeup" href="${esc(parentLearningUrl_(task.url))}" target="_blank" rel="noopener">${showPartNumber?'Làm / nộp phần này':'Làm / nộp bài'} →</a>`);actions.push(...submittedFileActions_(state));
       const taskTitle=(showPartNumber?`Phần ${index+1}: `:'')+esc(task.title||'Bài tập');
       const statusClass=state.tracked===false?'neutral':(state.status==='Nộp muộn'||state.status==='Làm muộn')?'late':state.completed?'done':'missing';
       const missingItems=(state.missingItems||[]).length?`<p class="task-note"><strong>Cần hoàn thành:</strong> ${esc(state.missingItems.join(' · '))}</p>`:'';
@@ -1559,7 +1559,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
       return '<article class="session">'+
         '<header class="session-head"><div><span class="program-pill">'+esc(item.program||'Bài tự luyện')+'</span><strong class="session-no">'+esc(item.session||'Bài tự luyện')+'</strong><div class="session-date">Đăng '+esc(fullDate(item.releaseDate))+'</div></div><div class="session-topic"><span>'+esc(item.weekLabel||'Bài tự luyện')+'</span><h3>'+esc(item.topic||item.session)+'</h3>'+badge+'</div></header>'+
         '<section class="lesson"><strong class="content-label">Yêu cầu</strong><p style="white-space:pre-line">'+esc(item.instructions||'Hoàn thành bài theo hướng dẫn.')+'</p></section>'+
-        '<section class="tasks"><div class="task"><span class="task-num">1</span><div><h4>'+esc(item.topic||item.session)+'</h4><p>Mở bài và hoàn thành đầy đủ theo hướng dẫn ở trên.</p></div>'+(item.url?'<a class="action" href="'+esc(item.url)+'" target="_blank" rel="noopener">Làm bài</a>':'')+'</div></section>'+
+        '<section class="tasks"><div class="task"><span class="task-num">1</span><div><h4>'+esc(item.topic||item.session)+'</h4><p>Mở bài và hoàn thành đầy đủ theo hướng dẫn ở trên.</p></div>'+(item.url?'<a class="action" href="'+esc(parentLearningUrl_(item.url))+'" target="_blank" rel="noopener">Làm bài</a>':'')+'</div></section>'+
         (item.dueDate?'<div class="deadline '+(deadlineState==='overdue'?'is-overdue':'')+'"><strong>Hạn nộp bài</strong><span>'+esc(fullDate(item.dueDate))+'</span></div>':'')+
         '</article>';
     }
@@ -1780,7 +1780,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
         article.setAttribute('data-personal-history-row','1');
         article.setAttribute('data-needs-action','1');
         const title=assignment.topic||assignment.session||'B\u00e0i t\u1eadp t\u1ef1 luy\u1ec7n';
-        article.innerHTML='<div class="feedback-item__top"><div><h4>B\u00e0i t\u1eadp t\u1ef1 luy\u1ec7n \u00b7 '+esc(row.code||assignment.session||'')+'</h4><p class="feedback-meta">'+esc(assignment.program||'FIGHTER LISTENING')+(assignment.dueDate?' \u00b7 H\u1ea1n '+esc(fullDate(assignment.dueDate)):'')+'</p></div><span class="status missing">'+status+'</span></div><div class="feedback-requirements"><div class="task-followup"><div class="task-followup__head"><strong>'+esc(title)+'</strong><span class="status missing">'+status+'</span></div><p>'+esc(assignment.instructions||'Ho\u00e0n th\u00e0nh b\u00e0i theo h\u01b0\u1edbng d\u1eabn.')+'</p>'+(assignment.url?'<div class="feedback-actions"><a class="makeup" href="'+esc(assignment.url)+'" target="_blank" rel="noopener">L\u00e0m b\u00f9 \u2192</a></div>':'')+'</div></div>';
+        article.innerHTML='<div class="feedback-item__top"><div><h4>B\u00e0i t\u1eadp t\u1ef1 luy\u1ec7n \u00b7 '+esc(row.code||assignment.session||'')+'</h4><p class="feedback-meta">'+esc(assignment.program||'FIGHTER LISTENING')+(assignment.dueDate?' \u00b7 H\u1ea1n '+esc(fullDate(assignment.dueDate)):'')+'</p></div><span class="status missing">'+status+'</span></div><div class="feedback-requirements"><div class="task-followup"><div class="task-followup__head"><strong>'+esc(title)+'</strong><span class="status missing">'+status+'</span></div><p>'+esc(assignment.instructions||'Ho\u00e0n th\u00e0nh b\u00e0i theo h\u01b0\u1edbng d\u1eabn.')+'</p>'+(assignment.url?'<div class="feedback-actions"><a class="makeup" href="'+esc(parentLearningUrl_(assignment.url))+'" target="_blank" rel="noopener">L\u00e0m b\u00f9 \u2192</a></div>':'')+'</div></div>';
         list.appendChild(article);
       });
       applyPersonalHistoryLimitV1_(list,4);
@@ -1945,7 +1945,7 @@ function f9PortalTaskInlineMarkupV2_(task, state) {
   if (state && Number.isFinite(state.score)) result.push('Điểm ' + score(state.score));
   var actions = [];
   if (meta.cls === 'missing' && task && task.url) {
-    actions.push('<a class="makeup" href="' + esc(task.url) + '" target="_blank" rel="noopener">Làm bù →</a>');
+    actions.push('<a class="makeup" href="' + esc(parentLearningUrl_(task.url)) + '" target="_blank" rel="noopener">Làm bù →</a>');
   }
   // Tệp đã nộp là bằng chứng độc lập với việc đúng hạn hay nộp muộn.
   // Vì vậy tuyệt đối không chặn nút PDF/video theo completed hoặc meta.cls.
@@ -2023,7 +2023,7 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
       } else {
         var status = assignment.dueDate && dueState(assignment.dueDate) === 'overdue' ? 'THIẾU BÀI' : 'CHƯA HOÀN THÀNH';
         panel.innerHTML = '<div class="f9-inline-state-head"><strong>Tình trạng bài làm</strong><span class="status missing">' + status + '</span></div>' +
-          (assignment.url ? '<div class="feedback-actions"><a class="makeup" href="' + esc(assignment.url) + '" target="_blank" rel="noopener">Làm bù →</a></div>' : '');
+          (assignment.url ? '<div class="feedback-actions"><a class="makeup" href="' + esc(parentLearningUrl_(assignment.url)) + '" target="_blank" rel="noopener">Làm bù →</a></div>' : '');
       }
       var tasks = card.querySelector('.tasks');
       if (tasks) tasks.insertAdjacentElement('afterend', panel);
@@ -2341,6 +2341,100 @@ function fighterOpenPendingHomeworkV15_(){
 // FIGHTER_PENDING_HOMEWORK_ALERT_UI_END_V15
 </script>
 <script id="fighter-parent-hooks">
+/* STUDENT_PREFILL_BEGIN */
+/* STUDENT_LEARNING_PREFILL_V2: no storage, API calls, or bearer-token access. */
+function createStudentLearningPrefill(options) {
+  const origin = 'https://mstrangtrieueducation-droid.github.io';
+  const className = String(options.className || '');
+  const classValid = /^(?:(?:KIDS|FIGHTER|IELTS) [1-9]\d{0,2}|TA[1-9]\d{0,2})$/.test(className);
+  const viewerPaths = new Set(['student-learning', 'kids-learning']);
+  const dashboardRoutes = new Set(['23qdn2ys','2jskjgym','2qwemh5j','31wagboo','37htpfbf','3kuws5ny','3lu0698p','5jjvux82','63habmwz','6shx6heb','6zgbwd7n','7qzgp3p7','7rsn6kbh','89vnm8wz','92prber9','9az4ns3b','9fpwzhnz','9k6a4bxe','bhdzam6k','bhg37bsz','byogxkvy','cecccjpg','chaq17fk','cuhnjtw6','cwmkrshe','d5f9almb','dgpu6c9h','e73wgva4','eu2h66mj','firegh4f','gaeg8wku','gu159u7j','hwz7zw86','i8a0r77q','iw6h6bmb','j6fejhfq','jc4dppyg','js3npqsb','juzwewi0','kemtm929','l8tzmx20','m3g643sz','mf4c4tbe','muqt11rj','myude9i0','nwc3amdy','odwhkat1','p76n7ntc','p8qdzsoa','p8w8wz4f','q63ftrrf','qhaj55f2','qo7alz0y','qu3axuuz','r288s8x4','r60hdc1i','rge9fi0s','rp9rgb67','swsxdfdr','tr4qfy7b','u1g9ay98','u7x46qkb','u8226g5d','u90k1f5e','uee89ho9','vtw6rfy9','w3b6793g','wfyjrm4m','xcxhducu','xpe6dd4j','y31ibppw','y6r774jm','ywxrw9yp','zredv9ef','zuqtyg5e','zuuemtd2']);
+  const ownRoute = String(options.parentRoute || '').split('/').filter(Boolean)[0];
+  if (ownRoute) dashboardRoutes.add(ownRoute.toLowerCase());
+  function safe(value) {
+    try {
+      const text = String(value || '').trim();
+      const url = new URL(text);
+      return /^https?:$/.test(url.protocol) ? text : '';
+    } catch (_) { return ''; }
+  }
+  function name(value) {
+    if (typeof value !== 'string' || /[\u0000-\u001f\u007f-\u009f]/.test(value)) return '';
+    const result = value.trim().normalize('NFC');
+    return result && result.length <= 120 ? result : '';
+  }
+  function target(value) {
+    try {
+      const url = new URL(value);
+      if (url.origin !== origin || url.username || url.password) return null;
+      const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
+      const first = (parts[0] || '').toLowerCase();
+      if (!first || viewerPaths.has(first) || dashboardRoutes.has(first) || parts.some(part =>
+          /^\.|[\\\x00-\x1f\x7f]/.test(part) || /^(?:assets?|sources?|src|scripts?|styles?|downloads?|media|videos?)$/i.test(part))) return null;
+      const last = parts[parts.length - 1];
+      if (/\./.test(last) && !/\.html?$/i.test(last)) return null;
+      // A future private parent route is still a parent link, never a lesson.
+      if (url.searchParams.get('api') === 'parent1' || /^[A-Za-z0-9_-]{22}$/.test(new URLSearchParams(url.hash.slice(1)).get('p') || '')) return null;
+      return url;
+    } catch (_) { return null; }
+  }
+  function decorate(value, enabled = true) {
+    let original = safe(value);
+    if (!original || !enabled) return original;
+    try {
+      const outer = new URL(original);
+      if (outer.origin === origin && /^\/(?:student-learning|kids-learning)(?:\/|$)/i.test(outer.pathname)) {
+        const lessons = outer.searchParams.getAll('lesson');
+        if (!/^\/(?:student-learning|kids-learning)(?:\/index\.html|\/)?$/.test(outer.pathname) || lessons.length !== 1) return '';
+        original = safe(lessons[0]);
+        if (!target(original)) return '';
+      }
+      const destination = target(original);
+      if (!destination) return original;
+      let identity = null;
+      if (classValid && typeof options.getIdentity === 'function') {
+        try { identity = options.getIdentity(); } catch (_) { /* No identity hint without a readable verified profile. */ }
+      }
+      const submissionName = identity && name(identity.submissionName);
+      const englishName = identity && identity.englishName ? name(identity.englishName) : '';
+      if (!identity || identity.className !== className || !submissionName || identity.englishName && !englishName) {
+        ['mtt_name', 'mtt_class', 'mtt_english'].forEach(key => destination.searchParams.delete(key));
+        return destination.href;
+      }
+      const viewer = new URL('/student-learning/', origin);
+      viewer.searchParams.set('lesson', original);
+      viewer.searchParams.set('mtt_name', submissionName);
+      viewer.searchParams.set('mtt_class', className);
+      if (englishName) viewer.searchParams.set('mtt_english', englishName);
+      return viewer.href;
+    } catch (_) { return original; }
+  }
+  return Object.freeze({ decorate });
+}
+
+/* FIGHTER_PREFILL_IDENTITY_V2: the verified bootstrap selects the sole learner. */
+const fighterLearningPrefill_ = createStudentLearningPrefill({
+  className: 'FIGHTER 7', parentRoute: location.pathname,
+  getIdentity() {
+    const binding = fighterApi.parent.binding;
+    const pack = fighterParentPackage_;
+    if (document.hidden || !fighterApi.parent.authorized || !binding || !pack) return null;
+    const expected = 'FIGHTER 7';
+    const profile = pack.profile, student = profile && profile.student;
+    const directory = binding.directory;
+    if (!/^FIGHTER [1-9]\d{0,2}$/.test(expected) || binding.className !== expected ||
+        !profile || profile.className !== expected || !student || student.name !== binding.studentName ||
+        !directory || directory.className !== expected || !Array.isArray(directory.students) || directory.students.length !== 1 || directory.students[0].name !== student.name ||
+        !pack.publicData || pack.publicData.className !== expected || !pack.fullDashboard || pack.fullDashboard.className !== expected ||
+        activeStudentName_ && activeStudentName_ !== student.name) return null;
+    const englishName = String(student.englishName || '');
+    if (binding.englishName && String(binding.englishName) !== englishName) return null;
+    return {className: expected, rosterName: student.name, englishName, submissionName: student.name};
+  }
+});
+function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefill_.decorate(value, enabled); }
+
+/* STUDENT_PREFILL_END */
 /* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;
 function fighterParentIdentity_(){

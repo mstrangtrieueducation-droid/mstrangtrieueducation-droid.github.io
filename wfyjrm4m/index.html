@@ -3948,60 +3948,92 @@ html.vn-national-day-2026-root body .assignment.session {
       });
     }
 
+/* STUDENT_PREFILL_COMMON_BEGIN */
+/* STUDENT_LEARNING_PREFILL_V2: no storage, API calls, or bearer-token access. */
+function createStudentLearningPrefill(options) {
+  const origin = 'https://mstrangtrieueducation-droid.github.io';
+  const className = String(options.className || '');
+  const classValid = /^(?:(?:KIDS|FIGHTER|IELTS) [1-9]\d{0,2}|TA[1-9]\d{0,2})$/.test(className);
+  const viewerPaths = new Set(['student-learning', 'kids-learning']);
+  const dashboardRoutes = new Set(['23qdn2ys','2jskjgym','2qwemh5j','31wagboo','37htpfbf','3kuws5ny','3lu0698p','5jjvux82','63habmwz','6shx6heb','6zgbwd7n','7qzgp3p7','7rsn6kbh','89vnm8wz','92prber9','9az4ns3b','9fpwzhnz','9k6a4bxe','bhdzam6k','bhg37bsz','byogxkvy','cecccjpg','chaq17fk','cuhnjtw6','cwmkrshe','d5f9almb','dgpu6c9h','e73wgva4','eu2h66mj','firegh4f','gaeg8wku','gu159u7j','hwz7zw86','i8a0r77q','iw6h6bmb','j6fejhfq','jc4dppyg','js3npqsb','juzwewi0','kemtm929','l8tzmx20','m3g643sz','mf4c4tbe','muqt11rj','myude9i0','nwc3amdy','odwhkat1','p76n7ntc','p8qdzsoa','p8w8wz4f','q63ftrrf','qhaj55f2','qo7alz0y','qu3axuuz','r288s8x4','r60hdc1i','rge9fi0s','rp9rgb67','swsxdfdr','tr4qfy7b','u1g9ay98','u7x46qkb','u8226g5d','u90k1f5e','uee89ho9','vtw6rfy9','w3b6793g','wfyjrm4m','xcxhducu','xpe6dd4j','y31ibppw','y6r774jm','ywxrw9yp','zredv9ef','zuqtyg5e','zuuemtd2']);
+  const ownRoute = String(options.parentRoute || '').split('/').filter(Boolean)[0];
+  if (ownRoute) dashboardRoutes.add(ownRoute.toLowerCase());
+  function safe(value) {
+    try {
+      const text = String(value || '').trim();
+      const url = new URL(text);
+      return /^https?:$/.test(url.protocol) ? text : '';
+    } catch (_) { return ''; }
+  }
+  function name(value) {
+    if (typeof value !== 'string' || /[\u0000-\u001f\u007f-\u009f]/.test(value)) return '';
+    const result = value.trim().normalize('NFC');
+    return result && result.length <= 120 ? result : '';
+  }
+  function target(value) {
+    try {
+      const url = new URL(value);
+      if (url.origin !== origin || url.username || url.password) return null;
+      const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
+      const first = (parts[0] || '').toLowerCase();
+      if (!first || viewerPaths.has(first) || dashboardRoutes.has(first) || parts.some(part =>
+          /^\.|[\\\x00-\x1f\x7f]/.test(part) || /^(?:assets?|sources?|src|scripts?|styles?|downloads?|media|videos?)$/i.test(part))) return null;
+      const last = parts[parts.length - 1];
+      if (/\./.test(last) && !/\.html?$/i.test(last)) return null;
+      // A future private parent route is still a parent link, never a lesson.
+      if (url.searchParams.get('api') === 'parent1' || /^[A-Za-z0-9_-]{22}$/.test(new URLSearchParams(url.hash.slice(1)).get('p') || '')) return null;
+      return url;
+    } catch (_) { return null; }
+  }
+  function decorate(value, enabled = true) {
+    let original = safe(value);
+    if (!original || !enabled) return original;
+    try {
+      const outer = new URL(original);
+      if (outer.origin === origin && /^\/(?:student-learning|kids-learning)(?:\/|$)/i.test(outer.pathname)) {
+        const lessons = outer.searchParams.getAll('lesson');
+        if (!/^\/(?:student-learning|kids-learning)(?:\/index\.html|\/)?$/.test(outer.pathname) || lessons.length !== 1) return '';
+        original = safe(lessons[0]);
+        if (!target(original)) return '';
+      }
+      const destination = target(original);
+      if (!destination) return original;
+      let identity = null;
+      if (classValid && typeof options.getIdentity === 'function') {
+        try { identity = options.getIdentity(); } catch (_) { /* No identity hint without a readable verified profile. */ }
+      }
+      const submissionName = identity && name(identity.submissionName);
+      const englishName = identity && identity.englishName ? name(identity.englishName) : '';
+      if (!identity || identity.className !== className || !submissionName || identity.englishName && !englishName) {
+        ['mtt_name', 'mtt_class', 'mtt_english'].forEach(key => destination.searchParams.delete(key));
+        return destination.href;
+      }
+      const viewer = new URL('/student-learning/', origin);
+      viewer.searchParams.set('lesson', original);
+      viewer.searchParams.set('mtt_name', submissionName);
+      viewer.searchParams.set('mtt_class', className);
+      if (englishName) viewer.searchParams.set('mtt_english', englishName);
+      return viewer.href;
+    } catch (_) { return original; }
+  }
+  return Object.freeze({ decorate });
+}
+
+/* STUDENT_PREFILL_COMMON_END */
     // KIDS7_PARENT_LINK_V1: preserve all lesson/result renderers behind live authorization.
-    // KIDS_PARENT_PREFILL_V1: owned lesson pages open through the common viewer,
-    // including future assignments. Never forward the parent bearer token.
-    const parentLearningOrigin_ = 'https://mstrangtrieueducation-droid.github.io';
-    // Explicit current KIDS rollout. Future classes require their own verified
-    // class/route binding before enabling identity transfer to lesson pages.
-    const parentLearningClasses_ = Object.freeze([7,8,10,11,14,15,17,18,19,20,21,22,23,25,26,27,28,29,30,31,32,33,34,35,36,37,38]);
-    const parentLearningClassKeys_ = new Set(parentLearningClasses_);
-    const parentDashboardRoutes_ = Object.freeze(["23qdn2ys","2jskjgym","2qwemh5j","31wagboo","37htpfbf","3kuws5ny","3lu0698p","5jjvux82","63habmwz","6shx6heb","6zgbwd7n","7qzgp3p7","7rsn6kbh","89vnm8wz","92prber9","9az4ns3b","9fpwzhnz","9k6a4bxe","bhdzam6k","bhg37bsz","byogxkvy","cecccjpg","chaq17fk","cuhnjtw6","cwmkrshe","d5f9almb","dgpu6c9h","e73wgva4","eu2h66mj","firegh4f","gaeg8wku","gu159u7j","hwz7zw86","i8a0r77q","iw6h6bmb","j6fejhfq","jc4dppyg","js3npqsb","juzwewi0","kemtm929","l8tzmx20","m3g643sz","mf4c4tbe","muqt11rj","myude9i0","nwc3amdy","odwhkat1","p76n7ntc","p8qdzsoa","p8w8wz4f","q63ftrrf","qhaj55f2","qo7alz0y","qu3axuuz","r288s8x4","r60hdc1i","rge9fi0s","rp9rgb67","swsxdfdr","tr4qfy7b","u1g9ay98","u7x46qkb","u8226g5d","u90k1f5e","uee89ho9","vtw6rfy9","w3b6793g","wfyjrm4m","xcxhducu","xpe6dd4j","y31ibppw","y6r774jm","ywxrw9yp","zredv9ef","zuqtyg5e","zuuemtd2"]);
-    const parentDashboardRouteKeys_ = new Set(parentDashboardRoutes_);
-    function parentLearningTarget_(value) {
-      try {
-        const target = new URL(value);
-        if (target.origin !== parentLearningOrigin_ || target.username || target.password) return null;
-        const pathname = decodeURIComponent(target.pathname);
-        const segments = pathname.split('/').filter(Boolean);
-        const first = (segments[0] || '').toLowerCase();
-        if (!first || first === 'kids-learning' || parentDashboardRouteKeys_.has(first) ||
-            segments.some(part => /^\.|[\\\x00-\x1f]/.test(part) || /^(?:assets?|sources?|src|scripts?|styles?|downloads?|media|videos?)$/i.test(part))) return null;
-        const last = segments[segments.length - 1];
-        if (/\./.test(last) && !/\.html?$/i.test(last)) return null;
-        return target;
-      } catch (_) { return null; }
-    }
-    function parentLearningUrl_(value, enabled = true) {
-      let original = safeUrl(value);
-      if (!parentLearningClassKeys_.has(CLASS_NUMBER) || !original || !enabled) return original;
-      try {
-        const candidate = new URL(original);
-        if (candidate.origin === parentLearningOrigin_ && /^\/kids-learning(?:\/|$)/i.test(candidate.pathname)) {
-          // A copied viewer link is a lesson reference, never authority for a
-          // previous child. Unwrap once; recursive/ambiguous wrappers are invalid.
-          const lessons = candidate.searchParams.getAll('lesson');
-          if (!/^\/kids-learning(?:\/index\.html|\/)?$/.test(candidate.pathname) || lessons.length !== 1) return '';
-          original = safeUrl(lessons[0]);
-          if (!parentLearningTarget_(original)) return '';
-        }
-        const target = parentLearningTarget_(original);
-        if (!target) return original;
+    // KIDS_PREFILL_IDENTITY_V2: preserve current English-name submission identity.
+    const kidsLearningPrefill_ = createStudentLearningPrefill({
+      className: CLASS_NAME, parentRoute: location.pathname,
+      getIdentity() {
         const alias = text(kidsApi.parent.alias);
-        if (!kidsApi.parent.authorized || !alias || CLASS_NAME !== 'KIDS ' + CLASS_NUMBER || !app.directoryLoad.ready ||
+        if (document.hidden || !kidsApi.parent.authorized || !alias || CLASS_NAME !== 'KIDS ' + CLASS_NUMBER || !app.directoryLoad.ready ||
             !liveDirectoryContainsAlias_(alias) || matchKey(app.childAlias) !== matchKey(alias) ||
-            !validProfileData(app.child, alias) || app.child.className !== CLASS_NAME) {
-          target.searchParams.delete('mtt_name');
-          target.searchParams.delete('mtt_class');
-          return target.href;
-        }
-        const viewer = new URL('/kids-learning/', parentLearningOrigin_);
-        viewer.searchParams.set('lesson', original);
-        viewer.searchParams.set('mtt_name', alias);
-        viewer.searchParams.set('mtt_class', CLASS_NAME);
-        return viewer.href;
-      } catch (_) { return original; }
-    }
+            !validProfileData(app.child, alias) || app.child.className !== CLASS_NAME) return null;
+        return {className: CLASS_NAME, rosterName: '', englishName: alias, submissionName: alias};
+      }
+    });
+    function parentLearningUrl_(value, enabled = true) { return kidsLearningPrefill_.decorate(value, enabled); }
+
     let parentBootStarted_ = false;
     let parentAutoOpenTimer_ = null;
     let parentDirectoryHintVersion_ = 0;

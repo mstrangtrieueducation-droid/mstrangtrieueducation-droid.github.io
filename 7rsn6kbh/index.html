@@ -807,7 +807,7 @@ function renderIeltsShadowingV1_() {
     const points = ieltsShadowingInstructionsV1_(task.instructions);
     return `<article class="assignment ielts-shadowing-card" data-shadowing-code="${esc(item.assignmentCode)}">
       <header class="assignment-head session-head"><div><span class="badge neutral">SHADOWING</span><h3>${esc(item.assignmentCode)}</h3><p>Ngày giao: ${esc(item.releaseDate)}</p></div><div><p class="eyebrow">BÀI TẬP SHADOWING</p><h2>${esc(item.topic)}</h2></div></header>
-      <div class="ielts-shadowing-body"><div class="ielts-shadowing-task"><h3>Yêu cầu bài tập</h3>${safeUrl ? `<a class="task-action" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer">Làm / nộp bài</a>` : ''}</div>
+      <div class="ielts-shadowing-body"><div class="ielts-shadowing-task"><h3>Yêu cầu bài tập</h3>${safeUrl ? `<a class="task-action" href="${esc(parentLearningUrl_(safeUrl))}" target="_blank" rel="noopener noreferrer">Làm / nộp bài</a>` : ''}</div>
       <ol class="ielts-shadowing-steps">${points.map(function(point) { return `<li>${esc(point)}</li>`; }).join('')}</ol>
       ${item.dueDate ? `<div class="ielts-shadowing-deadline"><strong>Hạn nộp bài</strong><strong>${esc(item.dueDate)}</strong></div>` : ''}</div>
     </article>`;
@@ -994,9 +994,9 @@ function assignmentCard(item){
   const tasks=taskItems.map((task,index)=>{
     let actions='';
     const list=task.actions||[];
-    if(list.length===1)actions=`<a class="task-action action" href="${esc(list[0].url)}" target="_blank" rel="noopener">Làm / nộp bài</a>`;
-    else if(list.length>1)actions=`<div class="task-actions">${list.map(action=>`<a class="task-action action" href="${esc(action.url)}" target="_blank" rel="noopener">${esc(action.label)}</a>`).join('')}</div>`;
-    else if(task.url)actions=`<a class="task-action action" href="${esc(task.url)}" target="_blank" rel="noopener">Làm / nộp bài</a>`;
+    if(list.length===1)actions=`<a class="task-action action" href="${esc(parentLearningUrl_(list[0].url))}" target="_blank" rel="noopener">Làm / nộp bài</a>`;
+    else if(list.length>1)actions=`<div class="task-actions">${list.map(action=>`<a class="task-action action" href="${esc(parentLearningUrl_(action.url))}" target="_blank" rel="noopener">${esc(action.label)}</a>`).join('')}</div>`;
+    else if(task.url)actions=`<a class="task-action action" href="${esc(parentLearningUrl_(task.url))}" target="_blank" rel="noopener">Làm / nộp bài</a>`;
     return `<div class="task"><span class="task-number task-num">${index+1}</span><div><h4>${item.showPartNumbers?'Phần '+(index+1)+' · ':''}${esc(task.title||'Bài tập')}</h4>${task.instructions?ielts45TaskInstructionsHtmlV16_(task.instructions):''}</div>${actions}</div>`;
   }).join('');
   const assignmentLabel=item.displayGroupLabel||item.groupLabel||(item.skill==='writing'?'Writing · Cả lớp':item.program||skillLabel(item.skill));
@@ -1112,7 +1112,7 @@ function lookupStudent(){
     if(task.instructions)html+='<p>'+esc(task.instructions)+'</p>';
     if(assignment&&assignment.dueDate)html+='<small>Hạn: '+esc(fullDate(assignment.dueDate))+'</small>';
     html+='</div>';
-    if(task.url)html+='<a class="makeup-action" href="'+esc(task.url)+'" target="_blank" rel="noopener">Làm / nộp bù</a>';
+    if(task.url)html+='<a class="makeup-action" href="'+esc(parentLearningUrl_(task.url))+'" target="_blank" rel="noopener">Làm / nộp bù</a>';
     else html+='<button type="button" class="makeup-action missing-jump" data-skill="'+item.skillId+'">Mở bài để làm / nộp bù</button>';
     html+='</div>';
   });
@@ -3069,6 +3069,95 @@ loadPublic = function(force) {
 };
 
 
+/* STUDENT_PREFILL_BEGIN */
+/* STUDENT_LEARNING_PREFILL_V2: no storage, API calls, or bearer-token access. */
+function createStudentLearningPrefill(options) {
+  const origin = 'https://mstrangtrieueducation-droid.github.io';
+  const className = String(options.className || '');
+  const classValid = /^(?:(?:KIDS|FIGHTER|IELTS) [1-9]\d{0,2}|TA[1-9]\d{0,2})$/.test(className);
+  const viewerPaths = new Set(['student-learning', 'kids-learning']);
+  const dashboardRoutes = new Set(['23qdn2ys','2jskjgym','2qwemh5j','31wagboo','37htpfbf','3kuws5ny','3lu0698p','5jjvux82','63habmwz','6shx6heb','6zgbwd7n','7qzgp3p7','7rsn6kbh','89vnm8wz','92prber9','9az4ns3b','9fpwzhnz','9k6a4bxe','bhdzam6k','bhg37bsz','byogxkvy','cecccjpg','chaq17fk','cuhnjtw6','cwmkrshe','d5f9almb','dgpu6c9h','e73wgva4','eu2h66mj','firegh4f','gaeg8wku','gu159u7j','hwz7zw86','i8a0r77q','iw6h6bmb','j6fejhfq','jc4dppyg','js3npqsb','juzwewi0','kemtm929','l8tzmx20','m3g643sz','mf4c4tbe','muqt11rj','myude9i0','nwc3amdy','odwhkat1','p76n7ntc','p8qdzsoa','p8w8wz4f','q63ftrrf','qhaj55f2','qo7alz0y','qu3axuuz','r288s8x4','r60hdc1i','rge9fi0s','rp9rgb67','swsxdfdr','tr4qfy7b','u1g9ay98','u7x46qkb','u8226g5d','u90k1f5e','uee89ho9','vtw6rfy9','w3b6793g','wfyjrm4m','xcxhducu','xpe6dd4j','y31ibppw','y6r774jm','ywxrw9yp','zredv9ef','zuqtyg5e','zuuemtd2']);
+  const ownRoute = String(options.parentRoute || '').split('/').filter(Boolean)[0];
+  if (ownRoute) dashboardRoutes.add(ownRoute.toLowerCase());
+  function safe(value) {
+    try {
+      const text = String(value || '').trim();
+      const url = new URL(text);
+      return /^https?:$/.test(url.protocol) ? text : '';
+    } catch (_) { return ''; }
+  }
+  function name(value) {
+    if (typeof value !== 'string' || /[\u0000-\u001f\u007f-\u009f]/.test(value)) return '';
+    const result = value.trim().normalize('NFC');
+    return result && result.length <= 120 ? result : '';
+  }
+  function target(value) {
+    try {
+      const url = new URL(value);
+      if (url.origin !== origin || url.username || url.password) return null;
+      const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
+      const first = (parts[0] || '').toLowerCase();
+      if (!first || viewerPaths.has(first) || dashboardRoutes.has(first) || parts.some(part =>
+          /^\.|[\\\x00-\x1f\x7f]/.test(part) || /^(?:assets?|sources?|src|scripts?|styles?|downloads?|media|videos?)$/i.test(part))) return null;
+      const last = parts[parts.length - 1];
+      if (/\./.test(last) && !/\.html?$/i.test(last)) return null;
+      // A future private parent route is still a parent link, never a lesson.
+      if (url.searchParams.get('api') === 'parent1' || /^[A-Za-z0-9_-]{22}$/.test(new URLSearchParams(url.hash.slice(1)).get('p') || '')) return null;
+      return url;
+    } catch (_) { return null; }
+  }
+  function decorate(value, enabled = true) {
+    let original = safe(value);
+    if (!original || !enabled) return original;
+    try {
+      const outer = new URL(original);
+      if (outer.origin === origin && /^\/(?:student-learning|kids-learning)(?:\/|$)/i.test(outer.pathname)) {
+        const lessons = outer.searchParams.getAll('lesson');
+        if (!/^\/(?:student-learning|kids-learning)(?:\/index\.html|\/)?$/.test(outer.pathname) || lessons.length !== 1) return '';
+        original = safe(lessons[0]);
+        if (!target(original)) return '';
+      }
+      const destination = target(original);
+      if (!destination) return original;
+      let identity = null;
+      if (classValid && typeof options.getIdentity === 'function') {
+        try { identity = options.getIdentity(); } catch (_) { /* No identity hint without a readable verified profile. */ }
+      }
+      const submissionName = identity && name(identity.submissionName);
+      const englishName = identity && identity.englishName ? name(identity.englishName) : '';
+      if (!identity || identity.className !== className || !submissionName || identity.englishName && !englishName) {
+        ['mtt_name', 'mtt_class', 'mtt_english'].forEach(key => destination.searchParams.delete(key));
+        return destination.href;
+      }
+      const viewer = new URL('/student-learning/', origin);
+      viewer.searchParams.set('lesson', original);
+      viewer.searchParams.set('mtt_name', submissionName);
+      viewer.searchParams.set('mtt_class', className);
+      if (englishName) viewer.searchParams.set('mtt_english', englishName);
+      return viewer.href;
+    } catch (_) { return original; }
+  }
+  return Object.freeze({ decorate });
+}
+
+/* IELTS_PREFILL_IDENTITY_V2: live roster revision and the active profile must agree. */
+const ieltsLearningPrefill_ = createStudentLearningPrefill({
+  className: 'IELTS 45', parentRoute: location.pathname,
+  getIdentity() {
+    const expected = 'IELTS 45';
+    if (document.hidden || !/^IELTS [1-9]\d{0,2}$/.test(expected) || ieltsParentAccess.className !== expected ||
+        !parentState.authorized || parentState.locked || !parentPayloadValid_('dashboard', parentState.dashboard) ||
+        !parentPayloadValid_('profile', parentState.profile) || !parentState.directory ||
+        !Array.isArray(parentState.directory.all) || parentState.directory.all.length !== 1 || parentState.directory.all[0].name !== parentState.name ||
+        !state.student || state.student.name !== parentState.name || parentState.dashboard.className !== expected) return null;
+    const student = parentState.profile.student;
+    if (String(state.student.englishName || '') !== String(student.englishName || '')) return null;
+    return {className: expected, rosterName: student.name, englishName: String(student.englishName || ''), submissionName: student.name};
+  }
+});
+function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill_.decorate(value, enabled); }
+
+/* STUDENT_PREFILL_END */
 // Parent portal state is scoped to the bearer token, with server authorization before cache use.
 var parentState={authorized:false,locked:false,name:'',revision:'',directory:null,dashboard:null,profile:null,requestId:0,checking:false};
 function parentOpening_(message,name){
