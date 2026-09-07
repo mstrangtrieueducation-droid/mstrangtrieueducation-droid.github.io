@@ -18,6 +18,8 @@ const kidsApi = (() => {
   let status = validToken ? 'pending' : 'revoked';
   let boundAlias = '';
   let checkJob = null;
+  let checkEpoch = 0;
+  let checkController = null;
   let verifiedDirectory = null;
   let directoryVersion = 0;
   const norm = value => String(value || '').trim().toUpperCase();
@@ -54,6 +56,12 @@ const kidsApi = (() => {
       return alias;
     }
     if (!boundAlias) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
+    if (action === 'bootstrap') {
+      if (!Array.isArray(data.studentAliases) || data.studentAliases.length !== 1 ||
+          keyOf(aliasOf(data.studentAliases[0])) !== keyOf(boundAlias)) throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
+      validateScope(data.dashboard, 'dashboard');
+      validateScope(data.profile, 'profile');
+    }
     if ((action === 'directory' || action === 'dashboard') &&
         (!Array.isArray(data.studentAliases) || data.studentAliases.length !== 1 || keyOf(aliasOf(data.studentAliases[0])) !== keyOf(boundAlias))) {
       throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
@@ -63,9 +71,9 @@ const kidsApi = (() => {
     }
     return boundAlias;
   }
-  function requestAction(action, force) {
+  function requestAction(action, force, epoch) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
-    const key = JSON.stringify([action, Boolean(force)]);
+    const key = JSON.stringify([action, Boolean(force), action === 'check' ? epoch : null]);
     if (pending.has(key)) return pending.get(key);
     const url = new URL(endpoint);
     url.searchParams.set('api', 'parent1');
@@ -75,6 +83,7 @@ const kidsApi = (() => {
     url.searchParams.set('force', force ? '1' : '0');
     url.searchParams.set('_', String(Date.now()));
     const controller = new AbortController();
+    if (action === 'check') checkController = controller;
     controllers.add(controller);
     const started = performance.now();
     const timer = setTimeout(() => controller.abort(), ['directory','check'].includes(action) ? 28000 : 85000);
@@ -83,6 +92,7 @@ const kidsApi = (() => {
     }).then(async response => {
       if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
       const envelope = await response.json();
+      if (action === 'check' && epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const data = envelope && envelope.data;
       const envelopeCode = envelope && (envelope.code || envelope.error && envelope.error.code);
       if (status === 'revoked' || (envelope && (envelope.revoked === true || terminalCodes.has(envelopeCode))) ||
@@ -100,7 +110,8 @@ const kidsApi = (() => {
     }).finally(() => {
       clearTimeout(timer);
       controllers.delete(controller);
-      pending.delete(key);
+      if (checkController === controller) checkController = null;
+      if (pending.get(key) === promise) pending.delete(key);
     });
     pending.set(key, promise);
     return promise;
@@ -116,8 +127,9 @@ const kidsApi = (() => {
       return Promise.resolve(false);
     }
     if (!background) signal('pending');
-    checkJob = requestAction('check', true).then(data => {
-      if (status === 'revoked') return false;
+    const epoch = checkEpoch;
+    const job = requestAction('check', true, epoch).then(data => {
+      if (status === 'revoked' || epoch !== checkEpoch) return false;
       boundAlias = validateScope(data, 'check');
       verifiedDirectory = Array.isArray(data.studentAliases) ? {
         classNumber:expectedClass, className:'KIDS ' + expectedClass, directoryOnly:true, cacheStale:false,
@@ -128,9 +140,10 @@ const kidsApi = (() => {
       signal('authorized');
       return true;
     }).catch(err => {
-      if (status !== 'revoked') signal('unavailable');
+      if (status !== 'revoked' && epoch === checkEpoch) signal('unavailable');
       return false;
-    }).finally(() => { checkJob = null; });
+    }).finally(() => { if (checkJob === job) checkJob = null; });
+    checkJob = job;
     return checkJob;
   }
   function request(method, args) {
@@ -162,8 +175,18 @@ const kidsApi = (() => {
       get status() { return status; },
       get directoryHint() { return status === 'authorized' && verifiedDirectory ? JSON.parse(JSON.stringify(verifiedDirectory)) : null; },
       get directoryVersion() { return directoryVersion; },
+      bootstrap(force = false) {
+        if (status !== 'authorized') return Promise.reject(error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING'));
+        return requestAction('bootstrap', Boolean(force));
+      },
       check,
-      suspend() { if (status !== 'revoked') signal('pending'); },
+      suspend() {
+        if (status === 'revoked') return;
+        checkEpoch += 1;
+        checkJob = null;
+        if (checkController) checkController.abort();
+        signal('pending');
+      },
       revoke
     }
   };
@@ -1887,7 +1910,6 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function queuePaintedSnapshotRefresh_(requestedAlias) {
-      if (parentQueueSeedRefresh_(requestedAlias)) return true;
       const state = app.dashboardLoad;
       if (state.snapshotRefreshPending) return true;
       if (state.snapshotRefreshStarted || !app.child || !validDashboardData(app.data) ||
@@ -1947,7 +1969,6 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function dashboardRetryOrFail(error, force) {
-      if (parentSeedDashboardFailed_(force)) return;
       const state = app.dashboardLoad;
       clearLoadTimer(state, 'watchdog');
       state.inFlight = false;
@@ -1996,7 +2017,7 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function loadDashboard(force) {
       const state = app.dashboardLoad;
-      if (state.ready && !force && !parentSeedReadPending_()) return;
+      if (state.ready && !force) return;
       if (state.inFlight) return;
       state.forceActive = Boolean(force);
       setLoading(true);
@@ -2026,7 +2047,6 @@ html.vn-national-day-2026-root body .assignment.session {
       // duplicate request storm; the visible recovery card covers this wait.
       }, 90000);
       try {
-        parentSeedDashboardStarted_(request, force);
         kidsApi.run
           .withSuccessHandler(data => {
             if (request !== state.request) return;
@@ -2044,7 +2064,6 @@ html.vn-national-day-2026-root body .assignment.session {
               if (data && data.cacheDiagnostics) console.info('KIDS cache ' + JSON.stringify(data.cacheDiagnostics));
               if (data && data.sourceDiagnostics) console.warn('KIDS source ' + JSON.stringify(data.sourceDiagnostics));
               if (!validDashboardData(data)) throw new Error('Dữ liệu đầy đủ của lớp chưa sẵn sàng.');
-              if (parentSeedDashboardCompleted_(data, request, force)) return;
               if (force && data.cacheStale) {
                 throw new Error('Dữ liệu lịch mới chưa sẵn sàng. Hệ thống sẽ thử lại.');
               }
@@ -2054,7 +2073,6 @@ html.vn-national-day-2026-root body .assignment.session {
               state.retries = 0;
               state.recoveryRound = 0;
               if (typeof clearFirstPaintDeadline_ === 'function') clearFirstPaintDeadline_();
-              parentDashboardCompleted_(data);
               populateEntryNames(app.childAlias);
               $('#entryLogo').src = FALLBACK_LOGO;
               const activeAlias = app.childAlias;
@@ -2111,7 +2129,6 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function retryDashboardLoad() {
-      parentCancelSeedRefresh_();
       // A browser retry cannot cancel kidsApi.run on the server. Keep
       // the current request, but remember one explicit refresh after a normal
       // cache read. A forced request/retry already satisfies repeated clicks.
@@ -3258,7 +3275,6 @@ html.vn-national-day-2026-root body .assignment.session {
         state.resumeTimer = null;
         if (state.alias !== requestedAlias) return;
         if (state.inFlight) return;
-        if (parentParkScheduledProfileRetry_(requestedAlias, options)) return;
         // Refresh the shared model and the selected profile in sequence, never
         // run two forced workbook builds for the same parent action.
         if ((options || {}).force && app.dashboardLoad &&
@@ -3289,7 +3305,6 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function profileRetryOrFail(requestedAlias, options, error) {
-      parentRememberProfileBuildWait_(requestedAlias, options, error);
       const state = app.profileLoad;
       clearLoadTimer(state, 'watchdog');
       state.inFlight = false;
@@ -3332,14 +3347,6 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function loadChild(alias, options = {}) {
-      if (!kidsApi.parent.authorized || matchKey(alias) !== matchKey(kidsApi.parent.alias)) {
-        if (!kidsApi.parent.authorized) {
-          if (options.retrying) parentParkScheduledProfileRetry_(alias, options);
-          parentAccessGate_();
-        }
-        return;
-      }
-      if (parentReuseQueuedProfile_(alias, options)) return;
       const requestedAlias = text(alias).toUpperCase();
       if (!requestedAlias) {
         setEntryState('Bố mẹ chọn tên của con để tiếp tục.', false);
@@ -3430,7 +3437,6 @@ html.vn-national-day-2026-root body .assignment.session {
       // single live RPC long enough to finish instead of spawning duplicates.
       }, 90000);
       try {
-        parentProfileRequestStarted_();
         kidsApi.run
           .withSuccessHandler(profile => {
             if (request !== state.request || app.childAlias !== requestedAlias) return;
@@ -3876,7 +3882,6 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function retryCurrentLoad() {
-      parentCancelSeedRefresh_();
       const requestedAlias = text(app.childAlias || $('#entryName').value).toUpperCase();
       if (!app.data || !requestedAlias) {
         if (validDashboardData(app.data)) retryDashboardLoad();
@@ -4061,203 +4066,7 @@ function createStudentLearningPrefill(options) {
     });
     function parentLearningUrl_(value, enabled = true) { return kidsLearningPrefill_.decorate(value, enabled); }
 
-    let parentBootStarted_ = false;
-    let parentAutoOpenTimer_ = null;
-    let parentDirectoryHintVersion_ = 0;
-    let parentQueuedProfile_ = null;
-    // KIDS_PARENT_PROFILE_BUILD_WAKE_V1
-    let parentProfileBuildWait_ = null;
-    let parentParkedProfileRetry_ = null;
-    let parentProfileRequestStart_ = null;
-    let parentFreshDashboardVersion_ = 0;
-    // KIDS_PARENT_REFRESH_COALESCE_V1: a fresh private build already publishes
-    // its public generation. Read that seed before ordering another build.
-    let parentSeedRefresh_ = null;
-    let parentSeedRefreshUsed_ = '';
-    function parentCancelSeedRefresh_() {
-      if (parentSeedRefresh_ && parentSeedRefresh_.timer) window.clearTimeout(parentSeedRefresh_.timer);
-      parentSeedRefresh_ = null;
-    }
-    function parentSeedProfileMatches_(job) {
-      return Boolean(job && !kidsApi.parent.revoked &&
-        matchKey(job.alias) === matchKey(kidsApi.parent.alias) &&
-        matchKey(job.alias) === matchKey(app.childAlias) &&
-        job.profileRequest === app.profileLoad.request &&
-        validProfileData(app.child, job.alias) && !responseHasErrors(app.child) &&
-        !app.child.cacheStale && Number(app.child.sourceModelBuiltAt) === job.generation);
-    }
-    function parentSeedReadPending_() {
-      return Boolean(parentSeedRefresh_ && parentSeedRefresh_.phase === 'queued' &&
-        kidsApi.parent.authorized && parentSeedProfileMatches_(parentSeedRefresh_));
-    }
-    function parentQueueSeedRefresh_(requestedAlias) {
-      if (parentSeedRefresh_) {
-        if (parentSeedProfileMatches_(parentSeedRefresh_)) { parentResumeSeedRefresh_(); return true; }
-        parentCancelSeedRefresh_();
-      }
-      const state = app.dashboardLoad;
-      const generation = Number((app.child || {}).sourceModelBuiltAt);
-      const key = [requestedAlias, app.profileLoad.request, generation].join('|');
-      if (!validDashboardData(app.data) || !app.data.cacheStale || !Number.isFinite(generation) || generation <= 0 ||
-          !validProfileData(app.child, requestedAlias) || responseHasErrors(app.child) || app.child.cacheStale ||
-          parentSeedRefreshUsed_ === key || state.manualProfileRefresh || state.pendingManualRefresh ||
-          (state.inFlight && state.forceActive)) return false;
-      const job = {alias:requestedAlias, generation, profileRequest:app.profileLoad.request,
-        phase:'queued', dashboardRequest:0, retries:0, timer:null, data:null};
-      if (!parentSeedProfileMatches_(job)) return false;
-      parentSeedRefresh_ = job;
-      parentSeedRefreshUsed_ = key;
-      clearLoadTimer(state, 'snapshotRefreshTimer');
-      state.snapshotRefreshPending = false;
-      state.snapshotRefreshStarted = true;
-      $('#metaLine').textContent = 'Đang hoàn tất bản cập nhật lịch học…';
-      job.timer = window.setTimeout(() => { job.timer = null; parentResumeSeedRefresh_(); }, 0);
-      return true;
-    }
-    function parentResumeSeedRefresh_() {
-      const job = parentSeedRefresh_;
-      if (!job) return false;
-      if (!parentSeedProfileMatches_(job)) { parentCancelSeedRefresh_(); return false; }
-      if (!kidsApi.parent.authorized || job.timer || job.phase === 'inFlight') return true;
-      const state = app.dashboardLoad;
-      if (state.pendingManualRefresh || state.manualProfileRefresh) { parentCancelSeedRefresh_(); return false; }
-      if (state.inFlight || state.resumeTimer || app.profileLoad.inFlight) return true;
-      if (job.phase === 'received') {
-        const data = job.data;
-        const generation = Number(data && data.snapshotBuiltAt);
-        if (!validDashboardData(data) || data.cacheStale || !Number.isFinite(generation) || generation < job.generation) {
-          // One normal seed read was insufficient. The existing bounded forced
-          // class/profile lane remains authoritative; do not repeat this peek.
-          parentCancelSeedRefresh_();
-          state.snapshotRefreshPending = true;
-          state.manualProfileRefresh = true;
-          state.retries = 0;
-          state.recoveryRound = 0;
-          loadDashboard(true);
-          return true;
-        }
-        parentCancelSeedRefresh_();
-        app.data = data;
-        state.ready = true;
-        state.retries = 0;
-        state.recoveryRound = 0;
-        state.staleRefreshAttempted = false;
-        state.snapshotRefreshPending = false;
-        app.profileLoad.staleRefreshAlias = '';
-        parentDashboardCompleted_(data);
-        populateEntryNames(app.childAlias);
-        applyChildProfile(app.child, job.alias, {quiet:true, tab:app.activeTab});
-        setLoading(false);
-        // Only a genuinely newer source requires another private assembly.
-        if (generation > job.generation) scheduleProfileLoad(job.alias, {
-          quiet:true, force:true, refreshCached:true, skipBrowserCache:true, tab:app.activeTab
-        }, 0);
-        return true;
-      }
-      if (job.phase === 'queued') loadDashboard(false);
-      return true;
-    }
-    function parentSeedDashboardStarted_(request, force) {
-      if (!force && parentSeedReadPending_()) {
-        parentSeedRefresh_.phase = 'inFlight';
-        parentSeedRefresh_.dashboardRequest = request;
-      }
-    }
-    function parentSeedDashboardCompleted_(data, request, force) {
-      const job = parentSeedRefresh_;
-      if (job && !force && job.phase === 'queued' && !job.dashboardRequest) {
-        // A normal read may have started before the private build finished.
-        // Reuse a matching/newer result; otherwise wake the one seed read now
-        // that the old RPC has settled, without treating it as a failed peek.
-        if (!data.cacheStale && Number(data.snapshotBuiltAt) >= job.generation) {
-          job.data = data;
-          job.phase = 'received';
-          parentResumeSeedRefresh_();
-        } else if (!job.timer) {
-          job.timer = window.setTimeout(() => { job.timer = null; parentResumeSeedRefresh_(); }, 0);
-        }
-        return true;
-      }
-      if (!job || force || job.phase !== 'inFlight' || job.dashboardRequest !== request) return false;
-      job.data = data;
-      job.phase = 'received';
-      parentResumeSeedRefresh_();
-      return true;
-    }
-    function parentSeedDashboardFailed_(force) {
-      const job = parentSeedRefresh_, state = app.dashboardLoad;
-      if (!job || force || job.phase !== 'inFlight' || job.dashboardRequest !== state.request) return false;
-      clearLoadTimer(state, 'watchdog');
-      state.inFlight = false;
-      if (!parentSeedProfileMatches_(job)) { parentCancelSeedRefresh_(); return true; }
-      if (job.retries < 2) {
-        job.retries += 1;
-        job.phase = 'queued';
-        job.timer = window.setTimeout(() => { job.timer = null; parentResumeSeedRefresh_(); }, job.retries === 1 ? 650 : 1600);
-      } else {
-        parentCancelSeedRefresh_();
-        state.snapshotRefreshPending = false;
-        setLoading(false);
-        $('#metaLine').textContent = 'Đang hiển thị dữ liệu gần nhất · Bản cập nhật lịch chưa sẵn sàng';
-      }
-      return true;
-    }
-    function parentDashboardCompleted_(data) {
-      if (validDashboardData(data) && !data.cacheStale) parentFreshDashboardVersion_ += 1;
-    }
-    function parentProfileRequestStarted_() {
-      parentCancelSeedRefresh_();
-      parentProfileBuildWait_ = null;
-      parentParkedProfileRetry_ = null;
-      parentProfileRequestStart_ = {
-        request: app.profileLoad.request, dashboardVersion: parentFreshDashboardVersion_
-      };
-    }
-    function parentRememberProfileBuildWait_(requestedAlias, options, error) {
-      const started = parentProfileRequestStart_;
-      parentProfileBuildWait_ = error && error.code === 'PROFILE_LOADING' ? {
-        alias: requestedAlias, options: Object.assign({}, options || {}),
-        request: app.profileLoad.request,
-        dashboardVersion: started && started.request === app.profileLoad.request
-          ? started.dashboardVersion : parentFreshDashboardVersion_, parked: false
-      } : null;
-      // Run after profileRetryOrFail has installed its bounded retry timer.
-      // This also covers a loading response arriving just after class-ready.
-      if (parentProfileBuildWait_) window.setTimeout(parentResumeProfileBuildWait_, 0);
-    }
-    function parentParkScheduledProfileRetry_(requestedAlias, options) {
-      if (kidsApi.parent.authorized) return false;
-      const state = app.profileLoad;
-      if (!kidsApi.parent.revoked && matchKey(state.alias) === matchKey(requestedAlias) &&
-          !state.inFlight && !state.resumeTimer) {
-        parentParkedProfileRetry_ = {alias:requestedAlias, options:Object.assign({}, options || {}),
-          request:state.request, parked:true};
-      }
-      return true;
-    }
-    function parentResumeProfileBuildWait_() {
-      const wait = parentParkedProfileRetry_ || parentProfileBuildWait_;
-      if (!wait) return false;
-      const state = app.profileLoad;
-      if (wait.request !== state.request || matchKey(wait.alias) !== matchKey(state.alias)) {
-        parentProfileBuildWait_ = null;
-        parentParkedProfileRetry_ = null;
-        return false;
-      }
-      if (!kidsApi.parent.authorized || matchKey(wait.alias) !== matchKey(kidsApi.parent.alias) ||
-          state.inFlight) return false;
-      const freshCompletion = parentDashboardReady_() && !app.data.cacheStale &&
-        parentFreshDashboardVersion_ > wait.dashboardVersion;
-      if (!wait.parked && (!state.resumeTimer || !freshCompletion)) return false;
-      // Resume an already-due suspended retry, or wake one explicit class-build
-      // wait after a fresh dashboard completion. Consume before scheduling, and
-      // retain the scheduler's forced public/profile sequencing.
-      parentProfileBuildWait_ = null;
-      parentParkedProfileRetry_ = null;
-      clearLoadTimer(state, 'resumeTimer');
-      scheduleProfileLoad(wait.alias, wait.options, 0);
-      return true;
-    }
+
     function parentRecordFirstOpen_() {
       if (!kidsApi.parent.authorized || $('#dashboardShell').hidden || !parentDashboardReady_() ||
           !validProfileData(app.child, kidsApi.parent.alias)) return;
@@ -4265,12 +4074,14 @@ function createStudentLearningPrefill(options) {
         document.documentElement.dataset.parentFirstOpenMs = String(Math.round(performance.now()));
       }
     }
+
     function parentDashboardReady_() {
       // A complete last-good class payload is usable after current token
       // authorization. Its freshness refresh must not hold a matching child
       // profile behind the opening panel.
       return Boolean(validDashboardData(app.data) && app.dashboardLoad.ready);
     }
+
     function parentOpeningMessage_(message) {
       if (text(message)) return text(message);
       if (!app.directoryLoad.ready) return 'Đã xác nhận liên kết · Đang chuẩn bị hồ sơ của con…';
@@ -4280,10 +4091,12 @@ function createStudentLearningPrefill(options) {
         : 'Đang tải lịch học, bài tập và kết quả của con…';
       return profileReady ? 'Đang mở đầy đủ hồ sơ của con…' : 'Đã tải lịch học · Đang hoàn tất kết quả của con…';
     }
+
     function parentUpdateOpeningStage_() {
       if (!kidsApi.parent.authorized || $('#entryGate').hidden || !$('#entryRetry').hidden) return;
       $('#entryMessage').textContent = parentOpeningMessage_('');
     }
+
     function parentConsumeDirectoryHint_() {
       if (!kidsApi.parent.authorized || parentDirectoryHintVersion_ === kidsApi.parent.directoryVersion) return false;
       const hint = kidsApi.parent.directoryHint;
@@ -4304,38 +4117,7 @@ function createStudentLearningPrefill(options) {
       parentUpdateOpeningStage_();
       return true;
     }
-    function parentDeferProfile_(profile, requestedAlias, options) {
-      if (kidsApi.parent.authorized && parentDashboardReady_()) {
-        if (parentQueuedProfile_ && matchKey(parentQueuedProfile_.alias) === matchKey(requestedAlias)) parentQueuedProfile_ = null;
-        return false;
-      }
-      parentQueuedProfile_ = {profile, alias:requestedAlias, options:options || {}};
-      app.child = profile;
-      app.childAlias = requestedAlias;
-      parentUpdateOpeningStage_();
-      return true;
-    }
-    function parentReuseQueuedProfile_(requestedAlias, options = {}) {
-      const queued = parentQueuedProfile_;
-      if (!queued || options.force || !kidsApi.parent.authorized || !parentDashboardReady_() ||
-          matchKey(queued.alias) !== matchKey(requestedAlias) || !validProfileData(queued.profile, requestedAlias) || responseHasErrors(queued.profile)) return false;
-      parentQueuedProfile_ = null;
-      app.profileLoad.busy = false;
-      // If the complete class is stale too, its refresh owns this episode.
-      // Cancel only an unstarted automatic stale-profile timer, never a live
-      // request or an explicitly parked/manual retry.
-      if (app.data.cacheStale && queued.profile.cacheStale &&
-          app.profileLoad.staleRefreshAlias === queued.alias && app.profileLoad.resumeTimer &&
-          !app.profileLoad.inFlight && !parentParkedProfileRetry_ &&
-          !app.dashboardLoad.manualProfileRefresh && !app.dashboardLoad.pendingManualRefresh) {
-        clearLoadTimer(app.profileLoad, 'resumeTimer');
-        app.profileLoad.staleRefreshAlias = '';
-      }
-      applyChildProfile(queued.profile, queued.alias, Object.assign({}, queued.options, options));
-      setLoading(false);
-      if (app.data.cacheStale) queuePaintedSnapshotRefresh_(queued.alias);
-      return true;
-    }
+
     function parentVerifiedIdentityLabel_() {
       if (!kidsApi.parent.authorized) return '';
       const alias = text(kidsApi.parent.alias);
@@ -4350,6 +4132,7 @@ function createStudentLearningPrefill(options) {
       if (matchKey(entryAlias) !== matchKey(alias)) return alias;
       return typeof entry === 'string' ? alias : text(pick(entry, ['label', 'displayName'], '')) || alias;
     }
+
     function parentRenderIdentity_() {
       const label = parentVerifiedIdentityLabel_();
       const opening = $('#parentOpeningIdentity');
@@ -4384,143 +4167,229 @@ function createStudentLearningPrefill(options) {
         pending.hidden = !label;
       }
     }
-    function parentAccessGate_() {
-      const revoked = kidsApi.parent.revoked;
-      parentRenderIdentity_();
-      $('#dashboardShell').hidden = true;
-      if (!kidsApi.parent.authorized) {
-        const pendingGate = $('#pendingWorkGate');
-        if (pendingGate) pendingGate.hidden = true;
-      }
-      $('#entryGate').hidden = false;
-      $('#entryForm').hidden = true;
-      $('#entryName').disabled = true;
-      $('#entrySubmit').disabled = true;
-      $('#entryMessage').textContent = revoked ? 'Hồ sơ không còn hoạt động' :
-        (kidsApi.parent.status === 'unavailable' ? 'Chưa thể kiểm tra hồ sơ. Bố mẹ bấm tải lại nhé.' : 'Đang kiểm tra và mở hồ sơ của con…');
-      $('#entryRetry').hidden = revoked || kidsApi.parent.status !== 'unavailable';
-      $('#entryRetry').disabled = false;
-      if (revoked) {
-        parentCancelSeedRefresh_();
-        parentSeedRefreshUsed_ = '';
-        parentQueuedProfile_ = null;
-        parentProfileBuildWait_ = null;
-        parentParkedProfileRetry_ = null;
-        parentProfileRequestStart_ = null;
-        parentDirectoryHintVersion_ = 0;
-        clearFirstPaintDeadline_();
-        if (parentAutoOpenTimer_) window.clearTimeout(parentAutoOpenTimer_);
-        parentAutoOpenTimer_ = null;
-        [app.directoryLoad, app.dashboardLoad, app.profileLoad].forEach(state => {
-          ['watchdog', 'resumeTimer', 'snapshotRefreshTimer'].forEach(key => clearLoadTimer(state, key));
-          state.request += 1;
-          state.inFlight = false;
-          state.busy = false;
-          state.ready = false;
-          state.snapshotReady = false;
-        });
-        if (app.scheduleTimer) window.clearTimeout(app.scheduleTimer);
-        app.scheduleTimer = null;
-        app.child = null;
-        app.childAlias = '';
-        app.data = null;
-        app.profileCache = {};
-        app.directoryAliases = [];
-        $('#entryName').innerHTML = '';
-        $('#activeChild').textContent = 'Hồ sơ của con';
-        $('#metaLine').textContent = '';
-        ['schedulePanel','lessonsPanel','practicePanel','profilePanel','competitionPanel',
-          'pendingWorkTitle','pendingWorkDetail','pendingWorkGateTitle','pendingWorkGateDetail',
-          'paperHomeworkReminder'].forEach(id => { const el = $('#' + id); if (el) el.innerHTML = ''; });
-        ['pendingWorkBanner','pendingWorkGate','paperHomeworkReminder'].forEach(id => { const el = $('#' + id); if (el) el.hidden = true; });
-        // The trial writes no persistent profile snapshots. Remove only its own legacy namespace.
-        ['localStorage','sessionStorage'].forEach(storageName => {
-          try {
-            const storage = window[storageName];
-            for (let i = storage.length - 1; i >= 0; i--) {
-              const key = storage.key(i);
-              if (key && key.startsWith('kids22-parent-')) storage.removeItem(key);
-            }
-          } catch (_) { /* Storage is optional. */ }
-        });
-      }
+
+    // KIDS_PARENT_BOOTSTRAP_V1: one owner installs an exact public/private pair.
+    let parentDirectoryHintVersion_ = 0;
+    let parentPackage_ = null;
+    let parentBootstrapJob_ = null;
+    let parentBootstrapGeneration_ = 0;
+    let parentBootstrapRetry_ = null;
+    let parentBootstrapIntent_ = null;
+    let parentBootstrapNextForce_ = false;
+    let parentBootstrapPainted_ = false;
+    let parentPackageWarning_ = false;
+    function parentPackagePartial_(value) {
+      return Boolean(value.partial || responseHasErrors(value.profile));
     }
-    function parentAutoOpen_() {
-      parentRenderIdentity_();
-      parentUpdateOpeningStage_();
-      if (parentAutoOpenTimer_) return;
-      parentAutoOpenTimer_ = window.setTimeout(() => {
-        parentAutoOpenTimer_ = null;
-        if (!kidsApi.parent.authorized || !app.directoryLoad.ready) return;
-        const alias = kidsApi.parent.alias;
-        if (!alias || !liveDirectoryContainsAlias_(alias)) return;
-        if (parentResumeProfileBuildWait_()) return;
-        if (parentReuseQueuedProfile_(alias)) return;
-        if (app.child || app.profileLoad.inFlight || app.profileLoad.busy || app.profileLoad.resumeTimer) return;
-        $('#entryName').value = alias;
-        app.profileLoad.openStartedAt = performance.now();
-        loadChild(alias, {tab:'schedule', skipBrowserCache:true, refreshCached:true});
-      }, 0);
+    function parentPackageStale_(value) {
+      return Boolean(parentPackagePartial_(value) || value.cacheStale || value.dashboard.cacheStale || value.profile.cacheStale ||
+        Number(value.dashboard.snapshotBuiltAt) !== Number(value.profile.sourceModelBuiltAt));
     }
-    function parentContinue_() {
-      if (!kidsApi.parent.authorized) return;
-      parentConsumeDirectoryHint_();
-      parentRenderIdentity_();
-      parentResumeSeedRefresh_();
-      if (!parentBootStarted_) {
-        parentBootStarted_ = true;
-        installFirstPaintDeadline_();
-        if (!app.directoryLoad.ready) loadClassDirectory();
-        loadDashboard(false);
-        parentAutoOpen_();
-        return;
+    function parentValidatePackage_(value) {
+      const alias = kidsApi.parent.alias;
+      if (!value || Number(value.classNumber) !== CLASS_NUMBER || value.className !== CLASS_NAME ||
+          !validDashboardData(value.dashboard) || !validProfileData(value.profile, alias) ||
+          !Number.isFinite(Number(value.sourceModelBuiltAt)) ||
+          Number(value.sourceModelBuiltAt) <= 0 || Number(value.sourceModelBuiltAt) !== Number(value.profile.sourceModelBuiltAt) ||
+          !Number.isFinite(Number(value.dashboard.snapshotBuiltAt)) || Number(value.dashboard.snapshotBuiltAt) <= 0 ||
+          !Array.isArray(value.studentAliases) || value.studentAliases.length !== 1 ||
+          matchKey(pick(value.studentAliases[0], ['alias','englishName','value'], value.studentAliases[0])) !== matchKey(alias)) {
+        const error = new Error('Hồ sơ đầy đủ chưa sẵn sàng.'); error.code = 'INVALID_SCOPE'; throw error;
       }
-      if (app.child && matchKey(app.childAlias) === matchKey(kidsApi.parent.alias)) {
-        applyChildProfile(app.child, app.childAlias, {quiet:true, tab:app.activeTab});
-      }
-      if (!app.directoryLoad.ready && !app.directoryLoad.inFlight && !app.directoryLoad.resumeTimer) loadClassDirectory();
-      if (!app.dashboardLoad.ready && !app.dashboardLoad.inFlight && !app.dashboardLoad.resumeTimer) loadDashboard(false);
-      parentAutoOpen_();
+      return value;
     }
-    function parentRecheck_(options = {}) {
-      return kidsApi.parent.check(options).then(ok => {
-        if (ok && (!options.background || $('#dashboardShell').hidden)) parentContinue_();
+    function parentClearBootstrapRetry_() {
+      if (parentBootstrapRetry_) window.clearTimeout(parentBootstrapRetry_);
+      parentBootstrapRetry_ = null;
+    }
+    function parentClearPackage_() {
+      parentBootstrapGeneration_ += 1;
+      parentClearBootstrapRetry_();
+      parentBootstrapIntent_ = null;
+      parentBootstrapNextForce_ = false;
+      parentBootstrapJob_ = null;
+      parentPackage_ = null;
+      parentBootstrapPainted_ = false;
+      parentPackageWarning_ = false;
+      parentDirectoryHintVersion_ = 0;
+      clearFirstPaintDeadline_();
+      [app.directoryLoad, app.dashboardLoad, app.profileLoad].forEach(state => {
+        ['watchdog','resumeTimer','snapshotRefreshTimer'].forEach(key => clearLoadTimer(state,key));
+        state.request += 1; state.inFlight = false; state.busy = false; state.ready = false; state.snapshotReady = false;
       });
+      if (app.scheduleTimer) window.clearTimeout(app.scheduleTimer);
+      app.scheduleTimer = null;
+      app.child = null; app.childAlias = ''; app.data = null; app.profileCache = {}; app.directoryAliases = [];
+      ['schedulePanel','lessonsPanel','practicePanel','profilePanel','competitionPanel',
+        'pendingWorkTitle','pendingWorkDetail','pendingWorkGateTitle','pendingWorkGateDetail',
+        'paperHomeworkReminder'].forEach(id => { const el=$('#'+id); if(el)el.innerHTML=''; });
+      ['pendingWorkBanner','pendingWorkGate','paperHomeworkReminder'].forEach(id => { const el=$('#'+id);if(el)el.hidden=true; });
+      $('#entryName').innerHTML=''; $('#activeChild').textContent='Hồ sơ của con'; $('#metaLine').textContent='';
+    }
+    function parentAccessGate_(message, retry = false) {
+      if (kidsApi.parent.revoked) parentClearPackage_();
+      parentRenderIdentity_();
+      $('#dashboardShell').hidden=true; $('#entryGate').hidden=false; $('#entryForm').hidden=true;
+      $('#entryName').disabled=true; $('#entrySubmit').disabled=true;
+      const pending=$('#pendingWorkGate');if(pending)pending.hidden=true;
+      $('#entryMessage').textContent=kidsApi.parent.revoked?'Hồ sơ không còn hoạt động':
+        (message || (kidsApi.parent.status==='unavailable'?'Chưa thể kiểm tra hồ sơ. Bố mẹ bấm tải lại nhé.':'Đang kiểm tra và mở hồ sơ của con…'));
+      $('#entryRetry').hidden=kidsApi.parent.revoked || !(retry || kidsApi.parent.status==='unavailable');
+      $('#entryRetry').disabled=false;
+    }
+    function parentDeferProfile_() {
+      if (!kidsApi.parent.authorized || !parentDashboardReady_()) { parentAccessGate_(); return true; }
+      return false;
+    }
+    function parentAutoOpen_() { /* Atomic bootstrap owns the sole selected child. */ }
+    function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = false) {
+      if (!kidsApi.parent.authorized || !parentPackage_) return false;
+      const value=parentValidatePackage_(parentPackage_),alias=kidsApi.parent.alias;
+      parentConsumeDirectoryHint_();
+      if (!app.directoryLoad.ready || !liveDirectoryContainsAlias_(alias)) return false;
+      app.data=value.dashboard;
+      const loading=Boolean(preserveJob&&parentBootstrapJob_);
+      app.dashboardLoad.ready=true;app.dashboardLoad.inFlight=loading;
+      app.child=value.profile;app.childAlias=alias;
+      app.profileLoad.alias=alias;app.profileLoad.busy=loading;app.profileLoad.inFlight=loading;
+      app.profileCache={};if(!parentPackagePartial_(value))app.profileCache[alias]=value.profile;
+      const applied=applyChildProfile(value.profile,alias,{quiet:quiet||parentBootstrapPainted_,tab:app.activeTab||'schedule'});
+      if(!applied)throw new Error('Hồ sơ chưa hiển thị trọn vẹn.');
+      parentBootstrapPainted_=true;setLoading(loading);
+      document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));
+      if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần bài nộp đang được đồng bộ…';
+      else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Đang kiểm tra cập nhật…';
+      else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
+      return true;
+    }
+    function parentScheduleBootstrap_(intent, delay) {
+      parentClearBootstrapRetry_();
+      parentBootstrapIntent_=intent;
+      const generation=parentBootstrapGeneration_;
+      parentBootstrapRetry_=window.setTimeout(()=>{
+        parentBootstrapRetry_=null;
+        if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return;
+        if(!kidsApi.parent.authorized)return; // Keep intent for fresh resume.
+        const next=parentBootstrapIntent_;parentBootstrapIntent_=null;
+        if(next)parentLoadBootstrap_(next.force,next.quiet,next.attempt);
+      },delay);
+    }
+    function parentLoadBootstrap_(force=false,quiet=false,attempt=0) {
+      if(kidsApi.parent.revoked)return Promise.resolve(false);
+      if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt};return Promise.resolve(false);}
+      if(parentBootstrapJob_){
+        if(force&&!parentBootstrapJob_.force)parentBootstrapNextForce_=true;
+        if(!quiet)parentAccessGate_('Đang tải lịch học, bài tập và kết quả của con…');
+        return parentBootstrapJob_.promise;
+      }
+      parentClearBootstrapRetry_();parentBootstrapIntent_=null;
+      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,promise:null};
+      parentBootstrapJob_=job;
+      app.dashboardLoad.inFlight=true;app.profileLoad.inFlight=true;app.profileLoad.busy=true;
+      app.profileLoad.request+=1;app.dashboardLoad.request+=1;
+      setLoading(true);
+      document.documentElement.dataset.parentLoadStartedMs=String(Math.round(performance.now()));
+      if(!quiet||!parentBootstrapPainted_)parentAccessGate_('Đang tải lịch học, bài tập và kết quả của con…');
+      let next=null;
+      job.promise=kidsApi.parent.bootstrap(force).then(value=>{
+        if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
+        parentValidatePackage_(value);
+        const stale=parentPackageStale_(value);
+        if(force&&stale){const error=new Error('Bản cập nhật mới chưa sẵn sàng.');error.code='DATA_STALE';throw error;}
+        const retained=parentPackage_&&!parentPackagePartial_(parentPackage_)&&parentPackage_;
+        const missingCollections=retained&&['assignments','selfPractice','tests','retakeResults','lessons'].some(key=>
+          Array.isArray(retained.profile[key])&&!Array.isArray(value.profile[key]));
+        const older=retained&&Number(value.profile.snapshotBuiltAt)>0&&
+          Number(retained.profile.snapshotBuiltAt)>Number(value.profile.snapshotBuiltAt);
+        parentPackageWarning_=Boolean(parentPackagePartial_(value)||missingCollections||older);
+        // Preserve a complete visible pair when a temporary submission outage
+        // or older response arrives. First partial profiles still show the
+        // available teacher data, with a warning and the same bounded owner.
+        if(!retained||!parentPackageWarning_)parentPackage_=value;
+        app.dashboardLoad.inFlight=false;app.profileLoad.inFlight=false;app.profileLoad.busy=false;
+        if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,true);
+        if(!force&&(stale||parentPackageWarning_))next={force:true,quiet:true,attempt:0,delay:0};
+        return true;
+      }).catch(error=>{
+        if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
+        const waiting=error&&error.code==='PROFILE_LOADING',limit=waiting?6:2;
+        const repair=!force&&error&&error.code==='DATA_UNAVAILABLE'&&
+          (!parentPackage_||parentPackagePartial_(parentPackage_));
+        // An assembled profile can outlive the raw source required by the
+        // server's identity guard. A normal retry would hit that same object;
+        // one forced episode repairs its source without relaxing the guard.
+        if(repair)next={force:true,quiet:parentBootstrapPainted_,attempt:0,delay:650};
+        else if(attempt<limit)next={force,quiet,attempt:attempt+1,delay:waiting?[1500,3000,6000,12000,20000,30000][attempt]:[650,1600][attempt]};
+        if(!quiet||!parentBootstrapPainted_||$('#dashboardShell').hidden){
+          parentAccessGate_(next?'Đang kết nối lại hồ sơ của con…':'Chưa tải đủ hồ sơ. Bố mẹ bấm tải lại nhé.',!next);
+        }else $('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';
+        return false;
+      }).finally(()=>{
+        if(generation!==parentBootstrapGeneration_)return;
+        parentBootstrapJob_=null;app.dashboardLoad.inFlight=false;app.profileLoad.inFlight=false;app.profileLoad.busy=false;
+        setLoading(false);
+        if(parentBootstrapNextForce_){parentBootstrapNextForce_=false;next={force:true,quiet:false,attempt:0,delay:0};}
+        if(next)parentScheduleBootstrap_(next,next.delay);
+      });
+      return job.promise;
+    }
+    function parentContinue_(options={}) {
+      if(!kidsApi.parent.authorized)return Promise.resolve(false);
+      parentConsumeDirectoryHint_();parentRenderIdentity_();
+      if(options.refresh){
+        parentClearBootstrapRetry_();parentBootstrapIntent_=null;
+        return parentLoadBootstrap_(true,false,0);
+      }
+      // Periodic authorization never restarts an exhausted academic budget.
+      // A successful check may uncover the retained view, while a manual,
+      // foreground or online event owns any new data-refresh episode.
+      if(options.background){
+        if(parentPackage_&&$('#dashboardShell').hidden)parentApplyPackage_(true,false,true);
+        return Promise.resolve(Boolean(parentPackage_));
+      }
+      if(parentBootstrapJob_){
+        if(parentPackage_&&!options.background)parentApplyPackage_(true,false,true);
+        return parentBootstrapJob_.promise;
+      }
+      if(parentPackage_)parentApplyPackage_(true);
+      if(parentBootstrapIntent_&&!parentBootstrapRetry_){const next=parentBootstrapIntent_;parentBootstrapIntent_=null;return parentLoadBootstrap_(next.force,next.quiet,next.attempt);}
+      if(parentBootstrapRetry_)return Promise.resolve(Boolean(parentPackage_));
+      // Foreground return may follow minutes or an overnight suspension. The
+      // fresh token check permits the memory paint, but says nothing about
+      // changed homework/marks. One quiet normal bootstrap checks those next.
+      if(parentPackage_)return parentLoadBootstrap_(false,true,0);
+      return parentLoadBootstrap_(false,false,0);
+    }
+    function parentRecheck_(options={}) {
+      if(options.refresh)document.documentElement.dataset.parentRefreshStartedMs=String(Math.round(performance.now()));
+      return kidsApi.parent.check(options).then(ok=>ok?parentContinue_(options):false);
     }
     function parentStart_() {
-      // KIDS_PARENT_INITIAL_PAGESHOW_V1: bootstrap already checks this document.
-      // A late initial load event must not hide a profile that is ready. Real
-      // returns still require fresh authorization, including WebView resumes
-      // that report persisted=false after an actual pagehide.
-      let pageHiddenSinceShow = false;
-      window.addEventListener('kids-parent-access', event => {
-        if (event.detail.status !== 'authorized') parentAccessGate_();
-        else { parentConsumeDirectoryHint_(); parentRenderIdentity_(); }
+      // KIDS_PARENT_INITIAL_PAGESHOW_V1 retained: initial show adds no check.
+      let pageHiddenSinceShow=false;
+      window.addEventListener('kids-parent-access',event=>{
+        if(event.detail.status!=='authorized')parentAccessGate_();
+        else{parentConsumeDirectoryHint_();parentRenderIdentity_();}
       });
-      window.addEventListener('pageshow', event => {
-        const returning = event.persisted || pageHiddenSinceShow;
-        pageHiddenSinceShow = false;
-        if (returning) parentRecheck_();
-      });
-      window.addEventListener('online', parentRecheck_);
-      window.addEventListener('pagehide', () => {
-        pageHiddenSinceShow = true;
-        kidsApi.parent.suspend();
-      });
-      window.addEventListener('hashchange', () => {
-        kidsApi.parent.suspend();
-        window.location.reload();
-      });
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') parentRecheck_();
-        else kidsApi.parent.suspend();
-      });
-      window.setInterval(() => {
-        if (document.visibilityState === 'visible' && !kidsApi.parent.revoked) parentRecheck_({background:true});
-      }, 60000);
-      parentAccessGate_();
-      parentRecheck_();
+      window.addEventListener('pageshow',event=>{const returning=event.persisted||pageHiddenSinceShow;pageHiddenSinceShow=false;if(returning)parentRecheck_();});
+      window.addEventListener('online',()=>parentRecheck_());
+      window.addEventListener('pagehide',()=>{pageHiddenSinceShow=true;kidsApi.parent.suspend();});
+      window.addEventListener('hashchange',()=>{kidsApi.parent.suspend();window.location.reload();});
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')parentRecheck_();else kidsApi.parent.suspend();});
+      window.setInterval(()=>{if(document.visibilityState==='visible'&&!kidsApi.parent.revoked)parentRecheck_({background:true});},60000);
+      parentAccessGate_();parentRecheck_();
     }
+    // Parent bootstrap owns data reads. The preserved class-page loaders must
+    // not run a second dashboard/profile lane behind its atomic package.
+    loadDashboard=force=>parentLoadBootstrap_(Boolean(force),Boolean(app.child));
+    loadChild=(alias,options={})=>matchKey(alias)===matchKey(kidsApi.parent.alias)
+      ?parentLoadBootstrap_(Boolean(options.force),Boolean(options.quiet)):Promise.resolve(false);
+    retryDashboardLoad=()=>parentRecheck_({refresh:true});
+    retryCurrentLoad=()=>parentRecheck_({refresh:true});
+    retryInitialDashboardLoad_=()=>parentRecheck_({refresh:true});
+    loadClassDirectory=()=>parentConsumeDirectoryHint_();
+    scheduleClassDirectory=()=>{};scheduleDashboardLoad=()=>{};scheduleProfileLoad=()=>{};
+    scheduleStaleProfileRefresh=()=>{};queuePaintedSnapshotRefresh_=()=>false;
 
     $$('.tab-btn').forEach(button => button.addEventListener('click', () => switchTab(button.dataset.tab)));
     $('#pendingWorkOpen').addEventListener('click', openFirstPendingWork);
@@ -4559,7 +4428,7 @@ function createStudentLearningPrefill(options) {
     });
     $('#entryName').addEventListener('change', () => setEntryState('', false));
     $('#entryRetry').addEventListener('click', () => { if (!kidsApi.parent.authorized) parentRecheck_(); else retryCurrentLoad(); });
-    $('#refreshBtn').addEventListener('click', () => kidsApi.parent.check().then(ok => { if (ok) { parentContinue_(); retryDashboardLoad(); } }));
+    $('#refreshBtn').addEventListener('click', () => parentRecheck_({refresh:true}));
     $('#brandLogo').addEventListener('error', event => { if (event.currentTarget.src !== FALLBACK_LOGO) event.currentTarget.src = FALLBACK_LOGO; });
     $('#entryLogo').src = FALLBACK_LOGO;
     $('#entryLogo').addEventListener('error', event => { if (event.currentTarget.src !== FALLBACK_LOGO) event.currentTarget.src = FALLBACK_LOGO; });
