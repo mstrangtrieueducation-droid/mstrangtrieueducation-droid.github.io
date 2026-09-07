@@ -3952,6 +3952,10 @@ html.vn-national-day-2026-root body .assignment.session {
     // KIDS_PARENT_PREFILL_V1: owned lesson pages open through the common viewer,
     // including future assignments. Never forward the parent bearer token.
     const parentLearningOrigin_ = 'https://mstrangtrieueducation-droid.github.io';
+    // Explicit current KIDS rollout. Future classes require their own verified
+    // class/route binding before enabling identity transfer to lesson pages.
+    const parentLearningClasses_ = Object.freeze([7,8,10,11,14,15,17,18,19,20,21,22,23,25,26,27,28,29,30,31,32,33,34,35,36,37,38]);
+    const parentLearningClassKeys_ = new Set(parentLearningClasses_);
     const parentDashboardRoutes_ = Object.freeze(["23qdn2ys","2jskjgym","2qwemh5j","31wagboo","37htpfbf","3kuws5ny","3lu0698p","5jjvux82","63habmwz","6shx6heb","6zgbwd7n","7qzgp3p7","7rsn6kbh","89vnm8wz","92prber9","9az4ns3b","9fpwzhnz","9k6a4bxe","bhdzam6k","bhg37bsz","byogxkvy","cecccjpg","chaq17fk","cuhnjtw6","cwmkrshe","d5f9almb","dgpu6c9h","e73wgva4","eu2h66mj","firegh4f","gaeg8wku","gu159u7j","hwz7zw86","i8a0r77q","iw6h6bmb","j6fejhfq","jc4dppyg","js3npqsb","juzwewi0","kemtm929","l8tzmx20","m3g643sz","mf4c4tbe","muqt11rj","myude9i0","nwc3amdy","odwhkat1","p76n7ntc","p8qdzsoa","p8w8wz4f","q63ftrrf","qhaj55f2","qo7alz0y","qu3axuuz","r288s8x4","r60hdc1i","rge9fi0s","rp9rgb67","swsxdfdr","tr4qfy7b","u1g9ay98","u7x46qkb","u8226g5d","u90k1f5e","uee89ho9","vtw6rfy9","w3b6793g","wfyjrm4m","xcxhducu","xpe6dd4j","y31ibppw","y6r774jm","ywxrw9yp","zredv9ef","zuqtyg5e","zuuemtd2"]);
     const parentDashboardRouteKeys_ = new Set(parentDashboardRoutes_);
     function parentLearningTarget_(value) {
@@ -3970,9 +3974,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
     function parentLearningUrl_(value, enabled = true) {
       let original = safeUrl(value);
-      // KIDS21 pilot only. Future common-template builds must not opt another
-      // class into the viewer before its rollout is authorized.
-      if (CLASS_NUMBER !== 21 || !original || !enabled) return original;
+      if (!parentLearningClassKeys_.has(CLASS_NUMBER) || !original || !enabled) return original;
       try {
         const candidate = new URL(original);
         if (candidate.origin === parentLearningOrigin_ && /^\/kids-learning(?:\/|$)/i.test(candidate.pathname)) {
@@ -3986,9 +3988,9 @@ html.vn-national-day-2026-root body .assignment.session {
         const target = parentLearningTarget_(original);
         if (!target) return original;
         const alias = text(kidsApi.parent.alias);
-        if (!kidsApi.parent.authorized || !alias || !app.directoryLoad.ready ||
+        if (!kidsApi.parent.authorized || !alias || CLASS_NAME !== 'KIDS ' + CLASS_NUMBER || !app.directoryLoad.ready ||
             !liveDirectoryContainsAlias_(alias) || matchKey(app.childAlias) !== matchKey(alias) ||
-            !validProfileData(app.child, alias)) {
+            !validProfileData(app.child, alias) || app.child.className !== CLASS_NAME) {
           target.searchParams.delete('mtt_name');
           target.searchParams.delete('mtt_class');
           return target.href;

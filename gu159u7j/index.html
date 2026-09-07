@@ -2787,7 +2787,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const firstTask = arr(item && item.tasks)[0] || {};
       const nestedTaskUrl = safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], ''));
       const evidenceUrl = safeUrl(pick(item, ['submissionUrl', 'evidenceUrl', 'reviewUrl', 'viewUrl'], ''));
-      const learningUrl = taskUrl || nestedTaskUrl;
+      const learningUrl = parentLearningUrl_(taskUrl || nestedTaskUrl, pick(item, ['requiresSubmission'], true) !== false && !pick(item, ['reviewDownload'], false) && firstTask.requiresSubmission !== false && !firstTask.reviewDownload && !['download-review', 'review-only', 'self-directed'].includes(text(pick(item, ['webActivityMode'], ''))));
       const parts = [];
       if (learningUrl) parts.push(`<a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${escapeHtml(primaryLabel || (childMode ? 'Mở bài tập' : 'Làm bài'))}</a>`);
       if (videoUrl && videoUrl !== learningUrl) parts.push(`<a class="btn sky" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener">▶ Xem video</a>`);
@@ -2906,7 +2906,7 @@ html.vn-national-day-2026-root body .assignment.session {
         ? isRetakeAssignment
         : tasks.length > 1 && tasks.every(homeworkTaskIsRetake);
       const taskHtml = tasks.map((task, index) => {
-        const url = safeUrl(pick(task, ['url', 'taskUrl', 'learningUrl'], ''));
+        const url = parentLearningUrl_(pick(task, ['url', 'taskUrl', 'learningUrl'], ''), !nonSubmissionWebActivity && !downloadReviewWebActivity && pick(task, ['requiresSubmission'], true) !== false && !pick(task, ['reviewDownload'], false));
         if (nonSubmissionWebActivity || pick(task, ['requiresSubmission'], true) === false) {
           const reviewDownload = downloadReviewWebActivity || pick(task, ['reviewDownload'], false) === true;
           const defaultTitle = reviewDownload
@@ -3170,7 +3170,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const score = pick(item, ['scoreLabel', 'score', 'grade'], '');
       const meta = statusMeta(item);
       const firstTask = arr(item && item.tasks)[0] || {};
-      const learningUrl = safeUrl(pick(item, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')) || safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], ''));
+      const learningUrl = parentLearningUrl_(safeUrl(pick(item, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')) || safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')), item.requiresSubmission !== false && !item.reviewDownload && firstTask.requiresSubmission !== false && !firstTask.reviewDownload);
       const reviewUrl = safeUrl(pick(item, ['viewUrl', 'reviewUrl'], ''));
       const submissionText = submissionAttempts.length > 1
         ? `Đã nhận ${submissionAttempts.length} lần`
@@ -3711,7 +3711,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const assessmentTitle = (titleParts ? titleParts[2] : cleanTitle).replace(/\s*\+\s*/g, ' + ');
       const retake = pick(item, ['retake'], {}) || {};
       const retakeAvailable = Boolean(retake.available);
-      const retakeUrl = safeUrl(pick(retake, ['learningUrl'], ''));
+      const retakeUrl = parentLearningUrl_(pick(retake, ['learningUrl'], ''));
       const retakeViewUrl = safeUrl(pick(retake, ['viewUrl'], ''));
       const retakeScore = pick(retake, ['score'], null);
       const retakeMaximum = pick(retake, ['maximum'], null);
@@ -3769,9 +3769,9 @@ html.vn-national-day-2026-root body .assignment.session {
       if (typeof item === 'string') return `<div class="notice"><span class="notice-icon">!</span><div class="notice-copy"><small>${nl2br(item)}</small></div></div>`;
       let actions = arr(pick(item, ['actions'], [])).map(action => ({
         title: text(pick(action, ['title'], 'Bài tập')),
-        url: safeUrl(pick(action, ['learningUrl', 'actionUrl', 'url'], ''))
+        url: parentLearningUrl_(pick(action, ['learningUrl', 'actionUrl', 'url'], ''))
       })).filter(action => action.url);
-      const fallbackUrl = safeUrl(pick(item, ['actionUrl', 'learningUrl'], ''));
+      const fallbackUrl = parentLearningUrl_(pick(item, ['actionUrl', 'learningUrl'], ''));
       if (!actions.length && fallbackUrl) actions = [{ title: '', url: fallbackUrl }];
       const buttons = actions.map((action, index) => `<a class="btn" href="${escapeHtml(action.url)}" target="_blank" rel="noopener">${escapeHtml(actions.length > 1 ? 'Nộp bù: ' + (action.title || 'Bài ' + (index + 1)) : 'Nộp bài bù')}</a>`).join('');
       return `<div class="notice"><span class="notice-icon">!</span><div class="notice-copy"><strong>${escapeHtml(pick(item,['title'],'Bài cần hoàn thành'))}</strong><small>${nl2br(pick(item,['message','text'],'Bài chưa nộp.'))}</small></div>${buttons ? `<div class="notice-actions">${buttons}</div>` : ''}</div>`;
@@ -3949,6 +3949,59 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     // KIDS7_PARENT_LINK_V1: preserve all lesson/result renderers behind live authorization.
+    // KIDS_PARENT_PREFILL_V1: owned lesson pages open through the common viewer,
+    // including future assignments. Never forward the parent bearer token.
+    const parentLearningOrigin_ = 'https://mstrangtrieueducation-droid.github.io';
+    // Explicit current KIDS rollout. Future classes require their own verified
+    // class/route binding before enabling identity transfer to lesson pages.
+    const parentLearningClasses_ = Object.freeze([7,8,10,11,14,15,17,18,19,20,21,22,23,25,26,27,28,29,30,31,32,33,34,35,36,37,38]);
+    const parentLearningClassKeys_ = new Set(parentLearningClasses_);
+    const parentDashboardRoutes_ = Object.freeze(["23qdn2ys","2jskjgym","2qwemh5j","31wagboo","37htpfbf","3kuws5ny","3lu0698p","5jjvux82","63habmwz","6shx6heb","6zgbwd7n","7qzgp3p7","7rsn6kbh","89vnm8wz","92prber9","9az4ns3b","9fpwzhnz","9k6a4bxe","bhdzam6k","bhg37bsz","byogxkvy","cecccjpg","chaq17fk","cuhnjtw6","cwmkrshe","d5f9almb","dgpu6c9h","e73wgva4","eu2h66mj","firegh4f","gaeg8wku","gu159u7j","hwz7zw86","i8a0r77q","iw6h6bmb","j6fejhfq","jc4dppyg","js3npqsb","juzwewi0","kemtm929","l8tzmx20","m3g643sz","mf4c4tbe","muqt11rj","myude9i0","nwc3amdy","odwhkat1","p76n7ntc","p8qdzsoa","p8w8wz4f","q63ftrrf","qhaj55f2","qo7alz0y","qu3axuuz","r288s8x4","r60hdc1i","rge9fi0s","rp9rgb67","swsxdfdr","tr4qfy7b","u1g9ay98","u7x46qkb","u8226g5d","u90k1f5e","uee89ho9","vtw6rfy9","w3b6793g","wfyjrm4m","xcxhducu","xpe6dd4j","y31ibppw","y6r774jm","ywxrw9yp","zredv9ef","zuqtyg5e","zuuemtd2"]);
+    const parentDashboardRouteKeys_ = new Set(parentDashboardRoutes_);
+    function parentLearningTarget_(value) {
+      try {
+        const target = new URL(value);
+        if (target.origin !== parentLearningOrigin_ || target.username || target.password) return null;
+        const pathname = decodeURIComponent(target.pathname);
+        const segments = pathname.split('/').filter(Boolean);
+        const first = (segments[0] || '').toLowerCase();
+        if (!first || first === 'kids-learning' || parentDashboardRouteKeys_.has(first) ||
+            segments.some(part => /^\.|[\\\x00-\x1f]/.test(part) || /^(?:assets?|sources?|src|scripts?|styles?|downloads?|media|videos?)$/i.test(part))) return null;
+        const last = segments[segments.length - 1];
+        if (/\./.test(last) && !/\.html?$/i.test(last)) return null;
+        return target;
+      } catch (_) { return null; }
+    }
+    function parentLearningUrl_(value, enabled = true) {
+      let original = safeUrl(value);
+      if (!parentLearningClassKeys_.has(CLASS_NUMBER) || !original || !enabled) return original;
+      try {
+        const candidate = new URL(original);
+        if (candidate.origin === parentLearningOrigin_ && /^\/kids-learning(?:\/|$)/i.test(candidate.pathname)) {
+          // A copied viewer link is a lesson reference, never authority for a
+          // previous child. Unwrap once; recursive/ambiguous wrappers are invalid.
+          const lessons = candidate.searchParams.getAll('lesson');
+          if (!/^\/kids-learning(?:\/index\.html|\/)?$/.test(candidate.pathname) || lessons.length !== 1) return '';
+          original = safeUrl(lessons[0]);
+          if (!parentLearningTarget_(original)) return '';
+        }
+        const target = parentLearningTarget_(original);
+        if (!target) return original;
+        const alias = text(kidsApi.parent.alias);
+        if (!kidsApi.parent.authorized || !alias || CLASS_NAME !== 'KIDS ' + CLASS_NUMBER || !app.directoryLoad.ready ||
+            !liveDirectoryContainsAlias_(alias) || matchKey(app.childAlias) !== matchKey(alias) ||
+            !validProfileData(app.child, alias) || app.child.className !== CLASS_NAME) {
+          target.searchParams.delete('mtt_name');
+          target.searchParams.delete('mtt_class');
+          return target.href;
+        }
+        const viewer = new URL('/kids-learning/', parentLearningOrigin_);
+        viewer.searchParams.set('lesson', original);
+        viewer.searchParams.set('mtt_name', alias);
+        viewer.searchParams.set('mtt_class', CLASS_NAME);
+        return viewer.href;
+      } catch (_) { return original; }
+    }
     let parentBootStarted_ = false;
     let parentAutoOpenTimer_ = null;
     let parentDirectoryHintVersion_ = 0;
