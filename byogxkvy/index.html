@@ -1887,6 +1887,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function queuePaintedSnapshotRefresh_(requestedAlias) {
+      if (parentQueueSeedRefresh_(requestedAlias)) return true;
       const state = app.dashboardLoad;
       if (state.snapshotRefreshPending) return true;
       if (state.snapshotRefreshStarted || !app.child || !validDashboardData(app.data) ||
@@ -1946,6 +1947,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function dashboardRetryOrFail(error, force) {
+      if (parentSeedDashboardFailed_(force)) return;
       const state = app.dashboardLoad;
       clearLoadTimer(state, 'watchdog');
       state.inFlight = false;
@@ -1994,7 +1996,7 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function loadDashboard(force) {
       const state = app.dashboardLoad;
-      if (state.ready && !force) return;
+      if (state.ready && !force && !parentSeedReadPending_()) return;
       if (state.inFlight) return;
       state.forceActive = Boolean(force);
       setLoading(true);
@@ -2024,6 +2026,7 @@ html.vn-national-day-2026-root body .assignment.session {
       // duplicate request storm; the visible recovery card covers this wait.
       }, 90000);
       try {
+        parentSeedDashboardStarted_(request, force);
         kidsApi.run
           .withSuccessHandler(data => {
             if (request !== state.request) return;
@@ -2041,6 +2044,7 @@ html.vn-national-day-2026-root body .assignment.session {
               if (data && data.cacheDiagnostics) console.info('KIDS cache ' + JSON.stringify(data.cacheDiagnostics));
               if (data && data.sourceDiagnostics) console.warn('KIDS source ' + JSON.stringify(data.sourceDiagnostics));
               if (!validDashboardData(data)) throw new Error('Dữ liệu đầy đủ của lớp chưa sẵn sàng.');
+              if (parentSeedDashboardCompleted_(data, request, force)) return;
               if (force && data.cacheStale) {
                 throw new Error('Dữ liệu lịch mới chưa sẵn sàng. Hệ thống sẽ thử lại.');
               }
@@ -2107,6 +2111,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function retryDashboardLoad() {
+      parentCancelSeedRefresh_();
       // A browser retry cannot cancel kidsApi.run on the server. Keep
       // the current request, but remember one explicit refresh after a normal
       // cache read. A forced request/retry already satisfies repeated clicks.
@@ -2653,19 +2658,33 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function sessions() {
+      // KIDS_PARENT_LESSON_COMPLETION_V1
       const now = new Date();
+      const todaySerial = classDateSerial(now);
       const joinSerial = dateValueSerial(pick(app.child || {}, ['joinDate'], ''));
-      const scheduledLessons = scheduleRows().filter(item => {
-        const lessonSerial = dateValueSerial(pick(item, ['lessonDate', 'date'], ''));
-        return item._end <= now && (!joinSerial || lessonSerial >= joinSerial);
+      const rows = validPublicData(app.data) ? scheduleRows() : [];
+      const completed = rows.filter(item => {
+        const date = text(pick(item, ['lessonDate', 'dateLabel', 'date'], ''));
+        const day = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        const clock = text(pick(item, ['endTime'], '')).match(/^(\d{1,2}):(\d{2})$/);
+        if (!day || !clock || Number(clock[1]) > 23 || Number(clock[2]) > 59) return false;
+        const serial = Date.UTC(Number(day[3]), Number(day[2]) - 1, Number(day[1]));
+        const calendarDay = new Date(serial);
+        if (calendarDay.getUTCFullYear() !== Number(day[3]) ||
+            calendarDay.getUTCMonth() !== Number(day[2]) - 1 ||
+            calendarDay.getUTCDate() !== Number(day[1])) return false;
+        const end = classScheduleInstant(Number(day[3]), Number(day[2]) - 1,
+          Number(day[1]), Number(clock[1]), Number(clock[2]));
+        return end <= now && (!joinSerial || serial >= joinSerial);
       });
-      if (scheduledLessons.length) return scheduledLessons;
-      // A child's tracker lessons are a safe, private fallback while the public
-      // Schedule model is still being hydrated. This keeps the lesson ledger
-      // useful without fabricating a class schedule from incomplete data.
+      // An empty completed list is a valid result, including a learner's first
+      // day and cancelled dates. Never replace it with precreated tracker rows.
+      if (validDashboardData(app.data) || rows.length) return completed;
+      // While Schedule is unavailable, only earlier calendar dates can form a
+      // temporary tracker fallback. A date alone cannot prove today's end time.
       return arr((app.child || {}).lessons).filter(item => {
         const serial = dateValueSerial(pick(item, ['lessonDate', 'date'], ''));
-        return serial > 0 && serial <= classDateSerial(now);
+        return serial > 0 && serial < todaySerial && (!joinSerial || serial >= joinSerial);
       });
     }
 
@@ -3857,6 +3876,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function retryCurrentLoad() {
+      parentCancelSeedRefresh_();
       const requestedAlias = text(app.childAlias || $('#entryName').value).toUpperCase();
       if (!app.data || !requestedAlias) {
         if (validDashboardData(app.data)) retryDashboardLoad();
@@ -4050,10 +4070,143 @@ function createStudentLearningPrefill(options) {
     let parentParkedProfileRetry_ = null;
     let parentProfileRequestStart_ = null;
     let parentFreshDashboardVersion_ = 0;
+    // KIDS_PARENT_REFRESH_COALESCE_V1: a fresh private build already publishes
+    // its public generation. Read that seed before ordering another build.
+    let parentSeedRefresh_ = null;
+    let parentSeedRefreshUsed_ = '';
+    function parentCancelSeedRefresh_() {
+      if (parentSeedRefresh_ && parentSeedRefresh_.timer) window.clearTimeout(parentSeedRefresh_.timer);
+      parentSeedRefresh_ = null;
+    }
+    function parentSeedProfileMatches_(job) {
+      return Boolean(job && !kidsApi.parent.revoked &&
+        matchKey(job.alias) === matchKey(kidsApi.parent.alias) &&
+        matchKey(job.alias) === matchKey(app.childAlias) &&
+        job.profileRequest === app.profileLoad.request &&
+        validProfileData(app.child, job.alias) && !responseHasErrors(app.child) &&
+        !app.child.cacheStale && Number(app.child.sourceModelBuiltAt) === job.generation);
+    }
+    function parentSeedReadPending_() {
+      return Boolean(parentSeedRefresh_ && parentSeedRefresh_.phase === 'queued' &&
+        kidsApi.parent.authorized && parentSeedProfileMatches_(parentSeedRefresh_));
+    }
+    function parentQueueSeedRefresh_(requestedAlias) {
+      if (parentSeedRefresh_) {
+        if (parentSeedProfileMatches_(parentSeedRefresh_)) { parentResumeSeedRefresh_(); return true; }
+        parentCancelSeedRefresh_();
+      }
+      const state = app.dashboardLoad;
+      const generation = Number((app.child || {}).sourceModelBuiltAt);
+      const key = [requestedAlias, app.profileLoad.request, generation].join('|');
+      if (!validDashboardData(app.data) || !app.data.cacheStale || !Number.isFinite(generation) || generation <= 0 ||
+          !validProfileData(app.child, requestedAlias) || responseHasErrors(app.child) || app.child.cacheStale ||
+          parentSeedRefreshUsed_ === key || state.manualProfileRefresh || state.pendingManualRefresh ||
+          (state.inFlight && state.forceActive)) return false;
+      const job = {alias:requestedAlias, generation, profileRequest:app.profileLoad.request,
+        phase:'queued', dashboardRequest:0, retries:0, timer:null, data:null};
+      if (!parentSeedProfileMatches_(job)) return false;
+      parentSeedRefresh_ = job;
+      parentSeedRefreshUsed_ = key;
+      clearLoadTimer(state, 'snapshotRefreshTimer');
+      state.snapshotRefreshPending = false;
+      state.snapshotRefreshStarted = true;
+      $('#metaLine').textContent = 'Đang hoàn tất bản cập nhật lịch học…';
+      job.timer = window.setTimeout(() => { job.timer = null; parentResumeSeedRefresh_(); }, 0);
+      return true;
+    }
+    function parentResumeSeedRefresh_() {
+      const job = parentSeedRefresh_;
+      if (!job) return false;
+      if (!parentSeedProfileMatches_(job)) { parentCancelSeedRefresh_(); return false; }
+      if (!kidsApi.parent.authorized || job.timer || job.phase === 'inFlight') return true;
+      const state = app.dashboardLoad;
+      if (state.pendingManualRefresh || state.manualProfileRefresh) { parentCancelSeedRefresh_(); return false; }
+      if (state.inFlight || state.resumeTimer || app.profileLoad.inFlight) return true;
+      if (job.phase === 'received') {
+        const data = job.data;
+        const generation = Number(data && data.snapshotBuiltAt);
+        if (!validDashboardData(data) || data.cacheStale || !Number.isFinite(generation) || generation < job.generation) {
+          // One normal seed read was insufficient. The existing bounded forced
+          // class/profile lane remains authoritative; do not repeat this peek.
+          parentCancelSeedRefresh_();
+          state.snapshotRefreshPending = true;
+          state.manualProfileRefresh = true;
+          state.retries = 0;
+          state.recoveryRound = 0;
+          loadDashboard(true);
+          return true;
+        }
+        parentCancelSeedRefresh_();
+        app.data = data;
+        state.ready = true;
+        state.retries = 0;
+        state.recoveryRound = 0;
+        state.staleRefreshAttempted = false;
+        state.snapshotRefreshPending = false;
+        app.profileLoad.staleRefreshAlias = '';
+        parentDashboardCompleted_(data);
+        populateEntryNames(app.childAlias);
+        applyChildProfile(app.child, job.alias, {quiet:true, tab:app.activeTab});
+        setLoading(false);
+        // Only a genuinely newer source requires another private assembly.
+        if (generation > job.generation) scheduleProfileLoad(job.alias, {
+          quiet:true, force:true, refreshCached:true, skipBrowserCache:true, tab:app.activeTab
+        }, 0);
+        return true;
+      }
+      if (job.phase === 'queued') loadDashboard(false);
+      return true;
+    }
+    function parentSeedDashboardStarted_(request, force) {
+      if (!force && parentSeedReadPending_()) {
+        parentSeedRefresh_.phase = 'inFlight';
+        parentSeedRefresh_.dashboardRequest = request;
+      }
+    }
+    function parentSeedDashboardCompleted_(data, request, force) {
+      const job = parentSeedRefresh_;
+      if (job && !force && job.phase === 'queued' && !job.dashboardRequest) {
+        // A normal read may have started before the private build finished.
+        // Reuse a matching/newer result; otherwise wake the one seed read now
+        // that the old RPC has settled, without treating it as a failed peek.
+        if (!data.cacheStale && Number(data.snapshotBuiltAt) >= job.generation) {
+          job.data = data;
+          job.phase = 'received';
+          parentResumeSeedRefresh_();
+        } else if (!job.timer) {
+          job.timer = window.setTimeout(() => { job.timer = null; parentResumeSeedRefresh_(); }, 0);
+        }
+        return true;
+      }
+      if (!job || force || job.phase !== 'inFlight' || job.dashboardRequest !== request) return false;
+      job.data = data;
+      job.phase = 'received';
+      parentResumeSeedRefresh_();
+      return true;
+    }
+    function parentSeedDashboardFailed_(force) {
+      const job = parentSeedRefresh_, state = app.dashboardLoad;
+      if (!job || force || job.phase !== 'inFlight' || job.dashboardRequest !== state.request) return false;
+      clearLoadTimer(state, 'watchdog');
+      state.inFlight = false;
+      if (!parentSeedProfileMatches_(job)) { parentCancelSeedRefresh_(); return true; }
+      if (job.retries < 2) {
+        job.retries += 1;
+        job.phase = 'queued';
+        job.timer = window.setTimeout(() => { job.timer = null; parentResumeSeedRefresh_(); }, job.retries === 1 ? 650 : 1600);
+      } else {
+        parentCancelSeedRefresh_();
+        state.snapshotRefreshPending = false;
+        setLoading(false);
+        $('#metaLine').textContent = 'Đang hiển thị dữ liệu gần nhất · Bản cập nhật lịch chưa sẵn sàng';
+      }
+      return true;
+    }
     function parentDashboardCompleted_(data) {
       if (validDashboardData(data) && !data.cacheStale) parentFreshDashboardVersion_ += 1;
     }
     function parentProfileRequestStarted_() {
+      parentCancelSeedRefresh_();
       parentProfileBuildWait_ = null;
       parentParkedProfileRetry_ = null;
       parentProfileRequestStart_ = {
@@ -4168,6 +4321,16 @@ function createStudentLearningPrefill(options) {
           matchKey(queued.alias) !== matchKey(requestedAlias) || !validProfileData(queued.profile, requestedAlias) || responseHasErrors(queued.profile)) return false;
       parentQueuedProfile_ = null;
       app.profileLoad.busy = false;
+      // If the complete class is stale too, its refresh owns this episode.
+      // Cancel only an unstarted automatic stale-profile timer, never a live
+      // request or an explicitly parked/manual retry.
+      if (app.data.cacheStale && queued.profile.cacheStale &&
+          app.profileLoad.staleRefreshAlias === queued.alias && app.profileLoad.resumeTimer &&
+          !app.profileLoad.inFlight && !parentParkedProfileRetry_ &&
+          !app.dashboardLoad.manualProfileRefresh && !app.dashboardLoad.pendingManualRefresh) {
+        clearLoadTimer(app.profileLoad, 'resumeTimer');
+        app.profileLoad.staleRefreshAlias = '';
+      }
       applyChildProfile(queued.profile, queued.alias, Object.assign({}, queued.options, options));
       setLoading(false);
       if (app.data.cacheStale) queuePaintedSnapshotRefresh_(queued.alias);
@@ -4238,6 +4401,8 @@ function createStudentLearningPrefill(options) {
       $('#entryRetry').hidden = revoked || kidsApi.parent.status !== 'unavailable';
       $('#entryRetry').disabled = false;
       if (revoked) {
+        parentCancelSeedRefresh_();
+        parentSeedRefreshUsed_ = '';
         parentQueuedProfile_ = null;
         parentProfileBuildWait_ = null;
         parentParkedProfileRetry_ = null;
@@ -4301,6 +4466,7 @@ function createStudentLearningPrefill(options) {
       if (!kidsApi.parent.authorized) return;
       parentConsumeDirectoryHint_();
       parentRenderIdentity_();
+      parentResumeSeedRefresh_();
       if (!parentBootStarted_) {
         parentBootStarted_ = true;
         installFirstPaintDeadline_();
@@ -4322,13 +4488,25 @@ function createStudentLearningPrefill(options) {
       });
     }
     function parentStart_() {
+      // KIDS_PARENT_INITIAL_PAGESHOW_V1: bootstrap already checks this document.
+      // A late initial load event must not hide a profile that is ready. Real
+      // returns still require fresh authorization, including WebView resumes
+      // that report persisted=false after an actual pagehide.
+      let pageHiddenSinceShow = false;
       window.addEventListener('kids-parent-access', event => {
         if (event.detail.status !== 'authorized') parentAccessGate_();
         else { parentConsumeDirectoryHint_(); parentRenderIdentity_(); }
       });
-      window.addEventListener('pageshow', parentRecheck_);
+      window.addEventListener('pageshow', event => {
+        const returning = event.persisted || pageHiddenSinceShow;
+        pageHiddenSinceShow = false;
+        if (returning) parentRecheck_();
+      });
       window.addEventListener('online', parentRecheck_);
-      window.addEventListener('pagehide', () => kidsApi.parent.suspend());
+      window.addEventListener('pagehide', () => {
+        pageHiddenSinceShow = true;
+        kidsApi.parent.suspend();
+      });
       window.addEventListener('hashchange', () => {
         kidsApi.parent.suspend();
         window.location.reload();
