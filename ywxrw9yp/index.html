@@ -2050,6 +2050,7 @@ html.vn-national-day-2026-root body .assignment.session {
               state.retries = 0;
               state.recoveryRound = 0;
               if (typeof clearFirstPaintDeadline_ === 'function') clearFirstPaintDeadline_();
+              parentDashboardCompleted_(data);
               populateEntryNames(app.childAlias);
               $('#entryLogo').src = FALLBACK_LOGO;
               const activeAlias = app.childAlias;
@@ -3238,6 +3239,7 @@ html.vn-national-day-2026-root body .assignment.session {
         state.resumeTimer = null;
         if (state.alias !== requestedAlias) return;
         if (state.inFlight) return;
+        if (parentParkScheduledProfileRetry_(requestedAlias, options)) return;
         // Refresh the shared model and the selected profile in sequence, never
         // run two forced workbook builds for the same parent action.
         if ((options || {}).force && app.dashboardLoad &&
@@ -3268,6 +3270,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function profileRetryOrFail(requestedAlias, options, error) {
+      parentRememberProfileBuildWait_(requestedAlias, options, error);
       const state = app.profileLoad;
       clearLoadTimer(state, 'watchdog');
       state.inFlight = false;
@@ -3311,7 +3314,10 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function loadChild(alias, options = {}) {
       if (!kidsApi.parent.authorized || matchKey(alias) !== matchKey(kidsApi.parent.alias)) {
-        if (!kidsApi.parent.authorized) parentAccessGate_();
+        if (!kidsApi.parent.authorized) {
+          if (options.retrying) parentParkScheduledProfileRetry_(alias, options);
+          parentAccessGate_();
+        }
         return;
       }
       if (parentReuseQueuedProfile_(alias, options)) return;
@@ -3405,6 +3411,7 @@ html.vn-national-day-2026-root body .assignment.session {
       // single live RPC long enough to finish instead of spawning duplicates.
       }, 90000);
       try {
+        parentProfileRequestStarted_();
         kidsApi.run
           .withSuccessHandler(profile => {
             if (request !== state.request || app.childAlias !== requestedAlias) return;
@@ -3946,6 +3953,66 @@ html.vn-national-day-2026-root body .assignment.session {
     let parentAutoOpenTimer_ = null;
     let parentDirectoryHintVersion_ = 0;
     let parentQueuedProfile_ = null;
+    // KIDS_PARENT_PROFILE_BUILD_WAKE_V1
+    let parentProfileBuildWait_ = null;
+    let parentParkedProfileRetry_ = null;
+    let parentProfileRequestStart_ = null;
+    let parentFreshDashboardVersion_ = 0;
+    function parentDashboardCompleted_(data) {
+      if (validDashboardData(data) && !data.cacheStale) parentFreshDashboardVersion_ += 1;
+    }
+    function parentProfileRequestStarted_() {
+      parentProfileBuildWait_ = null;
+      parentParkedProfileRetry_ = null;
+      parentProfileRequestStart_ = {
+        request: app.profileLoad.request, dashboardVersion: parentFreshDashboardVersion_
+      };
+    }
+    function parentRememberProfileBuildWait_(requestedAlias, options, error) {
+      const started = parentProfileRequestStart_;
+      parentProfileBuildWait_ = error && error.code === 'PROFILE_LOADING' ? {
+        alias: requestedAlias, options: Object.assign({}, options || {}),
+        request: app.profileLoad.request,
+        dashboardVersion: started && started.request === app.profileLoad.request
+          ? started.dashboardVersion : parentFreshDashboardVersion_, parked: false
+      } : null;
+      // Run after profileRetryOrFail has installed its bounded retry timer.
+      // This also covers a loading response arriving just after class-ready.
+      if (parentProfileBuildWait_) window.setTimeout(parentResumeProfileBuildWait_, 0);
+    }
+    function parentParkScheduledProfileRetry_(requestedAlias, options) {
+      if (kidsApi.parent.authorized) return false;
+      const state = app.profileLoad;
+      if (!kidsApi.parent.revoked && matchKey(state.alias) === matchKey(requestedAlias) &&
+          !state.inFlight && !state.resumeTimer) {
+        parentParkedProfileRetry_ = {alias:requestedAlias, options:Object.assign({}, options || {}),
+          request:state.request, parked:true};
+      }
+      return true;
+    }
+    function parentResumeProfileBuildWait_() {
+      const wait = parentParkedProfileRetry_ || parentProfileBuildWait_;
+      if (!wait) return false;
+      const state = app.profileLoad;
+      if (wait.request !== state.request || matchKey(wait.alias) !== matchKey(state.alias)) {
+        parentProfileBuildWait_ = null;
+        parentParkedProfileRetry_ = null;
+        return false;
+      }
+      if (!kidsApi.parent.authorized || matchKey(wait.alias) !== matchKey(kidsApi.parent.alias) ||
+          state.inFlight) return false;
+      const freshCompletion = parentDashboardReady_() && !app.data.cacheStale &&
+        parentFreshDashboardVersion_ > wait.dashboardVersion;
+      if (!wait.parked && (!state.resumeTimer || !freshCompletion)) return false;
+      // Resume an already-due suspended retry, or wake one explicit class-build
+      // wait after a fresh dashboard completion. Consume before scheduling, and
+      // retain the scheduler's forced public/profile sequencing.
+      parentProfileBuildWait_ = null;
+      parentParkedProfileRetry_ = null;
+      clearLoadTimer(state, 'resumeTimer');
+      scheduleProfileLoad(wait.alias, wait.options, 0);
+      return true;
+    }
     function parentRecordFirstOpen_() {
       if (!kidsApi.parent.authorized || $('#dashboardShell').hidden || !parentDashboardReady_() ||
           !validProfileData(app.child, kidsApi.parent.alias)) return;
@@ -4080,6 +4147,9 @@ html.vn-national-day-2026-root body .assignment.session {
       $('#entryRetry').disabled = false;
       if (revoked) {
         parentQueuedProfile_ = null;
+        parentProfileBuildWait_ = null;
+        parentParkedProfileRetry_ = null;
+        parentProfileRequestStart_ = null;
         parentDirectoryHintVersion_ = 0;
         clearFirstPaintDeadline_();
         if (parentAutoOpenTimer_) window.clearTimeout(parentAutoOpenTimer_);
@@ -4127,6 +4197,7 @@ html.vn-national-day-2026-root body .assignment.session {
         if (!kidsApi.parent.authorized || !app.directoryLoad.ready) return;
         const alias = kidsApi.parent.alias;
         if (!alias || !liveDirectoryContainsAlias_(alias)) return;
+        if (parentResumeProfileBuildWait_()) return;
         if (parentReuseQueuedProfile_(alias)) return;
         if (app.child || app.profileLoad.inFlight || app.profileLoad.busy || app.profileLoad.resumeTimer) return;
         $('#entryName').value = alias;
