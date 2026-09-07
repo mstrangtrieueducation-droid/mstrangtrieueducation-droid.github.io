@@ -2787,7 +2787,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const firstTask = arr(item && item.tasks)[0] || {};
       const nestedTaskUrl = safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], ''));
       const evidenceUrl = safeUrl(pick(item, ['submissionUrl', 'evidenceUrl', 'reviewUrl', 'viewUrl'], ''));
-      const learningUrl = parentLearningUrl_(taskUrl || nestedTaskUrl, pick(item, ['requiresSubmission'], true) !== false && !pick(item, ['reviewDownload'], false) && firstTask.requiresSubmission !== false && !firstTask.reviewDownload && !['download-review', 'review-only', 'self-directed'].includes(text(pick(item, ['webActivityMode'], ''))));
+      const learningUrl = parentLearningUrl_(taskUrl || nestedTaskUrl);
       const parts = [];
       if (learningUrl) parts.push(`<a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${escapeHtml(primaryLabel || (childMode ? 'Mở bài tập' : 'Làm bài'))}</a>`);
       if (videoUrl && videoUrl !== learningUrl) parts.push(`<a class="btn sky" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener">▶ Xem video</a>`);
@@ -2906,7 +2906,7 @@ html.vn-national-day-2026-root body .assignment.session {
         ? isRetakeAssignment
         : tasks.length > 1 && tasks.every(homeworkTaskIsRetake);
       const taskHtml = tasks.map((task, index) => {
-        const url = parentLearningUrl_(pick(task, ['url', 'taskUrl', 'learningUrl'], ''), !nonSubmissionWebActivity && !downloadReviewWebActivity && pick(task, ['requiresSubmission'], true) !== false && !pick(task, ['reviewDownload'], false));
+        const url = parentLearningUrl_(pick(task, ['url', 'taskUrl', 'learningUrl'], ''));
         if (nonSubmissionWebActivity || pick(task, ['requiresSubmission'], true) === false) {
           const reviewDownload = downloadReviewWebActivity || pick(task, ['reviewDownload'], false) === true;
           const defaultTitle = reviewDownload
@@ -3170,7 +3170,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const score = pick(item, ['scoreLabel', 'score', 'grade'], '');
       const meta = statusMeta(item);
       const firstTask = arr(item && item.tasks)[0] || {};
-      const learningUrl = parentLearningUrl_(safeUrl(pick(item, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')) || safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')), item.requiresSubmission !== false && !item.reviewDownload && firstTask.requiresSubmission !== false && !firstTask.reviewDownload);
+      const learningUrl = parentLearningUrl_(safeUrl(pick(item, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')) || safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')));
       const reviewUrl = safeUrl(pick(item, ['viewUrl', 'reviewUrl'], ''));
       const submissionText = submissionAttempts.length > 1
         ? `Đã nhận ${submissionAttempts.length} lần`
@@ -3973,7 +3973,11 @@ function createStudentLearningPrefill(options) {
   function target(value) {
     try {
       const url = new URL(value);
-      if (url.origin !== origin || url.username || url.password) return null;
+      if (url.username || url.password) return null;
+      // Direct native submission Forms use the same per-profile viewer entry.
+      // Exact entry mappings remain centralized in that viewer's configuration.
+      if (url.origin === 'https://docs.google.com' && /^\/forms\/(?:u\/\d+\/)?d\/(?:e\/)?[A-Za-z0-9_-]+\/viewform\/?$/.test(url.pathname)) return url;
+      if (url.origin !== origin) return null;
       const parts = decodeURIComponent(url.pathname).split('/').filter(Boolean);
       const first = (parts[0] || '').toLowerCase();
       if (!first || viewerPaths.has(first) || dashboardRoutes.has(first) || parts.some(part =>
@@ -4005,6 +4009,9 @@ function createStudentLearningPrefill(options) {
       const submissionName = identity && name(identity.submissionName);
       const englishName = identity && identity.englishName ? name(identity.englishName) : '';
       if (!identity || identity.className !== className || !submissionName || identity.englishName && !englishName) {
+        // Do not revive a previously personalized native Form without an
+        // active profile: its entry IDs are known only by the central viewer.
+        if (destination.origin === 'https://docs.google.com') return '';
         ['mtt_name', 'mtt_class', 'mtt_english'].forEach(key => destination.searchParams.delete(key));
         return destination.href;
       }
