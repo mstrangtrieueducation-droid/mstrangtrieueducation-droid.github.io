@@ -1528,24 +1528,32 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
   
 
     // FIGHTER_SELF_STUDY_UI_V1
-    function submittedFileActions_(state){
+    // FIGHTER_DIRECT_SUBMITTED_ACTIONS_V1
+    function submittedFileActions_(state, fallbackType){
+      state=state||{};
       const files=Array.isArray(state.submissionFiles)?state.submissionFiles.filter(function(file){return file&&file.url;}):[];
-      if(!files.length&&state.submissionUrl)files.push({type:'file',url:state.submissionUrl});
-      const pdfTotal=files.filter(function(file){return file.type==='pdf';}).length;
-      const videoTotal=files.filter(function(file){return file.type==='video';}).length;
+      if(!files.length&&state.submissionUrl)files.push({type:fallbackType||(state.kind==='shadowing'?'video':'file'),url:state.submissionUrl});
+      const fileType=function(file){return file.type||fallbackType||(state.kind==='shadowing'?'video':'file');};
+      const pdfTotal=files.filter(function(file){return fileType(file)==='pdf';}).length;
+      const videoTotal=files.filter(function(file){return fileType(file)==='video';}).length;
       let pdfIndex=0;
       let videoIndex=0;
       return files.map(function(file){
-        let label='Xem b\u00e0i \u0111\u00e3 n\u1ed9p';
-        if(file.type==='pdf'){
+        let label='Xem bài đã nộp';
+        if(fileType(file)==='pdf'){
           pdfIndex+=1;
-          label='Xem PDF b\u00e0i \u0111\u00e3 n\u1ed9p'+(pdfTotal>1?' '+pdfIndex+'/'+pdfTotal:'');
-        }else if(file.type==='video'){
+          label='Xem PDF bài đã nộp'+(pdfTotal>1?' '+pdfIndex+'/'+pdfTotal:'');
+        }else if(fileType(file)==='video'){
           videoIndex+=1;
-          label='Xem video b\u00e0i \u0111\u00e3 n\u1ed9p'+(videoTotal>1?' '+videoIndex+'/'+videoTotal:'');
+          label='Xem video bài đã nộp'+(videoTotal>1?' '+videoIndex+'/'+videoTotal:'');
         }
-        return '<a class="makeup submitted-file" href="'+esc(file.url)+'" target="_blank" rel="noopener noreferrer">'+label+' \u2192</a>';
+        return '<a class="makeup submitted-file" href="'+esc(file.url)+'" target="_blank" rel="noopener noreferrer">'+label+' →</a>';
       });
+    }
+
+    function submittedFileActionsMarkupV1_(state, fallbackType){
+      const actions=submittedFileActions_(state,fallbackType);
+      return actions.length?'<div class="feedback-actions">'+actions.join('')+'</div>':'';
     }
 
     function renderSelfStudyAssignments(){
@@ -1629,7 +1637,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
         const complete=result.completed!==false;
         const status=result.status||(complete?'\u0110\u00e3 ho\u00e0n th\u00e0nh':'\u0110\u00e3 n\u1ed9p \u00b7 \u0111ang x\u1eed l\u00fd');
         const body=isShadowing
-          ? ((result.submissionFiles&&result.submissionFiles.length)?'<div class="feedback-actions">'+submittedFileActions_(result).join('')+'</div>':'')
+          ? submittedFileActionsMarkupV1_(result,'video')
           : isReading?fighterReadingScoreMarkupV27_(result,false):'<div class="self-study-score-card__scores">'+
             '<div class="self-study-score-card__score"><span>Listening</span><strong>'+esc(selfStudyScoreTextV1_(result.listening,25))+'</strong></div>'+
             '<div class="self-study-score-card__score"><span>Paraphrase</span><strong>'+esc(selfStudyScoreTextV1_(result.paraphrase,10))+'</strong></div>'+
@@ -2015,7 +2023,7 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
         var complete = result.completed !== false;
         var statusText = result.status || (complete ? 'Đã hoàn thành' : 'Đã nộp · đang xử lý');
         var body = isShadowing
-          ? ((result.submissionFiles && result.submissionFiles.length) ? '<div class="feedback-actions">' + submittedFileActions_(result).join('') + '</div>' : '')
+          ? submittedFileActionsMarkupV1_(result,'video')
           : isReading ? fighterReadingScoreMarkupV27_(result, true) : '<div class="f9-inline-self-study-scores">' +
             '<span>Listening <strong>' + esc(selfStudyScoreTextV1_(result.listening, 25)) + '</strong></span>' +
             '<span>Paraphrase <strong>' + esc(selfStudyScoreTextV1_(result.paraphrase, 10)) + '</strong></span>' +
