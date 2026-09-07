@@ -75,39 +75,35 @@ const ieltsApi=(()=>{
 #parent-opening-status{max-width:820px;min-height:29px;margin:18px 0 0;color:#68778b;font-size:clamp(15px,1.35vw,19px);font-weight:650;line-height:1.6;overflow-wrap:anywhere}
 #parent-retry{min-height:54px;margin-top:20px;padding:13px 28px;border:1px solid #cad8d2;border-radius:12px;background:#fff;color:#09264a;font-family:inherit;font-size:17px;font-weight:800;line-height:1.4;cursor:pointer}
 #parent-retry:hover{background:#f4f7f8}#parent-retry:focus-visible,#ielts-pending-work-gate button:focus-visible{outline:3px solid #a78640;outline-offset:4px}
-#ielts-pending-work-gate{position:fixed;inset:0;z-index:1000;display:block;width:100%;height:100%;margin:0;padding:0;overflow:auto;overscroll-behavior:contain;background:linear-gradient(145deg,#fff8e6,#fff 70%);backdrop-filter:none;font-family:"Be Vietnam Pro",Arial,sans-serif}
-#ielts-pending-work-gate .ielts-pending-work-gate__card{display:flex;flex-direction:column;align-items:stretch;justify-content:center;width:100%;max-width:none;min-height:100vh;min-height:100svh;margin:0;padding:clamp(34px,6vh,80px) clamp(24px,7vw,112px);border:0;border-radius:0;background:linear-gradient(145deg,#fff8e6,#fff 70%);box-shadow:none;animation:parent-screen-in .22s ease-out}
-#ielts-pending-work-gate .ielts-pending-work-gate__card>*{flex-shrink:0;width:100%;max-width:1200px;margin-left:auto;margin-right:auto}
-#ielts-pending-work-gate #parent-pending-identity{margin-top:0;margin-bottom:26px;padding:0 0 24px;border-bottom:1px solid #eadfca;color:#09264a;font-size:clamp(23px,2.5vw,36px);font-weight:850;line-height:1.4;overflow-wrap:anywhere}
-#ielts-pending-work-gate .ielts-pending-work-gate__icon{width:64px;height:64px;max-width:none;margin:0 0 20px;display:grid;place-items:center;align-self:flex-start;border-radius:50%;background:#a55b31;color:#fff;font-size:30px;font-weight:900}
-#ielts-pending-work-gate .ielts-pending-work-gate__label{margin-top:0;margin-bottom:12px;color:#8f5529;font-size:14px;font-weight:900;letter-spacing:.11em;line-height:1.5;text-transform:uppercase}
-#ielts-pending-work-gate h2{margin-top:0;margin-bottom:0;color:#09264a;font-size:clamp(34px,4.3vw,62px);font-weight:850;line-height:1.25;letter-spacing:-.02em;overflow-wrap:anywhere}
-#ielts-pending-work-gate .ielts-pending-work-gate__detail{margin-top:22px;margin-bottom:0;color:#5e4b2d;font-size:clamp(18px,1.8vw,25px);line-height:1.65;overflow-wrap:anywhere}
-#ielts-pending-work-gate .ielts-pending-work-gate__encourage{margin-top:26px;margin-bottom:0;padding:20px 24px;border:1px solid #efb3b7;border-left:4px solid #b4232b;border-radius:16px;background:#fff0f0;color:#8f1d24;font-size:clamp(16px,1.45vw,21px);font-weight:800;line-height:1.65}
-#ielts-pending-work-gate .ielts-pending-work-gate__button{min-height:66px;margin-top:30px;margin-bottom:0;padding:17px 24px;border:0;border-radius:16px;background:#09264a;color:#fff;font-size:clamp(17px,1.6vw,22px);font-weight:850;line-height:1.4;transition:background .18s ease,transform .18s ease;cursor:pointer}
+#ielts-pending-work-gate{position:fixed;inset:0;z-index:1000;display:grid;align-items:center;justify-items:center;width:100%;height:100%;margin:0;padding:28px;overflow:auto;overscroll-behavior:contain;background:rgba(9,38,74,.58);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:"Be Vietnam Pro",Arial,sans-serif}
+#ielts-pending-work-gate .ielts-pending-work-gate__card{display:flex;flex-direction:column;align-items:stretch;width:min(860px,100%);max-width:860px;min-width:0;min-height:0;margin:0;padding:40px 46px;border:1px solid #ead09a;border-radius:26px;background:linear-gradient(145deg,#fff8e6,#fff 70%);box-shadow:0 28px 80px rgba(7,28,54,.28);animation:parent-screen-in .22s ease-out}
+#ielts-pending-work-gate .ielts-pending-work-gate__card>*{flex-shrink:0;width:100%;min-width:0;margin-left:auto;margin-right:auto}
+#ielts-pending-work-gate #parent-pending-identity{margin-top:0;margin-bottom:20px;padding:0 0 20px;border-bottom:1px solid #eadfca;color:#09264a;font-size:clamp(22px,2.6vw,29px);font-weight:850;line-height:1.4;overflow-wrap:anywhere}
+#ielts-pending-work-gate .ielts-pending-work-gate__icon{width:52px;height:52px;margin:0 0 16px;display:grid;place-items:center;align-self:flex-start;border-radius:50%;background:#a55b31;color:#fff;font-size:24px;font-weight:900}
+#ielts-pending-work-gate .ielts-pending-work-gate__label{margin-top:0;margin-bottom:9px;color:#8f5529;font-size:12px;font-weight:900;letter-spacing:.11em;line-height:1.5;text-transform:uppercase}
+#ielts-pending-work-gate h2{margin-top:0;margin-bottom:0;color:#09264a;font-size:clamp(26px,3.2vw,36px);font-weight:850;line-height:1.3;letter-spacing:-.02em;overflow-wrap:anywhere}
+#ielts-pending-work-gate .ielts-pending-work-gate__detail{margin-top:16px;margin-bottom:0;color:#5e4b2d;font-size:16px;line-height:1.65;overflow-wrap:anywhere}
+#ielts-pending-work-gate .ielts-pending-work-gate__encourage{margin-top:18px;margin-bottom:0;padding:14px 16px;border:1px solid #efb3b7;border-left:3px solid #b4232b;border-radius:11px;background:#fff0f0;color:#8f1d24;font-size:14px;font-weight:800;line-height:1.65}
+#ielts-pending-work-gate .ielts-pending-work-gate__button{min-height:58px;margin-top:24px;margin-bottom:0;padding:13px 18px;border:0;border-radius:13px;background:#09264a;color:#fff;font-size:16px;font-weight:850;line-height:1.4;transition:background .18s ease,transform .18s ease;cursor:pointer}
 #ielts-pending-work-gate .ielts-pending-work-gate__button:hover{background:#153e6d;transform:translateY(-1px)}
 @keyframes parent-name-pending{0%,100%{background-position:100% 0}50%{background-position:0 0}}
 @keyframes parent-screen-in{from{opacity:0;transform:translateY(-10px) scale(.985)}to{opacity:1;transform:none}}
 @media(min-width:601px) and (max-height:800px){
  .parent-opening__card{padding:28px 6vw}.parent-opening__logo{width:84px;height:84px;margin-bottom:14px}.parent-opening__eyebrow{font-size:11px;margin-bottom:8px}#parent-opening-title{font-size:50px;margin-bottom:10px}.parent-opening__intro{font-size:17px}
  .parent-opening__identity{margin-top:24px;padding:24px}.parent-opening__name-slot{min-height:100px;margin-top:10px}#parent-opening-name{font-size:44px}#parent-opening-status{font-size:16px;margin-top:14px}
- #ielts-pending-work-gate .ielts-pending-work-gate__card{padding:28px 6vw}#ielts-pending-work-gate #parent-pending-identity{font-size:24px;padding-bottom:16px;margin-bottom:18px}
- #ielts-pending-work-gate .ielts-pending-work-gate__icon{width:50px;height:50px;margin-bottom:14px;font-size:25px}#ielts-pending-work-gate .ielts-pending-work-gate__label{font-size:12px;margin-bottom:8px}#ielts-pending-work-gate h2{font-size:44px}
- #ielts-pending-work-gate .ielts-pending-work-gate__detail{font-size:18px;line-height:1.55;margin-top:16px}#ielts-pending-work-gate .ielts-pending-work-gate__encourage{font-size:16px;line-height:1.55;padding:14px 20px;margin-top:18px}#ielts-pending-work-gate .ielts-pending-work-gate__button{min-height:58px;margin-top:20px;font-size:18px}
 }
 @media(max-width:600px){
  .parent-opening__card{padding:max(28px,env(safe-area-inset-top)) 24px max(28px,env(safe-area-inset-bottom))}
  .parent-opening__logo{width:86px;height:86px;margin-bottom:16px}.parent-opening__eyebrow{font-size:11px;margin-bottom:10px}#parent-opening-title{font-size:43px}
  .parent-opening__intro{font-size:16px;max-width:340px}.parent-opening__identity{margin-top:26px;padding:22px 16px;border-radius:18px}.parent-opening__identity-label{font-size:11px}
  .parent-opening__name-slot{min-height:104px;margin-top:12px}#parent-opening-name{font-size:clamp(29px,7.4vw,38px)}#parent-opening-skeleton{width:85%;height:28px}#parent-opening-status{font-size:14px;min-height:45px}
- #ielts-pending-work-gate .ielts-pending-work-gate__card{padding:max(28px,env(safe-area-inset-top)) 24px max(28px,env(safe-area-inset-bottom))}
- #ielts-pending-work-gate #parent-pending-identity{font-size:23px;margin-bottom:22px;padding-bottom:20px}
- #ielts-pending-work-gate .ielts-pending-work-gate__icon{width:54px;height:54px;margin-bottom:18px;font-size:26px}
- #ielts-pending-work-gate .ielts-pending-work-gate__label{font-size:12px;margin-bottom:10px}#ielts-pending-work-gate h2{font-size:34px}
- #ielts-pending-work-gate .ielts-pending-work-gate__detail{margin-top:18px;font-size:17px}#ielts-pending-work-gate .ielts-pending-work-gate__encourage{padding:17px 18px;margin-top:22px;font-size:15px}
- #ielts-pending-work-gate .ielts-pending-work-gate__button{min-height:60px;margin-top:24px;font-size:17px}
+ #ielts-pending-work-gate{padding:max(18px,env(safe-area-inset-top)) 14px max(18px,env(safe-area-inset-bottom))}
+ #ielts-pending-work-gate .ielts-pending-work-gate__card{padding:26px 22px;border-radius:22px}
+ #ielts-pending-work-gate #parent-pending-identity{font-size:23px}
+ #ielts-pending-work-gate .ielts-pending-work-gate__detail{font-size:15px}
 }
-@media(prefers-reduced-motion:reduce){#parent-opening-skeleton,.parent-opening__card,#ielts-pending-work-gate .ielts-pending-work-gate__card{animation:none}#ielts-pending-work-gate .ielts-pending-work-gate__button{transition:none;transform:none}}
+@media(max-height:640px){#ielts-pending-work-gate{align-items:start}}
+@media(prefers-reduced-motion:reduce){#parent-opening-skeleton,.parent-opening__card,#ielts-pending-work-gate .ielts-pending-work-gate__card{animation:none}#ielts-pending-work-gate .ielts-pending-work-gate__button,#ielts-pending-work-gate .ielts-pending-work-gate__button:hover{transition:none;transform:none}}
 </style>
   <base target="_top">
   <meta charset="utf-8">
