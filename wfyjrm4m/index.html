@@ -4473,7 +4473,7 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       const assignments=list(profile.assignments),checks=[];
       assignments.forEach(assignment=>{
         if(!assignment||assignment.isAssessmentLesson)return;
-        const tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false);
+        const tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false),receivedTiming=new Map();
         const mode=assignment.webActivityMode||(assignment.optionalWebPractice?'self-directed':'required');
         tasks.forEach(task=>{
           if(!task)return;const maps=mappings(assignment,task,required.length);
@@ -4483,7 +4483,7 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
           receive(feedback,found);
           const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(proof),complete:true});
           const eligible=deadline.missing;
-          if(found.length&&deadline.late){feedback.isLate=true;feedback.stateLabel='Đã nộp · Muộn';}
+          if(found.length){feedback.isLate=Boolean(deadline.late);receivedTiming.set(task,deadline);if(deadline.late)feedback.stateLabel='Đã nộp · Muộn';}
           if(ticket&&proof&&eligible){guard.authorize(ticket,task,proof,{complete:true,stale:!fresh});guard.authorize(ticket,feedback,proof,{complete:true,stale:!fresh});}
           if(mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&deadline.eligible)checks.push(Boolean(feedback.submitted||proof&&eligible));
         });
@@ -4491,6 +4491,9 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
         if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true,stale:!fresh});
         if(assignment.kind==='self-practice'&&required.length===1&&required[0].feedback.submitted){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
+        // Only a complete set of source-confirmed task receipts replaces the
+        // assignment timing. Paper/teacher-only and unknown-source work stay intact.
+        if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
       });
       list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
         const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;

@@ -3000,7 +3000,11 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
           let coverage=taskCoverage(payload,assignment,task,index);
           if(coverage){const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};if(!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known)coverage=null;}
           const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(proof(coverage)),complete:state.completed===true,completedAt:components.completedAt||undefined});
-          if(found.length&&deadline.late)state.status='Nộp muộn';
+          if(found.length&&(!components.known||components.complete||!deadline.eligible)){
+            state.isLate=Boolean(deadline.late);state.isOverdue=Boolean(deadline.missing);
+            if(deadline.late)state.status='Nộp muộn';
+            else if(/^(?:nop muon|lam muon)(?: |$)/.test(m.normalizeSearchText_(state.status)))state.status=components.known&&!components.complete?'Đã nộp một phần':'Đã nộp bài';
+          }
           if(deadline.missing)grant(guard,ticket,state,coverage,fresh);
         });
         const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>manual(task)?fresh:record.tasks[index]&&(record.tasks[index].completed===true||guard.can(record.tasks[index])));
@@ -3018,6 +3022,8 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         const found=receipts.filter(r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers));
         const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).missing)grant(guard,ticket,assignment,coverage,fresh);
         if(!found.length)return;assignment.submissionReceived=true;
+        const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{complete:true});
+        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=false;
         found.forEach(r=>{
           const item={receiptId:r.id,code,submittedAt:r.submittedAt,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
           if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
@@ -3026,6 +3032,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
           }
           value.directSelfStudyItems.push(item);
           received(item,[r]);
+          item.isLate=Boolean(receivedDeadline.late);item.isOverdue=false;if(receivedDeadline.late)item.status='Nộp muộn';
         });
       });
       const records=student.assignments;
