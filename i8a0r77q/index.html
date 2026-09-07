@@ -18,7 +18,7 @@ const kidsApi = (() => {
   let status = validToken ? 'pending' : 'revoked';
   let boundAlias = '';
   let checkJob = null;
-  let checkEpoch = 0;
+  let checkEpoch = 0, receiptEpoch = 0;
   let checkController = null;
   let verifiedDirectory = null;
   let directoryVersion = 0;
@@ -32,7 +32,7 @@ const kidsApi = (() => {
   }
   function revoke() {
     if (status === 'revoked') return;
-    status = 'revoked';
+    status = 'revoked'; receiptEpoch += 1;
     controllers.forEach(controller => controller.abort());
     pending.clear();
     boundAlias = '';
@@ -45,6 +45,10 @@ const kidsApi = (() => {
     return err;
   }
   function validateScope(data, action) {
+    if(action==='submissions'){
+      if(!boundAlias||!data||data.className!=='KIDS '+expectedClass||data.schema!==1||!Array.isArray(data.receipts)||!Array.isArray(data.coverage))throw error('Dữ liệu bài nộp chưa khớp.','INVALID_SCOPE');
+      return boundAlias;
+    }
     if (!data || Number(data.classNumber) !== expectedClass || data.className !== 'KIDS ' + expectedClass) {
       throw error('Dữ liệu lớp chưa khớp. Vui lòng thử lại.', 'INVALID_SCOPE');
     }
@@ -73,7 +77,7 @@ const kidsApi = (() => {
   }
   function requestAction(action, force, epoch) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
-    const key = JSON.stringify([action, Boolean(force), action === 'check' ? epoch : null]);
+    const key = JSON.stringify([action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null]);
     if (pending.has(key)) return pending.get(key);
     const url = new URL(endpoint);
     url.searchParams.set('api', 'parent1');
@@ -92,7 +96,7 @@ const kidsApi = (() => {
     }).then(async response => {
       if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
       const envelope = await response.json();
-      if (action === 'check' && epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
+      if ((action === 'check' && epoch !== checkEpoch) || (action === 'submissions' && epoch !== receiptEpoch)) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const data = envelope && envelope.data;
       const envelopeCode = envelope && (envelope.code || envelope.error && envelope.error.code);
       if (status === 'revoked' || (envelope && (envelope.revoked === true || terminalCodes.has(envelopeCode))) ||
@@ -140,7 +144,8 @@ const kidsApi = (() => {
       signal('authorized');
       return true;
     }).catch(err => {
-      if (status !== 'revoked' && epoch === checkEpoch) signal('unavailable');
+      if(epoch===checkEpoch&&err&&err.code==='INVALID_SCOPE'){revoke();return false;}
+      if (status !== 'revoked' && epoch === checkEpoch && !background) signal('unavailable');
       return false;
     }).finally(() => { if (checkJob === job) checkJob = null; });
     checkJob = job;
@@ -175,6 +180,10 @@ const kidsApi = (() => {
       get status() { return status; },
       get directoryHint() { return status === 'authorized' && verifiedDirectory ? JSON.parse(JSON.stringify(verifiedDirectory)) : null; },
       get directoryVersion() { return directoryVersion; },
+      submissions() {
+        if(status!=='authorized')return Promise.reject(error('Đang kiểm tra hồ sơ.','AUTH_PENDING'));
+        return requestAction('submissions',false,receiptEpoch);
+      },
       bootstrap(force = false) {
         if (status !== 'authorized') return Promise.reject(error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING'));
         return requestAction('bootstrap', Boolean(force));
@@ -184,8 +193,8 @@ const kidsApi = (() => {
         if (status === 'revoked') return;
         checkEpoch += 1;
         checkJob = null;
-        if (checkController) checkController.abort();
-        signal('pending');
+        // Visibility does not abort a request or replace an already open profile.
+        // The epoch still excludes an older access-check response.
       },
       revoke
     }
@@ -1422,6 +1431,7 @@ html.vn-national-day-2026-root body .assignment.session {
 }
 
 </style>
+<style id="submission-status-style">.submission-unverified{display:none!important}</style>
 </head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
@@ -2259,7 +2269,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const summary = profile.summary || {};
       const summaryCount = Number(pick(summary, ['needsCompletionCount'], NaN));
       const pendingCount = Math.max(0, Number.isFinite(summaryCount) ? summaryCount : 0, reminders.length);
-      if (!app.child || pendingCount < 1) {
+      if (!app.child || !submissionCan_(profile) || pendingCount < 1) {
         banner.hidden = true;
         $('#pendingWorkTitle').textContent = '';
         $('#pendingWorkDetail').textContent = '';
@@ -2308,7 +2318,7 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function showPendingWorkGate(signature, title, detail) {
       const gate = $('#pendingWorkGate');
-      if (!gate || !signature || app.pendingNoticeSeen === signature) {
+      if (!submissionCan_(app.child) || !gate || !signature || app.pendingNoticeSeen === signature) {
         hidePendingWorkGate();
         return;
       }
@@ -2976,7 +2986,7 @@ html.vn-national-day-2026-root body .assignment.session {
             ? { cls: 'checked', label: 'Đã có điểm làm lại' }
             : taskSubmitted
               ? { cls: 'wait', label: 'Đã nộp bài' }
-              : { cls: 'todo', label: 'Chưa nộp bài' }
+              : submissionMissingMeta_(feedback)
           : taskMeta;
         const visibleTaskAttempts = taskAttempts.length || !isRetakeTask || !taskSubmittedAt
           ? taskAttempts
@@ -2998,7 +3008,7 @@ html.vn-national-day-2026-root body .assignment.session {
         } : null);
         const submissionText = isRetakeTask && historyHtml ? '' : taskAttempts.length > 1
           ? `Đã nhận ${taskAttempts.length} lần`
-          : taskSubmittedAt ? `Đã nộp lúc ${taskSubmittedAt}` : taskSubmitted ? 'Đã nộp bài' : 'Chưa nộp bài';
+          : taskSubmittedAt ? `Đã nộp lúc ${taskSubmittedAt}` : taskSubmitted ? 'Đã nộp bài' : submissionCan_(feedback) ? 'Chưa nộp bài' : '';
         const reviewText = taskComment ? nl2br(taskComment) : taskSubmitted ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
         return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${taskSubmitted ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
       }).join('');
@@ -3032,7 +3042,7 @@ html.vn-national-day-2026-root body .assignment.session {
           ? { cls: 'checked', label: 'Đã có điểm làm lại' }
           : retakeAssignmentSubmitted
             ? { cls: 'wait', label: 'Đã nộp bài' }
-            : { cls: 'todo', label: 'Chưa nộp bài' }
+            : submissionMissingMeta_(privateAssignment)
         : meta;
       const paperDueHtml = nonSubmissionWebActivity && paperHomework && due
         ? `<div class="due-highlight"><span>⏰ Hạn bài tập sách giấy</span><strong>${escapeHtml(due)}</strong></div>`
@@ -3153,7 +3163,7 @@ html.vn-national-day-2026-root body .assignment.session {
             : arr(pick(trackedItem, ['submissionAttempts'], []));
           const submitted = Boolean(item.submitted || trackedItem.submitted || submittedAt || submissionAttempts.length);
           const reviewed = Boolean(item.reviewed || trackedItem.reviewed || teacherComment);
-          return Object.assign({}, trackedItem, item, {
+          return submissionGuard_.transfer(submissionCan_(item)?item:trackedItem, Object.assign({}, trackedItem, item, {
             submitted: submitted,
             reviewed: reviewed,
             state: reviewed ? 'co_da_nhan_xet' : submitted ? 'da_nop_cho_nhan_xet' : pick(item, ['state'], pick(trackedItem, ['state'], 'can_lam')),
@@ -3164,7 +3174,7 @@ html.vn-national-day-2026-root body .assignment.session {
             learningUrl: pick(item, ['learningUrl'], pick(trackedItem, ['learningUrl'], '')),
             viewUrl: pick(item, ['viewUrl'], pick(trackedItem, ['viewUrl'], '')),
             teacherComment: teacherComment
-          });
+          }));
         });
         const scheduledIds = new Set(scheduled.map(item => text(item.id)).filter(Boolean));
         tracked.forEach((item, index) => {
@@ -3210,7 +3220,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const reviewUrl = safeUrl(pick(item, ['viewUrl', 'reviewUrl'], ''));
       const submissionText = submissionAttempts.length > 1
         ? `Đã nhận ${submissionAttempts.length} lần`
-        : submittedAt ? 'Đã nộp lúc ' + submittedAt : submitted ? 'Đã nộp bài' : 'Chưa nộp bài';
+        : submittedAt ? 'Đã nộp lúc ' + submittedAt : submitted ? 'Đã nộp bài' : submissionCan_(item) ? 'Chưa nộp bài' : '';
       const historyHtml = submissionHistoryHtml(submissionAttempts, reviewUrl);
       const needsReview = feedbackNeedsReview(comment);
       return `<article class="card sky" data-pending-target data-assignment-id="${escapeHtml(text(pick(item, ['id'], '')))}" data-task-id="${escapeHtml(text(pick(firstTask, ['id'], '')))}" data-pending-title="${escapeHtml(matchKey(title))}">
@@ -3556,7 +3566,7 @@ html.vn-national-day-2026-root body .assignment.session {
       }
     }
 
-    function statusMeta(item) {
+    function submissionOriginalStatusMeta_(item) {
       const raw = text(pick(item, ['state', 'status', 'statusKey'], '')).toLowerCase();
       const label = text(pick(item, ['statusLabel', 'stateLabel'], ''));
       if (item && item.isOverdue) return { cls: 'late', label: 'Cần hoàn thành' };
@@ -3569,6 +3579,12 @@ html.vn-national-day-2026-root body .assignment.session {
       if (/late|overdue|muộn|quá hạn/.test(raw + ' ' + label.toLowerCase())) return { cls: 'late', label: label || 'Cần hoàn thành' };
       if (/done|complete|đã xong|hoàn thành/.test(raw + ' ' + label.toLowerCase())) return { cls: 'done', label: label || 'Đã hoàn thành' };
       return { cls: 'todo', label: label || 'Cần làm' };
+    }
+    function statusMeta(item) {
+      const meta=submissionOriginalStatusMeta_(item);
+      const received=Boolean(item&&(item.submitted||item.submittedAt||arr(item.submissionAttempts).length||item.isLate));
+      if(!received&&['todo','late'].includes(meta.cls)&&!submissionCan_(item))return {cls:'submission-unverified',label:''};
+      return meta;
     }
 
     function childTaskCard(item) {
@@ -3765,7 +3781,7 @@ html.vn-national-day-2026-root body .assignment.session {
           ? { cls: 'checked', label: 'Đã có điểm làm lại' }
           : declaredAttemptCount || retakeSubmittedAt
             ? { cls: 'wait', label: 'Đã nộp bài' }
-            : { cls: 'todo', label: 'Chưa làm' };
+            : submissionCan_(retake) ? { cls: 'todo', label: 'Chưa làm' } : {cls:'submission-unverified',label:''};
       const attemptLabel = declaredAttemptCount ? `Đã nộp ${declaredAttemptCount} lần` : retakeDisplayMeta.label;
       const attemptCards = attempts.map((attempt, index) => {
         const attemptNumber = Number(pick(attempt, ['attempt', 'attemptNumber'], index + 1)) || index + 1;
@@ -3791,6 +3807,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function reminderCard(item) {
+      if(!submissionCan_(typeof item==='string'?app.child:item))return '';
       if (typeof item === 'string') return `<div class="notice"><span class="notice-icon">!</span><div class="notice-copy"><small>${nl2br(item)}</small></div></div>`;
       let actions = arr(pick(item, ['actions'], [])).map(action => ({
         title: text(pick(action, ['title'], 'Bài tập')),
@@ -3817,12 +3834,12 @@ html.vn-national-day-2026-root body .assignment.session {
       const latestScore = latestTest.score !== undefined && latestTest.score !== null
         ? `${latestTest.score}${latestTest.maximum ? '/' + latestTest.maximum : ''}`
         : pick(profile, ['latestScore', 'testScore'], '—');
-      const notices = reminders.length
+      const notices = !submissionCan_(profile) ? '' : reminders.length
         ? reminders.map(reminderCard).join('')
         : '<div class="notice good"><span class="notice-icon">✓</span><div class="notice-copy"><strong>Đã hoàn thành</strong><small>Con không có bài cần hoàn thành.</small></div></div>';
       $('#profileContent').innerHTML = `<div class="section-head"><div><p class="label">Hồ sơ của ${escapeHtml(displayName)}</p><h2>Kết quả kiểm tra</h2></div></div>
-        <div class="grid three"><div class="metric score"><strong>${escapeHtml(latestScore)}</strong><span>Kết quả kiểm tra gần nhất</span></div><div class="metric stars"><strong><span class="metric-icon">⭐</span>${escapeHtml(stars)}</strong><span>Tổng số sao</span></div><div class="metric pending${pendingCount ? '' : ' is-clear'}"><strong>${escapeHtml(pendingCount)}</strong><span>Bài cần hoàn thành</span></div></div>
-        <div class="section-head"><div><h2>Con cần chú ý</h2></div></div>${notices}
+        <div class="grid three"><div class="metric score"><strong>${escapeHtml(latestScore)}</strong><span>Kết quả kiểm tra gần nhất</span></div><div class="metric stars"><strong><span class="metric-icon">⭐</span>${escapeHtml(stars)}</strong><span>Tổng số sao</span></div>${submissionCan_(profile) ? `<div class="metric pending${pendingCount ? '' : ' is-clear'}"><strong>${escapeHtml(pendingCount)}</strong><span>Bài cần hoàn thành</span></div>` : ''}</div>
+        ${notices ? `<div class="section-head"><div><h2>Con cần chú ý</h2></div></div>${notices}` : ''}
         <div class="section-head"><div><h2>Chi tiết từng bài kiểm tra</h2></div></div>
         ${results.length ? `<div class="result-list">${results.map(testCard).join('')}</div>` : '<div class="empty">Chưa có kết quả kiểm tra mới.</div>'}`;
     }
@@ -4052,6 +4069,471 @@ function createStudentLearningPrefill(options) {
 }
 
 /* STUDENT_PREFILL_COMMON_END */
+/* SUBMISSION_STATUS_GUARD_V1: absence requires a current, scoped source check. */
+(function(root){
+  'use strict';
+  function createSubmissionStatusGuard(options){
+    options=options||{};
+    var epoch=0, sequence=0, identity='', channels=new Map(), grants=new WeakMap();
+    function currentIdentity(){
+      try{return String(options.getIdentity&&options.getIdentity()||'');}catch(_){return '';}
+    }
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function reset(){epoch++;identity='';channels.clear();grants=new WeakMap();}
+    function sync(){
+      var value=currentIdentity();
+      if(!value||!visible()){reset();return '';}
+      if(identity!==value){reset();identity=value;}
+      return value;
+    }
+    function validProof(proof){
+      return Boolean(proof&&proof.schema===1&&proof.complete===true&&proof.freshRead===true&&
+        Number.isFinite(proof.verifiedAt)&&proof.verifiedAt>0);
+    }
+    function ticketCurrent(ticket){
+      return Boolean(ticket&&sync()&&ticket.identity===identity&&ticket.epoch===epoch&&
+        channels.get(ticket.channel)===ticket);
+    }
+    function begin(channel){
+      var who=sync();
+      if(!who)return null;
+      var ticket={epoch:epoch,sequence:++sequence,identity:who,channel:String(channel||'receipts'),settled:false};
+      channels.set(ticket.channel,ticket);
+      return ticket;
+    }
+    function grant(ticket,target,proof,conditions){
+      if(!ticketCurrent(ticket)||!target||typeof target!=='object')return false;
+      conditions=conditions||{};
+      grants.set(target,{ticket:ticket,proof:proof,usable:conditions.complete!==false&&conditions.stale!==true});
+      return true;
+    }
+    function accept(ticket,payload,conditions){
+      if(!ticketCurrent(ticket)||!payload||typeof payload!=='object')return false;
+      var seen=new WeakSet();
+      function visit(value,inherited){
+        if(!value||typeof value!=='object'||seen.has(value))return;
+        seen.add(value);
+        var own=Object.prototype.hasOwnProperty.call(value,'submissionVerification');
+        var proof=own?value.submissionVerification:inherited;
+        grant(ticket,value,proof,conditions);
+        Object.keys(value).forEach(function(key){
+          if(key!=='submissionVerification')visit(value[key],proof);
+        });
+      }
+      visit(payload,null);ticket.settled=true;return true;
+    }
+    function authorize(ticket,target,proof,conditions){
+      // A narrow receipt adapter must first match the server's immutable task
+      // key and the live pupil. This binds its result to the existing renderer
+      // object without replacing teacher marks, feedback or assignment links.
+      if(!grant(ticket,target,proof,conditions))return false;
+      ticket.settled=true;return true;
+    }
+    function can(target){
+      var entry=target&&typeof target==='object'&&grants.get(target);
+      return Boolean(entry&&ticketCurrent(entry.ticket)&&entry.ticket.settled&&entry.usable&&validProof(entry.proof));
+    }
+    function fail(ticket){
+      if(!ticketCurrent(ticket))return false;
+      ticket.settled=false;return true;
+    }
+    function transfer(source,target){
+      var entry=source&&typeof source==='object'&&grants.get(source);
+      if(!entry||!ticketCurrent(entry.ticket)||!target||typeof target!=='object')return target;
+      var proof=Object.prototype.hasOwnProperty.call(target,'submissionVerification')?target.submissionVerification:entry.proof;
+      grants.set(target,{ticket:entry.ticket,proof:proof,usable:entry.usable});
+      return target;
+    }
+    return {begin:begin,accept:accept,authorize:authorize,can:can,fail:fail,suspend:reset,clear:reset,
+      transfer:transfer,isCurrent:ticketCurrent,isVerifiedProof:validProof};
+  }
+  root.createSubmissionStatusGuard=createSubmissionStatusGuard;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionStatusGuard:createSubmissionStatusGuard};
+})(typeof globalThis==='object'?globalThis:this);
+
+/* SUBMISSION_RECEIPT_OWNER_V1: one lightweight current-pupil read. */
+(function(root){
+  'use strict';
+  function createSubmissionReceiptOwner(options){
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false;
+    function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
+    function suspend(){needsFresh=true;current=null;options.guard.suspend();}
+    function clear(){generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function refresh(){
+      var active=who();if(!active||!visible())return Promise.resolve(false);
+      if(active!==identity){clear();identity=active;}
+      if(job){if(needsFresh)queued=true;return job;}
+      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;
+      if(options.render)options.render();
+      var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
+        if(!isCurrent(run))return false;
+        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage))throw new Error('INVALID_SUBMISSION_RECEIPTS');
+        // Receipt absence is not a withdrawal of an earlier confirmed receipt.
+        // Keep the server-positive union for this exact identity, even when a
+        // later source snapshot omits an attempt. No local submit event enters it.
+        var merged=new Map();
+        (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
+        payload.receipts.forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt)merged.set(receipt.id,receipt);});
+        current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        if(visible()&&options.render)options.render();return true;
+      }).catch(function(){
+        if(isCurrent(run)){options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        return false;
+      }).finally(function(){if(job===task){job=null;if(queued&&visible()&&who()===identity){queued=false;refresh();}}});
+      job=task;return task;
+    }
+    function reapply(target){
+      if(!target||!identity||who()!==identity||!visible())return target;
+      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
+    }
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);}};
+  }
+  root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_DEADLINE_POLICY_V1: dashboard deadlines, September 2026 onward. */
+(function(root){
+  'use strict';
+  var offset=7*3600000,cutover=Date.UTC(2026,8,1)-offset;
+  function time(value,endOfDay){
+    if(typeof value==='number')return Number.isFinite(value)&&value>1e11&&value<=8640000000000000?value:0;
+    var s=String(value||'').trim(),m;
+    if(/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(s))return Date.parse(s)||0;
+    if((m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)))m=[m[0],m[3],m[2],m[1],m[4],m[5],m[6]];
+    else m=s.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?:[·,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if(!m)return 0;
+    var n=m.slice(1).map(function(v){return Number(v||0);}),d=new Date(Date.UTC(n[2],n[1]-1,n[0],n[3],n[4],n[5]));
+    if(d.getUTCFullYear()!==n[2]||d.getUTCMonth()!==n[1]-1||d.getUTCDate()!==n[0]||n[3]>23||n[4]>59||n[5]>59)return 0;
+    return d.getTime()-offset+(endOfDay&&m[4]===undefined?86399999:0);
+  }
+  function first(source,keys,end){for(var i=0;i<keys.length;i++){var v=time(source&&source[keys[i]],end);if(v)return v;}return 0;}
+  function receiptTime(receipt){
+    receipt=receipt||{};
+    // Keep the friendly display unchanged; the original source timestamp is
+    // the canonical comparison value when the backend supplies it.
+    var milliseconds=typeof receipt.submittedAtMs==='number'?time(receipt.submittedAtMs,false):0;
+    return milliseconds||time(receipt.submittedAt,false);
+  }
+  function evaluate(assignment,receipts,options){
+    options=options||{};assignment=assignment||{};
+    // No receipt date, month column, or generatedAt can invent the assigned date.
+    var assigned=first(assignment,['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'],false);
+    var due=first(assignment,['dueAt','deadlineAt','deadlineIso','dueDate','deadline'],true);
+    var eligible=assigned>=cutover&&due>=assigned;
+    var times=(Array.isArray(receipts)?receipts:[]).map(receiptTime).filter(Boolean);
+    var received=times.length>0,complete=received&&options.complete!==false;
+    var completedAt=options.completedAt?time(options.completedAt,false):received?Math.min.apply(null,times):0;
+    var now=typeof options.now==='number'?options.now:Date.now();
+    return {eligible:eligible,assignedAt:assigned,dueAt:due,received:received,complete:complete,
+      late:Boolean(eligible&&complete&&completedAt>due),
+      missing:Boolean(eligible&&options.verified===true&&!complete&&now>due),
+      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':eligible&&options.verified===true?(now>due?'Chưa nộp · Quá hạn':'Chưa đến hạn nộp'):''};
+  }
+  var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_ASSIGNMENT_WINDOW_V1: source code reuse stays date-bound. */
+(function(root){
+  'use strict';
+  function assignedAt(assignment){
+    return root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{}).assignedAt;
+  }
+  // Callers provide only source-proven same-family/code candidates, and preserve
+  // any independent class/group lane. Deadlines never truncate valid late work;
+  // only a new occurrence of that same assignment code closes this window.
+  function windowFor(assignment,candidates){
+    var start=assignedAt(assignment),rows=Array.isArray(candidates)?candidates:[],unique=new Map();
+    rows.concat([assignment]).forEach(function(row){
+      var date=assignedAt(row),id=String(row.id||row.assignmentId||'');
+      unique.set(id+'|'+date,row);
+    });
+    rows=Array.from(unique.values());
+    var undated=rows.some(function(row){return !assignedAt(row);});
+    var same=rows.filter(function(row){return assignedAt(row)===start;});
+    var ambiguous=rows.length>1&&(undated||same.length>1);
+    var later=rows.map(assignedAt).filter(function(date){return date>start;});
+    return {start:start,end:later.length?Math.min.apply(null,later):0,ambiguous:ambiguous,known:Boolean(start)&&!ambiguous};
+  }
+  function contains(receipt,assignment,candidates){
+    var window=windowFor(assignment,candidates);
+    var time=root.DirectSubmissionDeadlinePolicy.receiptTime(receipt);
+    if(!time||window.ambiguous)return false;
+    return (!window.start||time>=window.start)&&(!window.end||time<window.end);
+  }
+  var api={assignedAt:assignedAt,windowFor:windowFor,contains:contains};
+  root.DirectSubmissionAssignmentWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+const kidsReceiptMatching_=(()=>{const CONFIG={sourceAliasPairs:CLASS_NUMBER===7?[["SCIENCEVIDEO30","G1VIDEO52"],["SCIENCEVIDEO30","SCIENCEG152"],["VIDEO30","G1VIDEO52"],["VIDEO30","SCIENCEG152"]]:[]};
+function assignmentSourceKeys_(id, tasks, text) {
+  const keys = [id];
+  (tasks || []).forEach(function(task) {
+    if (task.id) keys.push(task.id);
+    const pathKey = taskSourceKey_(task.url);
+    if (pathKey) keys.push(pathKey);
+  });
+  const lessonMatch = clean_(text).match(/(?:video|lesson|bài)\s*0*(\d+)/i);
+  if (lessonMatch) keys.push('lesson' + String(Number(lessonMatch[1])).padStart(2, '0'));
+  return uniqueStrings_(keys.map(normalizeKey_).filter(function(key) { return key.length >= 4; }));
+}
+
+function clean_(value) {
+  return value === null || value === undefined ? '' : String(value).trim();
+}
+
+function configuredSourceAliasMatch_(leftValue, rightValue) {
+  const left = normalizeKey_(leftValue);
+  const right = normalizeKey_(rightValue);
+  if (!left || !right) return false;
+  return (CONFIG.sourceAliasPairs || []).some(function(pair) {
+    const first = normalizeKey_((pair || [])[0]);
+    const second = normalizeKey_((pair || [])[1]);
+    if (!first || !second) return false;
+    return (strictSourceKeyMatches_(left, first) && strictSourceKeyMatches_(right, second)) ||
+      (strictSourceKeyMatches_(left, second) && strictSourceKeyMatches_(right, first));
+  });
+}
+
+function homeworkTaskType_(value) {
+  const normalized = normalizeSearchText_(value);
+  if (!normalized) return '';
+  if (/tu moi|tu vung|vocabulary|\bwords?\b/.test(normalized)) return 'vocabulary';
+  if (/ngu phap|grammar/.test(normalized)) return 'grammar';
+  if (/phat am|pronunciation/.test(normalized)) return 'pronunciation';
+  if (/long tieng|dubbing/.test(normalized)) return 'dubbing';
+  if (/reading|bai doc|doc hieu/.test(normalized)) return 'reading';
+  if (/speaking|bai noi|noi tieng anh/.test(normalized)) return 'speaking';
+  if (/writing|bai viet|viet cau/.test(normalized)) return 'writing';
+  if (/listening|bai nghe|nghe hieu/.test(normalized)) return 'listening';
+  if (/video|phim/.test(normalized)) return 'video';
+  return normalizeKey_(normalized);
+}
+
+function lessonSubmissionKeys_(program, sessionNumber) {
+  if (!sessionNumber) return [];
+  const session = String(Number(sessionNumber));
+  const padded = session.padStart(2, '0');
+  const normalizedProgram = normalizeKey_(program);
+  const keys = [
+    'TIET' + session,
+    'BUOI' + session
+  ];
+  const discover = normalizedProgram.match(/(?:OXFORD)?DISCOVER(\d+)/) || normalizedProgram.match(/^D(\d+)$/);
+  if (discover) {
+    keys.push(
+      'D' + discover[1] + 'L' + padded,
+      'D' + discover[1] + 'L' + session,
+      'D' + discover[1] + 'TIET' + session,
+      'D' + discover[1] + 'BUOI' + session
+    );
+  }
+  const critical = normalizedProgram.match(/CRITICAL(?:THINKING)?(?:(?:AND)?SCIENCE)?(\d+)/) || normalizedProgram.match(/^C(\d+)$/);
+  if (critical) {
+    keys.push(
+      'C' + critical[1] + 'L' + padded,
+      'C' + critical[1] + 'L' + session,
+      'C' + critical[1] + 'TIET' + session,
+      'C' + critical[1] + 'BUOI' + session
+    );
+  }
+  const phonics = normalizedProgram.match(/PHONICS(\d+)/);
+  if (phonics) {
+    keys.push('OP' + phonics[1] + 'L' + padded, 'OP' + phonics[1] + 'L' + session);
+  }
+  const familyFriends = normalizedProgram.match(/FAMILY(?:AND)?FRIENDS?(\d+)/);
+  if (familyFriends) {
+    keys.push('FF' + familyFriends[1] + 'TIET' + session, 'FF' + familyFriends[1] + 'BUOI' + session);
+  }
+  if (!phonics && !familyFriends && !discover && !critical) {
+    const prefix = normalizedProgram.slice(0, 10);
+    keys.push(prefix + 'TIET' + session, prefix + 'BUOI' + session);
+  }
+  return uniqueStrings_(keys);
+}
+
+function normalizeKey_(value) {
+  return normalizeSearchText_(value).replace(/[^a-z0-9]/g, '').toUpperCase();
+}
+
+function normalizeSearchText_(value) {
+  return clean_(value).toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function practiceNumberKeys_(program, number) {
+  if (!number) return [];
+  const padded = String(number).padStart(2, '0');
+  const normalizedProgram = normalizeKey_(program);
+  const prefix = normalizedProgram.indexOf('PEPPA') >= 0 ? 'PEPPA' :
+    (normalizedProgram.indexOf('PHONICS') >= 0 ? 'PHONICSVIDEO' : normalizedProgram.slice(0, 12));
+  return uniqueStrings_([prefix + padded, prefix + String(Number(number)), 'VIDEO' + padded, 'LESSON' + padded]);
+}
+
+function sourceKeyMatches_(sourceValue, keyValue) {
+  return strictSourceKeyMatches_(sourceValue, keyValue) ||
+    configuredSourceAliasMatch_(sourceValue, keyValue);
+}
+
+function strictSourceKeyMatches_(sourceValue, keyValue) {
+  const source = normalizeKey_(sourceValue);
+  const key = normalizeKey_(keyValue);
+  if (!source || !key || key.length < 4) return false;
+  if (source === key) return true;
+  const sourceNumbers = source.match(/\d+/g) || [];
+  const keyNumbers = key.match(/\d+/g) || [];
+  if (sourceNumbers.length && keyNumbers.length &&
+      sourceNumbers[sourceNumbers.length - 1] !== keyNumbers[keyNumbers.length - 1]) return false;
+  return source.indexOf(key) >= 0 || key.indexOf(source) >= 0;
+}
+
+function taskSourceKey_(url) {
+  const cleanUrl = clean_(url).replace(/[?#].*$/, '').replace(/\/$/, '');
+  const parts = cleanUrl.split('/').filter(Boolean);
+  const last = parts[parts.length - 1] || '';
+  const lesson = clean_(url).match(/[?&]lesson=0*(\d+)/i);
+  return lesson ? 'lesson' + String(Number(lesson[1])).padStart(2, '0') : normalizeKey_(last);
+}
+
+function uniqueStrings_(items) {
+  const seen = {};
+  return (items || []).filter(function(item) {
+    const key = clean_(item);
+    if (!key || seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberKeys_,lessonSubmissionKeys_,sourceKeyMatches_,homeworkTaskType_};})();
+/* KIDS_DIRECT_RECEIPT_PROJECTOR_V1: exact family/code evidence, no teacher-grade edits. */
+(function(root){
+  'use strict';
+  function createKidsReceiptProjector(matching,config){
+    const list=v=>Array.isArray(v)?v:[],key=matching.normalizeKey_,known=new Map();
+    const familyLabels={'Science G1':'SCIENCE G1 & G2','Science K':'SCIENCE K','Discover 1':'DISCOVER 1','Discover 2':'DISCOVER 2','Discover English':'DISCOVER ENGLISH','Family and Friends 1':'FF1','Family and Friends 2':'FF2','Phonics':'PHONICS 1–4'};
+    function urlKey(value){try{let u=new URL(value);if(['/student-learning/','/kids-learning/'].includes(u.pathname))u=new URL(u.searchParams.get('lesson'));return u.origin+u.pathname.replace(/\/+$/,'')+'/';}catch(_){return '';}}
+    list(config.urls).forEach(row=>known.set(urlKey(row.url),list(row.mappings).map(m=>({family:familyLabels[m.formFamily]||m.family||m.formFamily,code:m.code}))));
+    function isRetake(assignment,task){return Boolean(assignment.isRetake||assignment.retakeTracking&&assignment.retakeTracking.tracked||task.isRetake||/lam lai|kiem tra lai|retake|redo/.test(matching.normalizeSearchText_([task.title,task.name].join(' '))));}
+    function mappings(assignment,task,count){
+      const mapped=known.get(urlKey(task.url||task.learningUrl||task.taskUrl));
+      if(mapped&&mapped.length)return mapped.map(m=>({...m,exact:true}));
+      const retake=isRetake(assignment,task),program=key(assignment.program||'');
+      const families=retake?['KIDS_RETAKE']:list(config.rules).filter(rule=>new RegExp(rule.programPattern).test(program)).flatMap(rule=>rule.families);
+      if(!families.length)return [];
+      const number=Number(assignment.number||assignment.practiceNumber||0);
+      const keys=list(task.sourceKeys).concat(task.sourceCode||task.code||[],list(assignment.sourceKeys),
+        matching.assignmentSourceKeys_(assignment.id,[task],''),
+        retake?[]:matching.practiceNumberKeys_(assignment.program,number),
+        retake?[]:matching.lessonSubmissionKeys_(assignment.program,assignment.sessionNumber));
+      // Combined program tabs must not match another level through a generic
+      // lesson number. Exact recorded URL codes take priority above this lane.
+      const strong=[...new Set(keys.map(key).filter(k=>k.length>=4&&!/^(?:TIET|BUOI|LESSON|VIDEO)\d+$/.test(k)))];
+      return families.flatMap(family=>strong.map(code=>({family,code,exact:false,taskType:count>1?matching.homeworkTaskType_([task.title,task.instructions].join(' ')):''})));
+    }
+    function matches(receipt,map){return receipt.family===map.family&&
+      (map.exact?key(receipt.code)===key(map.code):matching.sourceKeyMatches_(receipt.code,map.code))&&
+      (!map.taskType||matching.homeworkTaskType_(receipt.code)===map.taskType);}
+    function peersFor(assignment,maps,assignments){
+      return assignments.filter(other=>list(other.tasks).some(task=>mappings(other,task,list(other.tasks).filter(t=>t.requiresSubmission!==false).length)
+        .some(candidate=>maps.some(map=>candidate.family===map.family&&(matches({family:map.family,code:map.code},candidate)||matches({family:candidate.family,code:candidate.code},map))))));
+    }
+    function proofFor(payload,maps){
+      if(!maps.length)return null;
+      const families=[...new Set(maps.map(m=>m.family))];
+      const coverage=families.map(family=>list(payload.coverage).filter(c=>c.family===family));
+      if(coverage.some(rows=>!rows.length||rows.some(c=>c.complete!==true||c.freshRead!==true)))return null;
+      return {schema:1,complete:true,freshRead:true,verifiedAt:Math.min(...coverage.flat().map(c=>Number(c.verifiedAt)||0))};
+    }
+    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,submittedAt:r.submittedAt,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
+    function receive(target,found){
+      if(!found.length)return;
+      const sorted=found.slice().sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b)),last=sorted[sorted.length-1];
+      const prior=list(target.submissionAttempts),ids=new Set(prior.map(x=>x.receiptId).filter(Boolean));
+      const added=attempts(sorted).filter(x=>!ids.has(x.receiptId)&&!prior.some(p=>!p.receiptId&&p.submittedAt===x.submittedAt));
+      target.submitted=true;target.submittedAt=target.submittedAt||sorted[0].submittedAt;target.lastSubmittedAt=last.submittedAt;
+      target.submissionAttempts=prior.concat(added);target.isOverdue=false;
+      if(last.viewUrl){try{const url=new URL(last.viewUrl);if(url.protocol==='https:'&&!url.username&&!url.password)target.viewUrl=url.href;}catch(_){} }
+      target.state=target.teacherComment||target.comment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';
+      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':'Đã nộp bài';
+      if(last.scoreSource==='automatic-score-source'&&Number.isFinite(last.score)){
+        target.score=last.score;if(Number.isFinite(last.maximum))target.maximum=last.maximum;
+        target.scoreLabel=String(last.score)+(Number.isFinite(last.maximum)?'/'+last.maximum:'');
+      }
+    }
+    return function projectKidsSubmissions(value,payload,ticket,guard){
+      if(!value||!value.profile||!payload)return value;
+      const profile=value.profile,receipts=list(payload.receipts),fresh=!(value.cacheStale||value.dashboard.cacheStale||profile.cacheStale||value.partial||list(profile.errors).length);
+      const assignments=list(profile.assignments),checks=[];
+      assignments.forEach(assignment=>{
+        if(!assignment||assignment.isAssessmentLesson)return;
+        const tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false);
+        const mode=assignment.webActivityMode||(assignment.optionalWebPractice?'self-directed':'required');
+        tasks.forEach(task=>{
+          if(!task)return;const maps=mappings(assignment,task,required.length);
+          const peers=peersFor(assignment,maps,assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
+          const found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers));
+          const feedback=task.feedback||(task.feedback={}),proof=window.known?proofFor(payload,maps):null;
+          receive(feedback,found);
+          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(proof),complete:true});
+          const eligible=deadline.missing;
+          if(found.length&&deadline.late){feedback.isLate=true;feedback.stateLabel='Đã nộp · Muộn';}
+          if(ticket&&proof&&eligible){guard.authorize(ticket,task,proof,{complete:true,stale:!fresh});guard.authorize(ticket,feedback,proof,{complete:true,stale:!fresh});}
+          if(mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&deadline.eligible)checks.push(Boolean(feedback.submitted||proof&&eligible));
+        });
+        const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
+        if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
+        if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true,stale:!fresh});
+        if(assignment.kind==='self-practice'&&required.length===1&&required[0].feedback.submitted){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
+      });
+      list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
+        const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;
+        const assignment=assignments.find(a=>a.id===retake.assignmentId);if(!assignment)return;
+        const task=list(assignment.tasks).find(t=>isRetake(assignment,t)&&t.feedback&&t.feedback.submitted);if(!task)return;
+        const feedback=task.feedback;
+        retake.submittedAt=feedback.submittedAt;retake.attempts=list(feedback.submissionAttempts).slice();retake.declaredAttemptCount=retake.attempts.length;
+        if(Number.isFinite(feedback.score)){retake.score=feedback.score;retake.maximum=feedback.maximum;retake.scoreLabel=feedback.scoreLabel;}
+        if(ticket&&guard.can(task))guard.transfer(task,retake);
+      });
+      // The original summary counts online assignments, never paper marks.
+      // Rebuild its existing reminders only when every relevant task was read.
+      if(ticket&&fresh&&checks.length&&checks.every(Boolean)){
+        const missing=assignments.filter(a=>!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&!(t.feedback&&t.feedback.submitted)));
+        profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
+        profile.privateReminders=missing.slice(0,8).map(a=>{const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:a.isOverdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:a.isOverdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
+        const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
+        guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
+      }
+      return value;
+    };
+  }
+  root.createKidsReceiptProjector=createKidsReceiptProjector;
+  if(typeof module==='object'&&module.exports)module.exports={createKidsReceiptProjector};
+})(typeof globalThis==='object'?globalThis:this);
+
+const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rules":[{"programPattern":"^(?:DE|DISCOVERENGLISH)$","families":["DISCOVER ENGLISH"]},{"programPattern":"^(?:D1|DISCOVER1)$","families":["DISCOVER 1"]},{"programPattern":"^(?:D2|DISCOVER2)$","families":["DISCOVER 2"]},{"programPattern":"^(?:FF1|FAMILYANDFRIENDS1)$","families":["FF1"]},{"programPattern":"^(?:FF2|FAMILYANDFRIENDS2)$","families":["FF2"]},{"programPattern":"^(?:PHONICS[1-4]|OP[1-4])$","families":["PHONICS 1–4"]},{"programPattern":"^SCIENCEK$","families":["SCIENCE K"]},{"programPattern":"^SCIENCEG[12]$","families":["SCIENCE G1 & G2"]},{"programPattern":"^CRITICAL(?:THINKING)?(?:SCIENCE)?[1-3]$","families":["CRITICAL 1–3"]},{"programPattern":"^(?:PEPPA|PEPPAPIG)$","families":["PEPPA PIG"]},{"programPattern":"^PHONICSVIDEO$","families":["PHONICS VIDEO"]}],"urls":[{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/wnzd7ycuwwlhkf/","mappings":[{"code":"SCIENCE-G1-12","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/g5t0vayvepwegl/","mappings":[{"code":"SCIENCE-G1-11","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/id599acyn7ecsy/","mappings":[{"code":"SCIENCE-G1-10","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/tes739houtjxbo/","mappings":[{"code":"SCIENCE-G1-09","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/oaowxlt6nh7zj0/","mappings":[{"code":"SCIENCE-G1-14","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/nsyflw5ljt1dsn/","mappings":[{"code":"SCIENCE-G1-13","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/78uogtwvrtaxce/","mappings":[{"code":"SCIENCE-K-15","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/lyjim9t9199gs8/","mappings":[{"code":"SCIENCE-K-14","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/yxwqewg/","mappings":[{"code":"D2-Tiết 60","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/spz89vn/","mappings":[{"code":"D2-Tiết 59-Ngữ pháp","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/g399h42/","mappings":[{"code":"D2-Tiết 59-Từ vựng","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/umpho9p6yol7qx/","mappings":[{"code":"SCIENCE-K-13","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/udsrspa/","mappings":[{"code":"D2-Tiết 58","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/v5sdru2/","mappings":[{"code":"D2-Tiết 57","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/8eaot6m73fyqlm/","mappings":[{"code":"SCIENCE-K-12","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/j8hfbvt/","mappings":[{"code":"D2-Tiết 46-Ngữ pháp","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/c2qm74r/","mappings":[{"code":"D2-Tiết 46-Từ vựng","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/du1kqq9j7cax8a/","mappings":[{"code":"SCIENCE-K-05","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/kuquksp/","mappings":[{"code":"D2-Tiết 45","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/y230v01k71si1y/","mappings":[{"code":"SCIENCE-K-04","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/jryvsry/","mappings":[{"code":"D2-Tiết 44","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xed95th/","mappings":[{"code":"D2-Tiết 43-Ngữ pháp","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/j2tjzaq/","mappings":[{"code":"D2-Tiết 43-Từ vựng","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/xollyg0w9bijfs/","mappings":[{"code":"SCIENCE-K-03","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/tesjgfy/","mappings":[{"code":"D2-Tiết 42","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/hfh4yka/","mappings":[{"code":"D2-Tiết 41","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/jbmtee44nb62ce/","mappings":[{"code":"SCIENCE-K-02","formFamily":"Science K"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/u3w3q6xtl4unh6/","mappings":[{"code":"SCIENCE-G1-25","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/6dejsjap9hoeco/","mappings":[{"code":"SCIENCE-G1-24","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/jzp6yh5l49kjvt/","mappings":[{"code":"SCIENCE-G1-23","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/cbpaiyzv2kev99/","mappings":[{"code":"SCIENCE-G1-22","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/wg2g278/","mappings":[{"code":"D2-Tiết 25","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/cejamhk/","mappings":[{"code":"D2-Tiết 24","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/hbh2xz8/","mappings":[{"code":"D2-Tiết 21-Ngữ pháp","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/aewke57/","mappings":[{"code":"D2-Tiết 21-Từ vựng","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/vwjxvn5/","mappings":[{"code":"D2-Tiết 20","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ebbefzj/","mappings":[{"code":"D2-Tiết 19","formFamily":"Discover 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/wic0a4qepqzq/","mappings":[{"code":"DE-25","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ewtrybq/","mappings":[{"code":"D1-Tiết 54-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/dn644p6/","mappings":[{"code":"D1-Tiết 54-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/nl2ki2i9qphi/","mappings":[{"code":"DE-24","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/bpt9gkz/","mappings":[{"code":"D1-Tiết 53","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ttnkeu9/","mappings":[{"code":"D1-Tiết 52","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/ah9dxsvuqfhd/","mappings":[{"code":"DE-23","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/nv9zny4/","mappings":[{"code":"D1-Tiết 51-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/f4hpk52/","mappings":[{"code":"D1-Tiết 51-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/v3up7uh/","mappings":[{"code":"D1-Tiết 50","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/ibxfw6v1gbpf/","mappings":[{"code":"DE-22","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/z5swdb3/","mappings":[{"code":"D1-Tiết 49","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/ifzzpumrdkhh/","mappings":[{"code":"DE-11","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/ubyylfeb7od2/","mappings":[{"code":"DE-10","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/a8hjzqn/","mappings":[{"code":"D1-Tiết 37-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/j2nvw5d/","mappings":[{"code":"D1-Tiết 37-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/n8nhfnf/","mappings":[{"code":"D1-Tiết 36","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/4aymq2nyf0ad/","mappings":[{"code":"DE-09","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/fzz3h8k/","mappings":[{"code":"D1-Tiết 35","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/rdmgxs7/","mappings":[{"code":"D1-Tiết 34-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/vsz2hyw/","mappings":[{"code":"D1-Tiết 34-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/tbf6s10ju0ly/","mappings":[{"code":"DE-08","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ancs9qq/","mappings":[{"code":"D1-Tiết 33","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/70c5ij2sll16/","mappings":[{"code":"DE-07","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/nw6xzb8qudov/","mappings":[{"code":"DE-06","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/wvga2yeddm1s/","mappings":[{"code":"DE-05","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/asmekmn/","mappings":[{"code":"D1-Tiết 18-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ezpw46u/","mappings":[{"code":"D1-Tiết 18-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ahvxzc6/","mappings":[{"code":"D1-Tiết 17","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/fpugrtnditam/","mappings":[{"code":"DE-04","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/uccu4gk/","mappings":[{"code":"D1-Tiết 16","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/vmrrbisjxu4n/","mappings":[{"code":"DE-03","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ntcp6ew/","mappings":[{"code":"D1-Tiết 13-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/wpykq2j/","mappings":[{"code":"D1-Tiết 13-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/fbdn7he/","mappings":[{"code":"D1-Tiết 12","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/hneppbw/","mappings":[{"code":"D1-Tiết 11","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ky38rpm/","mappings":[{"code":"D1-Tiết 10-Ngữ pháp","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/smy5cwy/","mappings":[{"code":"D1-Tiết 10-Từ vựng","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/swjzcuj/","mappings":[{"code":"D1-Tiết 9","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/discover-english/cotlenqlmye5/","mappings":[{"code":"DE-02","formFamily":"Discover English"}]},{"url":"https://mstrangtrieueducation-droid.github.io/td94rne/","mappings":[{"code":"D1-Tiết 8","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/wyf4vph/","mappings":[{"code":"FF2-Tiết 55","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/hvzheh6/","mappings":[{"code":"FF2-Tiết 54","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/kwfq7f6/","mappings":[{"code":"FF2-Tiết 44","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/bqp4tpm/","mappings":[{"code":"FF2-Tiết 43","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/sfg2u5v/","mappings":[{"code":"FF2-Tiết 42","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/fcbe23v/","mappings":[{"code":"FF2-Tiết 41","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/jj95anx/","mappings":[{"code":"FF2-Tiết 40","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/hhcyvt2/","mappings":[{"code":"FF2-Tiết 36","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/kfe3zfb/","mappings":[{"code":"FF2-Tiết 33","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/n9xzdag/","mappings":[{"code":"FF2-Tiết 32","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/rgeeaeu/","mappings":[{"code":"FF2-Tiết 31","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/tyz5ug4/","mappings":[{"code":"FF2-Tiết 20","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/msn2x9d/","mappings":[{"code":"FF2-Tiết 19","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ttsf69z/","mappings":[{"code":"FF2-Tiết 18","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/d9cg2gv/","mappings":[{"code":"FF2-Tiết 17","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/bdmee83/","mappings":[{"code":"FF2-Tiết 16","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/fjg96cg/","mappings":[{"code":"FF2-Tiết 15","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/vnyv5ge/","mappings":[{"code":"FF2-Tiết 14","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/dyycvbh/","mappings":[{"code":"FF2-Tiết 9","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/t8ufstm/","mappings":[{"code":"FF2-Tiết 8","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/w59q35r/","mappings":[{"code":"FF2-Tiết 7","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ee3buhq/","mappings":[{"code":"FF2-Tiết 6","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xtvvugv/exgftj5/","mappings":[{"code":"FF2-Tiết 5","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/xcyyj5w/","mappings":[{"code":"FF2-Tiết 4","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/baefees/","mappings":[{"code":"FF2-Tiết 3","formFamily":"Family and Friends 2"}]},{"url":"https://mstrangtrieueducation-droid.github.io/kwuuvvn/","mappings":[{"code":"FF1-Tiết 49","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ptn3at2/","mappings":[{"code":"FF1-Tiết 48","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ymrjqdt/n99rqst/","mappings":[{"code":"FF1-Tiết 47","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/gpszmgv/","mappings":[{"code":"FF1-Tiết 26","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ymrjqdt/chzxveg/","mappings":[{"code":"FF1-Tiết 25","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/kkafn4q/","mappings":[{"code":"FF1-Tiết 21","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ttuxuhe/","mappings":[{"code":"FF1-Tiết 20","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ymrjqdt/cbyb9e4/","mappings":[{"code":"FF1-Tiết 19","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/zekwnnf/","mappings":[{"code":"FF1-Tiết 4","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/b5dw8sj/","mappings":[{"code":"FF1-Tiết 3","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ymrjqdt/r84qgwn/","mappings":[{"code":"FF1-Tiết 2","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/ssyhmy4/","mappings":[{"code":"FF1-Tiết 1","formFamily":"Family and Friends 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-beb66e0e/","mappings":[{"code":"OP4-L06","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-1c0595b0/","mappings":[{"code":"OP4-L05","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-de90ec27/","mappings":[{"code":"OP3-L08","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-d9ce78dd/","mappings":[{"code":"OP3-L07","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-8cc264ab/","mappings":[{"code":"OP3-L06","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-d5d9305c/","mappings":[{"code":"OP3-L05","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-474862bf/","mappings":[{"code":"OP3-L04","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-3cf04398/","mappings":[{"code":"OP2-L06","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-b5606023/","mappings":[{"code":"OP2-L05","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-6e84eee8/","mappings":[{"code":"OP2-L04","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-f21cb032/","mappings":[{"code":"OP2-L03","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-0f00183c/","mappings":[{"code":"OP2-L02","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/p14-k7m4q2/l-8a85c2b4/","mappings":[{"code":"OP2-L01","formFamily":"Phonics"}]},{"url":"https://mstrangtrieueducation-droid.github.io/e8kxjc2/","mappings":[{"code":"D1-Tiết 20","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/unmmsgw/","mappings":[{"code":"D1-Tiết 19","formFamily":"Discover 1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/mxihz8jewa0zzi/","mappings":[{"code":"SCIENCE-G2-59","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/s85i4t7x04iks4/","mappings":[{"code":"SCIENCE-G2-58","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/nwhbxo9j3dc4dl/","mappings":[{"code":"SCIENCE-G2-57","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/e1cifani3yvov9/","mappings":[{"code":"SCIENCE-G2-56","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/crux4yk7aj3ewz/","mappings":[{"code":"SCIENCE-G2-03","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/9ulxphrnmwkyt5/","mappings":[{"code":"SCIENCE-G2-02","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/33z8abfsbz0ig7/","mappings":[{"code":"SCIENCE-G2-01","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/9so1a2w82p/ob6h14fb2assgt/","mappings":[{"code":"SCIENCE-G1-30","formFamily":"Science G1"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/jb0pjk8yap0o/","mappings":[{"code":"Peppa-38","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/bgxprm9r9bn4/","mappings":[{"code":"Peppa-37","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/jzczocjgpwjl/","mappings":[{"code":"Peppa-36","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/4b1sinz4fupx/","mappings":[{"code":"Peppa-35","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/6tjw7jcs3534/","mappings":[{"code":"Peppa-17","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/xx9t6gf5hi15/","mappings":[{"code":"Peppa-16","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/caj81iq5r6ia/","mappings":[{"code":"Peppa-15","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/vo53y4y7nsa7/","mappings":[{"code":"Peppa-14","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/ofaxhzolivod/","mappings":[{"code":"Peppa-25","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/jo0fxzk0hzp5/","mappings":[{"code":"Peppa-24","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/wdbvjc08hnm3/","mappings":[{"code":"Peppa-23","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/a6gskeghb848/","mappings":[{"code":"Peppa-22","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/cub8dhq3g1id/","mappings":[{"code":"Peppa-13","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/zp4cwg6zn5no/","mappings":[{"code":"Peppa-12","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/ans2pqsd9h97/","mappings":[{"code":"Peppa-05","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/fwsb4u5hbrna/","mappings":[{"code":"Peppa-04","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/sx7atzuvta8n/","mappings":[{"code":"Peppa-03","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/rp50cmwggq45/","mappings":[{"code":"Peppa-02","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/oofdgb6t87j7/","mappings":[{"code":"Peppa-01","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/nnw63jtluxr8/","mappings":[{"code":"Phonics-Video-25","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/r9b2s87sng8a/","mappings":[{"code":"Phonics-Video-24","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/qt2jjyb04lpi/","mappings":[{"code":"Phonics-Video-23","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/ic93zbgxvd61/","mappings":[{"code":"Phonics-Video-22","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/fdr5b1be3w7m/","mappings":[{"code":"Phonics-Video-11","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/kksot8dcwd5s/","mappings":[{"code":"Phonics-Video-10","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/8oif91oij1mn/","mappings":[{"code":"Phonics-Video-09","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/phonics-video/1imxp5czrz0b/","mappings":[{"code":"Phonics-Video-08","formFamily":"PHONICS VIDEO"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/h30abcdnjsb7/","mappings":[{"code":"Peppa-08","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/pimbnxnxgh5u/","mappings":[{"code":"Peppa-07","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/peppa-pig/j23bq6c90ujz/","mappings":[{"code":"Peppa-06","formFamily":"PEPPA PIG"}]},{"url":"https://mstrangtrieueducation-droid.github.io/a9q5m7k/","mappings":[{"code":"D3-WT09","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/b1r7m4q/","mappings":[{"code":"D4-WT01","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/c3v7n5r/","mappings":[{"code":"D4-WT03","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/d4m8q6v/","mappings":[{"code":"D4-WT04","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/e5q8n4r/","mappings":[{"code":"D4-WT05","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/f6r8m4q/","mappings":[{"code":"D4-WT06","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/g7m4q8n/","mappings":[{"code":"D4-WT07","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/h2m7q4v/","mappings":[{"code":"D2-WT01","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/h8v4m7q/","mappings":[{"code":"D4-WT08","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/i9m4q7v/","mappings":[{"code":"D4-WT09","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/k4m7q2v/","mappings":[{"code":"D2-WT04","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/k8v4q2m/","mappings":[{"code":"D2-WT08","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/k9v4m7q/","mappings":[{"code":"D1-WT09","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/m6q8t4v/","mappings":[{"code":"D1-WT06","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/m9q6v3k/","mappings":[{"code":"D2-WT09","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/n2v7k4q/","mappings":[{"code":"D3-WT02","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/n4q7m2x/","mappings":[{"code":"D1-WT01","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/p3m7q5v/","mappings":[{"code":"D3-WT03","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/p8v3m6q/","mappings":[{"code":"D1-WT08","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/q2m8r5v/","mappings":[{"code":"D4-WT02","formFamily":"KIDS_RETAKE","maximum":60}]},{"url":"https://mstrangtrieueducation-droid.github.io/q4v8m2k/","mappings":[{"code":"D1-WT04","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/q5m8k2v/","mappings":[{"code":"D2-WT05","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/q7v4m2k/","mappings":[{"code":"D2-WT02","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/r3k8v6m/","mappings":[{"code":"D3-WT01","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/r8m4q2v/","mappings":[{"code":"D1-WT02","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/t4q8m6z/","mappings":[{"code":"D3-WT04","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/t5q8m3v/","mappings":[{"code":"D1-WT05","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/t6m4q8v/","mappings":[{"code":"D2-WT06","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/v5k2q8m/","mappings":[{"code":"D2-WT03","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/v7q3m8k/","mappings":[{"code":"D1-WT03","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/v7q3m9k/","mappings":[{"code":"D2-WT07","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/w5n8q4r/","mappings":[{"code":"D3-WT05","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/x6p9m4k/","mappings":[{"code":"D3-WT06","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/x7m4q9v/","mappings":[{"code":"D1-WT07","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/y7k4m9q/","mappings":[{"code":"D3-WT07","formFamily":"KIDS_RETAKE","maximum":50}]},{"url":"https://mstrangtrieueducation-droid.github.io/z8m4q7n/","mappings":[{"code":"D3-WT08","formFamily":"KIDS_RETAKE","maximum":50}]}]});
+
+    /* KIDS_SUBMISSION_STATUS_V1: source-confirmed absence, unchanged academic actions. */
+    const submissionGuard_ = createSubmissionStatusGuard({
+      getIdentity: () => kidsApi.parent.authorized && !kidsApi.parent.revoked ? CLASS_NAME + '|' + kidsApi.parent.alias : '',
+      isVisible: () => !document.hidden
+    });
+    function submissionCan_(item) { return submissionGuard_.can(item); }
+    function submissionMissingMeta_(item) { return submissionCan_(item) ? {cls:'todo',label:'Chưa nộp bài'} : {cls:'submission-unverified',label:''}; }
+    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,
+      getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
+      isVisible:()=>!document.hidden,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
+      render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
+    });
+    function submissionReset_() { submissionOwner_.suspend(); hidePendingWorkGate(); const banner=$('#pendingWorkBanner');if(banner)banner.hidden=true; }
+    window.addEventListener('kids-parent-access',event=>{if(event.detail.status==='revoked')submissionOwner_.clear();else if(event.detail.status!=='authorized')submissionReset_();});
+
     // KIDS7_PARENT_LINK_V1: preserve all lesson/result renderers behind live authorization.
     // KIDS_PREFILL_IDENTITY_V2: preserve current English-name submission identity.
     const kidsLearningPrefill_ = createStudentLearningPrefill({
@@ -4203,6 +4685,7 @@ function createStudentLearningPrefill(options) {
       parentBootstrapRetry_ = null;
     }
     function parentClearPackage_() {
+      submissionReset_();
       parentBootstrapGeneration_ += 1;
       parentClearBootstrapRetry_();
       parentBootstrapIntent_ = null;
@@ -4228,6 +4711,7 @@ function createStudentLearningPrefill(options) {
     }
     function parentAccessGate_(message, retry = false) {
       if (kidsApi.parent.revoked) parentClearPackage_();
+      if(parentBootstrapPainted_&&kidsApi.parent.authorized&&!kidsApi.parent.revoked)return;
       parentRenderIdentity_();
       $('#dashboardShell').hidden=true; $('#entryGate').hidden=false; $('#entryForm').hidden=true;
       $('#entryName').disabled=true; $('#entrySubmit').disabled=true;
@@ -4244,7 +4728,8 @@ function createStudentLearningPrefill(options) {
     function parentAutoOpen_() { /* Atomic bootstrap owns the sole selected child. */ }
     function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = false) {
       if (!kidsApi.parent.authorized || !parentPackage_) return false;
-      const value=parentValidatePackage_(parentPackage_),alias=kidsApi.parent.alias;
+      const savedScroll=parentBootstrapPainted_?{left:window.scrollX,top:window.scrollY,behavior:'instant'}:null;
+      const value=submissionOwner_.reapply(JSON.parse(JSON.stringify(parentValidatePackage_(parentPackage_)))),alias=kidsApi.parent.alias;
       parentConsumeDirectoryHint_();
       if (!app.directoryLoad.ready || !liveDirectoryContainsAlias_(alias)) return false;
       app.data=value.dashboard;
@@ -4260,6 +4745,7 @@ function createStudentLearningPrefill(options) {
       if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần bài nộp đang được đồng bộ…';
       else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Đang kiểm tra cập nhật…';
       else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
+      if(savedScroll)window.scrollTo(savedScroll);
       return true;
     }
     function parentScheduleBootstrap_(intent, delay) {
@@ -4336,6 +4822,7 @@ function createStudentLearningPrefill(options) {
     function parentContinue_(options={}) {
       if(!kidsApi.parent.authorized)return Promise.resolve(false);
       parentConsumeDirectoryHint_();parentRenderIdentity_();
+      if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh();
       if(options.refresh){
         parentClearBootstrapRetry_();parentBootstrapIntent_=null;
         return parentLoadBootstrap_(true,false,0);
@@ -4343,7 +4830,7 @@ function createStudentLearningPrefill(options) {
       // Periodic authorization never restarts an exhausted academic budget.
       // A successful check may uncover the retained view, while a manual,
       // foreground or online event owns any new data-refresh episode.
-      if(options.background){
+      if(options.background&&!options.foreground){
         if(parentPackage_&&$('#dashboardShell').hidden)parentApplyPackage_(true,false,true);
         return Promise.resolve(Boolean(parentPackage_));
       }
@@ -4371,11 +4858,11 @@ function createStudentLearningPrefill(options) {
         if(event.detail.status!=='authorized')parentAccessGate_();
         else{parentConsumeDirectoryHint_();parentRenderIdentity_();}
       });
-      window.addEventListener('pageshow',event=>{const returning=event.persisted||pageHiddenSinceShow;pageHiddenSinceShow=false;if(returning)parentRecheck_();});
-      window.addEventListener('online',()=>parentRecheck_());
-      window.addEventListener('pagehide',()=>{pageHiddenSinceShow=true;kidsApi.parent.suspend();});
+      window.addEventListener('pageshow',event=>{const returning=event.persisted||pageHiddenSinceShow;pageHiddenSinceShow=false;if(returning)parentRecheck_({background:true,foreground:true});});
+      window.addEventListener('online',()=>parentRecheck_({background:true,foreground:true}));
+      window.addEventListener('pagehide',()=>{pageHiddenSinceShow=true;kidsApi.parent.suspend();submissionReset_();});
       window.addEventListener('hashchange',()=>{kidsApi.parent.suspend();window.location.reload();});
-      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')parentRecheck_();else kidsApi.parent.suspend();});
+      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')parentRecheck_({background:true,foreground:true});else{kidsApi.parent.suspend();submissionReset_();}});
       window.setInterval(()=>{if(document.visibilityState==='visible'&&!kidsApi.parent.revoked)parentRecheck_({background:true});},60000);
       parentAccessGate_();parentRecheck_();
     }

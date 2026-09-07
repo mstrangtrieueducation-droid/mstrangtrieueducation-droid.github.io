@@ -12,12 +12,12 @@ const fighterApi = (() => {
   const actions={getPublicDashboardData:'public',getDashboardData:'dashboard',getStudentDirectoryFastV1:'directory',getStudentProfileFastV1:'profile',getSelfStudyResultsForStudentV1:'selfStudy'};
   const terminalCodes=new Set(['PARENT_LINK_REVOKED','INVALID_TOKEN','LINK_REVOKED','PARENT_LINK_INVALID','TOKEN_REVOKED']);
   const pending=new Map(), controllers=new Set();
-  let status=validToken?'pending':'revoked', binding=null, checkJob=null, selfStudyPrefetch=null;
+  let status=validToken?'pending':'revoked', binding=null, checkJob=null, selfStudyPrefetch=null, submissionEpoch=0, checkEpoch=0;
   const key=value=>String(value||'').trim().normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g,' ');
   const clone=value=>value==null?null:JSON.parse(JSON.stringify(value));
   function error(message,code){const e=new Error(message);e.code=code;return e;}
   function signal(next){status=next;window.dispatchEvent(new CustomEvent('fighter-parent-access',{detail:{status:next}}));}
-  function revoke(){status='revoked';controllers.forEach(c=>c.abort());pending.clear();binding=null;selfStudyPrefetch=null;signal('revoked');}
+  function revoke(){status='revoked';submissionEpoch++;checkEpoch++;controllers.forEach(c=>c.abort());pending.clear();binding=null;selfStudyPrefetch=null;signal('revoked');}
   function validate(data,action){
     if(action==='check'){
       if(!data||data.className!==className||!String(data.studentName||'').trim()||!data.directory||data.directory.className!==className||!Array.isArray(data.directory.students)||data.directory.students.length!==1||key(data.directory.students[0].name)!==key(data.studentName)||binding&&key(binding.studentName)!==key(data.studentName))throw error('Hồ sơ chưa khớp. Vui lòng thử lại.','INVALID_SCOPE');
@@ -29,6 +29,9 @@ const fighterApi = (() => {
       validate(data.publicData,'public');validate(data.fullDashboard,'dashboard');validate(data.profile,'profile');
       return;
     }
+    if(action==='submissions'){
+      if(!data||data.className!==className||data.schema!==1||!Array.isArray(data.receipts)||!Array.isArray(data.coverage))throw error('Dữ liệu bài nộp chưa khớp.','INVALID_SCOPE');return;
+    }
     if(action==='selfStudy'){if(!Array.isArray(data))throw error('Kết quả chưa sẵn sàng.','INVALID_SCOPE');return;}
     if(!data||data.className!==className)throw error('Dữ liệu lớp chưa khớp.','INVALID_SCOPE');
     if(action==='profile'&&(!data.student||key(data.student.name)!==key(binding.studentName)))throw error('Hồ sơ chưa khớp.','INVALID_SCOPE');
@@ -38,7 +41,8 @@ const fighterApi = (() => {
   function requestAction(action,force){
     if(!validToken||status==='revoked')return Promise.reject(error('Hồ sơ không còn hoạt động','PARENT_LINK_REVOKED'));
     if(action!=='check'&&status!=='authorized')return Promise.reject(error('Đang kiểm tra hồ sơ.','AUTH_PENDING'));
-    const requestKey=JSON.stringify([action,Boolean(force)]);
+    const receiptEpoch=action==='check'?checkEpoch:submissionEpoch;
+    const requestKey=JSON.stringify([action,Boolean(force),(action==='submissions'||action==='check')?receiptEpoch:null]);
     if(pending.has(requestKey))return pending.get(requestKey);
     const url=new URL(endpoint);
     Object.entries({api:'parent1',class:className,action,token,force:force?'1':'0',_:String(Date.now())}).forEach(([k,v])=>url.searchParams.set(k,v));
@@ -47,27 +51,31 @@ const fighterApi = (() => {
     const promise=fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal}).then(async response=>{
       if(!response.ok)throw error('Kết nối đang chậm. Vui lòng thử lại.','NETWORK_ERROR');
       const envelope=await response.json(),data=envelope&&envelope.data,code=envelope&&(envelope.code||envelope.error&&envelope.error.code);
+      if((action==='check'&&receiptEpoch!==checkEpoch)||(action==='submissions'&&receiptEpoch!==submissionEpoch))throw error('Đang kiểm tra hồ sơ.','AUTH_PENDING');
       if(status==='revoked'||envelope&&(envelope.revoked===true||terminalCodes.has(code))||data&&(data.revoked===true||terminalCodes.has(data.code))){revoke();throw error('Hồ sơ không còn hoạt động','PARENT_LINK_REVOKED');}
       if(!envelope||envelope.ok!==true||envelope.className!==className||envelope.action!==action||!Object.prototype.hasOwnProperty.call(envelope,'data'))throw error('Dữ liệu chưa sẵn sàng. Vui lòng thử lại.',code||'DATA_UNAVAILABLE');
       validate(data,action);
       document.documentElement.dataset[action+'Ms']=String(Math.round(performance.now()-started));
       document.documentElement.dataset[action+'ReadyMs']=String(Math.round(performance.now()));
       return data;
-    }).finally(()=>{clearTimeout(timer);controllers.delete(controller);pending.delete(requestKey);});
+    }).finally(()=>{clearTimeout(timer);controllers.delete(controller);if(pending.get(requestKey)===promise)pending.delete(requestKey);});
     pending.set(requestKey,promise);return promise;
   }
   function check(options={}){
     const background=Boolean(options.background&&status==='authorized');
-    if(checkJob){if(!background&&status!=='revoked')signal('pending');return checkJob;}
+    if(checkJob)return checkJob;
     if(!validToken||status==='revoked'){signal('revoked');return Promise.resolve(false);}
     if(!background)signal('pending');
-    checkJob=requestAction('check',true).then(data=>{
-      if(status==='revoked')return false;
-      validate(data,'check');binding=clone(data);
-      if(document.visibilityState==='hidden')return false;
-      signal('authorized');return true;
-    }).catch(()=>{if(status!=='revoked')signal('unavailable');return false;}).finally(()=>{checkJob=null;});
-    return checkJob;
+    const epoch=checkEpoch;
+    const job=requestAction('check',true).then(data=>{
+      if(status==='revoked'||epoch!==checkEpoch)return false;
+      validate(data,'check');binding=clone(data);signal('authorized');return true;
+    }).catch(error=>{
+      if(epoch!==checkEpoch)return false;
+      if(error&&error.code==='INVALID_SCOPE'){revoke();return false;}
+      if(status!=='revoked'&&!background)signal('unavailable');return false;
+    }).finally(()=>{if(checkJob===job)checkJob=null;});
+    checkJob=job;return job;
   }
   function request(method,args){
     if(status!=='authorized')return Promise.reject(error('Đang kiểm tra hồ sơ.','AUTH_PENDING'));
@@ -94,7 +102,7 @@ const fighterApi = (() => {
     Object.keys(actions).forEach(method=>{result[method]=(...args)=>request(method,args).then(data=>{if(status==='authorized'&&typeof success==='function')success(data);},err=>{if(typeof failure==='function')failure(err);});});
     return result;
   }
-  return {get run(){return runner();},readCache(){return null;},saveCache(){},parent:{get authorized(){return status==='authorized';},get revoked(){return status==='revoked';},get status(){return status;},get binding(){return status==='authorized'?clone(binding):null;},check,request:requestAction,prefetchSelfStudy,revoke,suspend(){selfStudyPrefetch=null;if(status!=='revoked')signal('pending');}}};
+  return {get run(){return runner();},readCache(){return null;},saveCache(){},parent:{get authorized(){return status==='authorized';},get revoked(){return status==='revoked';},get status(){return status;},get binding(){return status==='authorized'?clone(binding):null;},check,request:requestAction,prefetchSelfStudy,revoke,suspend(){checkEpoch++;checkJob=null;}}};
 })();
 
 </script>
@@ -929,6 +937,7 @@ body.f9-portal-locked #student-gateway {
 @media(max-height:640px){body.f9-portal-locked #student-gateway,#fighter-pending-work-gate{align-items:start}#student-gateway .entry-card{min-height:auto}}
 
 </style>
+<style id="submission-status-style">.submission-unverified{display:none!important}</style>
 </head>
 <body class="f9-portal-locked">
   <div id="loading" class="loading"><div><div class="spinner"></div><p>Đang tải thông tin học tập…</p></div></div>
@@ -1284,20 +1293,20 @@ body.f9-portal-locked #student-gateway {
       const result=[];if(state.submittedAt)result.push('Ghi nhận '+esc(state.submittedAt));if(Number.isFinite(state.score))result.push('Điểm '+score(state.score));
       const actions=[];if(!state.completed&&task.url)actions.push(`<a class="makeup" href="${esc(parentLearningUrl_(task.url))}" target="_blank" rel="noopener">${showPartNumber?'Làm / nộp phần này':'Làm / nộp bài'} →</a>`);actions.push(...submittedFileActions_(state));
       const taskTitle=(showPartNumber?`Phần ${index+1}: `:'')+esc(task.title||'Bài tập');
-      const statusClass=state.tracked===false?'neutral':(state.status==='Nộp muộn'||state.status==='Làm muộn')?'late':state.completed?'done':'missing';
-      const missingItems=(state.missingItems||[]).length?`<p class="task-note"><strong>Cần hoàn thành:</strong> ${esc(state.missingItems.join(' · '))}</p>`:'';
+      const statusClass=!state.completed&&!state.submittedAt&&!submissionCan_(state)?'submission-unverified':state.tracked===false?'neutral':(state.status==='Nộp muộn'||state.status==='Làm muộn')?'late':state.completed?'done':'missing';
+      const missingItems=submissionCan_(state)&&(state.missingItems||[]).length?`<p class="task-note"><strong>Cần hoàn thành:</strong> ${esc(state.missingItems.join(' · '))}</p>`:'';
       return `<div class="task-followup"><div class="task-followup__head"><strong>${taskTitle}</strong><span class="status ${statusClass}">${esc(state.status)}</span></div>${task.instructions?`<p>${esc(task.instructions)}</p>`:''}${missingItems}${result.length?`<div class="task-result">${result.join(' · ')}</div>`:''}${state.comment?`<p class="task-note"><strong>Nhận xét:</strong> ${esc(state.comment)}</p>`:''}${actions.length?`<div class="feedback-actions">${actions.join('')}</div>`:''}</div>`;
     }
     function renderStudentCoreV1_(s){
       activeStudentName_=s.name;
       const assignmentById=Object.fromEntries(dashboard.assignments.map(a=>[a.id,a]));
-      const feedback=s.assignments.map(item=>{const a=assignmentById[item.assignmentId]||{};const missing=(item.missingCount||0)>0;const statusClass=item.tracked===false?'neutral':(item.status==='Nộp muộn'||item.status==='Làm muộn')?'late':missing?'missing':'done';const tasks=a.tasks||[];const requirements=tasks.map((task,index)=>taskFollowup(task,index,(item.tasks||[])[index],Boolean(a.showPartNumbers))).join('');return `<div class="feedback-item"><div class="feedback-item__top"><div><h4>${esc(a.program||'Bài tập')} · ${esc(a.session||item.assignmentId)}</h4><p class="feedback-meta">${esc(a.topic||item.assignmentId)}${a.dueDate?' · Hạn '+esc(a.dueDate):''}</p></div><span class="status ${statusClass}">${esc(item.status||'Chưa ghi nhận')}</span></div>${requirements?`<div class="feedback-requirements">${requirements}</div>`:''}</div>`}).join('');
+      const feedback=s.assignments.map(item=>{const a=assignmentById[item.assignmentId]||{};const missing=(item.missingCount||0)>0;const statusClass=Number(item.missingCount||0)>0&&!submissionCan_(item)?'submission-unverified':item.tracked===false?'neutral':(item.status==='Nộp muộn'||item.status==='Làm muộn')?'late':missing?'missing':'done';const tasks=a.tasks||[];const requirements=tasks.map((task,index)=>taskFollowup(task,index,(item.tasks||[])[index],Boolean(a.showPartNumbers))).join('');return `<div class="feedback-item"><div class="feedback-item__top"><div><h4>${esc(a.program||'Bài tập')} · ${esc(a.session||item.assignmentId)}</h4><p class="feedback-meta">${esc(a.topic||item.assignmentId)}${a.dueDate?' · Hạn '+esc(a.dueDate):''}</p></div><span class="status ${statusClass}">${esc(item.status||'Chưa ghi nhận')}</span></div>${requirements?`<div class="feedback-requirements">${requirements}</div>`:''}</div>`}).join('');
       const missingCount=s.assignments.reduce((total,item)=>total+(item.missingCount||0),0);
-      $('#student-profile').innerHTML=`<div class="profile-head"><div><h3 class="student-name">${esc(s.name)}</h3><p class="student-sub">${esc(s.englishName||dashboard.className)}</p></div><span class="rank">${s.rank?'#'+s.rank+' toàn lớp':'Chưa đủ dữ liệu xếp hạng'}</span></div><div class="stats"><div class="stat"><span>Điểm TB kiểm tra trên lớp</span><strong>${score(s.average)}</strong></div><div class="stat"><span>Bài kiểm tra đã có điểm</span><strong>${s.completedScores}/${s.scoreDetails.length}</strong></div><div class="stat"><span>Bài tập cần hoàn thành</span><strong style="color:${missingCount?'var(--red)':'var(--green)'}">${missingCount}</strong></div></div>${rankAnalysis(s)}${submissionHabit(s)}<h4 class="feedback-title">Bài tập, nhận xét & nội dung cần làm bù</h4><div class="feedback-list">${feedback||'<div class="empty">Chưa có bài tập hoặc nhận xét.</div>'}</div>${progressScience(s)}${retakeSummary(s)}`;
+      $('#student-profile').innerHTML=`<div class="profile-head"><div><h3 class="student-name">${esc(s.name)}</h3><p class="student-sub">${esc(s.englishName||dashboard.className)}</p></div><span class="rank">${s.rank?'#'+s.rank+' toàn lớp':'Chưa đủ dữ liệu xếp hạng'}</span></div><div class="stats"><div class="stat"><span>Điểm TB kiểm tra trên lớp</span><strong>${score(s.average)}</strong></div><div class="stat"><span>Bài kiểm tra đã có điểm</span><strong>${s.completedScores}/${s.scoreDetails.length}</strong></div>${fighterSubmissionAggregate_()?`<div class="stat"><span>Bài tập cần hoàn thành</span><strong style="color:${missingCount?'var(--red)':'var(--green)'}">${missingCount}</strong></div>`:''}</div>${rankAnalysis(s)}${submissionHabit(s)}<h4 class="feedback-title">Bài tập, nhận xét & nội dung cần làm bù</h4><div class="feedback-list">${feedback||'<div class="empty">Chưa có bài tập hoặc nhận xét.</div>'}</div>${progressScience(s)}${retakeSummary(s)}`;
       rememberStudentNews_(s);
     }
     function rankAnalysis(s){const total=dashboard.classSummary.studentCount||0;if(!s.rank||!total)return'';const ratio=s.rank/total;const group=ratio<=.2?'Nhóm dẫn đầu':ratio<=.4?'Nhóm nổi bật':ratio<=.7?'Nhóm giữa lớp':'Nhóm cần củng cố';return `<div class="rank-analysis"><div><span>Vị trí học tập hiện tại</span><strong>Hạng ${s.rank} · ${group}</strong></div></div>`}
-    function submissionHabit(s){const x=s.submissionSummary||{};const alert=(x.lateCount||0)+(x.overdueCount||0)>0;return `<div class="submission-habit ${alert?'is-alert':''}"><div><span>Thói quen nộp bài</span><strong>${esc(x.label||'Chưa đủ dữ liệu')}</strong></div><p>Đúng hạn ${x.onTimeCount||0} · Nộp muộn ${x.lateCount||0} · Quá hạn ${x.overdueCount||0}</p></div>`}
+    function submissionHabit(s){if(!fighterSubmissionAggregate_())return '';const x=s.submissionSummary||{};const alert=(x.lateCount||0)+(x.overdueCount||0)>0;return `<div class="submission-habit ${alert?'is-alert':''}"><div><span>Thói quen nộp bài</span><strong>${esc(x.label||'Chưa đủ dữ liệu')}</strong></div><p>Đúng hạn ${x.onTimeCount||0} · Nộp muộn ${x.lateCount||0} · Quá hạn ${x.overdueCount||0}</p></div>`}
     function trendMeta(delta,count,latest,lastChange){if(count<3)return{label:'Chưa đủ dữ liệu',cls:'neutral'};if(delta>=2.5&&latest>=6.5&&lastChange>=-.5)return{label:'Tiến bộ đáng khen',cls:'praise'};if(delta>=1)return{label:'Đang tiến bộ',cls:'improving'};if(delta>-.5)return{label:'Ổn định',cls:'stable'};return{label:'Cần củng cố',cls:'support'}}
     function progressProgram(label,details){const valid=details.filter(item=>Number.isFinite(item.score));const first=valid[0]?.score,latest=valid[valid.length-1]?.score;const previous=valid[valid.length-2]?.score;const delta=valid.length>=2?Math.round((latest-first)*10)/10:null;const lastChange=valid.length>=2?Math.round((latest-previous)*10)/10:null;const trend=trendMeta(delta,valid.length,latest,lastChange);const deltaClass=Number.isFinite(delta)&&delta>0?'up':Number.isFinite(delta)&&delta<0?'down':'';const deltaText=Number.isFinite(delta)?`${delta>0?'+':''}${String(delta.toFixed(1)).replace('.',',')} điểm`:'—';const sequence=details.map(item=>`<span class="score-point"><span>${esc(item.label)}</span><strong>${score(item.score)}</strong>${scoreNewPill_('score',item)}</span>`).join('');return `<article class="trend-card"><div class="trend-head"><h5>${esc(label)}</h5><span class="trend-badge ${trend.cls}">${trend.label}</span></div><div class="trend-comparison"><div class="trend-value"><span>Điểm đầu tiên</span><strong>${score(first)}</strong></div><span class="trend-arrow">→</span><div class="trend-value"><span>Điểm gần nhất</span><strong>${score(latest)}</strong></div></div><div class="trend-delta ${deltaClass}">${deltaText}</div><div class="score-sequence">${sequence}</div></article>`}
     function progressScience(s){
@@ -1314,13 +1323,13 @@ body.f9-portal-locked #student-gateway {
       return cards?'<section class="progress-science"><div class="subhead"><div><h4>Theo dõi sự tiến bộ</h4></div></div><div class="progress-grid">'+cards+'</div></section>':'';
     }
     // RETAKE_COMPLETION_UI_V1
-    function retakeSummary(s){const items=s.retakes||[];if(!items.length)return'';const completedCount=items.filter(item=>Number.isFinite(item.retakeScore)).length;return `<section class="retake-section"><div class="subhead"><div><h4>Kết quả làm lại bài kiểm tra tại nhà</h4><p>Hoàn thành ${completedCount}/${items.length} bài làm lại</p></div></div><div class="retake-grid">${items.map(item=>{const hasScore=Number.isFinite(item.retakeScore);const completed=hasScore;const started=(item.done||item.submittedAt)&&!hasScore;const statusText=completed?'Hoàn thành đầy đủ':started?'Đã làm, chờ điểm':'Chưa hoàn thành';const diff=item.difference;const diffText=Number.isFinite(diff)?`${diff>0?'+':''}${String(diff.toFixed(1)).replace('.',',')} điểm so với bài trên lớp`:'Chưa đủ dữ liệu để đối chiếu';return `<article class="retake-card"><div class="retake-head"><h5>${esc(item.program)} · ${esc(item.label)}</h5><span class="retake-status ${completed?'done':'missing'}">${statusText}</span></div><div class="retake-comparison"><div class="retake-value"><span>Bài kiểm tra trên lớp</span><strong>${score(item.originalScore)}</strong></div><span class="retake-arrow">→</span><div class="retake-value"><span>Bài làm lại tại nhà</span><strong>${score(item.retakeScore)}</strong>${scoreNewPill_('retake',item)}</div></div><div class="retake-difference">${diffText}</div>${item.submittedAt?`<p class="retake-note">Hoàn thành lúc ${esc(item.submittedAt)}.</p>`:''}</article>`}).join('')}</div></section>`}
+    function retakeSummary(s){const items=s.retakes||[];if(!items.length)return'';const completedCount=items.filter(item=>Number.isFinite(item.retakeScore)).length;return `<section class="retake-section"><div class="subhead"><div><h4>Kết quả làm lại bài kiểm tra tại nhà</h4>${fighterSubmissionAggregate_()?`<p>Hoàn thành ${completedCount}/${items.length} bài làm lại</p>`:''}</div></div><div class="retake-grid">${items.map(item=>{const hasScore=Number.isFinite(item.retakeScore);const completed=hasScore;const started=(item.done||item.submittedAt)&&!hasScore;const statusText=completed?'Hoàn thành đầy đủ':started?'Đã làm, chờ điểm':'Chưa hoàn thành';const diff=item.difference;const diffText=Number.isFinite(diff)?`${diff>0?'+':''}${String(diff.toFixed(1)).replace('.',',')} điểm so với bài trên lớp`:'Chưa đủ dữ liệu để đối chiếu';return `<article class="retake-card"><div class="retake-head"><h5>${esc(item.program)} · ${esc(item.label)}</h5><span class="retake-status ${completed?'done':started?'neutral':submissionCan_(item)?'missing':'submission-unverified'}">${statusText}</span></div><div class="retake-comparison"><div class="retake-value"><span>Bài kiểm tra trên lớp</span><strong>${score(item.originalScore)}</strong></div><span class="retake-arrow">→</span><div class="retake-value"><span>Bài làm lại tại nhà</span><strong>${score(item.retakeScore)}</strong>${scoreNewPill_('retake',item)}</div></div><div class="retake-difference">${diffText}</div>${item.submittedAt?`<p class="retake-note">Hoàn thành lúc ${esc(item.submittedAt)}.</p>`:''}</article>`}).join('')}</div></section>`}
     // RETAKE_ATTEMPT_HISTORY_UI_V11
 function retakeSummary(s){
   const items=s.retakes||[];
   if(!items.length)return'';
   const completedCount=items.filter(item=>Number.isFinite(item.retakeScore)).length;
-  return `<section class="retake-section"><div class="subhead"><div><h4>Kết quả làm lại bài kiểm tra tại nhà</h4><p>Hoàn thành ${completedCount}/${items.length} bài làm lại</p></div></div><div class="retake-grid">${items.map(item=>{
+  return `<section class="retake-section"><div class="subhead"><div><h4>Kết quả làm lại bài kiểm tra tại nhà</h4>${fighterSubmissionAggregate_()?`<p>Hoàn thành ${completedCount}/${items.length} bài làm lại</p>`:''}</div></div><div class="retake-grid">${items.map(item=>{
     const hasScore=Number.isFinite(item.retakeScore);
     const completed=hasScore;
     const started=(item.done||item.submittedAt)&&!hasScore;
@@ -1331,7 +1340,7 @@ function retakeSummary(s){
     const history=attempts.length
       ?`<div class="retake-note"><strong>Các lần làm lại</strong>${attempts.map((a,index)=>`<div>Lần ${index+1}: <strong>${score(a.score)}</strong>${a.submittedAt?` · ${esc(a.submittedAt)}`:''}</div>`).join('')}</div>`
       :(item.submittedAt?`<p class="retake-note">Hoàn thành lúc ${esc(item.submittedAt)}.</p>`:'');
-    return `<article class="retake-card"><div class="retake-head"><h5>${esc(item.program)} · ${esc(item.label)}</h5><span class="retake-status ${completed?'done':'missing'}">${statusText}</span></div><div class="retake-comparison"><div class="retake-value"><span>Bài kiểm tra trên lớp</span><strong>${score(item.originalScore)}</strong></div><span class="retake-arrow">→</span><div class="retake-value"><span>Bài làm lại tại nhà</span><strong>${score(item.retakeScore)}</strong>${scoreNewPill_('retake',item)}</div></div><div class="retake-difference">${diffText}</div>${history}</article>`;
+    return `<article class="retake-card"><div class="retake-head"><h5>${esc(item.program)} · ${esc(item.label)}</h5><span class="retake-status ${completed?'done':started?'neutral':submissionCan_(item)?'missing':'submission-unverified'}">${statusText}</span></div><div class="retake-comparison"><div class="retake-value"><span>Bài kiểm tra trên lớp</span><strong>${score(item.originalScore)}</strong></div><span class="retake-arrow">→</span><div class="retake-value"><span>Bài làm lại tại nhà</span><strong>${score(item.retakeScore)}</strong>${scoreNewPill_('retake',item)}</div></div><div class="retake-difference">${diffText}</div>${history}</article>`;
   }).join('')}</div></section>`;
 }
 
@@ -1758,6 +1767,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
     function updatePersonalMissingStatV1_(selfStudyMissingCount){
       const profile=$('#student-profile');
       if(!profile)return;
+      if(!fighterSubmissionAggregate_()){const cards=profile.querySelectorAll('.stats .stat');if(cards.length>2)cards[2].hidden=true;return;}
       const regularCount=Number(profile.dataset.regularMissingCount||0);
       const total=regularCount+Number(selfStudyMissingCount||0);
       const cards=profile.querySelectorAll('.stats .stat');
@@ -1788,7 +1798,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
         article.setAttribute('data-personal-history-row','1');
         article.setAttribute('data-needs-action','1');
         const title=assignment.topic||assignment.session||'B\u00e0i t\u1eadp t\u1ef1 luy\u1ec7n';
-        article.innerHTML='<div class="feedback-item__top"><div><h4>B\u00e0i t\u1eadp t\u1ef1 luy\u1ec7n \u00b7 '+esc(row.code||assignment.session||'')+'</h4><p class="feedback-meta">'+esc(assignment.program||'FIGHTER LISTENING')+(assignment.dueDate?' \u00b7 H\u1ea1n '+esc(fullDate(assignment.dueDate)):'')+'</p></div><span class="status missing">'+status+'</span></div><div class="feedback-requirements"><div class="task-followup"><div class="task-followup__head"><strong>'+esc(title)+'</strong><span class="status missing">'+status+'</span></div><p>'+esc(assignment.instructions||'Ho\u00e0n th\u00e0nh b\u00e0i theo h\u01b0\u1edbng d\u1eabn.')+'</p>'+(assignment.url?'<div class="feedback-actions"><a class="makeup" href="'+esc(parentLearningUrl_(assignment.url))+'" target="_blank" rel="noopener">L\u00e0m b\u00f9 \u2192</a></div>':'')+'</div></div>';
+        article.innerHTML='<div class="feedback-item__top"><div><h4>B\u00e0i t\u1eadp t\u1ef1 luy\u1ec7n \u00b7 '+esc(row.code||assignment.session||'')+'</h4><p class="feedback-meta">'+esc(assignment.program||'FIGHTER LISTENING')+(assignment.dueDate?' \u00b7 H\u1ea1n '+esc(fullDate(assignment.dueDate)):'')+'</p></div><span class="status '+(submissionCan_(assignment)?'missing':'submission-unverified')+'">'+status+'</span></div><div class="feedback-requirements"><div class="task-followup"><div class="task-followup__head"><strong>'+esc(title)+'</strong><span class="status '+(submissionCan_(assignment)?'missing':'submission-unverified')+'">'+status+'</span></div><p>'+esc(assignment.instructions||'Ho\u00e0n th\u00e0nh b\u00e0i theo h\u01b0\u1edbng d\u1eabn.')+'</p>'+(assignment.url?'<div class="feedback-actions"><a class="makeup" href="'+esc(parentLearningUrl_(assignment.url))+'" target="_blank" rel="noopener">L\u00e0m b\u00f9 \u2192</a></div>':'')+'</div></div>';
         list.appendChild(article);
       });
       applyPersonalHistoryLimitV1_(list,4);
@@ -1935,7 +1945,7 @@ function f9PortalFindAssignmentRecordV2_(assignment, student) {
       return keys.indexOf(f9PortalKeyV2_(record && record.assignmentId)) >= 0;
     }) || null;
   }
-function f9PortalStatusMetaV2_(state, missingCount) {
+function submissionOriginalFighterStatus_(state, missingCount) {
   var text = String(state && state.status || 'Chưa có dữ liệu theo dõi').trim() || 'Chưa có dữ liệu theo dõi';
   var key = slug(text);
   var late = key === 'nop muon' || key === 'lam muon' || key.indexOf('nop muon ') === 0 || key.indexOf('lam muon ') === 0;
@@ -1945,6 +1955,12 @@ function f9PortalStatusMetaV2_(state, missingCount) {
   if (neutral) return {text:text, cls:'neutral', completed:false, neutral:true};
   return {text:text, cls:'missing', completed:false, neutral:false};
 }
+function f9PortalStatusMetaV2_(state,missingCount){
+  var meta=submissionOriginalFighterStatus_(state,missingCount);
+  if(state&&(state.submitted||state.submittedAt)&&!meta.completed)return Object.assign({},meta,{cls:'neutral',text:state.status||'Đã nộp bài'});
+  if(!meta.completed&&!submissionCan_(state))return Object.assign({},meta,{cls:'submission-unverified',text:'',missingBeforeVerification:meta.cls==='missing'});
+  return meta;
+}
 function f9PortalTaskInlineMarkupV2_(task, state) {
   /* FIGHTER9_LATE_SUBMISSION_FILES_V5 */
   var meta = f9PortalStatusMetaV2_(state, 0);
@@ -1952,7 +1968,7 @@ function f9PortalTaskInlineMarkupV2_(task, state) {
   if (state && state.submittedAt) result.push('Ghi nhận ' + esc(state.submittedAt));
   if (state && Number.isFinite(state.score)) result.push('Điểm ' + score(state.score));
   var actions = [];
-  if (meta.cls === 'missing' && task && task.url) {
+  if ((meta.cls === 'missing'||meta.missingBeforeVerification) && task && task.url) {
     actions.push('<a class="makeup" href="' + esc(parentLearningUrl_(task.url)) + '" target="_blank" rel="noopener">Làm bù →</a>');
   }
   // Tệp đã nộp là bằng chứng độc lập với việc đúng hạn hay nộp muộn.
@@ -1979,7 +1995,7 @@ function f9PortalDecorateRegularV2_(student) {
       var tasks = Array.isArray(assignment.tasks) ? assignment.tasks : [];
       var states = record && Array.isArray(record.tasks) ? record.tasks : [];
       if (tasks.length > 1) {
-        var overallState = record ? {status:record.status, completed:Number(record.missingCount || 0) === 0} : null;
+        var overallState = record ? submissionGuard_.transfer(record,{status:record.status, completed:Number(record.missingCount || 0) === 0}) : null;
         var overallMeta = f9PortalStatusMetaV2_(overallState, record && record.missingCount);
         var topic = card.querySelector('.session-topic');
         if (topic) topic.insertAdjacentHTML('beforeend', '<span class="status ' + overallMeta.cls + ' f9-inline-overall" data-f9-student-inline="1">' + esc(overallMeta.text) + '</span>');
@@ -2030,7 +2046,7 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
           (result.submittedAt ? '<div class="task-result">Ghi nhận ' + esc(result.submittedAt) + '</div>' : '') + body;
       } else {
         var status = assignment.dueDate && dueState(assignment.dueDate) === 'overdue' ? 'THIẾU BÀI' : 'CHƯA HOÀN THÀNH';
-        panel.innerHTML = '<div class="f9-inline-state-head"><strong>Tình trạng bài làm</strong><span class="status missing">' + status + '</span></div>' +
+        panel.innerHTML = '<div class="f9-inline-state-head"><strong>Tình trạng bài làm</strong><span class="status '+(submissionCan_(assignment)?'missing':'submission-unverified')+'">' + status + '</span></div>' +
           (assignment.url ? '<div class="feedback-actions"><a class="makeup" href="' + esc(parentLearningUrl_(assignment.url)) + '" target="_blank" rel="noopener">Làm bù →</a></div>' : '');
       }
       var tasks = card.querySelector('.tasks');
@@ -2180,7 +2196,7 @@ function fighterPendingRegularEntriesV15_(student){
     var states=Array.isArray(record.tasks)?record.tasks:[];
     tasks.forEach(function(task,index){
       var taskState=states[index];
-      if(!task||!taskState||taskState.missing!==true||!String(task.url||'').trim())return;
+      if(!task||!taskState||!submissionCan_(taskState)||taskState.missing!==true||!String(task.url||'').trim())return;
       var sessionLabel=[assignment.program,assignment.session||assignment.topic].filter(Boolean).join(' · ')||'Bài tập về nhà';
       var taskLabel=String(task.title||'').trim();
       entries.push({kind:'lessons',id:String(assignment.id||assignment.sourceCode||record.assignmentId||''),part:String(index),label:taskLabel?sessionLabel+' · '+taskLabel:sessionLabel});
@@ -2201,7 +2217,7 @@ function fighterPendingSelfStudyEntriesV15_(student){
   });
   return assignments.map(function(assignment){
     var code=typeof selfStudyCanonicalCodeUiV4_==='function'?selfStudyCanonicalCodeUiV4_(assignment&&assignment.sourceCode||assignment&&assignment.code||''):fighterPendingKeyV15_(assignment&&assignment.sourceCode||assignment&&assignment.code||'');
-    if(!assignment||!code||completed[code]||!String(assignment.url||'').trim())return null;
+    if(!assignment||assignment.submissionReceived||!submissionCan_(assignment)||!code||completed[code]||!String(assignment.url||'').trim())return null;
     return {kind:'self-study',id:String(code),label:[assignment.program,assignment.session||assignment.topic||code].filter(Boolean).join(' · ')};
   }).filter(Boolean);
 }
@@ -2450,6 +2466,605 @@ const fighterLearningPrefill_ = createStudentLearningPrefill({
 function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefill_.decorate(value, enabled); }
 
 /* STUDENT_PREFILL_END */
+/* SUBMISSION_STATUS_GUARD_V1: absence requires a current, scoped source check. */
+(function(root){
+  'use strict';
+  function createSubmissionStatusGuard(options){
+    options=options||{};
+    var epoch=0, sequence=0, identity='', channels=new Map(), grants=new WeakMap();
+    function currentIdentity(){
+      try{return String(options.getIdentity&&options.getIdentity()||'');}catch(_){return '';}
+    }
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function reset(){epoch++;identity='';channels.clear();grants=new WeakMap();}
+    function sync(){
+      var value=currentIdentity();
+      if(!value||!visible()){reset();return '';}
+      if(identity!==value){reset();identity=value;}
+      return value;
+    }
+    function validProof(proof){
+      return Boolean(proof&&proof.schema===1&&proof.complete===true&&proof.freshRead===true&&
+        Number.isFinite(proof.verifiedAt)&&proof.verifiedAt>0);
+    }
+    function ticketCurrent(ticket){
+      return Boolean(ticket&&sync()&&ticket.identity===identity&&ticket.epoch===epoch&&
+        channels.get(ticket.channel)===ticket);
+    }
+    function begin(channel){
+      var who=sync();
+      if(!who)return null;
+      var ticket={epoch:epoch,sequence:++sequence,identity:who,channel:String(channel||'receipts'),settled:false};
+      channels.set(ticket.channel,ticket);
+      return ticket;
+    }
+    function grant(ticket,target,proof,conditions){
+      if(!ticketCurrent(ticket)||!target||typeof target!=='object')return false;
+      conditions=conditions||{};
+      grants.set(target,{ticket:ticket,proof:proof,usable:conditions.complete!==false&&conditions.stale!==true});
+      return true;
+    }
+    function accept(ticket,payload,conditions){
+      if(!ticketCurrent(ticket)||!payload||typeof payload!=='object')return false;
+      var seen=new WeakSet();
+      function visit(value,inherited){
+        if(!value||typeof value!=='object'||seen.has(value))return;
+        seen.add(value);
+        var own=Object.prototype.hasOwnProperty.call(value,'submissionVerification');
+        var proof=own?value.submissionVerification:inherited;
+        grant(ticket,value,proof,conditions);
+        Object.keys(value).forEach(function(key){
+          if(key!=='submissionVerification')visit(value[key],proof);
+        });
+      }
+      visit(payload,null);ticket.settled=true;return true;
+    }
+    function authorize(ticket,target,proof,conditions){
+      // A narrow receipt adapter must first match the server's immutable task
+      // key and the live pupil. This binds its result to the existing renderer
+      // object without replacing teacher marks, feedback or assignment links.
+      if(!grant(ticket,target,proof,conditions))return false;
+      ticket.settled=true;return true;
+    }
+    function can(target){
+      var entry=target&&typeof target==='object'&&grants.get(target);
+      return Boolean(entry&&ticketCurrent(entry.ticket)&&entry.ticket.settled&&entry.usable&&validProof(entry.proof));
+    }
+    function fail(ticket){
+      if(!ticketCurrent(ticket))return false;
+      ticket.settled=false;return true;
+    }
+    function transfer(source,target){
+      var entry=source&&typeof source==='object'&&grants.get(source);
+      if(!entry||!ticketCurrent(entry.ticket)||!target||typeof target!=='object')return target;
+      var proof=Object.prototype.hasOwnProperty.call(target,'submissionVerification')?target.submissionVerification:entry.proof;
+      grants.set(target,{ticket:entry.ticket,proof:proof,usable:entry.usable});
+      return target;
+    }
+    return {begin:begin,accept:accept,authorize:authorize,can:can,fail:fail,suspend:reset,clear:reset,
+      transfer:transfer,isCurrent:ticketCurrent,isVerifiedProof:validProof};
+  }
+  root.createSubmissionStatusGuard=createSubmissionStatusGuard;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionStatusGuard:createSubmissionStatusGuard};
+})(typeof globalThis==='object'?globalThis:this);
+
+/* SUBMISSION_RECEIPT_OWNER_V1: one lightweight current-pupil read. */
+(function(root){
+  'use strict';
+  function createSubmissionReceiptOwner(options){
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false;
+    function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
+    function suspend(){needsFresh=true;current=null;options.guard.suspend();}
+    function clear(){generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function refresh(){
+      var active=who();if(!active||!visible())return Promise.resolve(false);
+      if(active!==identity){clear();identity=active;}
+      if(job){if(needsFresh)queued=true;return job;}
+      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;
+      if(options.render)options.render();
+      var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
+        if(!isCurrent(run))return false;
+        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage))throw new Error('INVALID_SUBMISSION_RECEIPTS');
+        // Receipt absence is not a withdrawal of an earlier confirmed receipt.
+        // Keep the server-positive union for this exact identity, even when a
+        // later source snapshot omits an attempt. No local submit event enters it.
+        var merged=new Map();
+        (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
+        payload.receipts.forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt)merged.set(receipt.id,receipt);});
+        current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        if(visible()&&options.render)options.render();return true;
+      }).catch(function(){
+        if(isCurrent(run)){options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        return false;
+      }).finally(function(){if(job===task){job=null;if(queued&&visible()&&who()===identity){queued=false;refresh();}}});
+      job=task;return task;
+    }
+    function reapply(target){
+      if(!target||!identity||who()!==identity||!visible())return target;
+      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
+    }
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);}};
+  }
+  root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_DEADLINE_POLICY_V1: dashboard deadlines, September 2026 onward. */
+(function(root){
+  'use strict';
+  var offset=7*3600000,cutover=Date.UTC(2026,8,1)-offset;
+  function time(value,endOfDay){
+    if(typeof value==='number')return Number.isFinite(value)&&value>1e11&&value<=8640000000000000?value:0;
+    var s=String(value||'').trim(),m;
+    if(/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(s))return Date.parse(s)||0;
+    if((m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)))m=[m[0],m[3],m[2],m[1],m[4],m[5],m[6]];
+    else m=s.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?:[·,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if(!m)return 0;
+    var n=m.slice(1).map(function(v){return Number(v||0);}),d=new Date(Date.UTC(n[2],n[1]-1,n[0],n[3],n[4],n[5]));
+    if(d.getUTCFullYear()!==n[2]||d.getUTCMonth()!==n[1]-1||d.getUTCDate()!==n[0]||n[3]>23||n[4]>59||n[5]>59)return 0;
+    return d.getTime()-offset+(endOfDay&&m[4]===undefined?86399999:0);
+  }
+  function first(source,keys,end){for(var i=0;i<keys.length;i++){var v=time(source&&source[keys[i]],end);if(v)return v;}return 0;}
+  function receiptTime(receipt){
+    receipt=receipt||{};
+    // Keep the friendly display unchanged; the original source timestamp is
+    // the canonical comparison value when the backend supplies it.
+    var milliseconds=typeof receipt.submittedAtMs==='number'?time(receipt.submittedAtMs,false):0;
+    return milliseconds||time(receipt.submittedAt,false);
+  }
+  function evaluate(assignment,receipts,options){
+    options=options||{};assignment=assignment||{};
+    // No receipt date, month column, or generatedAt can invent the assigned date.
+    var assigned=first(assignment,['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'],false);
+    var due=first(assignment,['dueAt','deadlineAt','deadlineIso','dueDate','deadline'],true);
+    var eligible=assigned>=cutover&&due>=assigned;
+    var times=(Array.isArray(receipts)?receipts:[]).map(receiptTime).filter(Boolean);
+    var received=times.length>0,complete=received&&options.complete!==false;
+    var completedAt=options.completedAt?time(options.completedAt,false):received?Math.min.apply(null,times):0;
+    var now=typeof options.now==='number'?options.now:Date.now();
+    return {eligible:eligible,assignedAt:assigned,dueAt:due,received:received,complete:complete,
+      late:Boolean(eligible&&complete&&completedAt>due),
+      missing:Boolean(eligible&&options.verified===true&&!complete&&now>due),
+      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':eligible&&options.verified===true?(now>due?'Chưa nộp · Quá hạn':'Chưa đến hạn nộp'):''};
+  }
+  var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_ASSIGNMENT_WINDOW_V1: source code reuse stays date-bound. */
+(function(root){
+  'use strict';
+  function assignedAt(assignment){
+    return root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{}).assignedAt;
+  }
+  // Callers provide only source-proven same-family/code candidates, and preserve
+  // any independent class/group lane. Deadlines never truncate valid late work;
+  // only a new occurrence of that same assignment code closes this window.
+  function windowFor(assignment,candidates){
+    var start=assignedAt(assignment),rows=Array.isArray(candidates)?candidates:[],unique=new Map();
+    rows.concat([assignment]).forEach(function(row){
+      var date=assignedAt(row),id=String(row.id||row.assignmentId||'');
+      unique.set(id+'|'+date,row);
+    });
+    rows=Array.from(unique.values());
+    var undated=rows.some(function(row){return !assignedAt(row);});
+    var same=rows.filter(function(row){return assignedAt(row)===start;});
+    var ambiguous=rows.length>1&&(undated||same.length>1);
+    var later=rows.map(assignedAt).filter(function(date){return date>start;});
+    return {start:start,end:later.length?Math.min.apply(null,later):0,ambiguous:ambiguous,known:Boolean(start)&&!ambiguous};
+  }
+  function contains(receipt,assignment,candidates){
+    var window=windowFor(assignment,candidates);
+    var time=root.DirectSubmissionDeadlinePolicy.receiptTime(receipt);
+    if(!time||window.ambiguous)return false;
+    return (!window.start||time>=window.start)&&(!window.end||time<window.end);
+  }
+  var api={assignedAt:assignedAt,windowFor:windowFor,contains:contains};
+  root.DirectSubmissionAssignmentWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+const fighterReceiptMatching_=(()=>{
+function assignmentProgramKeyV7_(value) {
+  const program = normalizeSearchText_(value || '');
+  if (/vocabulary foundation 1|tu vung nen tang 1/.test(program)) return 'vf1';
+  if (/vocabulary foundation 2|tu vung nen tang 2/.test(program)) return 'vf2';
+  if (/grammar foundation|ngu phap nen tang/.test(program)) return 'gf';
+  if (/reading(?: intensive)? 1|doc (?:hieu |chuyen sau )*1/.test(program)) return 'ri1';
+  if (/reading(?: intensive)? 2|doc (?:hieu |chuyen sau )*2/.test(program)) return 'ri2';
+  if (/doan van hoc thuat|academic paragraph/.test(program)) return 'ap';
+  if (/luyen de|practice(?: test)?/.test(program)) return 'pt';
+  return '';
+}
+
+function canonicalSelfStudyResultCodeV1_(value) {
+  const reading = fighterReadingCodeV27_(value);
+  if (reading) return reading;
+  const raw = clean_(value).toUpperCase();
+  let match = raw.match(/\bFL\s*(\d+)\s*-?\s*P\s*0*(\d+)\b/);
+  if (match) return 'FL' + Number(match[1]) + '-P' + String(Number(match[2])).padStart(2, '0');
+  match = raw.match(/\bSHADOW(?:ING)?\s*-?\s*L\s*0*(\d+)\s*-\s*0*(\d+)\b/);
+  return match ? 'SHADOW-L' + Number(match[1]) + '-' + String(Number(match[2])).padStart(3, '0') : '';
+}
+
+function canonicalSubmissionCodeV2_(value) {
+  const raw = clean_(value);
+  const normalized = normalizeSearchText_(raw);
+  if (normalized === 'tu vung unit 10') return 'VF2-U10';
+  const practiceCode = normalized.match(/^(?:luyen de[ .:_-]*)?(?:practice\s*test|pt)[ .:_-]*0*(\d+)$/);
+  if (practiceCode) return 'PT-' + String(Number(practiceCode[1])).padStart(2, '0');
+  const unitCode = normalized.match(/^(vf1|vf2|gf[12]?|ri1|ri2|ap|dvht)-u0*(\d+)(?:[_ .]0*(\d+))?(?:-[a-z0-9]+)*$/);
+  if (unitCode) {
+    let program = unitCode[1].toUpperCase();
+    if (/^GF[12]?$/.test(program)) program = 'GF';
+    if (program === 'DVHT') program = 'AP';
+    return program + '-U' + Number(unitCode[2]) + (unitCode[3] ? '_' + Number(unitCode[3]) : '');
+  }
+  const sessionCode = normalized.match(/^(?:buoi|tiet)\s*0*(\d+)$/);
+  if (sessionCode) return 'BUOI ' + Number(sessionCode[1]);
+  const testCode = normalized.match(/^test\s*0*(\d+)$/);
+  if (testCode) return 'TEST ' + Number(testCode[1]);
+  return raw;
+}
+
+// FIGHTER_SUBMISSION_TASK_ROUTING_V6
+// FIGHTER_SUBMISSION_TASK_ROUTING_V7
+
+function clean_(value) {
+  return value === null || value === undefined ? '' : String(value).trim();
+}
+
+
+// SUBMISSION_EVIDENCE_ACTIVE_V3
+// Bằng chứng nộp bài (điểm/thời gian/đã nộp/làm muộn) luôn được ưu tiên hơn trạng thái mặc định.
+
+function fighterReadingCodeV27_(value) {
+  const raw = clean_(value).toUpperCase().replace(/\s+/g, ' ');
+  const match = raw.match(/^RI\s*([345])\s*-\s*U\s*0*(\d{1,2})$/) ||
+    raw.match(/^READING(?: INTENSIVE)?\s+([345])\s*[-·:–—]?\s*UNIT\s+0*(\d{1,2})$/);
+  if (!match) return '';
+  const unit = Number(match[2]);
+  return unit >= 1 && unit <= 12 ? 'RI' + match[1] + '-U' + String(unit).padStart(2, '0') : '';
+}
+
+function normalizeSearchText_(value) {
+  return clean_(value)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, ' ');
+}
+
+function numberFrom_(value) {
+  const match = clean_(value).match(/\d+/);
+  return match ? Number(match[0]) : 0;
+}
+
+function practiceTestNumberFromAssignmentV8_(assignment) {
+  const taskText = (assignment && assignment.tasks || []).map(function(task) {
+    return [task && task.title, task && task.instructions].join(' ');
+  }).join(' ');
+  return practiceTestNumberFromTextV8_([
+    assignment && assignment.topic,
+    assignment && assignment.title,
+    assignment && assignment.content,
+    assignment && assignment.lessonContent,
+    taskText
+  ].join(' '));
+}
+
+function practiceTestNumberFromTextV8_(value) {
+  const text = normalizeSearchText_(value || '');
+  const explicit = text.match(/\bpractice\s*test\s*0*(\d+)\b/);
+  if (explicit) return Number(explicit[1]);
+  const compact = text.match(/\bpt\s*[-_. ]?\s*0*(\d+)\b/);
+  if (compact) return Number(compact[1]);
+  const tracker = text.match(/\bluyen de\b[\s\S]*?\bbuoi\s*0*(\d+)\b/);
+  return tracker ? Number(tracker[1]) : 0;
+}
+
+function submissionCodePartsV7_(value, profile) {
+  const code = normalizeSearchText_(canonicalSubmissionCodeV2_(value)).trim();
+  let match = code.match(/^(vf1|vf2|gf|ri1|ri2|ap)-u0*(\d+)(?:[_ .]0*(\d+))?$/);
+  if (match) return { kind: 'unit', program: match[1], unit: Number(match[2]), subunit: match[3] ? Number(match[3]) : null };
+  match = code.match(/^pt[- ]*0*(\d+)$/);
+  if (match) return { kind: 'practice', program: 'pt', practiceTest: Number(match[1]) };
+  match = code.match(/^buoi\s*0*(\d+)$/);
+  if (match) return { kind: 'session', session: Number(match[1]) };
+  match = code.match(/^test\s*0*(\d+)$/);
+  if (match) return { kind: 'test', test: Number(match[1]) };
+  const alias = normalizeSearchText_(value || '').match(/^tu vung\s+unit\s*0*(\d+)$/);
+  if (alias && profile && /^vf[12]$/.test(profile.program)) return { kind: 'unit', program: profile.program, unit: Number(alias[1]), subunit: null };
+  return null;
+}
+
+function submissionSourceProfileV7_(sourceTab, sourceName) {
+  const tab = normalizeSearchText_(sourceTab || '').trim();
+  const source = normalizeSearchText_(sourceName || '').trim();
+  const signature = [tab, source].join(' ');
+  if (/luyen de|practice(?: test)?|so luyen de/.test(signature)) return { program: 'pt', role: 'practice_notebooks', types: ['pdf', 'video'] };
+  if (tab === 'vocabulary foundation 1') return { program: 'vf1', role: 'vocabulary', types: ['pdf', 'video'] };
+  if (tab === 'vocabulary foundation 2') return { program: 'vf2', role: 'vocabulary', types: ['pdf', 'video'] };
+  if (tab === 'reading 1') return { program: 'ri1', role: 'vocabulary', types: ['pdf', 'video'] };
+  if (tab === 'reading 2 - tu vung') return { program: 'ri2', role: 'vocabulary', types: ['pdf', 'video'] };
+  if (tab === 'grammar foundation') return { program: 'gf', role: 'preparation', types: ['pdf'] };
+  if (tab === 'reading 1 - vo chua') return { program: 'ri1', role: 'correction', types: ['pdf'] };
+  if (tab === 'reading 2 - vo chua') return { program: 'ri2', role: 'correction', types: ['pdf'] };
+  if (tab === 'doan van hoc thuat') return { program: 'ap', role: 'writing', types: ['pdf'] };
+  return null;
+}
+
+function submissionTaskFactsV7_(task) {
+  const text = normalizeSearchText_([task && task.title, task && task.instructions].join(' '));
+  const unitMatch = text.match(/\bunit\s*0*(\d+)(?:[._,]0*(\d+))?/);
+  const sessionMatch = text.match(/\b(?:buoi|tiet)\s*0*(\d+)/);
+  const testMatch = text.match(/\btest\s*0*(\d+)/);
+  const practiceMatch = text.match(/\bpractice\s*test\s*0*(\d+)/);
+  return {
+    redo: /lam lai|kiem tra lai|redo/.test(text),
+    vocabulary: /so tu vung|video tra tu|quay video|tra tu|hoc ki tu vung[^.\n]*lam so|nop theo dung huong dan/.test(text),
+    preparation: /chuan bi|ly thuyet|doc truoc|xem truoc|tra cuu/.test(text),
+    theoryCopy: /chep|file bai giang goc|bai giang goc/.test(text),
+    correction: /vo chua|chua bai|sua loi/.test(text),
+    writing: /doan van|viet bai|bai viet|vo viet/.test(text),
+    practiceNotebooks: /so luyen de|so tu vung/.test(text),
+    unit: unitMatch ? Number(unitMatch[1]) : 0,
+    subunit: unitMatch && unitMatch[2] ? Number(unitMatch[2]) : null,
+    session: sessionMatch ? Number(sessionMatch[1]) : 0,
+    test: testMatch ? Number(testMatch[1]) : 0,
+    practiceTest: practiceMatch ? Number(practiceMatch[1]) : 0
+  };
+}
+
+function submissionTaskIndexV7_(assignment, item) {
+  if (!item || !assignment || !Array.isArray(assignment.tasks)) return -1;
+  const profile = submissionSourceProfileV7_(item.sourceTab, item.sourceName);
+  const code = submissionCodePartsV7_(item.assignmentId, profile);
+  if (!profile || !code || assignmentProgramKeyV7_(assignment.program) !== profile.program) return -1;
+  const assignmentSession = Number(assignment.sessionNumber || numberFrom_(assignment.session || ''));
+  // Do not confuse the class lesson/session with the Practice Test identifier.
+  const assignmentPracticeTest = practiceTestNumberFromAssignmentV8_(assignment) || assignmentSession;
+  const candidates = [];
+  assignment.tasks.forEach(function(task, index) {
+    const facts = submissionTaskFactsV7_(task);
+    if (facts.redo) return;
+    if (profile.role === 'vocabulary' && !facts.vocabulary) return;
+    if (profile.role === 'preparation' && !(facts.preparation && facts.theoryCopy)) return;
+    if (profile.role === 'correction' && !facts.correction) return;
+    if (profile.role === 'writing' && !facts.writing) return;
+    if (profile.role === 'practice_notebooks' && !facts.practiceNotebooks) return;
+    if (code.kind === 'unit') {
+      if (code.program !== profile.program || facts.unit !== code.unit) return;
+      if (code.subunit !== null && facts.subunit !== code.subunit) return;
+    }
+    if (code.kind === 'session' && code.session !== (facts.session || assignmentSession)) return;
+    if (code.kind === 'test' && code.test !== (facts.test || facts.unit)) return;
+    if (code.kind === 'practice' && code.practiceTest !== assignmentPracticeTest) return;
+    candidates.push(index);
+  });
+  return candidates.length === 1 ? candidates[0] : -1;
+}
+
+function assignmentKey_(value) {
+  const text = String(value || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+  let match = text.match(/(?:unit|\bu)\s*0*(\d+)(?:\s*[.,]\s*0*(\d+))?/);
+  if (match) return 'U' + Number(match[1]) + (match[2] !== undefined ? '.' + Number(match[2]) : '');
+  match = text.match(/practice\s*test\s*0*(\d+)/);
+  if (match) return 'B' + Number(match[1]);
+  match = text.match(/test\s*0*(\d+)/);
+  if (match) return 'U' + Number(match[1]);
+  match = text.match(/(?:buoi|de)\s*0*(\d+)/);
+  if (match) return 'B' + Number(match[1]);
+  return '';
+}
+
+function normalize_(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function parseRetakeRequest_(category, value) {
+  const raw = String(value || '').trim();
+  const normalized = normalize_(raw);
+  if (!raw || /chua chon|chua giao|nhap unit|vi du/.test(normalized)) return null;
+  const unitMatch = normalized.match(/(?:unit|u)\s*0*(\d+)/);
+  return {
+    category: category,
+    raw: raw,
+    normalized: normalized.replace(/^ma(?: bai)?\s*[:.-]?\s*/, ''),
+    unit: unitMatch ? Number(unitMatch[1]) : null,
+    assignmentKey: assignmentKey_(raw)
+  };
+}
+
+function retakeCategory_(code) {
+  const text = normalize_(code);
+  if (/luyen de|practice test/.test(text)) return 'PRACTICE';
+  if (/reading intensive 2|doc hieu chuyen sau 2|\bri2\b/.test(text)) return 'READING2';
+  if (/vocabulary foundation 1|vocab foundation 1|\bvf1\b/.test(text)) return 'VOCAB1';
+  if (/vocabulary foundation 2|vocab foundation 2|\bvf2\b/.test(text)) return 'VOCAB2';
+  if (/grammar foundation|\bgf\b/.test(text)) return 'GRAMMAR';
+  return '';
+}
+
+function retakeCodeMatches_(record, request) {
+  if (record.category !== request.category) return false;
+  if (request.assignmentKey && record.assignmentKey) return record.assignmentKey === request.assignmentKey;
+  if (request.unit !== null) return record.unit === request.unit;
+  const recordCode = normalize_(record.code);
+  return recordCode === request.normalized || recordCode.indexOf(request.normalized) >= 0 || request.normalized.indexOf(recordCode) >= 0;
+}
+
+function unitNumber_(value) {
+  const match = normalize_(value).match(/(?:unit|u)\s*0*(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
+/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence, manual preparation preserved. */
+(function(root){
+  'use strict';
+  function createFighterReceiptProjector(m){
+    const list=v=>Array.isArray(v)?v:[],manual=task=>m.submissionTaskFactsV7_(task).preparation;
+    function proof(row){return row&&row.complete===true&&row.freshRead===true?{schema:1,complete:true,freshRead:true,verifiedAt:Number(row.verifiedAt)||0}:null;}
+    function grant(guard,ticket,target,coverage,fresh){const p=proof(coverage);if(ticket&&p)guard.authorize(ticket,target,p,{complete:true,stale:!fresh});}
+    function expectedCodes(assignment,task){
+      const facts=m.submissionTaskFactsV7_(task),program=m.assignmentProgramKeyV7_(assignment.program).toUpperCase();
+      return [task.sourceCode,task.code,assignment.sourceCode,assignment.code,
+        facts.unit&&program?program+'-U'+facts.unit+(facts.subunit!==null?'_'+facts.subunit:''):'',
+        facts.session?'BUOI '+facts.session:'',facts.test?'TEST '+facts.test:'',facts.practiceTest?'PT-'+String(facts.practiceTest).padStart(2,'0'):''].filter(Boolean);
+    }
+    function taskCoverage(payload,assignment,task,index){
+      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),redo=m.submissionTaskFactsV7_(task).redo;
+      const candidates=list(payload.coverage).filter(c=>redo?c.family==='FIGHTER_RETAKE'&&c.category===category:
+        ['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(c.family)&&expectedCodes(assignment,task).some(code=>m.submissionTaskIndexV7_(assignment,{assignmentId:code,sourceTab:c.sourceTab,sourceName:c.sourceName})===index));
+      const candidate=candidates.find(c=>proof(c));if(!candidate)return null;
+      // A failed sibling tab in the same source family is not proof of absence.
+      const related=list(payload.coverage).filter(c=>c.family===candidate.family&&(!redo||c.category===category));
+      return related.length&&related.every(c=>proof(c))?{...candidate,verifiedAt:Math.min(...related.map(c=>Number(c.verifiedAt)||0))}:null;
+    }
+    function received(target,found){
+      if(!found.length)return;
+      target.submitted=true;target.submittedAt=target.submittedAt||found[0].submittedAt;if(!target.completed)target.status='Đã nộp bài';
+      const existing=list(target.submissionAttempts),ids=new Set(existing.map(x=>x.receiptId).filter(Boolean));
+      target.submissionAttempts=existing.concat(found.filter(r=>!ids.has(r.id)).map((r,i)=>({receiptId:r.id,submittedAt:r.submittedAt,attempt:i+1})));
+      // A receipt proves an upload; it does not silently complete a second
+      // required PDF/video/notebook component or replace a teacher comment.
+      const types=new Set(found.flatMap(r=>list(r.evidenceTypes)));
+      target.directReceiptEvidence={types:Array.from(types),ids:found.map(r=>r.id)};
+      const files=new Map(list(target.submissionFiles).map(file=>[file.url,file]));
+      found.forEach(r=>list(r.evidenceUrls).concat(r.viewUrl?[r.viewUrl]:[]).forEach(raw=>{
+        try{const url=new URL(raw);if(url.protocol==='https:'&&!url.username&&!url.password&&!files.has(url.href))files.set(url.href,{url:url.href,type:list(r.evidenceTypes).length===1&&r.evidenceTypes[0]==='video'?'video':'file'});}catch(_){}
+      }));target.submissionFiles=Array.from(files.values());
+    }
+    function componentCompletion(found){
+      if(!found.length)return {known:false,complete:false};
+      const notebooks=found.some(r=>r.family==='FIGHTER_PRACTICE_NOTEBOOKS');
+      const source=m.submissionSourceProfileV7_(found[0].sourceTab,found[0].sourceName);
+      const required=notebooks?['practiceNotebook','vocabularyNotebook']:source?source.types:[];
+      if(!required.length)return {known:false,complete:false};
+      const first=required.map(type=>found.filter(r=>notebooks?r.components&&r.components[type]===true:list(r.evidenceTypes).includes(type==='pdf'?'document':type)||list(r.evidenceTypes).includes(type))
+        .map(r=>root.DirectSubmissionDeadlinePolicy.receiptTime(r)).filter(Boolean).sort((a,b)=>a-b)[0]||0);
+      return {known:true,complete:first.every(Boolean),completedAt:first.every(Boolean)?Math.max(...first):0};
+    }
+    function retakeMatches(receipt,assignment){
+      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),request=m.parseRetakeRequest_(category,assignment.sourceCode||assignment.code||'');
+      if(receipt.family!=='FIGHTER_RETAKE'||!category||receipt.category!==category||!request)return false;
+      const expected=m.canonicalSubmissionCodeV2_(assignment.sourceCode||assignment.code),actual=m.canonicalSubmissionCodeV2_(receipt.code);
+      if(/^(?:VF[12]|GF|RI[12]|AP)-U\d+(?:_\d+)?$/.test(expected)||/^PT-\d+$/.test(expected))return expected===actual;
+      return m.retakeCodeMatches_({category:receipt.category,code:receipt.code,assignmentKey:m.assignmentKey_(receipt.code),unit:m.unitNumber_(receipt.code)},request);
+    }
+    return function projectFighterSubmissions(value,payload,ticket,guard){
+      if(!value||!value.profile||!value.profile.student)return value;
+      payload=payload||{receipts:[],coverage:[]};
+      const student=value.profile.student,assignments=list(value.publicData&&value.publicData.assignments),receipts=list(payload.receipts);
+      const fresh=!(value.publicData.cacheStale||value.fullDashboard.cacheStale||value.profile.cacheStale);
+      function homeworkIndex(receipt,assignment){return m.submissionTaskIndexV7_(assignment,{assignmentId:receipt.code,sourceTab:receipt.sourceTab,sourceName:receipt.sourceName});}
+      function peersFor(receipt){return assignments.filter(other=>receipt.family==='FIGHTER_RETAKE'?retakeMatches(receipt,other):homeworkIndex(receipt,other)>=0);}
+      student.assignments=list(student.assignments);
+      assignments.forEach(assignment=>{
+        let record=student.assignments.find(r=>r.assignmentId===assignment.id);
+        const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index])&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
+        const redo=tasks.map((task,index)=>m.submissionTaskFactsV7_(task).redo?index:-1).filter(index=>index>=0);
+        if(redo.length===1)receipts.filter(r=>retakeMatches(r,assignment)&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peersFor(r))).forEach(receipt=>matched.push({receipt,index:redo[0]}));
+        if(!record&&matched.length){record={assignmentId:assignment.id,tasks:tasks.map(()=>({tracked:false,completed:false,missing:false,status:''})),missingCount:0,tracked:false,status:''};student.assignments.push(record);}
+        if(!record)return;record.tasks=list(record.tasks);
+        tasks.forEach((task,index)=>{
+          let state=record.tasks[index];if(!state&&matched.some(row=>row.index===index)){state={tracked:false,completed:false,missing:false,status:''};record.tasks[index]=state;}
+          if(!state)return;
+          if(manual(task)){state.submissionManualAuthority=fresh;return;}
+          const found=matched.filter(row=>row.index===index).map(row=>row.receipt).sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b));received(state,found);
+          const components=componentCompletion(found);
+          if(components.known){state.completed=state.completed||components.complete;state.missing=!state.completed;state.status=state.completed?'Đã nộp bài':'Đã nộp một phần';}
+          const scored=found.filter(r=>r.scoreSource==='automatic-score-source'&&Number.isFinite(r.scoreOutOfTen));
+          const latest=scored.slice(-1)[0];
+          if(latest&&m.submissionTaskFactsV7_(task).redo){
+            state.score=latest.scoreOutOfTen;state.completed=true;state.status='Đã có điểm làm lại';state.missing=false;
+            student.retakes=list(student.retakes);
+            const expected=m.canonicalSubmissionCodeV2_(assignment.sourceCode||assignment.code);
+            const matching=student.retakes.filter(item=>m.canonicalSubmissionCodeV2_(item.sourceCode||String(item.key||'').replace(/-redo$/,''))===expected);
+            let summary=matching.length===1?matching[0]:null;
+            if(!matching.length){summary={key:'direct-'+expected,sourceCode:expected,program:assignment.program,label:task.title||expected,originalScore:null,difference:null,attempts:[]};student.retakes.push(summary);}
+            if(summary){
+              summary.retakeScore=latest.scoreOutOfTen;summary.done=true;summary.submittedAt=latest.submittedAt;
+              summary.difference=Number.isFinite(summary.originalScore)?Math.round((summary.retakeScore-summary.originalScore)*10)/10:null;
+              const previous=list(summary.attempts),ids=new Set(previous.map(a=>a.receiptId));
+              summary.attempts=previous.concat(scored.filter(r=>!ids.has(r.id)&&!previous.some(a=>!a.receiptId&&a.submittedAt===r.submittedAt)).map(r=>({receiptId:r.id,submittedAt:r.submittedAt,score:r.scoreOutOfTen,rawScore:r.score,maximum:r.maximum})));
+            }
+          }
+          let coverage=taskCoverage(payload,assignment,task,index);
+          if(coverage){const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};if(!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known)coverage=null;}
+          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(proof(coverage)),complete:state.completed===true,completedAt:components.completedAt||undefined});
+          if(found.length&&deadline.late)state.status='Nộp muộn';
+          if(deadline.missing)grant(guard,ticket,state,coverage,fresh);
+        });
+        const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>manual(task)?fresh:record.tasks[index]&&(record.tasks[index].completed===true||guard.can(record.tasks[index])));
+        if(all){
+          record.missingCount=record.tasks.filter(state=>state&&state.missing===true&&!state.completed).length;
+          record.status=record.missingCount?'Chưa hoàn thành':'Đã hoàn thành';
+          if(ticket)grant(guard,ticket,record,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},fresh);
+        }
+      });
+      value.directSelfStudyItems=[];
+      list(value.publicData.selfStudyAssignments).forEach(assignment=>{
+        const code=m.canonicalSelfStudyResultCodeV1_(assignment.sourceCode||assignment.code||'');if(!code)return;
+        const family=/^SHADOW-/.test(code)?'FIGHTER_SHADOWING':/^FL/.test(code)?'FIGHTER_LISTENING':/^RI[345]-/.test(code)?'FIGHTER_READING':'';
+        const peers=list(value.publicData.selfStudyAssignments).filter(a=>m.canonicalSelfStudyResultCodeV1_(a.sourceCode||a.code||'')===code&&String(a.scheduleClassName||'')===String(assignment.scheduleClassName||''));
+        const found=receipts.filter(r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers));
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).missing)grant(guard,ticket,assignment,coverage,fresh);
+        if(!found.length)return;assignment.submissionReceived=true;
+        found.forEach(r=>{
+          const item={receiptId:r.id,code,submittedAt:r.submittedAt,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
+          if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
+            Object.assign(item,{total:r.score,score:r.score,maximum:r.maximum,maxScore:r.maximum,percent:r.percentage,completed:true,status:'Đã có kết quả'});
+            if(Number.isFinite(r.listening))item.listening=r.listening;if(Number.isFinite(r.paraphrase))item.paraphrase=r.paraphrase;
+          }
+          value.directSelfStudyItems.push(item);
+          received(item,[r]);
+        });
+      });
+      const records=student.assignments;
+      const selfStudy=list(value.publicData.selfStudyAssignments);
+      if(ticket&&fresh&&records.length&&records.every(record=>guard.can(record))&&selfStudy.every(assignment=>assignment.submissionReceived||guard.can(assignment))){
+        grant(guard,ticket,value.profile,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},fresh);
+      }
+      return value;
+    };
+  }
+  root.createFighterReceiptProjector=createFighterReceiptProjector;
+  if(typeof module==='object'&&module.exports)module.exports={createFighterReceiptProjector};
+})(typeof globalThis==='object'?globalThis:this);
+
+const projectFighterReceipts_=createFighterReceiptProjector(fighterReceiptMatching_);
+
+/* FIGHTER_SUBMISSION_STATUS_V1: verification never changes teacher evidence. */
+const submissionGuard_ = createSubmissionStatusGuard({
+  getIdentity: () => {const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?String(b.className)+'|'+b.studentName:'';},
+  isVisible: () => !document.hidden
+});
+let fighterSubmissionProjected_=null;
+function submissionCan_(item){return Boolean(item&&item.submissionManualAuthority&&fighterApi.parent.authorized)||submissionGuard_.can(item);}
+const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
+  isVisible:()=>!document.hidden,request:()=>fighterApi.parent.request('submissions',false),project:projectFighterReceipts_,
+  render:()=>{if(fighterParentPackage_&&fighterApi.parent.authorized&&!document.hidden)fighterParentApply_();}
+});
+function fighterSubmissionReset_(){submissionOwner_.suspend();fighterClearPendingHomeworkV15_();}
+function fighterSubmissionProfile_(){return fighterSubmissionProjected_&&fighterSubmissionProjected_.profile;}
+function fighterSubmissionAggregate_(){return submissionCan_(fighterSubmissionProfile_());}
+function fighterSubmissionRender_(){if(fighterApi.parent.authorized&&fighterParentPackage_)fighterParentApply_();}
+function fighterSubmissionMergeSelfStudy_(items){
+  const rows=Array.isArray(items)?items.slice():[];
+  for(const item of fighterSubmissionProjected_&&fighterSubmissionProjected_.directSelfStudyItems||[]){
+    const same=rows.find(row=>row.receiptId===item.receiptId||row.code===item.code&&row.submittedAt===item.submittedAt);
+    if(!same)rows.push(item);
+  }return rows;
+}
+const fighterSubmissionOriginalSelfStudy_=renderSelfStudyResultsForStudentV1_;
+renderSelfStudyResultsForStudentV1_=function(target,items,student){return fighterSubmissionOriginalSelfStudy_.call(this,target,fighterSubmissionMergeSelfStudy_(items),student);};
+window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==='revoked'){submissionOwner_.clear();fighterSubmissionProjected_=null;}else if(event.detail.status!=='authorized')fighterSubmissionReset_();});
+
 /* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;
 function fighterParentIdentity_(){
@@ -2465,6 +3080,7 @@ function fighterParentIdentity_(){
   const pending=$('#parentPendingIdentity');if(pending){pending.textContent=label?'Hồ sơ của '+label:'';pending.hidden=!label;}
 }
 function fighterParentGate_(message,retry){
+  if(fighterParentPainted_&&fighterApi.parent.authorized&&!fighterApi.parent.revoked)return;
   fighterParentIdentity_();
   document.body.classList.add('f9-portal-locked');document.body.classList.remove('f9-portal-ready');
   $('#student-gateway').hidden=false;$('#loading').hidden=true;$('#student-switch').hidden=true;
@@ -2485,7 +3101,9 @@ function fighterParentClear_(){
 }
 function fighterParentApply_(){
   if(!fighterApi.parent.authorized||!fighterParentPackage_)return false;
-  const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterParentPackage_;
+  fighterSubmissionProjected_=submissionOwner_.reapply(JSON.parse(JSON.stringify(fighterParentPackage_)));
+  const savedScroll=fighterParentPainted_?{x:window.scrollX,y:window.scrollY}:null;
+  const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterSubmissionProjected_;
   if(profile.student.name!==binding.studentName)return false;
   studentDirectory_=binding.directory.students;studentDirectoryReady_=true;studentDirectoryLoading_=false;
   // render the complete current class payload before the existing profile
@@ -2509,6 +3127,7 @@ function fighterParentApply_(){
   fighterParentPainted_=true;fighterParentIdentity_();
   document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));
   if(document.documentElement.dataset.parentFirstOpenMs===undefined)document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));
+  if(savedScroll)window.scrollTo({left:savedScroll.x,top:savedScroll.y,behavior:'instant'});
   return true;
 }
 function fighterParentLoad_(force=false,quiet=false){
@@ -2543,6 +3162,7 @@ function fighterParentRecheck_(options={}){
   return fighterApi.parent.check(options).then(ok=>{
     if(!ok)return false;
     fighterParentIdentity_();
+    if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh();
     // A current bootstrap owns the next paint. Revalidation must not restore
     // the previous package while that load is pending or consume its prefetch.
     // Foreground checks retain their gate; background checks keep ready UI.
@@ -2574,11 +3194,12 @@ start=function(){return fighterParentRecheck_();};
 $('#parentOpeningRetry').addEventListener('click',()=>fighterParentRecheck_({refresh:true}));
 $('#student-switch').addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();fighterParentRecheck_({refresh:true});},true);
 window.addEventListener('fighter-parent-access',event=>{if(event.detail.status!=='authorized'){if(event.detail.status==='revoked')fighterParentClear_();fighterParentGate_();}else fighterParentIdentity_();});
-window.addEventListener('pageshow',()=>fighterParentRecheck_());
-window.addEventListener('online',()=>fighterParentRecheck_());
-window.addEventListener('pagehide',()=>fighterApi.parent.suspend());
+let fighterPageHidden_=false;
+window.addEventListener('pageshow',event=>{if(event.persisted||fighterPageHidden_){fighterPageHidden_=false;fighterParentRecheck_({background:true,foreground:true});}});
+window.addEventListener('online',()=>fighterParentRecheck_({background:true,foreground:true}));
+window.addEventListener('pagehide',()=>{fighterPageHidden_=true;fighterApi.parent.suspend();fighterSubmissionReset_();});
 window.addEventListener('hashchange',()=>{fighterApi.parent.suspend();window.location.reload();});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')fighterParentRecheck_();else fighterApi.parent.suspend();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')fighterParentRecheck_({background:true,foreground:true});else{fighterApi.parent.suspend();fighterSubmissionReset_();}});
 window.setInterval(()=>{if(document.visibilityState==='visible'&&!fighterApi.parent.revoked)fighterParentRecheck_({background:true});},60000);
 fighterParentGate_();
 fighterParentRecheck_();
