@@ -86,7 +86,7 @@ const kidsApi = (() => {
     if (action === 'check') checkController = controller;
     controllers.add(controller);
     const started = performance.now();
-    const timer = setTimeout(() => controller.abort(), ['directory','check'].includes(action) ? 28000 : 85000);
+    const timer = setTimeout(() => controller.abort(), ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
     const promise = fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
     }).then(async response => {
