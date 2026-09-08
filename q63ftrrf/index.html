@@ -507,7 +507,11 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
     .ielts-shadowing-steps{padding-left:26px;line-height:1.8;margin:22px 0}.ielts-shadowing-steps li{padding-left:8px;margin:12px 0}.ielts-shadowing-steps li::marker{font-weight:800;color:var(--blue,#1262bd)}
     .ielts-shadowing-deadline{display:flex;justify-content:space-between;gap:16px;padding:16px 20px;border:1px solid #f0d29b;border-radius:14px;background:#fff6e7;color:#81500e}
     @media(max-width:680px){.ielts-shadowing-body{padding:20px 16px}.ielts-shadowing-task{align-items:flex-start;flex-direction:column}.ielts-shadowing-deadline{flex-wrap:wrap}.ielts-shadowing-card h2{overflow-wrap:anywhere}}
-  </style></head>
+  </style><style>
+.wr-public-note{margin:12px 0;padding:13px 16px;border:1px solid #d5e0ed;border-radius:10px;background:#f6f9fd;color:#36536f;font-size:12px;line-height:1.7}.wr-public-note strong{display:block;color:#153c65;margin-bottom:3px}
+
+</style>
+</head>
 <body>
   <div id="app-loading"><div class="app-loading-inner"><div class="app-loading-spinner"></div><div>Đang tải thông tin học tập…</div></div></div>
   <aside id="ielts-mobile-embed-rescue" class="zalo-mobile-rescue" hidden aria-labelledby="zalo-mobile-rescue-title">
@@ -3164,6 +3168,21 @@ function ielts48OpenPendingHomeworkV32_(){
   };
 })();
 // IELTS_PENDING_HOMEWORK_ALERT_UI_END_V32
+</script>
+<script>
+/* IELTS_WRITING_PRIVATE_NOTICE_V1: no student data or bearer links. */
+(function(){
+const base=assignmentCard;
+assignmentCard=function(item){
+  const html=base.apply(this,arguments);
+  if(!item||item.skill!=='writing')return html;
+  const values=[item.assignmentCode,item.sourceCode,item.code,...(item.tasks||[]).flatMap(task=>[task.assignmentCode,task.code,task.title])];
+  const w09=values.some(value=>/^(?:IELTS-)?WRITING-W0*9(?:-|$)/.test(ielts48CanonicalAssignmentCode_(value))) || (item.id==='writing-chung-9-19082026'&&(item.tasks||[]).some(task=>task.url==='https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/'));
+  if(!w09)return html;
+  const notice='<aside class="wr-public-note"><strong>Bài chữa Writing W09 · Đề 1</strong>Em mở hồ sơ cá nhân bằng đường link riêng Cô đã gửi, vào Writing W09 hoặc Kết quả cá nhân rồi chọn “Xem bài chữa”.</aside>';
+  return html.replace('</article>',notice+'</article>');
+};
+})();
 </script>
 </body>
 </html>
