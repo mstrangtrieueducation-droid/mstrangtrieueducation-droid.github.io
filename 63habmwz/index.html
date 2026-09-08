@@ -4208,14 +4208,17 @@ function createStudentLearningPrefill(options) {
 (function(root){
   'use strict';
   function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0;
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0,sourceRetryCount=0;
     function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
     function visible(){return !options.isVisible||options.isVisible()===true;}
     function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
-    function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset)retryCount=0;}
+    function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset){retryCount=0;sourceRetryCount=0;}}
     function transientAuthority(payload){
       var a=payload&&payload.assignmentAuthority;
       return Boolean(payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
+    }
+    function transientSource(payload){
+      return Boolean(options.retryTransientSources===true&&payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&identity.indexOf(payload.className+'|')===0&&Array.isArray(payload.coverage)&&payload.coverage.some(function(source){return source&&source.complete===false&&source.freshRead===false&&(source.sourceFailure==='SOURCE_BUSY'||source.sourceFailure==='SOURCE_VERSION_CHANGED');}));
     }
     function suspend(){needsFresh=true;current=null;options.guard.suspend();}
     function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
@@ -4226,7 +4229,7 @@ function createStudentLearningPrefill(options) {
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
       cancelRetry(!resuming);
-      var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;needsFresh=!visible();readState='loading';
+      var run=++generation,retryNeeded=false,retryKind='';ticket=options.guard.begin('receipts');current=null;needsFresh=!visible();readState='loading';
       if(visible()&&options.render)options.render();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
@@ -4237,7 +4240,8 @@ function createStudentLearningPrefill(options) {
         var merged=new Map();
         (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
         payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
-        retryNeeded=transientAuthority(payload)&&retryCount<2;
+        retryKind=transientAuthority(payload)&&retryCount<2?'authority':transientSource(payload)&&sourceRetryCount<3?'source':'';
+        retryNeeded=Boolean(retryKind);
         if(!retryNeeded)cancelRetry(true);
         readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
         if(visible()&&options.render)options.render();return true;
@@ -4248,10 +4252,11 @@ function createStudentLearningPrefill(options) {
         job=null;
         if(queued&&visible()&&who()===identity){queued=false;refresh();}
         else if(retryNeeded&&isCurrent(run)){
-          // Retain/render this response first. Retry only a concurrent Schedule
-          // edit, never a persistent family/source issue, and never overlap a read.
+          // Retain this response before a bounded retry. KIDS source-busy
+          // retries are explicitly enabled by its adapter; ordinary errors never retry.
           var intent={run:run,identity:identity};
-          retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job){retryCount++;refresh(intent);}},1500);
+          var delay=retryKind==='source'?[4000,10000,20000][sourceRetryCount]+Math.floor(Math.random()*500):1500;
+          retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job){if(retryKind==='source')sourceRetryCount++;else retryCount++;refresh(intent);}},delay);
         }
       }});
       job=task;return task;
@@ -4260,7 +4265,7 @@ function createStudentLearningPrefill(options) {
       if(!target||!identity||who()!==identity||!visible())return target;
       return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
-    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get readState(){return who()===identity&&identity?readState:'idle';}};
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
   root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
@@ -4841,7 +4846,7 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
       return {cls:'neutral receipt-unavailable',label:resolution==='authority-unavailable'?'Chưa xác minh được lịch giao bài':'Chưa đọc được nguồn bài nộp'};
     }
     function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
-    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,
+    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,retryTransientSources:true,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
       isVisible:()=>!document.hidden,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
       render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
