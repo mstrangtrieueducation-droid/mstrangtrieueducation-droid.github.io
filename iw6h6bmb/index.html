@@ -5076,8 +5076,16 @@ function writtenTestDisplayTitle_(item) {
       return now.every((n,i)=>n>=recovery.before[i])&&now.some((n,i)=>n>recovery.before[i]);
     }
     function parentRecoveryNext_(recovery) {
-      if(parentForceRecovery_!==recovery||!recovery||recovery.remaining<=0)return null;
-      return {force:false,quiet:parentBootstrapPainted_,attempt:0,delay:[30000,15000,5000][recovery.remaining-1]};
+      if(!recovery||parentForceRecovery_!==recovery||recovery.finalUsed)return null;
+      const offsets=[5,20,50,80,120,180,270,420],elapsed=Math.max(0,Date.now()-recovery.startedAt);
+      // A slow read or suspended timer skips missed checkpoints; it never
+      // creates a burst. The final check remains available after the window.
+      let index=recovery.nextIndex;
+      while(index<offsets.length-1&&offsets[index]*1000<=elapsed)index+=1;
+      recovery.nextIndex=index;
+      const jitter=index===offsets.length-1?0:Math.floor(Math.random()*500);
+      return {force:false,quiet:parentBootstrapPainted_,attempt:0,
+        reconcile:{recovery,index},delay:Math.max(0,offsets[index]*1000+jitter-elapsed)};
     }
     function parentClearBootstrapRetry_() {
       if (parentBootstrapRetry_) window.clearTimeout(parentBootstrapRetry_);
@@ -5157,12 +5165,12 @@ function writtenTestDisplayTitle_(item) {
         if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return;
         if(!kidsApi.parent.authorized)return; // Keep intent for fresh resume.
         const next=parentBootstrapIntent_;parentBootstrapIntent_=null;
-        if(next)parentLoadBootstrap_(next.force,next.quiet,next.attempt);
+        if(next)parentLoadBootstrap_(next.force,next.quiet,next.attempt,next.reconcile);
       },delay);
     }
-    function parentLoadBootstrap_(force=false,quiet=false,attempt=0) {
+    function parentLoadBootstrap_(force=false,quiet=false,attempt=0,reconcile=null) {
       if(kidsApi.parent.revoked)return Promise.resolve(false);
-      if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt};return Promise.resolve(false);}
+      if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt,reconcile};return Promise.resolve(false);}
       const recovery=parentForceRecovery_;
       if(recovery&&(recovery.alias!==matchKey(kidsApi.parent.alias)||force))return Promise.resolve(false);
       if(parentBootstrapJob_){
@@ -5170,10 +5178,21 @@ function writtenTestDisplayTitle_(item) {
         if(!quiet)parentAccessGate_('Đang tải lịch học, bài tập và kết quả của con…');
         return parentBootstrapJob_.promise;
       }
-      if(recovery&&recovery.remaining<=0)return Promise.resolve(Boolean(parentPackage_));
-      if(recovery)recovery.remaining-=1;
+      if(recovery){
+        if(!reconcile||reconcile.recovery!==recovery)return Promise.resolve(Boolean(parentPackage_));
+        if(reconcile.foreground){
+          if(!recovery.finalUsed)return Promise.resolve(Boolean(parentPackage_));
+        }else{
+          if(recovery.finalUsed||reconcile.index<recovery.nextIndex)return Promise.resolve(Boolean(parentPackage_));
+          const offsets=[5,20,50,80,120,180,270,420],elapsed=Math.max(0,Date.now()-recovery.startedAt);
+          let index=reconcile.index;
+          while(index<offsets.length-1&&offsets[index+1]*1000<=elapsed)index+=1;
+          recovery.nextIndex=index+1;recovery.calls+=1;
+          if(index===offsets.length-1)recovery.finalUsed=true;
+        }
+      }else if(reconcile)return Promise.resolve(false);
       parentClearBootstrapRetry_();parentBootstrapIntent_=null;
-      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,recovery,promise:null};
+      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,recovery,foregroundRecovery:Boolean(reconcile&&reconcile.foreground),promise:null};
       parentBootstrapJob_=job;
       app.dashboardLoad.inFlight=true;app.profileLoad.inFlight=true;app.profileLoad.busy=true;
       app.profileLoad.request+=1;app.dashboardLoad.request+=1;
@@ -5200,7 +5219,7 @@ function writtenTestDisplayTitle_(item) {
         const recovered=job.recovery&&parentRecoveryReady_(value,job.recovery);
         if(force||recovered){if(!job.recovery||parentForceRecovery_===job.recovery)parentForceRecovery_=null;}
         if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,!job.recovery||Boolean(recovered));
-        if(job.recovery){if(!recovered)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
+        if(job.recovery){if(!recovered&&!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
         else if(!force&&(stale||parentPackageWarning_))next={force:true,quiet:true,attempt:0,delay:0};
         return true;
       }).catch(error=>{
@@ -5215,9 +5234,9 @@ function writtenTestDisplayTitle_(item) {
         // one forced episode repairs its source without relaxing the guard.
         if(force&&error&&(error.code==='PROFILE_LOADING'||(error.code==='BOOTSTRAP_FORCE_TIMEOUT'&&error.forcedBootstrapDeadline===true))){
           const value=parentPackage_;
-          parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),remaining:3,before:value?[Number(value.dashboard.snapshotBuiltAt),Number(value.profile.sourceModelBuiltAt),Number(value.profile.snapshotBuiltAt)]:null};
+          parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),startedAt:Date.now(),nextIndex:0,calls:0,finalUsed:false,before:value?[Number(value.dashboard.snapshotBuiltAt),Number(value.profile.sourceModelBuiltAt),Number(value.profile.snapshotBuiltAt)]:null};
           next=parentRecoveryNext_(parentForceRecovery_);
-        }else if(job.recovery)next=parentRecoveryNext_(job.recovery);
+        }else if(job.recovery){if(!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);}
         else if(repair)next={force:true,quiet:parentBootstrapPainted_,attempt:0,delay:650};
         else if(attempt<limit)next={force,quiet,attempt:attempt+1,delay:waiting?[1500,3000,6000,12000,20000,30000][attempt]:[650,1600][attempt]};
         if(!quiet||!parentBootstrapPainted_||$('#dashboardShell').hidden){
@@ -5247,6 +5266,12 @@ function writtenTestDisplayTitle_(item) {
       // foreground or online event owns any new data-refresh episode.
       if(options.background&&!options.foreground){
         if(parentPackage_&&$('#dashboardShell').hidden)parentApplyPackage_(true,false,true);
+        const pending=parentBootstrapIntent_;
+        if(!parentBootstrapJob_&&!parentBootstrapRetry_&&pending&&pending.reconcile&&
+            pending.reconcile.recovery===parentForceRecovery_){
+          parentBootstrapIntent_=null;
+          return parentLoadBootstrap_(false,pending.quiet,pending.attempt,pending.reconcile);
+        }
         return Promise.resolve(Boolean(parentPackage_));
       }
       if(parentBootstrapJob_){
@@ -5254,8 +5279,15 @@ function writtenTestDisplayTitle_(item) {
         return parentBootstrapJob_.promise;
       }
       if(parentPackage_)parentApplyPackage_(true);
-      if(parentBootstrapIntent_&&!parentBootstrapRetry_){const next=parentBootstrapIntent_;parentBootstrapIntent_=null;return parentLoadBootstrap_(next.force,next.quiet,next.attempt);}
+      if(parentBootstrapIntent_&&!parentBootstrapRetry_){const next=parentBootstrapIntent_;parentBootstrapIntent_=null;return parentLoadBootstrap_(next.force,next.quiet,next.attempt,next.reconcile);}
       if(parentBootstrapRetry_)return Promise.resolve(Boolean(parentPackage_));
+      if(parentForceRecovery_){
+        const next=parentRecoveryNext_(parentForceRecovery_);
+        if(next){parentScheduleBootstrap_(next,next.delay);return Promise.resolve(Boolean(parentPackage_));}
+        // A later foreground/online event may observe a completed server
+        // refresh once. It cannot restart expired checkpoints or force work.
+        return parentLoadBootstrap_(false,true,0,{recovery:parentForceRecovery_,foreground:true});
+      }
       // Foreground return may follow minutes or an overnight suspension. The
       // fresh token check permits the memory paint, but says nothing about
       // changed homework/marks. One quiet normal bootstrap checks those next.
