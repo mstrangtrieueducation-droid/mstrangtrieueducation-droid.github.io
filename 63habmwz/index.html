@@ -20,6 +20,9 @@ const kidsApi = (() => {
   let checkJob = null;
   let checkEpoch = 0, receiptEpoch = 0;
   let checkController = null;
+  // A single-use handoff, never a saved authorization decision.
+  let initialBootstrapAttempted = false;
+  let initialBootstrapPackage = null;
   let verifiedDirectory = null;
   let directoryVersion = 0;
   const norm = value => String(value || '').trim().toUpperCase();
@@ -33,6 +36,7 @@ const kidsApi = (() => {
   function revoke() {
     if (status === 'revoked') return;
     status = 'revoked'; receiptEpoch += 1;
+    initialBootstrapPackage = null;
     controllers.forEach(controller => controller.abort());
     pending.clear();
     boundAlias = '';
@@ -56,6 +60,7 @@ const kidsApi = (() => {
       if(!boundAlias||!data||data.className!=='KIDS '+expectedClass||data.schema!==1||!Array.isArray(data.receipts)||!Array.isArray(data.coverage))throw error('Dữ liệu bài nộp chưa khớp.','INVALID_SCOPE');
       return boundAlias;
     }
+    const prospectiveAlias = arguments[2];
     if (!data || Number(data.classNumber) !== expectedClass || data.className !== 'KIDS ' + expectedClass) {
       throw error('Dữ liệu lớp chưa khớp. Vui lòng thử lại.', 'INVALID_SCOPE');
     }
@@ -66,25 +71,26 @@ const kidsApi = (() => {
           keyOf(aliasOf(data.studentAliases[0])) !== keyOf(alias))) throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
       return alias;
     }
-    if (!boundAlias) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
+    const scopeAlias = prospectiveAlias || boundAlias;
+    if (!scopeAlias) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
     if (action === 'bootstrap') {
       if (!Array.isArray(data.studentAliases) || data.studentAliases.length !== 1 ||
-          keyOf(aliasOf(data.studentAliases[0])) !== keyOf(boundAlias)) throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
-      validateScope(data.dashboard, 'dashboard');
-      validateScope(data.profile, 'profile');
+          keyOf(aliasOf(data.studentAliases[0])) !== keyOf(scopeAlias)) throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
+      validateScope(data.dashboard, 'dashboard', scopeAlias);
+      validateScope(data.profile, 'profile', scopeAlias);
     }
     if ((action === 'directory' || action === 'dashboard') &&
-        (!Array.isArray(data.studentAliases) || data.studentAliases.length !== 1 || keyOf(aliasOf(data.studentAliases[0])) !== keyOf(boundAlias))) {
+        (!Array.isArray(data.studentAliases) || data.studentAliases.length !== 1 || keyOf(aliasOf(data.studentAliases[0])) !== keyOf(scopeAlias))) {
       throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
     }
-    if (action === 'profile' && data.ok !== false && keyOf(data.englishName || data.alias) !== keyOf(boundAlias)) {
+    if (action === 'profile' && data.ok !== false && keyOf(data.englishName || data.alias) !== keyOf(scopeAlias)) {
       throw error('Hồ sơ chưa khớp.', 'INVALID_SCOPE');
     }
     return boundAlias;
   }
-  function requestAction(action, force, epoch) {
+  function requestAction(action, force, epoch, initialBootstrap = false) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
-    const key = JSON.stringify([action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null]);
+    const key = JSON.stringify([action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null]);
     if (pending.has(key)) return pending.get(key);
     const url = new URL(endpoint);
     url.searchParams.set('api', 'parent1');
@@ -105,6 +111,7 @@ const kidsApi = (() => {
     }).then(async response => {
       if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
       const envelope = await response.json();
+      if (initialBootstrap && epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       if ((action === 'check' && epoch !== checkEpoch) || (action === 'submissions' && epoch !== receiptEpoch)) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const data = envelope && envelope.data;
       const envelopeCode = envelope && (envelope.code || envelope.error && envelope.error.code);
@@ -116,7 +123,7 @@ const kidsApi = (() => {
       if (!envelope || envelope.ok !== true || !Object.prototype.hasOwnProperty.call(envelope, 'data')) {
         throw error('Dữ liệu chưa sẵn sàng. Vui lòng thử lại.', envelopeCode || 'DATA_UNAVAILABLE', envelope && envelope.diagnostics);
       }
-      validateScope(data, action);
+      validateScope(data, action, initialBootstrap ? validateScope(data, 'check') : undefined);
       document.documentElement.dataset[action + 'Ms'] = String(Math.round(performance.now() - started));
       document.documentElement.dataset[action + 'ReadyMs'] = String(Math.round(performance.now()));
       return data;
@@ -142,13 +149,36 @@ const kidsApi = (() => {
       if (!background && status !== 'revoked') signal('pending');
       return checkJob;
     }
+    initialBootstrapPackage = null;
     if (!validToken || status === 'revoked') {
       signal('revoked');
       return Promise.resolve(false);
     }
     if (!background) signal('pending');
     const epoch = checkEpoch;
-    const job = requestAction('check', true, epoch).then(data => {
+    const initial = options.initialBootstrap === true && !initialBootstrapAttempted && !boundAlias &&
+      typeof options.validateInitialBootstrap === 'function';
+    if (initial) initialBootstrapAttempted = true;
+    let handoff = null;
+    const request = initial ? requestAction('bootstrap', false, epoch, true).then(data => {
+      if (status === 'revoked' || epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
+      const alias = validateScope(data, 'check');
+      // The same renderer validator checks every collection and generation.
+      // Partial academic data takes the ordinary check/load fallback.
+      if (options.validateInitialBootstrap(data, alias) !== true) {
+        throw error('Cần kiểm tra hồ sơ trước.', 'INITIAL_BOOTSTRAP_FALLBACK');
+      }
+      handoff = data;
+      return data;
+    }).catch(err => {
+      handoff = null;
+      if (status === 'revoked' || epoch !== checkEpoch ||
+          err && (err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
+      // One fallback to the ordinary access check. Existing loaders retain
+      // their normal retry/partial-data/force-recovery rules after this check.
+      return requestAction('check', true, epoch);
+    }) : requestAction('check', true, epoch);
+    const job = request.then(data => {
       if (status === 'revoked' || epoch !== checkEpoch) return false;
       boundAlias = validateScope(data, 'check');
       verifiedDirectory = Array.isArray(data.studentAliases) ? {
@@ -157,6 +187,7 @@ const kidsApi = (() => {
       } : null;
       directoryVersion += 1;
       if (document.visibilityState === 'hidden') return false;
+      initialBootstrapPackage = handoff ? {epoch:epoch, alias:keyOf(boundAlias), value:handoff} : null;
       signal('authorized');
       return true;
     }).catch(err => {
@@ -202,12 +233,18 @@ const kidsApi = (() => {
       },
       bootstrap(force = false) {
         if (status !== 'authorized') return Promise.reject(error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING'));
+        const handoff = initialBootstrapPackage;
+        initialBootstrapPackage = null;
+        if (!force && handoff && handoff.epoch === checkEpoch && handoff.alias === keyOf(boundAlias)) {
+          return Promise.resolve(handoff.value);
+        }
         return requestAction('bootstrap', Boolean(force));
       },
       check,
       suspend() {
         if (status === 'revoked') return;
         checkEpoch += 1;
+        initialBootstrapPackage = null;
         checkJob = null;
         // Visibility does not abort a request or replace an already open profile.
         // The epoch still excludes an older access-check response.
@@ -5018,8 +5055,7 @@ function writtenTestDisplayTitle_(item) {
       return Boolean(parentPackagePartial_(value) || value.cacheStale || value.dashboard.cacheStale || value.profile.cacheStale ||
         Number(value.dashboard.snapshotBuiltAt) !== Number(value.profile.sourceModelBuiltAt));
     }
-    function parentValidatePackage_(value) {
-      const alias = kidsApi.parent.alias;
+    function parentValidatePackage_(value, alias = kidsApi.parent.alias) {
       if (!value || Number(value.classNumber) !== CLASS_NUMBER || value.className !== CLASS_NAME ||
           !validDashboardData(value.dashboard) || !validProfileData(value.profile, alias) ||
           !Number.isFinite(Number(value.sourceModelBuiltAt)) ||
@@ -5228,7 +5264,14 @@ function writtenTestDisplayTitle_(item) {
     }
     function parentRecheck_(options={}) {
       if(options.refresh)document.documentElement.dataset.parentRefreshStartedMs=String(Math.round(performance.now()));
-      return kidsApi.parent.check(options).then(ok=>ok?parentContinue_(options):false);
+      const checkOptions = options.initialBootstrap ? Object.assign({}, options, {
+        validateInitialBootstrap(value, alias) {
+          parentValidatePackage_(value, alias);
+          return !parentPackagePartial_(value) && Number.isFinite(Number(value.profile.snapshotBuiltAt)) &&
+            Number(value.profile.snapshotBuiltAt) > 0;
+        }
+      }) : options;
+      return kidsApi.parent.check(checkOptions).then(ok=>ok?parentContinue_(options):false);
     }
     function parentStart_() {
       // KIDS_PARENT_INITIAL_PAGESHOW_V1 retained: initial show adds no check.
@@ -5243,7 +5286,7 @@ function writtenTestDisplayTitle_(item) {
       window.addEventListener('hashchange',()=>{kidsApi.parent.suspend();window.location.reload();});
       document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')parentRecheck_({background:true,foreground:true});else{kidsApi.parent.suspend();submissionReset_();}});
       window.setInterval(()=>{if(document.visibilityState==='visible'&&!kidsApi.parent.revoked)parentRecheck_({background:true});},60000);
-      parentAccessGate_();parentRecheck_();
+      parentAccessGate_();parentRecheck_({initialBootstrap:true});
     }
     // Parent bootstrap owns data reads. The preserved class-page loaders must
     // not run a second dashboard/profile lane behind its atomic package.
