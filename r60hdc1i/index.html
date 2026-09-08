@@ -1433,6 +1433,20 @@ html.vn-national-day-2026-root body .assignment.session {
 
 </style>
 <style id="submission-status-style">.submission-unverified{display:none!important}</style>
+<style id="kids-written-test-layout">/* KIDS_WRITTEN_TEST_LAYOUT_V1: paper-result heading only. */
+.written-score-card .score-card__main{grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;padding:19px 20px}
+.written-test__heading{min-width:0}
+.written-test__eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:7px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5;margin-bottom:6px}
+.written-test__eyebrow:empty{display:none}
+.written-score-card .score-card__main h3{margin:0;color:var(--navy);font-size:18px;font-weight:750;line-height:1.35;letter-spacing:-.015em;overflow-wrap:anywhere}
+.written-test__units{min-width:0;margin-top:9px}
+.written-test__unit{display:inline-block;box-sizing:border-box;max-width:100%;padding:4px 9px;border:1px solid #dbe6df;border-radius:7px;background:#eff5f1;color:var(--sage-deep);font-size:12px;font-weight:650;line-height:1.4;white-space:nowrap;overflow:auto;vertical-align:top}
+.written-score-card .score-card__date{display:block;margin-top:9px;font-size:12px;line-height:1.5}
+.written-score-card .score-badge{min-width:98px;box-sizing:border-box;padding:12px;text-align:center}
+.written-score-card .score-badge strong{font-size:24px}
+.written-score-card .score-badge span{display:block;margin-top:4px;font-size:12px;line-height:1.45;white-space:nowrap}
+@media(max-width:480px){.written-score-card .score-card__main{grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px}.written-score-card .score-card__main h3{font-size:17px}.written-score-card .score-badge{min-width:80px;padding:10px 8px}.written-score-card .score-badge strong{font-size:22px}}
+</style>
 </head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
@@ -2287,7 +2301,7 @@ html.vn-national-day-2026-root body .assignment.session {
       }).filter(Boolean);
       const shown = titles.slice(0, 2);
       const remaining = Math.max(0, pendingCount - shown.length);
-      const title = `Con còn ${pendingCount} bài tập cần hoàn thành`;
+      const title = profile.submissionPendingIncomplete ? `Đã xác nhận ${pendingCount} bài cần hoàn thành` : `Con còn ${pendingCount} bài tập cần hoàn thành`;
       const detail = shown.length
         ? `Cần hoàn thành: ${shown.join(' · ')}${remaining ? ` · và ${remaining} bài khác` : ''}.`
         : 'Bố mẹ cùng con mở phần Tiết học & Bài tập để hoàn thành nhé.';
@@ -3738,7 +3752,27 @@ html.vn-national-day-2026-root body .assignment.session {
       </article>`;
     }
 
-    function testCard(item) {
+    function writtenTestHeading_(item,title){
+  const original=text(title),compact=original.replace(/\s+/g,' ').trim();
+  const type=compact.match(/^(Kiểm tra giấy(?: định k[ìỳ])?|Bài kiểm tra giấy|Written test)(?=\s|[·:|–—-]|$)/i);
+  const eyebrow=type?/^bài/i.test(type[1])?'Bài kiểm tra giấy':/^written/i.test(type[1])?'Written test':/định/i.test(type[1])?'Kiểm tra giấy định kì':'Kiểm tra giấy':'';
+  let main=(type?compact.slice(type[0].length):compact).replace(/^[\s·:|–—-]+/,'').trim(),unit='';
+  // Separate only an explicit, complete native Unit clause. Malformed or unknown
+  // labels stay in the visible title; numbers are never inferred from test IDs.
+  const tail=main.match(/(?:^|[\s·:|])((?:Units?)\s*\d[\s\S]*)$/i);
+  if(tail&&/^Units?\s*[1-9]\d*(?:\s*(?:\+|,|&|–|—|-)\s*[1-9]\d*)*$/i.test(tail[1])){
+    unit=tail[1].replace(/^units?/i,'Unit').replace(/^Unit\s*/,'Unit ').replace(/\s*\+\s*/g,' + ').replace(/\s*,\s*/g,', ');
+    main=main.slice(0,tail.index).replace(/[\s·:|–—-]+$/,'').trim();
+  }
+  main=main.replace(/^Sách\s+/i,'').trim();
+  if(!main)main=text(pick(item,['program'],''))||eyebrow||original;
+  return {eyebrow:main===eyebrow?'':eyebrow,main,unit};
+}
+function writtenTestHeadingHtml_(item,title,date){
+  const heading=writtenTestHeading_(item,title);
+  return `<div class="written-test__heading"><div class="written-test__eyebrow">${heading.eyebrow?`<span>${escapeHtml(heading.eyebrow)}</span>`:''}${item.isNew?'<span class="new-score-badge">ĐIỂM MỚI</span>':''}</div><h3>${escapeHtml(heading.main)}</h3>${heading.unit?`<div class="written-test__units"><span class="written-test__unit">${escapeHtml(heading.unit)}</span></div>`:''}${date?`<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>`:''}</div>`;
+}
+function testCard(item) {
       if (text(pick(item, ['assessmentType'], '')).toLowerCase() === 'speaking-interview') return speakingInterviewCard(item);
       if (isRubricAssessment(item)) return rubricAssessmentCard(item);
       const retakeOnly = Boolean(pick(item, ['retakeOnly'], false));
@@ -3802,8 +3836,8 @@ html.vn-national-day-2026-root body .assignment.session {
         const viewUrl = safeUrl(pick(attempt, ['viewUrl'], index === attempts.length - 1 ? retakeViewUrl : ''));
         return `<div class="retake-attempt"><div class="retake-attempt__head"><strong>Lần ${attemptNumber}</strong><time>${escapeHtml(submittedAt || 'Ngày giờ đang cập nhật')}</time></div><div class="retake-attempt__result">${escapeHtml(resultLabel)}</div>${viewUrl ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(viewUrl)}" target="_blank" rel="noopener">Xem bài lần ${attemptNumber}</a></div>` : ''}</div>`;
       }).join('');
-      return `<article class="score-card${retakeOnly ? ' retake-only' : ''}">
-        <div class="score-card__main"><div><div class="score-card__eyebrow">${bookLabel ? `<span class="score-card__book">${escapeHtml(bookLabel)}</span>` : ''}${item.isNew ? '<span class="new-score-badge">ĐIỂM MỚI</span>' : ''}</div><h3>${escapeHtml(assessmentTitle)}</h3>${date ? `<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>` : ''}</div>${mainScoreBadge}</div>
+      return `<article class="score-card${retakeOnly ? ' retake-only' : ' written-score-card'}">
+        <div class="score-card__main">${retakeOnly ? `<div><div class="score-card__eyebrow">${bookLabel ? `<span class="score-card__book">${escapeHtml(bookLabel)}</span>` : ''}${item.isNew ? '<span class="new-score-badge">ĐIỂM MỚI</span>' : ''}</div><h3>${escapeHtml(assessmentTitle)}</h3>${date ? `<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>` : ''}</div>` : writtenTestHeadingHtml_(item,title,date)}${mainScoreBadge}</div>
         <div class="retake-box"><div class="retake-box__head"><strong>Làm lại</strong><span class="pill ${retakeDisplayMeta.cls}">${escapeHtml(attemptLabel)}</span></div>
         ${attemptCards ? `<div class="retake-attempts">${attemptCards}</div>` : `<p>${retakeUrl ? 'Con có thể làm lại để củng cố phần chưa chắc.' : 'Chưa có bài làm lại được giao.'}</p>`}
         ${retakeUrl ? `<div class="actions"><a class="btn" href="${escapeHtml(retakeUrl)}" target="_blank" rel="noopener">Làm lại</a></div>` : ''}</div>
@@ -4717,6 +4751,9 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
           const found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers));
           const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
           if(maps.length){feedback.directReceiptResolution=proof&&ticket?'verified':active?'source-unavailable':authority?'not-current':'authority-unavailable';}
+          // Reminder exclusions are policy/context, never a submission verdict.
+          const assignedAt=root.DirectSubmissionAssignmentWindow.assignedAt(assignment);
+          feedback.directReceiptExclusion=!active&&authority&&assignedAt>0&&assignedAt<root.DirectSubmissionDeadlinePolicy.cutover?'before-policy-cutoff':!active&&authority&&typeof authority.scopeStartAt==='number'&&assignedAt>0&&assignedAt<authority.scopeStartAt?'outside-authority-horizon':!active&&authority?'not-in-current-authority':'';
           receive(feedback,found);
           const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{verified:Boolean(proof),complete:true});
           const eligible=deadline.pending;feedback.directReceiptDeadline=deadline;
@@ -4734,7 +4771,7 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
         if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true});
         assignment.directReceiptCurrent=active;
-        if(required.length===1){assignment.directReceiptResolution=required[0].feedback.directReceiptResolution;assignment.directReceiptDeadline=required[0].feedback.directReceiptDeadline;}
+        if(required.length===1){assignment.directReceiptResolution=required[0].feedback.directReceiptResolution;assignment.directReceiptDeadline=required[0].feedback.directReceiptDeadline;assignment.directReceiptExclusion=required[0].feedback.directReceiptExclusion;}
         if(required.some(t=>t.feedback&&t.feedback.contentMissing)){assignment.submitted=false;assignment.contentMissing=true;}else if(complete){assignment.contentMissing=false;}
         if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
         // Only a complete set of source-confirmed task receipts replaces the
@@ -4779,12 +4816,16 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     function submissionMissingMeta_(item) {
       const deadline=item&&item.directReceiptDeadline;
       if(submissionCan_(item))return deadline&&deadline.pending?{cls:deadline.missing?'late':'todo',label:deadline.missing?'Chưa nộp · Quá hạn':'Cần nộp bài'}:{cls:'neutral',label:'Chưa ghi nhận bài nộp'};
-      const state=submissionOwner_.readState,resolution=item&&item.directReceiptResolution;
+      const state=submissionOwner_.readState,resolution=item&&item.directReceiptResolution,exclusion=item&&item.directReceiptExclusion;
       if(state==='loading'||state==='idle')return {cls:'neutral receipt-loading',label:'Đang đọc nguồn bài nộp'};
-      if(resolution==='not-current')return {cls:'neutral',label:'Bài lưu trong lịch sử'};
+      if(resolution==='not-current'){
+        if(exclusion==='before-policy-cutoff')return {cls:'neutral',label:'Không tính bài thiếu',detail:'Bài giao trước 01/09/2026.'};
+        if(exclusion==='outside-authority-horizon')return {cls:'neutral',label:'Ngoài đợt nhắc hiện tại',detail:'Bài nằm ngoài khoảng thời gian đang kiểm tra.'};
+        return {cls:'neutral',label:'Không có trong lịch hiện tại',detail:'Bài được giữ lại để xem; chưa kết luận tình trạng nộp.'};
+      }
       return {cls:'neutral receipt-unavailable',label:resolution==='authority-unavailable'?'Chưa xác minh được lịch giao bài':'Chưa đọc được nguồn bài nộp'};
     }
-    function submissionMissingText_(item){return submissionMissingMeta_(item).label;}
+    function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
     const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
       isVisible:()=>!document.hidden,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
