@@ -83,6 +83,7 @@ const kidsApi = (() => {
     url.searchParams.set('api', 'parent1');
     url.searchParams.set('class', String(expectedClass));
     url.searchParams.set('action', action);
+    if(action==='submissions')url.searchParams.set('authorityScope','reminders');
     url.searchParams.set('token', token);
     url.searchParams.set('force', force ? '1' : '0');
     url.searchParams.set('_', String(Date.now()));
@@ -4158,18 +4159,26 @@ function createStudentLearningPrefill(options) {
 (function(root){
   'use strict';
   function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle';
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0;
     function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
     function visible(){return !options.isVisible||options.isVisible()===true;}
     function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
+    function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset)retryCount=0;}
+    function transientAuthority(payload){
+      var a=payload&&payload.assignmentAuthority;
+      return Boolean(payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
+    }
     function suspend(){needsFresh=true;current=null;options.guard.suspend();}
-    function clear(){readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
-    function refresh(){
-      var active=who();if(!active||!visible())return Promise.resolve(false);
+    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function refresh(retry){
+      // Only the same internally scheduled job may continue while hidden.
+      var resuming=Boolean(retry&&retry.run===generation&&retry.identity===identity&&isCurrent(retry.run));
+      var active=who();if(!active||!visible()&&!resuming)return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
-      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;readState='loading';
-      if(options.render)options.render();
+      cancelRetry(!resuming);
+      var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;needsFresh=!visible();readState='loading';
+      if(visible()&&options.render)options.render();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
         if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
@@ -4179,12 +4188,23 @@ function createStudentLearningPrefill(options) {
         var merged=new Map();
         (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
         payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
+        retryNeeded=transientAuthority(payload)&&retryCount<2;
+        if(!retryNeeded)cancelRetry(true);
         readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
         if(visible()&&options.render)options.render();return true;
       }).catch(function(){
         if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
         return false;
-      }).finally(function(){if(job===task){job=null;if(queued&&visible()&&who()===identity){queued=false;refresh();}}});
+      }).finally(function(){if(job===task){
+        job=null;
+        if(queued&&visible()&&who()===identity){queued=false;refresh();}
+        else if(retryNeeded&&isCurrent(run)){
+          // Retain/render this response first. Retry only a concurrent Schedule
+          // edit, never a persistent family/source issue, and never overlap a read.
+          var intent={run:run,identity:identity};
+          retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job){retryCount++;refresh(intent);}},1500);
+        }
+      }});
       job=task;return task;
     }
     function reapply(target){
@@ -4583,7 +4603,20 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
     }
     function currentAuthority(value,payload){
       const a=payload&&payload.assignmentAuthority;
-      return a&&a.schema===1&&a.className===value.className&&a.complete===true&&a.freshRead===true&&Number.isFinite(a.verifiedAt)&&a.verifiedAt>0&&Array.isArray(a.assignments)&&Array.isArray(a.schedule)?a:null;
+      if(!(a&&a.schema===1&&a.className===value.className&&a.complete===true&&a.freshRead===true&&Number.isFinite(a.verifiedAt)&&a.verifiedAt>0&&Array.isArray(a.assignments)&&Array.isArray(a.schedule)))return null;
+      if(!Object.prototype.hasOwnProperty.call(a,'scopeStartAt'))return a;
+      if(typeof a.scopeStartAt!=='number'||!root.DirectSubmissionDeadlinePolicy.time(a.scopeStartAt))return null;
+      // A reminder read is authoritative only inside its explicit rolling horizon.
+      // Retain older/undated academic history; a reused ID cannot overwrite it.
+      const start=a.scopeStartAt,assigned=root.DirectSubmissionAssignmentWindow.assignedAt;
+      const date=row=>root.DirectSubmissionDeadlinePolicy.time(row&&row.date);
+      const retained=(rows,time)=>list(rows).filter(row=>!time(row)||time(row)<start);
+      const oldAssignments=retained(list(value.profile.assignments).concat(list(value.dashboard.assignments)),assigned);
+      const oldSchedule=retained(value.dashboard.schedule,date);
+      return Object.assign({},a,{
+        assignments:a.assignments.filter(row=>row&&assigned(row)>=start&&!oldAssignments.some(old=>old&&old.id&&old.id===row.id)),
+        schedule:a.schedule.filter(row=>row&&date(row)>=start&&!oldSchedule.some(old=>old&&old.lessonKey&&old.lessonKey===row.lessonKey))
+      });
     }
     function mergeAuthority(profile,authority){
       const rows=list(profile.assignments),beforeRows=rows.slice(),current=new WeakMap();
@@ -4664,7 +4697,15 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
     return function projectKidsSubmissions(value,payload,ticket,guard){
       if(!value||!value.profile||!payload)return value;
       const profile=value.profile,receipts=list(payload.receipts),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
-      if(authority){value.dashboard.schedule=authority.schedule;value.dashboard.assignments=authority.assignments;if(typeof authority.joinDate==='string')profile.joinDate=authority.joinDate;}
+      if(authority){
+        const start=authority.scopeStartAt;
+        if(typeof start==='number'){
+          const preserve=(rows,time)=>list(rows).filter(row=>!time(row)||time(row)<start);
+          value.dashboard.schedule=preserve(value.dashboard.schedule,row=>root.DirectSubmissionDeadlinePolicy.time(row&&row.date)).concat(authority.schedule);
+          value.dashboard.assignments=preserve(value.dashboard.assignments,root.DirectSubmissionAssignmentWindow.assignedAt).concat(authority.assignments);
+        }else{value.dashboard.schedule=authority.schedule;value.dashboard.assignments=authority.assignments;}
+        if(typeof authority.joinDate==='string')profile.joinDate=authority.joinDate;
+      }
       const reconciled=mergeAuthority(profile,authority),assignments=reconciled.rows,checks=[];
       assignments.forEach(assignment=>{
         if(!assignment||assignment.isAssessmentLesson)return;
