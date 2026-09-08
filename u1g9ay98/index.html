@@ -2856,27 +2856,27 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function submissionHistoryHtml(value, fallbackUrl, options) {
       const config = options || {};
-      const attempts = arr(value).map((item, index) => ({
+      const attempts = DirectSubmissionHistory.merge([],arr(value)).map((item, index) => ({
         attempt: Number(pick(item, ['attempt', 'attemptNumber'], index + 1)) || index + 1,
         submittedAt: text(pick(item, ['submittedAt', 'date'], '')),
         viewUrl: safeUrl(pick(item, ['viewUrl', 'reviewUrl'], '')),
         score: pick(item, ['score'], null),
         maximum: pick(item, ['maximum'], null),
-        scoreLabel: text(pick(item, ['scoreLabel'], ''))
+        scoreLabel: text(pick(item, ['scoreLabel'], '')),evidence:submissionEvidenceFiles_(item),contentStatus:text(pick(item,['contentStatus'],''))
       })).filter(item => item.submittedAt);
-      if (!attempts.length || (attempts.length < 2 && !config.showSingle)) return '';
+      if (!attempts.length || (attempts.length < 2 && !config.showSingle && !attempts.some(item=>item.contentStatus==='empty'||item.evidence.length>1||item.evidence.length&&!safeUrl(fallbackUrl)))) return '';
       const fallbackScore = pick(config, ['fallbackScore'], null);
       const fallbackMaximum = pick(config, ['fallbackMaximum'], null);
       const hasFallbackScore = fallbackScore !== null && fallbackScore !== '';
-      if (config.compact && hasFallbackScore && !attempts.some(item => item.scoreLabel || (item.score !== null && item.score !== ''))) {
-        const latest = attempts[attempts.length - 1];
+      if (config.compact && hasFallbackScore && attempts.some(item=>item.contentStatus!=='empty') && !attempts.some(item => item.scoreLabel || (item.score !== null && item.score !== ''))) {
+        const latest = attempts.filter(item=>item.contentStatus!=='empty').slice(-1)[0];
         latest.score = fallbackScore;
         latest.maximum = fallbackMaximum;
         latest.scoreLabel = text(pick(config, ['fallbackScoreLabel'], '')) || `${fallbackScore}${fallbackMaximum !== null && fallbackMaximum !== '' ? '/' + fallbackMaximum : ''}`;
       }
       if (config.compact) {
         return `<div class="submission-history is-compact">${attempts.map((item, index) => {
-          const viewUrl = item.viewUrl || (index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
+          const viewUrl = item.viewUrl || (item.contentStatus!=='empty' && index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
           const hasScore = item.score !== null && item.score !== '';
           const scoreText = item.scoreLabel || (hasScore
             ? `${item.score}${item.maximum !== null && item.maximum !== '' ? '/' + item.maximum : ''}`
@@ -2885,16 +2885,16 @@ html.vn-national-day-2026-root body .assignment.session {
           const timeParts = submittedAt.split(/\s*·\s*/).filter(Boolean);
           const dateText = timeParts.shift() || submittedAt;
           const timeText = timeParts.join(' · ');
-          return `<div class="submission-attempt"><div class="submission-attempt__line"><strong>Lần ${escapeHtml(item.attempt)}</strong><span class="submission-attempt__separator">·</span><time>${escapeHtml(dateText)}</time>${timeText ? `<span class="submission-attempt__separator">·</span><time>${escapeHtml(timeText)}</time>` : ''}${scoreText ? `<span class="submission-attempt__separator">·</span><span class="submission-attempt__score">Điểm ${escapeHtml(scoreText)}</span>` : ''}</div>${viewUrl ? `<a href="${escapeHtml(viewUrl)}" target="_blank" rel="noopener">Xem bài</a>` : ''}</div>`;
+          return `<div class="submission-attempt"><div class="submission-attempt__line"><strong>Lần ${escapeHtml(item.attempt)}</strong><span class="submission-attempt__separator">·</span><time>${escapeHtml(dateText)}</time>${timeText ? `<span class="submission-attempt__separator">·</span><time>${escapeHtml(timeText)}</time>` : ''}${scoreText ? `<span class="submission-attempt__separator">·</span><span class="submission-attempt__score">Điểm ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">Chưa có video hoặc tệp đính kèm</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
         }).join('')}</div>`;
       }
       return `<div class="submission-history">${attempts.map((item, index) => {
-        const viewUrl = item.viewUrl || (index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
+        const viewUrl = item.viewUrl || (item.contentStatus!=='empty' && index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
         const hasScore = item.score !== null && item.score !== '';
         const scoreText = item.scoreLabel || (hasScore
           ? `${item.score}${item.maximum !== null && item.maximum !== '' ? '/' + item.maximum : ''}`
           : '');
-        return `<div class="submission-attempt"><strong>Lần ${escapeHtml(item.attempt)}</strong><div class="submission-attempt__detail"><time>${escapeHtml(item.submittedAt)}</time>${scoreText ? `<span class="submission-attempt__score">Kết quả: ${escapeHtml(scoreText)}</span>` : ''}</div>${viewUrl ? `<a href="${escapeHtml(viewUrl)}" target="_blank" rel="noopener">Xem bài</a>` : ''}</div>`;
+        return `<div class="submission-attempt"><strong>Lần ${escapeHtml(item.attempt)}</strong><div class="submission-attempt__detail"><time>${escapeHtml(item.submittedAt)}</time>${scoreText ? `<span class="submission-attempt__score">Kết quả: ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">Chưa có video hoặc tệp đính kèm</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
       }).join('')}</div>`;
     }
 
@@ -2967,7 +2967,7 @@ html.vn-national-day-2026-root body .assignment.session {
         const taskMeta = statusMeta(feedback);
         const taskSubmittedAt = text(pick(feedback, ['submittedAt'], ''));
         const taskAttempts = arr(pick(feedback, ['submissionAttempts'], []));
-        const taskSubmitted = Boolean(pick(feedback, ['submitted'], false) || taskSubmittedAt || taskAttempts.length);
+        const taskSubmitted = !feedback.contentMissing && Boolean(pick(feedback, ['submitted'], false) || taskSubmittedAt || taskAttempts.length);
         const taskComment = text(pick(feedback, ['teacherComment', 'comment'], ''));
         const taskReviewUrl = safeUrl(pick(feedback, ['viewUrl', 'submissionUrl', 'reviewUrl'], ''));
         const taskScore = pick(feedback, ['score'], null);
@@ -3006,11 +3006,11 @@ html.vn-national-day-2026-root body .assignment.session {
           fallbackMaximum: taskMaximum,
           fallbackScoreLabel: taskScoreText
         } : null);
-        const submissionText = isRetakeTask && historyHtml ? '' : taskAttempts.length > 1
+        const submissionText = feedback.contentMissing ? 'Đã nhận lượt gửi nhưng bài trống — chưa có video/tệp đính kèm' : isRetakeTask && historyHtml ? '' : taskAttempts.length > 1
           ? `Đã nhận ${taskAttempts.length} lần`
-          : taskSubmittedAt ? `Đã nộp lúc ${taskSubmittedAt}` : taskSubmitted ? 'Đã nộp bài' : submissionCan_(feedback) ? 'Chưa nộp bài' : '';
-        const reviewText = taskComment ? nl2br(taskComment) : taskSubmitted ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
-        return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${taskSubmitted ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
+          : taskSubmittedAt ? `Đã nộp lúc ${taskSubmittedAt}` : taskSubmitted ? 'Đã nộp bài' : submissionMissingText_(feedback);
+        const reviewText = taskComment ? nl2br(taskComment) : taskSubmitted&&!feedback.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
+        return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${taskSubmitted || !submissionCan_(feedback) || !(feedback.directReceiptDeadline&&feedback.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
       }).join('');
       const taskComments = tasks.map(task => text(pick(pick(task, ['feedback'], {}) || {}, ['teacherComment'], ''))).filter(Boolean);
       const taskReviewUrls = tasks.map(task => safeUrl(pick(pick(task, ['feedback'], {}) || {}, ['viewUrl'], ''))).filter(Boolean);
@@ -3212,15 +3212,15 @@ html.vn-national-day-2026-root body .assignment.session {
       const comment = text(pick(item, ['teacherComment', 'comment', 'feedback'], ''));
       const submittedAt = text(pick(item, ['submittedAt'], ''));
       const submissionAttempts = arr(pick(item, ['submissionAttempts'], []));
-      const submitted = Boolean(submittedAt || pick(item, ['submitted'], false) || /da_nop|co_da_nhan_xet/.test(text(pick(item, ['state'], ''))));
+      const submitted = !item.contentMissing && Boolean(submittedAt || pick(item, ['submitted'], false) || /da_nop|co_da_nhan_xet/.test(text(pick(item, ['state'], ''))));
       const score = pick(item, ['scoreLabel', 'score', 'grade'], '');
       const meta = statusMeta(item);
       const firstTask = arr(item && item.tasks)[0] || {};
       const learningUrl = parentLearningUrl_(safeUrl(pick(item, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')) || safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')));
       const reviewUrl = safeUrl(pick(item, ['viewUrl', 'reviewUrl'], ''));
-      const submissionText = submissionAttempts.length > 1
+      const submissionText = item.contentMissing ? 'Đã nhận lượt gửi nhưng bài trống — chưa có video/tệp đính kèm' : submissionAttempts.length > 1
         ? `Đã nhận ${submissionAttempts.length} lần`
-        : submittedAt ? 'Đã nộp lúc ' + submittedAt : submitted ? 'Đã nộp bài' : submissionCan_(item) ? 'Chưa nộp bài' : '';
+        : submittedAt ? 'Đã nộp lúc ' + submittedAt : submitted ? 'Đã nộp bài' : submissionMissingText_(item);
       const historyHtml = submissionHistoryHtml(submissionAttempts, reviewUrl);
       const needsReview = feedbackNeedsReview(comment);
       return `<article class="card sky" data-pending-target data-assignment-id="${escapeHtml(text(pick(item, ['id'], '')))}" data-task-id="${escapeHtml(text(pick(firstTask, ['id'], '')))}" data-pending-title="${escapeHtml(matchKey(title))}">
@@ -3228,7 +3228,7 @@ html.vn-national-day-2026-root body .assignment.session {
         <h3 class="card-title">${escapeHtml(title)}</h3>
         ${description ? `<p class="soft">${nl2br(description)}</p>` : ''}
         ${score !== '' && score !== null ? `<p><strong>Kết quả: ${escapeHtml(score)}</strong></p>` : ''}
-        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${submitted ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? nl2br(comment) : submitted ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
+        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? nl2br(comment) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
         ${due ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
         ${actionLinks(item, true, 'Mở bài tự luyện')}
       </article>`;
@@ -3582,8 +3582,10 @@ html.vn-national-day-2026-root body .assignment.session {
     }
     function statusMeta(item) {
       const meta=submissionOriginalStatusMeta_(item);
-      const received=Boolean(item&&(item.submitted||item.submittedAt||arr(item.submissionAttempts).length||item.isLate));
-      if(!received&&['todo','late'].includes(meta.cls)&&!submissionCan_(item))return {cls:'submission-unverified',label:''};
+      if(item&&item.contentMissing)return {cls:'todo',label:'Bài đã gửi nhưng còn trống'};
+      const received=Boolean(item&&(item.submitted||item.submittedAt||arr(item.submissionAttempts).length));
+      if(!received&&['todo','late'].includes(meta.cls)&&!submissionCan_(item))return submissionMissingMeta_(item);
+      if(!received&&submissionCan_(item))return submissionMissingMeta_(item);
       return meta;
     }
 
@@ -3727,7 +3729,8 @@ html.vn-national-day-2026-root body .assignment.session {
       const topicHtml = topic || topicEn
         ? `<div class="rubric-topic"><small>CHỦ ĐỀ</small>${topic ? `<strong>${escapeHtml(topic)}</strong>` : ''}${topicEn ? `<span lang="en">${escapeHtml(topicEn)}</span>` : ''}</div>` : '';
       const resultUrl = safeUrl(pick(item, ['resultUrl'], ''));
-      const actionHtml = resultUrl ? `<div class="actions interview-actions"><a class="btn secondary" href="${escapeHtml(resultUrl)}" target="_blank" rel="noopener">Xem phiếu kết quả</a></div>` : '';
+      const evidenceActions=submissionEvidenceActionsHtml_({links:[{url:pick(item,['videoUrl'],''),type:'video',label:'Xem video bài đánh giá'},{url:resultUrl,label:'Xem phiếu kết quả'}]});
+      const actionHtml=evidenceActions?'<div class="actions interview-actions">'+evidenceActions+'</div>':'';
       return `<article class="score-card rubric-card">
         <div class="score-card__main"><div><div class="score-card__eyebrow"><span class="score-card__book">${escapeHtml(program || 'ĐÁNH GIÁ')}</span>${item.isNew ? '<span class="new-score-badge">ĐIỂM MỚI</span>' : ''}</div><h3 class="rubric-card__title">${escapeHtml(title)}</h3>${subtitle ? `<span class="rubric-card__subtitle">${escapeHtml(subtitle)}</span>` : ''}${date ? `<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>` : ''}${topicHtml}</div><div class="score-badge${scoreClass}"><strong>${escapeHtml(result)}</strong><span>${numericPercentage !== null && !absent ? escapeHtml(numericPercentage) + '% · Mức độ hoàn thành' : absent ? 'Vắng buổi đánh giá' : hasResult ? 'Kết quả đánh giá' : 'Chờ kết quả'}</span>${numericPercentage !== null && !absent ? `<div class="rubric-summary-progress"><span><b>Tiến độ</b><b>${escapeHtml(numericPercentage)}%</b></span><div class="rubric-progress"><i style="width:${overallProgress}%"></i></div></div>` : ''}</div></div>
         <div class="rubric-details"><div class="rubric-section-head"><strong>Điểm từng tiêu chí</strong><span>${criteria.length ? escapeHtml(criteria.length) + ' tiêu chí' : 'Đang cập nhật tiêu chí'}</span></div>${criteriaHtml ? `<div class="criteria-grid">${criteriaHtml}</div>` : '<div class="empty">Tiêu chí đang được cập nhật.</div>'}${absent ? '<div class="assessment-absent">Vắng buổi đánh giá</div>' : ''}<div class="assessment-teacher-comment"><div class="assessment-teacher-comment__head"><strong>Nhận xét chung của giáo viên</strong><span>${generalComment ? 'Cô đã nhận xét' : 'Chờ nhận xét'}</span></div><p>${generalComment ? nl2br(generalComment) : 'Chưa có nhận xét của giáo viên.'}</p></div>${actionHtml}</div>
@@ -3738,7 +3741,7 @@ html.vn-national-day-2026-root body .assignment.session {
       if (text(pick(item, ['assessmentType'], '')).toLowerCase() === 'speaking-interview') return speakingInterviewCard(item);
       if (isRubricAssessment(item)) return rubricAssessmentCard(item);
       const retakeOnly = Boolean(pick(item, ['retakeOnly'], false));
-      const title = pick(item, ['title', 'name'], 'Bài kiểm tra giấy');
+      const title = writtenTestDisplayTitle_(item);
       const date = pick(item, ['date', 'dateLabel'], '');
       const score = pick(item, ['score', 'grade'], '—');
       const maximum = pick(item, ['maximum'], '');
@@ -3838,7 +3841,7 @@ html.vn-national-day-2026-root body .assignment.session {
         ? reminders.map(reminderCard).join('')
         : '<div class="notice good"><span class="notice-icon">✓</span><div class="notice-copy"><strong>Đã hoàn thành</strong><small>Con không có bài cần hoàn thành.</small></div></div>';
       $('#profileContent').innerHTML = `<div class="section-head"><div><p class="label">Hồ sơ của ${escapeHtml(displayName)}</p><h2>Kết quả kiểm tra</h2></div></div>
-        <div class="grid three"><div class="metric score"><strong>${escapeHtml(latestScore)}</strong><span>Kết quả kiểm tra gần nhất</span></div><div class="metric stars"><strong><span class="metric-icon">⭐</span>${escapeHtml(stars)}</strong><span>Tổng số sao</span></div>${submissionCan_(profile) ? `<div class="metric pending${pendingCount ? '' : ' is-clear'}"><strong>${escapeHtml(pendingCount)}</strong><span>Bài cần hoàn thành</span></div>` : ''}</div>
+        <div class="grid three"><div class="metric score"><strong>${escapeHtml(latestScore)}</strong><span>Kết quả kiểm tra gần nhất</span></div><div class="metric stars"><strong><span class="metric-icon">⭐</span>${escapeHtml(stars)}</strong><span>Tổng số sao</span></div>${submissionCan_(profile) ? `<div class="metric pending${pendingCount ? '' : ' is-clear'}"><strong>${profile.submissionPendingIncomplete?'≥ ':''}${escapeHtml(pendingCount)}</strong><span>Bài cần hoàn thành</span></div>` : ''}</div>
         ${notices ? `<div class="section-head"><div><h2>Con cần chú ý</h2></div></div>${notices}` : ''}
         <div class="section-head"><div><h2>Chi tiết từng bài kiểm tra</h2></div></div>
         ${results.length ? `<div class="result-list">${results.map(testCard).join('')}</div>` : '<div class="empty">Chưa có kết quả kiểm tra mới.</div>'}`;
@@ -4155,31 +4158,31 @@ function createStudentLearningPrefill(options) {
 (function(root){
   'use strict';
   function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false;
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle';
     function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
     function visible(){return !options.isVisible||options.isVisible()===true;}
     function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
     function suspend(){needsFresh=true;current=null;options.guard.suspend();}
-    function clear(){generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function clear(){readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
     function refresh(){
       var active=who();if(!active||!visible())return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
-      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;
+      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;readState='loading';
       if(options.render)options.render();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
-        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage))throw new Error('INVALID_SUBMISSION_RECEIPTS');
+        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
         // Receipt absence is not a withdrawal of an earlier confirmed receipt.
         // Keep the server-positive union for this exact identity, even when a
         // later source snapshot omits an attempt. No local submit event enters it.
         var merged=new Map();
         (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
-        payload.receipts.forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt)merged.set(receipt.id,receipt);});
-        current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
+        readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
         if(visible()&&options.render)options.render();return true;
       }).catch(function(){
-        if(isCurrent(run)){options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
         return false;
       }).finally(function(){if(job===task){job=null;if(queued&&visible()&&who()===identity){queued=false;refresh();}}});
       job=task;return task;
@@ -4188,7 +4191,7 @@ function createStudentLearningPrefill(options) {
       if(!target||!identity||who()!==identity||!visible())return target;
       return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
-    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);}};
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
   root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
@@ -4578,23 +4581,81 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       return assignments.filter(other=>list(other.tasks).some(task=>mappings(other,task,list(other.tasks).filter(t=>t.requiresSubmission!==false).length)
         .some(candidate=>maps.some(map=>candidate.family===map.family&&(matches({family:map.family,code:map.code},candidate)||matches({family:candidate.family,code:candidate.code},map))))));
     }
-    function proofFor(payload,maps){
-      if(!maps.length)return null;
-      const families=[...new Set(maps.map(m=>m.family))];
-      const coverage=families.map(family=>list(payload.coverage).filter(c=>c.family===family));
-      if(coverage.some(rows=>!rows.length||rows.some(c=>c.complete!==true||c.freshRead!==true)))return null;
-      return {schema:1,complete:true,freshRead:true,verifiedAt:Math.min(...coverage.flat().map(c=>Number(c.verifiedAt)||0))};
+    function currentAuthority(value,payload){
+      const a=payload&&payload.assignmentAuthority;
+      return a&&a.schema===1&&a.className===value.className&&a.complete===true&&a.freshRead===true&&Number.isFinite(a.verifiedAt)&&a.verifiedAt>0&&Array.isArray(a.assignments)&&Array.isArray(a.schedule)?a:null;
     }
-    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,sourceAttempt:r.attempt||index+1,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),family:r.family,part:r.part,evidenceUrls:r.evidenceUrls,links:r.links,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
+    function mergeAuthority(profile,authority){
+      const rows=list(profile.assignments),beforeRows=rows.slice(),current=new WeakMap();
+      if(!authority)return {rows,current};
+      function resetReceipt(value){
+        const result=Object.assign({},value),automatic=list(value&&value.submissionAttempts).some(a=>a&&a.receiptId&&a.score!==undefined);
+        ['submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','canViewSubmission'].forEach(k=>delete result[k]);
+        if(automatic)['score','maximum','scoreLabel'].forEach(k=>delete result[k]);return result;
+      }
+      function sameScope(prior,old,publicRow,task){
+        if(!prior||!old)return false;
+        const before=mappings(prior,old,list(prior.tasks).length),after=mappings(publicRow,task,list(publicRow.tasks).length);
+        const identity=rows=>rows.map(m=>m.family+'|'+key(m.code)+'|'+String(m.taskType||'')).sort().join('\n');
+        if(identity(before)!==identity(after))return false;
+        if(!before.length&&urlKey(old.url||old.learningUrl||old.taskUrl)!==urlKey(task.url||task.learningUrl||task.taskUrl))return false;
+        const a=root.DirectSubmissionAssignmentWindow.windowFor(prior,peersFor(prior,before,beforeRows)),b=root.DirectSubmissionAssignmentWindow.windowFor(publicRow,peersFor(publicRow,after,authority.assignments));
+        if(!a.known||!b.known||a.start!==b.start)return false;
+        if(a.end===b.end)return true;
+        // A newly published repeat closes an older open interval without changing
+        // its source. Retain a proven older upload only while all retained dated
+        // evidence still belongs to that interval; never copy it to the new start.
+        const feedback=old.feedback||{},evidence=list(feedback.submissionAttempts).concat([feedback]).filter(r=>r&&r.contentStatus!=='empty'&&(r.receiptId||root.DirectSubmissionHistory.fileKey(r.viewUrl||r.submissionUrl)||list(r.links).some(link=>root.DirectSubmissionHistory.fileKey(link&&link.url))));
+        return evidence.length>0&&evidence.every(r=>{const time=root.DirectSubmissionDeadlinePolicy.receiptTime(r);return time&&time>=b.start&&(!b.end||time<b.end);});
+      }
+      const privateKeys=['submitted','submittedAt','lastSubmittedAt','submissionAttempts','state','stateLabel','isLate','isOverdue','score','scoreLabel','maximum','grade','paperGrade','teacherComment','comment','stars','feedback'];
+      list(authority.assignments).forEach(publicRow=>{
+        if(!publicRow||!publicRow.id||list(authority.assignments).filter(a=>a&&a.id===publicRow.id).length!==1)return;
+        const matches=rows.filter(a=>a&&a.id===publicRow.id);if(matches.length>1)return;
+        const prior=matches[0],merged=Object.assign({},prior||{},publicRow);
+        if(prior)privateKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(prior,k))merged[k]=prior[k];});
+        let changed=false;
+        merged.tasks=list(publicRow.tasks).map(task=>{
+          let candidates=list(prior&&prior.tasks).filter(t=>task.id&&t.id===task.id);
+          if(candidates.length!==1||!sameScope(prior,candidates[0],publicRow,task)){const url=urlKey(task.url||task.learningUrl||task.taskUrl);if(url){const alternate=list(prior&&prior.tasks).filter(t=>urlKey(t.url||t.learningUrl||t.taskUrl)===url&&sameScope(prior,t,publicRow,task));if(alternate.length===1)candidates=alternate;}}
+          const old=candidates.length===1?candidates[0]:null,result=Object.assign({},old||{},task);
+          const same=sameScope(prior,old,publicRow,task);if(prior&&!same)changed=true;
+          result.feedback=old&&old.feedback?(same?Object.assign({},old.feedback):resetReceipt(old.feedback)):{};return result;
+        });
+        if(changed){const cleaned=resetReceipt(merged);Object.keys(merged).forEach(k=>delete merged[k]);Object.assign(merged,cleaned);}
+        if(prior)rows[rows.indexOf(prior)]=merged;else rows.push(merged);current.set(merged,publicRow);
+      });profile.assignments=rows;return {rows,current};
+    }
+    function proofFor(payload,maps,window){
+      if(!maps.length||!window||!window.known)return null;
+      const families=[...new Set(maps.map(m=>m.family))];
+      function irrelevant(issue,family){
+        const ms=typeof issue.submittedAtMs==='number'?root.DirectSubmissionDeadlinePolicy.time(issue.submittedAtMs):0;
+        if(ms&&(ms<window.start||window.end&&ms>=window.end))return true;
+        const code=key(issue.code);
+        return Boolean(code&&issue.codeKnown===true&&!maps.some(map=>matches({family,code:issue.code},map)));
+      }
+      const coverage=families.map(family=>list(payload.coverage).filter(c=>c.family===family));
+      if(coverage.some((rows,index)=>!rows.length||rows.some(c=>{
+        if(c.freshRead!==true||!Number.isFinite(Number(c.verifiedAt))||Number(c.verifiedAt)<=0)return true;
+        if(Number(c.coverageStartAt)>window.start)return true;
+        if(c.complete===true)return false;
+        return !(c.issuesSchema===1&&c.structurallyComplete===true&&Array.isArray(c.issues)&&c.issues.length>0&&c.issues.every(issue=>issue&&irrelevant(issue,families[index])));
+      })))return null;
+      return {schema:1,complete:true,freshRead:true,verifiedAt:Math.min(...coverage.flat().map(c=>Number(c.verifiedAt)))};
+    }
+    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,sourceAttempt:r.attempt||index+1,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),family:r.family,part:r.part,contentStatus:r.contentStatus,evidenceUrls:r.evidenceUrls,links:r.links,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
     function receive(target,found){
       if(!found.length)return;
       const sorted=found.slice().sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b)),last=sorted[sorted.length-1];
+      const priorContent=target.hasContent===true||Boolean(root.DirectSubmissionHistory.fileKey(target.viewUrl||target.submissionUrl))||list(target.submissionAttempts).some(a=>a&&a.contentStatus!=='empty'&&(a.receiptId||root.DirectSubmissionHistory.fileKey(a.viewUrl)||list(a.links).some(link=>root.DirectSubmissionHistory.fileKey(link&&link.url))));
       const history=root.DirectSubmissionHistory.merge(target.submissionAttempts,attempts(sorted));
       target.submitted=true;target.submittedAt=target.submittedAt||sorted[0].submittedAt;target.lastSubmittedAt=last.submittedAt;
       target.submissionAttempts=history;target.isOverdue=false;
+      target.receiptReceived=true;target.hasContent=priorContent||found.some(r=>r.contentStatus!=='empty');target.contentMissing=!target.hasContent;target.submitted=target.hasContent;
       if(last.viewUrl){try{const url=new URL(last.viewUrl);if(url.protocol==='https:'&&!url.username&&!url.password)target.viewUrl=url.href;}catch(_){} }
       target.state=target.teacherComment||target.comment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';
-      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':'Đã nộp bài';
+      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':target.contentMissing?'Đã nhận lượt nộp':'Đã nộp bài';
       if(last.scoreSource==='automatic-score-source'&&Number.isFinite(last.score)){
         target.score=last.score;if(Number.isFinite(last.maximum))target.maximum=last.maximum;
         target.scoreLabel=String(last.score)+(Number.isFinite(last.maximum)?'/'+last.maximum:'');
@@ -4602,30 +4663,39 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
     }
     return function projectKidsSubmissions(value,payload,ticket,guard){
       if(!value||!value.profile||!payload)return value;
-      const profile=value.profile,receipts=list(payload.receipts),fresh=!(value.cacheStale||value.dashboard.cacheStale||profile.cacheStale||value.partial||list(profile.errors).length);
-      const assignments=list(profile.assignments),checks=[];
+      const profile=value.profile,receipts=list(payload.receipts),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
+      if(authority){value.dashboard.schedule=authority.schedule;value.dashboard.assignments=authority.assignments;if(typeof authority.joinDate==='string')profile.joinDate=authority.joinDate;}
+      const reconciled=mergeAuthority(profile,authority),assignments=reconciled.rows,checks=[];
       assignments.forEach(assignment=>{
         if(!assignment||assignment.isAssessmentLesson)return;
-        const tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false),receivedTiming=new Map();
+        const active=Boolean(reconciled.current.get(assignment)),tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false),receivedTiming=new Map();
         const mode=assignment.webActivityMode||(assignment.optionalWebPractice?'self-directed':'required');
         tasks.forEach(task=>{
           if(!task)return;const maps=mappings(assignment,task,required.length);
-          const peers=peersFor(assignment,maps,assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
+          const peers=peersFor(assignment,maps,active?list(authority.assignments):assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
           const found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers));
-          const feedback=task.feedback||(task.feedback={}),proof=window.known?proofFor(payload,maps):null;
+          const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
+          if(maps.length){feedback.directReceiptResolution=proof&&ticket?'verified':active?'source-unavailable':authority?'not-current':'authority-unavailable';}
           receive(feedback,found);
-          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(proof),complete:true});
-          const eligible=deadline.pending;
-          if(found.length){feedback.isLate=Boolean(deadline.late);receivedTiming.set(task,deadline);if(deadline.late)feedback.stateLabel='Đã nộp · Muộn';}
-          if(ticket&&proof&&eligible){guard.authorize(ticket,task,proof,{complete:true,stale:!fresh});guard.authorize(ticket,feedback,proof,{complete:true,stale:!fresh});if(guard.can(feedback)&&!feedback.submitted)feedback.isOverdue=Boolean(deadline.missing);}
+          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{verified:Boolean(proof),complete:true});
+          const eligible=deadline.pending;feedback.directReceiptDeadline=deadline;
+          if(found.length){
+            const hasNewContent=found.some(r=>r.contentStatus!=='empty');
+            if(hasNewContent||!feedback.hasContent||!deadline.eligible)feedback.isLate=Boolean(deadline.late);
+            receivedTiming.set(task,Object.assign({},deadline,{late:Boolean(feedback.isLate)}));if(feedback.isLate)feedback.stateLabel='Đã nộp · Muộn';
+          }
+          if(ticket&&proof){guard.authorize(ticket,task,proof,{complete:true});guard.authorize(ticket,feedback,proof,{complete:true});if(guard.can(feedback)&&!feedback.submitted)feedback.isOverdue=Boolean(deadline.missing);}
           // Already-assigned required work contributes to the unfinished aggregate.
           // Its due date controls late status, not whether a fresh reminder may appear.
-          if(mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
+          if(active&&mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
         });
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
-        if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true,stale:!fresh});
-        if(assignment.kind==='self-practice'&&required.length===1&&required[0].feedback.submitted){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
+        if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true});
+        assignment.directReceiptCurrent=active;
+        if(required.length===1){assignment.directReceiptResolution=required[0].feedback.directReceiptResolution;assignment.directReceiptDeadline=required[0].feedback.directReceiptDeadline;}
+        if(required.some(t=>t.feedback&&t.feedback.contentMissing)){assignment.submitted=false;assignment.contentMissing=true;}else if(complete){assignment.contentMissing=false;}
+        if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
         // Only a complete set of source-confirmed task receipts replaces the
         // assignment timing. Paper/teacher-only and unknown-source work stay intact.
         if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
@@ -4641,10 +4711,12 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       });
       // The original summary counts online assignments, never paper marks.
       // Rebuild its existing reminders only when every relevant task was read.
-      if(ticket&&fresh&&checks.length&&checks.every(Boolean)){
-        const missing=assignments.filter(a=>!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).pending&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&!(t.feedback&&t.feedback.submitted)));
+      if(ticket&&authority&&checks.length){
+        const missing=assignments.filter(a=>reconciled.current.has(a)&&!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).pending&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)));
+        if(!missing.length&&!checks.every(Boolean))return value;
+        profile.submissionPendingIncomplete=!checks.every(Boolean);
         profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
-        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
+        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Bài đã gửi nhưng còn trống.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
       }
@@ -4663,7 +4735,15 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
       isVisible: () => !document.hidden
     });
     function submissionCan_(item) { return submissionGuard_.can(item); }
-    function submissionMissingMeta_(item) { return submissionCan_(item) ? {cls:'todo',label:'Chưa nộp bài'} : {cls:'submission-unverified',label:''}; }
+    function submissionMissingMeta_(item) {
+      const deadline=item&&item.directReceiptDeadline;
+      if(submissionCan_(item))return deadline&&deadline.pending?{cls:deadline.missing?'late':'todo',label:deadline.missing?'Chưa nộp · Quá hạn':'Cần nộp bài'}:{cls:'neutral',label:'Chưa ghi nhận bài nộp'};
+      const state=submissionOwner_.readState,resolution=item&&item.directReceiptResolution;
+      if(state==='loading'||state==='idle')return {cls:'neutral receipt-loading',label:'Đang đọc nguồn bài nộp'};
+      if(resolution==='not-current')return {cls:'neutral',label:'Bài lưu trong lịch sử'};
+      return {cls:'neutral receipt-unavailable',label:resolution==='authority-unavailable'?'Chưa xác minh được lịch giao bài':'Chưa đọc được nguồn bài nộp'};
+    }
+    function submissionMissingText_(item){return submissionMissingMeta_(item).label;}
     const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
       isVisible:()=>!document.hidden,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
@@ -4671,6 +4751,36 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     });
     function submissionReset_() { submissionOwner_.suspend(); hidePendingWorkGate(); const banner=$('#pendingWorkBanner');if(banner)banner.hidden=true; }
     window.addEventListener('kids-parent-access',event=>{if(event.detail.status==='revoked')submissionOwner_.clear();else if(event.detail.status!=='authorized')submissionReset_();});
+
+/* KIDS_EVIDENCE_RESOURCES_V1: deduplicate files inside one actual occurrence only. */
+function submissionEvidenceFiles_(item, fallbackUrl) {
+  item=item||{};
+  const rows=arr(item.links).concat(arr(item.submissionFiles),arr(item.evidenceUrls),[item.viewUrl,item.reviewUrl,item.fileUrl,item.submissionUrl]),files=new Map();
+  if(fallbackUrl&&item.contentStatus!=='empty')rows.push(fallbackUrl);
+  const generic=label=>/^(?:file|document|link|upload|attachment|xem bài|xem bài đã nộp|tệp)$/i.test(text(label));
+  rows.forEach(value=>{
+    const source=typeof value==='string'?{url:value}:value||{},url=safeUrl(source.url);
+    let key=DirectSubmissionHistory.fileKey(url);
+    if(!key){try{const parsed=new URL(url);if(parsed.protocol==='http:'&&!parsed.username&&!parsed.password)key=parsed.href;}catch(_){} }
+    if(!key)return;
+    const type=text(source.type||source.kind).toLowerCase(),caption=text(source.label||source.caption||source.title);
+    const specific=caption&&!generic(caption)?caption:type==='video'?'Xem video':type==='pdf'?'Xem PDF':type==='mindmap'?'Xem sơ đồ tư duy':'';
+    const previous=files.get(key);
+    if(!previous)files.set(key,{url,label:specific,type});
+    else if(!previous.label&&specific)files.set(key,{url:previous.url,label:specific,type});
+  });
+  const values=Array.from(files.values());
+  return values.map((file,index)=>({...file,label:file.label||(values.length>1?'Xem tệp '+(index+1)+'/'+values.length:'Xem bài')}));
+}
+function submissionEvidenceActionsHtml_(item, fallbackUrl) {
+  return submissionEvidenceFiles_(item,fallbackUrl).map(file=>`<a href="${escapeHtml(file.url)}" target="_blank" rel="noopener">${escapeHtml(file.label)}</a>`).join(' ');
+}
+function writtenTestDisplayTitle_(item) {
+  const original=text(pick(item,['title','name'],'Bài kiểm tra giấy'));
+  const hasUnit=value=>/\bunits?\s*\d+/i.test(value);
+  const supplied=[item.writtenUnitLabel,item.assessmentTitle].map(text).find(hasUnit)||'';
+  return !hasUnit(original)&&hasUnit(supplied)?original+' · '+supplied:original;
+}
 
     // KIDS7_PARENT_LINK_V1: preserve all lesson/result renderers behind live authorization.
     // KIDS_PREFILL_IDENTITY_V2: preserve current English-name submission identity.

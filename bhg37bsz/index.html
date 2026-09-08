@@ -809,7 +809,7 @@ function renderIeltsShadowingV1_() {
       <header class="assignment-head session-head"><div><span class="badge neutral">SHADOWING</span><h3>${esc(item.assignmentCode)}</h3><p>Ngày giao: ${esc(item.releaseDate)}</p></div><div><p class="eyebrow">BÀI TẬP SHADOWING</p><h2>${esc(item.topic)}</h2></div></header>
       <div class="ielts-shadowing-body"><div class="ielts-shadowing-task"><h3>Yêu cầu bài tập</h3>${safeUrl ? `<a class="task-action" href="${esc(parentLearningUrl_(safeUrl))}" target="_blank" rel="noopener noreferrer">Làm / nộp bài</a>` : ''}</div>
       <ol class="ielts-shadowing-steps">${points.map(function(point) { return `<li>${esc(point)}</li>`; }).join('')}</ol>
-      ${item.dueDate ? `<div class="ielts-shadowing-deadline"><strong>Hạn nộp bài</strong><strong>${esc(item.dueDate)}</strong></div>` : ''}${item.directSubmission?parentDirectAttempts_(item,null):parentSubmissionKnown_(item,null)?'<p>'+esc(parentSubmissionLabel_(item,null))+'</p>':''}</div>
+      ${item.dueDate ? `<div class="ielts-shadowing-deadline"><strong>Hạn nộp bài</strong><strong>${esc(item.dueDate)}</strong></div>` : ''}${item.directSubmission?parentDirectAttempts_(item,null):parentSubmissionKnown_(item,null)?'<p>'+esc(parentSubmissionLabel_(item,null))+'</p>':parentSubmissionLinks_(item,null)}</div>
     </article>`;
   }).join('');
   host.innerHTML = `<header class="section-head"><p class="eyebrow">IELTS · SHADOWING</p><h2>Bài tập Shadowing</h2><p>Em xem hướng dẫn, luyện theo video và nộp bài tại link của từng bài.</p></header>${cards || empty('Chưa có bài Shadowing được giao.', 'Bài mới sẽ hiển thị khi đến ngày phát hành.')}`;
@@ -3259,31 +3259,31 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
 (function(root){
   'use strict';
   function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false;
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle';
     function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
     function visible(){return !options.isVisible||options.isVisible()===true;}
     function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
     function suspend(){needsFresh=true;current=null;options.guard.suspend();}
-    function clear(){generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function clear(){readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
     function refresh(){
       var active=who();if(!active||!visible())return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
-      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;
+      var run=++generation;ticket=options.guard.begin('receipts');current=null;needsFresh=false;readState='loading';
       if(options.render)options.render();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
-        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage))throw new Error('INVALID_SUBMISSION_RECEIPTS');
+        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
         // Receipt absence is not a withdrawal of an earlier confirmed receipt.
         // Keep the server-positive union for this exact identity, even when a
         // later source snapshot omits an attempt. No local submit event enters it.
         var merged=new Map();
         (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
-        payload.receipts.forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt)merged.set(receipt.id,receipt);});
-        current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
+        readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
         if(visible()&&options.render)options.render();return true;
       }).catch(function(){
-        if(isCurrent(run)){options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
         return false;
       }).finally(function(){if(job===task){job=null;if(queued&&visible()&&who()===identity){queued=false;refresh();}}});
       job=task;return task;
@@ -3292,7 +3292,7 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
       if(!target||!identity||who()!==identity||!visible())return target;
       return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
-    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);}};
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
   root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
@@ -3560,7 +3560,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
   function timeOf(r){return Number.isFinite(r.submittedAt)?r.submittedAt:Number(r.submittedAtMs||Date.parse(r.submittedAt)||0);}
   function displayAt(value){if(!Number.isFinite(value))return String(value||'');return new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(value));}
   function sorted(receipts){return receipts.slice().sort(function(a,b){return timeOf(a)-timeOf(b);});}
-  function attempts(receipts){return sorted(receipts).map(function(r,i){return {id:r.id,receiptId:r.id,part:r.part,code:r.code,family:r.family,attempt:Number(r.attempt)||i+1,label:'Lần '+(Number(r.attempt)||i+1),submittedAt:displayAt(r.submittedAt),submittedAtMs:r.submittedAtMs,links:r.links,viewUrl:r.viewUrl,score:r.score,maximum:r.maximum,scoreSource:r.scoreSource};});}
+  function attempts(receipts){return sorted(receipts).map(function(r,i){return {id:r.id,receiptId:r.id,contentStatus:r.contentStatus,part:r.part,code:r.code,family:r.family,attempt:Number(r.attempt)||i+1,label:'Lần '+(Number(r.attempt)||i+1),submittedAt:displayAt(r.submittedAt),submittedAtMs:r.submittedAtMs,links:r.links,viewUrl:r.viewUrl,score:r.score,maximum:r.maximum,scoreSource:r.scoreSource};});}
   function sameLane(left,right){return String(left&&left.scheduleClassName||left&&left.className||'').trim()===String(right&&right.scheduleClassName||right&&right.className||'').trim();}
   function occurrenceCandidates(item,family,key,items,resolve){
     return items.filter(function(other){
@@ -3576,6 +3576,25 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
       return Boolean(date)&&root.DirectSubmissionAssignmentWindow.contains({submittedAt:date},item,candidates);
     });
   }
+  function priorContent(item,record,map,part,candidates){
+    if(!root.DirectSubmissionAssignmentWindow.windowFor(item,candidates).known)return [];
+    var key=code(map.code),sources=[item,record].filter(Boolean),rows=[];
+    sources.forEach(function(source){
+      list(source.directSubmission&&source.directSubmission.receipts).concat(list(source.directSubmission&&source.directSubmission.contentEvidence),list(source.submissionAttempts),[source]).forEach(function(row){
+        if(!row||row.contentStatus==='empty')return;
+        var sourceCode=code(row.code||row.assignmentCode||row.sourceCode||source.assignmentCode||source.sourceCode);
+        if(sourceCode!==key||row.family&&row.family!==map.family||part&&row.part!==part)return;
+        if(!root.DirectSubmissionAssignmentWindow.contains(row,item,candidates))return;
+        var links=receiptLinks([row]);
+        // Classroom bands and completion words are not original scoring proof.
+        var scored=row.scoreSource==='original-grading'&&Number.isFinite(row.score)&&Number.isFinite(row.maximum)&&row.maximum>0&&row.score>=0&&row.score<=row.maximum;
+        if(!links.length&&!scored)return;
+        rows.push(Object.assign({},row,{code:key,family:map.family,part:part||row.part||'',submittedAt:root.DirectSubmissionDeadlinePolicy.receiptTime(row),links:links}));
+      });
+    });
+    var unique=new Map();rows.forEach(function(row){unique.set(JSON.stringify([row.id||row.receiptId||'',row.family,row.code,row.part,root.DirectSubmissionDeadlinePolicy.receiptTime(row),receiptLinks([row]).map(function(link){return link.url;}).sort()]),row);});
+    return sorted(Array.from(unique.values()));
+  }
   function projectIeltsSubmissions(target,payload,ticket,guard,options){
     if(!target||!target.dashboard||!target.student||!payload)return target;
     options=options||{};
@@ -3586,43 +3605,45 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
       var skill=String(item.skill||'').toLowerCase();if(!['reading','listening','writing','speaking','shadowing'].includes(skill))return;
       if(options.eligible&&!options.eligible(item,student,target.dashboard))return;
       var maps=root.IeltsDirectAssignmentResolver.resolve(item);if(!maps.length)return;
-      var parts=maps.flatMap(function(map){return (list(map.requiredParts).length?map.requiredParts:['']).map(function(part){
-        var candidates=occurrenceCandidates(item,map.family,code(map.code),assignmentItems,root.IeltsDirectAssignmentResolver.resolve);
-        var window=root.DirectSubmissionAssignmentWindow.windowFor(item,candidates);
-        var found=all.filter(function(r){return r&&r.family===map.family&&code(r.code)===code(map.code)&&r.id&&root.DirectSubmissionAssignmentWindow.contains(r,item,candidates)&&(!part||r.part===part);});
-        return {map:map,part:part,receipts:sorted(found),coverage:window.known?coverageFor(payload,map.family,code(map.code)):null};
-      });});
-      var unique=new Map();parts.forEach(function(p){p.receipts.forEach(function(r){unique.set(r.id,r);});});
-      var found=sorted(Array.from(unique.values())),complete=parts.every(function(p){return p.receipts.length>0;}),covered=parts.every(function(p){return Boolean(p.coverage);});
-      var coverage=covered?{verifiedAt:Math.min.apply(null,parts.map(function(p){return p.coverage.verifiedAt;}))}:null;
-      var verified=Boolean(ticket&&coverage),key=maps.map(function(m){return m.code;}).join('|');
-      var completedAt=complete?Math.max.apply(null,parts.map(function(p){return timeOf(p.receipts[0]);})):0;
-      item.directDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(item,found,{complete:complete,completedAt:completedAt,verified:verified});
-      item.directReceiptSource=true;
-      if(skill==='shadowing'){
-        authorize(guard,ticket,item,coverage);
-        if(found.length)item.directSubmission={receipts:found,links:receiptLinks(found),complete:complete};
-        return;
-      }
-      var bucket=student.skills[skill]||(student.skills[skill]={records:[]});bucket.records=list(bucket.records);
+      var bucket=skill==='shadowing'?{records:[]}:(student.skills[skill]||(student.skills[skill]={records:[]}));bucket.records=list(bucket.records);
       var matching=bucket.records.filter(function(r){return r.directAssignmentId===item.id;});
       var available=bucket.records.filter(function(r){return (!r.directAssignmentId||r.directAssignmentId===item.id)&&recordInOccurrence(r,item,maps,assignmentItems);});
       var record=matching.length===1?matching[0]:options.matchRecord?options.matchRecord(item,available):null;
       if(!record&&maps.length===1){matching=available.filter(function(r){return code(r.assignmentCode||r.sourceCode)===code(maps[0].code);});if(matching.length===1)record=matching[0];}
+      var parts=maps.flatMap(function(map){return (list(map.requiredParts).length?map.requiredParts:['']).map(function(part){
+        var candidates=occurrenceCandidates(item,map.family,code(map.code),assignmentItems,root.IeltsDirectAssignmentResolver.resolve);
+        var window=root.DirectSubmissionAssignmentWindow.windowFor(item,candidates);
+        var found=all.filter(function(r){return r&&r.family===map.family&&code(r.code)===code(map.code)&&r.id&&root.DirectSubmissionAssignmentWindow.contains(r,item,candidates)&&(!part||r.part===part);});
+        return {map:map,part:part,receipts:sorted(found),content:sorted(found.filter(function(r){return r.contentStatus!=='empty';}).concat(priorContent(item,record,map,part,candidates))),coverage:window.known?coverageFor(payload,map.family,code(map.code)):null};
+      });});
+      var unique=new Map();parts.forEach(function(p){p.receipts.forEach(function(r){unique.set(r.id,r);});});
+      var found=sorted(Array.from(unique.values())),complete=parts.every(function(p){return p.content.length>0;}),covered=parts.every(function(p){return Boolean(p.coverage);});
+      var coverage=covered?{verifiedAt:Math.min.apply(null,parts.map(function(p){return p.coverage.verifiedAt;}))}:null;
+      var verified=Boolean(ticket&&coverage),key=maps.map(function(m){return m.code;}).join('|');
+      var completedAt=complete?Math.max.apply(null,parts.map(function(p){return timeOf(p.content[0]);})):0;
+      item.directDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(item,found,{complete:complete,completedAt:completedAt,verified:verified});
+      item.directReceiptSource=true;
+      item.contentMissing=parts.some(function(p){return p.receipts.length>0&&p.content.length===0;});
+      if(skill==='shadowing'){
+        authorize(guard,ticket,item,coverage);
+        if(found.length)item.directSubmission={receipts:found,contentEvidence:parts.flatMap(function(p){return p.content;}),links:receiptLinks(found.concat(parts.flatMap(function(p){return p.content;}))),complete:complete};
+        return;
+      }
+
       authorize(guard,ticket,item,coverage);
       if((found.length||verified)&&!record){record={id:'receipt-'+String(item.id||key),sourceRecordId:'receipt-'+key,skill:skill,assignmentCode:item.assignmentCode||key,sourceCode:item.sourceCode||key,sessionLabel:item.session||'',date:item.lessonDate||'',homeworkEligible:true};bucket.records.push(record);}
       if(record){
-        record.directAssignmentId=item.id;record.directDeadline=item.directDeadline;record.directReceiptSource=true;
+        record.directAssignmentId=item.id;record.directDeadline=item.directDeadline;record.directReceiptSource=true;record.contentMissing=item.contentMissing;
         // Receipt status has its own source; teacher marks, prose and stars are never replaced.
         record.directOriginalHomework=record.directOriginalHomework||{code:record.homeworkCode,status:record.homeworkStatus,type:record.statusType};
         var deadline=item.directDeadline;
         record.homeworkCode=complete?(deadline.late?'late':deadline.eligible?'completed':'submitted_zalo'):deadline.missing?'missing':deadline.pending?'pending':'not_recorded';
-        record.homeworkStatus=deadline.label;record.statusType=complete?(deadline.late?'late':'done'):deadline.missing?'missing':deadline.pending?'pending':'neutral';
+        record.homeworkStatus=item.contentMissing?'Đã nhận lượt gửi nhưng bài trống':deadline.label;record.statusType=complete?(deadline.late?'late':'done'):deadline.missing?'missing':deadline.pending?'pending':'neutral';
         item.directRecord=record;authorize(guard,ticket,record,coverage);
       }
       if(!found.length)return;
       var ordered=sorted(found),last=ordered[ordered.length-1],first=ordered[0];
-      item.directSubmission={receipts:ordered,links:receiptLinks(ordered),complete:complete,parts:parts.map(function(p){return {code:p.map.code,part:p.part,received:p.receipts.length>0};})};
+      item.directSubmission={receipts:ordered,contentEvidence:parts.flatMap(function(p){return p.content;}),links:receiptLinks(ordered.concat(parts.flatMap(function(p){return p.content;}))),complete:complete,parts:parts.map(function(p){return {code:p.map.code,part:p.part,received:p.receipts.length>0};})};
       Object.assign(record,{submitted:complete,submissionState:complete?'submitted':'partial',submittedAt:displayAt(first.submittedAt),lastSubmittedAt:displayAt(last.submittedAt),directSubmission:item.directSubmission});
       var incomingAttempts=attempts(ordered.filter(function(r){return r.receiptType!=='grading-summary';}));
       record.submissionAttempts=root.DirectSubmissionHistory.merge(list(record.submissionAttempts),incomingAttempts,{scope:function(a){
@@ -3687,9 +3708,10 @@ const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGu
  render:()=>{if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile&&!document.hidden){parentState.renderedProfile=null;parentRender_();}}
 });
 function parentSubmissionKnown_(item,record){if(item&&item.directReceiptSource||record&&record.directReceiptSource){return Boolean(item&&item.directSubmission||record&&record.directSubmission||parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending||parentSubmissionGuard_.can(record)&&record.directDeadline&&record.directDeadline.pending);}return Boolean(record&&(record.submitted===true||record.submittedAt||record.statusType==='done')||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}
-function parentSubmissionLabel_(item,record){const deadline=item&&item.directDeadline||record&&record.directDeadline;return deadline?deadline.label:record&&record.homeworkStatus||'';}
-function parentSubmissionLinks_(item,record){const value=item&&item.directSubmission||record&&record.directSubmission;return value&&value.links&&value.links.length?'<div class="direct-submission-links">'+value.links.map(link=>'<a class="button small secondary" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>':'';}
-function parentDirectAttempts_(item,record){const direct=item&&item.directSubmission||record&&record.directSubmission;if(!direct)return '';return '<section class="direct-submission-results"><strong>'+esc(parentSubmissionLabel_(item,record))+'</strong>'+direct.receipts.filter(r=>r.receiptType!=='grading-summary').map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+(r.part?' · Sections '+esc(r.part):'')+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <b>'+esc(r.score)+'/'+esc(r.maximum)+'</b>':'')+'</p>').join('')+parentSubmissionLinks_(item,record)+'</section>';}
+function parentSubmissionLabel_(item,record){if(item&&item.contentMissing||record&&record.contentMissing)return 'Đã nhận lượt gửi nhưng bài trống';const deadline=item&&item.directDeadline||record&&record.directDeadline;return deadline?deadline.label:record&&record.homeworkStatus||'';}
+function parentSubmissionProblem_(item,record){return item&&item.contentMissing||record&&record.contentMissing?'<div class="direct-empty-submission" style="border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px"><strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có nội dung bài làm, video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p></div>':'';}
+function parentSubmissionLinks_(item,record){const value=item&&item.directSubmission||record&&record.directSubmission;return (!parentSubmissionKnown_(item,record)?'<p class="direct-source-status">'+(['idle','loading'].includes(parentReceiptOwner_.readState)?'Đang đọc nguồn bài nộp':'Chưa đọc được nguồn bài nộp')+'</p>':'')+parentSubmissionProblem_(item,record)+(value&&value.links&&value.links.length?'<div class="direct-submission-links">'+value.links.map(link=>'<a class="button small secondary" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>':'');}
+function parentDirectAttempts_(item,record){const direct=item&&item.directSubmission||record&&record.directSubmission;if(!direct)return '';return '<section class="direct-submission-results"><strong>'+esc(parentSubmissionLabel_(item,record))+'</strong>'+direct.receipts.filter(r=>r.receiptType!=='grading-summary').map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+(r.part?' · Sections '+esc(r.part):'')+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(r.contentStatus==='empty'?' · <b>Lượt gửi trống, chưa có nội dung/video/tệp.</b>':'')+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <b>'+esc(r.score)+'/'+esc(r.maximum)+'</b>':'')+'</p>').join('')+parentSubmissionLinks_(item,record)+'</section>';}
 function parentSubmissionSummary_(skill){const records=(skill&&skill.records||[]).filter(r=>r.directDeadline&&(r.directDeadline.pending||r.directDeadline.eligible&&r.directDeadline.complete)&&parentSubmissionGuard_.can(r));if(!records.length)return '';return '<small>Đã ghi nhận '+records.filter(r=>r.directSubmission&&r.directSubmission.complete).length+' · Cần nộp '+records.filter(r=>r.directDeadline.pending).length+' · Quá hạn '+records.filter(r=>r.directDeadline.missing).length+' · Muộn '+records.filter(r=>r.directDeadline.late).length+'</small>';}
 async function parentQuietResume_(){
  if(parentState.checking)return;parentState.checking=true;const id=parentState.requestId;
@@ -3879,7 +3901,7 @@ var ieltsPendingCurrentV32_=null;
 
 function ielts47PendingHomeworkEntriesV32_(){
   if(!state.student||!state.dashboard)return [];
-  return (state.dashboard.assignments||[]).filter(item=>item&&ielts47AssignmentEligibleForStudentV35_(state.student,item)&&!ielts47NoHomeworkItemV22_(item)&&parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending).map(item=>({tab:item.skill,id:String(item.id),label:skillLabel(item.skill)+' · '+String(item.session||item.topic||'Bài tập')}));
+  return (state.dashboard.assignments||[]).filter(item=>item&&ielts47AssignmentEligibleForStudentV35_(state.student,item)&&!ielts47NoHomeworkItemV22_(item)&&parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending).map(item=>({tab:item.skill,id:String(item.id),label:skillLabel(item.skill)+' · '+String(item.session||item.topic||'Bài tập')+(item.contentMissing?' · Bài đã gửi nhưng còn trống':'')}));
 }
 
 function ielts47EnsurePendingUiV32_(){
