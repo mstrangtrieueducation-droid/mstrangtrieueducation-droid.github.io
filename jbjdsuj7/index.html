@@ -6,7 +6,9 @@
 <script>const ieltsParentAccess = (() => {
   const endpoint='https://script.google.com/macros/s/AKfycbxwh2L2AesTRRIniypTInctBpqfH0KCFFk10_WGz5j-BZ9ZL7AiPNhYzCyboxTYuiu6KA/exec',className='IELTS 50';
   const params=new URLSearchParams(location.hash.replace(/^#/,''));
-  const token=params.getAll('p').length===1&&params.size===1?params.get('p'):'';
+  // IELTS_PARENT_FRAGMENT_COUNT_V1: URLSearchParams.size is absent in some supported browsers.
+  let parameterCount=0;params.forEach(()=>{parameterCount+=1;});
+  const token=params.getAll('p').length===1&&parameterCount===1?params.get('p'):'';
   const valid=/^[A-Za-z0-9_-]{22}$/.test(token||'');
   const pending=new Map();
   let generation=0;
