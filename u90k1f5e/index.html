@@ -5172,7 +5172,7 @@ function writtenTestDisplayTitle_(item) {
         // An assembled profile can outlive the raw source required by the
         // server's identity guard. A normal retry would hit that same object;
         // one forced episode repairs its source without relaxing the guard.
-        if(force&&error&&error.code==='BOOTSTRAP_FORCE_TIMEOUT'&&error.forcedBootstrapDeadline===true){
+        if(force&&error&&(error.code==='PROFILE_LOADING'||(error.code==='BOOTSTRAP_FORCE_TIMEOUT'&&error.forcedBootstrapDeadline===true))){
           const value=parentPackage_;
           parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),remaining:3,before:value?[Number(value.dashboard.snapshotBuiltAt),Number(value.profile.sourceModelBuiltAt),Number(value.profile.snapshotBuiltAt)]:null};
           next=parentRecoveryNext_(parentForceRecovery_);
