@@ -39,9 +39,16 @@ const kidsApi = (() => {
     verifiedDirectory = null;
     signal('revoked');
   }
-  function error(message, code) {
+  function error(message, code, diagnostics) {
     const err = new Error(message);
     err.code = code;
+    // Carry only source classification, never arbitrary messages or identifiers.
+    if (diagnostics && diagnostics.schema === 1 &&
+        ['QUOTA_OR_RATE_LIMIT','NETWORK_OR_SERVICE','AUTHORIZATION','RANGE_OR_TITLE','SOURCE_UNAVAILABLE','OTHER_READ_FAILURE'].includes(diagnostics.category)) {
+      err.diagnostics = {schema:1, category:diagnostics.category};
+      if (typeof diagnostics.stage === 'string' && /^[a-z][a-z0-9-]{0,39}$/.test(diagnostics.stage)) err.diagnostics.stage = diagnostics.stage;
+      if (Number.isInteger(diagnostics.httpStatus) && diagnostics.httpStatus >= 0 && diagnostics.httpStatus <= 599) err.diagnostics.httpStatus = diagnostics.httpStatus;
+    }
     return err;
   }
   function validateScope(data, action) {
@@ -91,7 +98,8 @@ const kidsApi = (() => {
     if (action === 'check') checkController = controller;
     controllers.add(controller);
     const started = performance.now();
-    const timer = setTimeout(() => controller.abort(), ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
+    let deadlineExpired = false;
+    const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
     const promise = fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
     }).then(async response => {
@@ -106,12 +114,19 @@ const kidsApi = (() => {
         throw error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED');
       }
       if (!envelope || envelope.ok !== true || !Object.prototype.hasOwnProperty.call(envelope, 'data')) {
-        throw error('Dữ liệu chưa sẵn sàng. Vui lòng thử lại.', envelopeCode || 'DATA_UNAVAILABLE');
+        throw error('Dữ liệu chưa sẵn sàng. Vui lòng thử lại.', envelopeCode || 'DATA_UNAVAILABLE', envelope && envelope.diagnostics);
       }
       validateScope(data, action);
       document.documentElement.dataset[action + 'Ms'] = String(Math.round(performance.now() - started));
       document.documentElement.dataset[action + 'ReadyMs'] = String(Math.round(performance.now()));
       return data;
+    }).catch(err => {
+      if (action === 'bootstrap' && force && deadlineExpired && status !== 'revoked') {
+        const timeoutError = error('Kết nối đang chậm. Vui lòng thử lại.', 'BOOTSTRAP_FORCE_TIMEOUT');
+        timeoutError.forcedBootstrapDeadline = true;
+        throw timeoutError;
+      }
+      throw err;
     }).finally(() => {
       clearTimeout(timer);
       controllers.delete(controller);
@@ -4990,6 +5005,7 @@ function writtenTestDisplayTitle_(item) {
     let parentBootstrapNextForce_ = false;
     let parentBootstrapPainted_ = false;
     let parentPackageWarning_ = false;
+    let parentForceRecovery_ = null;
     function parentPackagePartial_(value) {
       return Boolean(value.partial || responseHasErrors(value.profile));
     }
@@ -5010,6 +5026,18 @@ function writtenTestDisplayTitle_(item) {
       }
       return value;
     }
+    // A browser deadline does not prove that the server stopped its refresh.
+    function parentRecoveryReady_(value,recovery) {
+      if(!recovery||parentPackageStale_(value)||parentPackageWarning_)return false;
+      const now=[Number(value.dashboard.snapshotBuiltAt),Number(value.profile.sourceModelBuiltAt),Number(value.profile.snapshotBuiltAt)];
+      if(!now.every(n=>Number.isFinite(n)&&n>0))return false;
+      if(!recovery.before)return true;
+      return now.every((n,i)=>n>=recovery.before[i])&&now.some((n,i)=>n>recovery.before[i]);
+    }
+    function parentRecoveryNext_(recovery) {
+      if(parentForceRecovery_!==recovery||!recovery||recovery.remaining<=0)return null;
+      return {force:false,quiet:parentBootstrapPainted_,attempt:0,delay:[30000,15000,5000][recovery.remaining-1]};
+    }
     function parentClearBootstrapRetry_() {
       if (parentBootstrapRetry_) window.clearTimeout(parentBootstrapRetry_);
       parentBootstrapRetry_ = null;
@@ -5020,6 +5048,7 @@ function writtenTestDisplayTitle_(item) {
       parentClearBootstrapRetry_();
       parentBootstrapIntent_ = null;
       parentBootstrapNextForce_ = false;
+      parentForceRecovery_ = null;
       parentBootstrapJob_ = null;
       parentPackage_ = null;
       parentBootstrapPainted_ = false;
@@ -5093,13 +5122,17 @@ function writtenTestDisplayTitle_(item) {
     function parentLoadBootstrap_(force=false,quiet=false,attempt=0) {
       if(kidsApi.parent.revoked)return Promise.resolve(false);
       if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt};return Promise.resolve(false);}
+      const recovery=parentForceRecovery_;
+      if(recovery&&(recovery.alias!==matchKey(kidsApi.parent.alias)||force))return Promise.resolve(false);
       if(parentBootstrapJob_){
         if(force&&!parentBootstrapJob_.force)parentBootstrapNextForce_=true;
         if(!quiet)parentAccessGate_('Đang tải lịch học, bài tập và kết quả của con…');
         return parentBootstrapJob_.promise;
       }
+      if(recovery&&recovery.remaining<=0)return Promise.resolve(Boolean(parentPackage_));
+      if(recovery)recovery.remaining-=1;
       parentClearBootstrapRetry_();parentBootstrapIntent_=null;
-      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,promise:null};
+      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,recovery,promise:null};
       parentBootstrapJob_=job;
       app.dashboardLoad.inFlight=true;app.profileLoad.inFlight=true;app.profileLoad.busy=true;
       app.profileLoad.request+=1;app.dashboardLoad.request+=1;
@@ -5123,18 +5156,28 @@ function writtenTestDisplayTitle_(item) {
         // available teacher data, with a warning and the same bounded owner.
         if(!retained||!parentPackageWarning_)parentPackage_=value;
         app.dashboardLoad.inFlight=false;app.profileLoad.inFlight=false;app.profileLoad.busy=false;
-        if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,true);
-        if(!force&&(stale||parentPackageWarning_))next={force:true,quiet:true,attempt:0,delay:0};
+        const recovered=job.recovery&&parentRecoveryReady_(value,job.recovery);
+        if(force||recovered){if(!job.recovery||parentForceRecovery_===job.recovery)parentForceRecovery_=null;}
+        if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,!job.recovery||Boolean(recovered));
+        if(job.recovery){if(!recovered)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
+        else if(!force&&(stale||parentPackageWarning_))next={force:true,quiet:true,attempt:0,delay:0};
         return true;
       }).catch(error=>{
         if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
         const waiting=error&&error.code==='PROFILE_LOADING',limit=waiting?6:2;
-        const repair=!force&&error&&error.code==='DATA_UNAVAILABLE'&&
+        const transientSource=Boolean(error&&error.diagnostics&&error.diagnostics.schema===1&&
+          ['QUOTA_OR_RATE_LIMIT','NETWORK_OR_SERVICE'].includes(error.diagnostics.category));
+        const repair=!force&&!transientSource&&error&&error.code==='DATA_UNAVAILABLE'&&
           (!parentPackage_||parentPackagePartial_(parentPackage_));
         // An assembled profile can outlive the raw source required by the
         // server's identity guard. A normal retry would hit that same object;
         // one forced episode repairs its source without relaxing the guard.
-        if(repair)next={force:true,quiet:parentBootstrapPainted_,attempt:0,delay:650};
+        if(force&&error&&error.code==='BOOTSTRAP_FORCE_TIMEOUT'&&error.forcedBootstrapDeadline===true){
+          const value=parentPackage_;
+          parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),remaining:3,before:value?[Number(value.dashboard.snapshotBuiltAt),Number(value.profile.sourceModelBuiltAt),Number(value.profile.snapshotBuiltAt)]:null};
+          next=parentRecoveryNext_(parentForceRecovery_);
+        }else if(job.recovery)next=parentRecoveryNext_(job.recovery);
+        else if(repair)next={force:true,quiet:parentBootstrapPainted_,attempt:0,delay:650};
         else if(attempt<limit)next={force,quiet,attempt:attempt+1,delay:waiting?[1500,3000,6000,12000,20000,30000][attempt]:[650,1600][attempt]};
         if(!quiet||!parentBootstrapPainted_||$('#dashboardShell').hidden){
           parentAccessGate_(next?'Đang kết nối lại hồ sơ của con…':'Chưa tải đủ hồ sơ. Bố mẹ bấm tải lại nhé.',!next);
@@ -5154,6 +5197,7 @@ function writtenTestDisplayTitle_(item) {
       parentConsumeDirectoryHint_();parentRenderIdentity_();
       if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh();
       if(options.refresh){
+        parentForceRecovery_=null;
         parentClearBootstrapRetry_();parentBootstrapIntent_=null;
         return parentLoadBootstrap_(true,false,0);
       }
