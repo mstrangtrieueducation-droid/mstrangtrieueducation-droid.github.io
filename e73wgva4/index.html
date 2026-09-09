@@ -4317,14 +4317,15 @@ const ieltsWritingReviews_ = (() => {
   }
   function notebookHtml(assignment) {
     const item = notebookStates.find(entry => code(entry.assignmentCode) === assignment.assignmentCode);
-    if (!item) return assignment.notebook ? '<section class="wr-notebook wr-notebook-pending"><h5>Vở chép · Nhận xét của Cô</h5><p>Chưa có kết quả kiểm tra vở. Bài viết mới chỉ được chấm sau khi vở đạt yêu cầu.</p></section>' : '';
+    if (!item) return assignment.notebook ? '<section class="wr-notebook wr-notebook-pending"><h5>Vở chép · Nhận xét của Cô</h5><p>Chưa có kết quả kiểm tra vở.' + (assignment.tasks.length ? ' Bài viết mới chỉ được chấm sau khi vở đạt yêu cầu.' : ' Kết quả sẽ hiện sau khi vở được đối chiếu với tài liệu Cô giao.') + '</p></section>' : '';
+    const hasWriting = item.homeworkMode === 'notebook_and_writing';
     const current = item.current && !refreshing;
     const failed = current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
     const complete = current && item.state === 'notebook_complete';
     const title = !current ? (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại') :
       failed ? (item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
-    const latestNote = !current ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại. Bài viết mới tiếp tục chờ kiểm tra vở.') + '</p>' +
+    const latestNote = !current ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
     const issues = array(item.issues).map(issue => {
       const pages = [...new Set(array(issue.notebookPages).map(p => Number(p.page)).filter(n => Number.isInteger(n) && n > 0))];
@@ -4344,9 +4345,9 @@ const ieltsWritingReviews_ = (() => {
   }
   function overviewHtml() {
     if (!current()) return '';
-    const assignments = ieltsWritingAssignments_.all().filter(assignment => reviews.some(record => code(record.assignmentCode) === assignment.assignmentCode) ||
+    const assignments = ieltsWritingAssignments_.all().filter(assignment => reviews.some(record => code(record.assignmentCode) === assignment.assignmentCode) || notebookStates.some(record => code(record.assignmentCode) === assignment.assignmentCode) ||
       array(state.dashboard && state.dashboard.assignments).some(item => ieltsWritingAssignments_.forItem(item)?.assignmentCode === assignment.assignmentCode));
-    const content = assignments.length ? '<div class="wr-result-list">' + assignments.map(groupHtml).join('') + '</div>' : status !== 'ready' ? loadStatus() : '<p class="wr-status">Bài chữa sẽ hiện tại đây sau khi bài viết của em được chấm.</p>';
+    const content = assignments.length ? '<div class="wr-result-list">' + assignments.map(groupHtml).join('') + '</div>' : status !== 'ready' ? loadStatus() : '<p class="wr-status">Nhận xét sẽ hiện tại đây sau khi bài tập của em được kiểm tra.</p>';
     return '<section class="wr-personal"><header class="fighter-section-head"><span>BÀI LUYỆN TẬP TẠI NHÀ</span><h3>Writing · Bài chữa của Cô</h3><p>Xem nhận xét, chú thích trên bài gốc và bản sửa gợi ý.</p></header>' + content + '</section>';
   }
   function originalHtml(record) {
