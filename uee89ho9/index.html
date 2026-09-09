@@ -3050,9 +3050,9 @@ html.vn-national-day-2026-root body .assignment.session {
         });
         const taskDisplayMeta = isRetakeTask
           ? retakeHasVisibleScore
-            ? { cls: 'checked', label: 'Đã có điểm làm lại' }
+            ? submissionReceivedMeta_(feedback)
             : taskSubmitted
-              ? { cls: 'wait', label: 'Đã nộp bài' }
+              ? submissionReceivedMeta_(feedback)
               : submissionMissingMeta_(feedback)
           : taskMeta;
         const visibleTaskAttempts = taskAttempts.length || !isRetakeTask || !taskSubmittedAt
@@ -3073,11 +3073,9 @@ html.vn-national-day-2026-root body .assignment.session {
           fallbackMaximum: taskMaximum,
           fallbackScoreLabel: taskScoreText
         } : null);
-        const submissionText = feedback.contentMissing ? 'Đã nhận lượt gửi nhưng bài trống — chưa có video/tệp đính kèm' : isRetakeTask && historyHtml ? '' : taskAttempts.length > 1
-          ? `Đã nhận ${taskAttempts.length} lần`
-          : taskSubmittedAt ? `Đã nộp lúc ${taskSubmittedAt}` : taskSubmitted ? 'Đã nộp bài' : submissionMissingText_(feedback);
+        const submissionText = feedback.contentMissing ? submissionReceiptText_(feedback,0,'') : isRetakeTask && historyHtml ? '' : taskSubmitted ? submissionReceiptText_(feedback,taskAttempts.length,taskSubmittedAt) : submissionMissingText_(feedback);
         const reviewText = taskComment ? nl2br(taskComment) : taskSubmitted&&!feedback.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
-        return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${taskSubmitted || !submissionCan_(feedback) || !(feedback.directReceiptDeadline&&feedback.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
+        return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${feedback.contentMissing ? 'is-missing' : taskSubmitted || !submissionCan_(feedback) || !(feedback.directReceiptDeadline&&feedback.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
       }).join('');
       const taskComments = tasks.map(task => text(pick(pick(task, ['feedback'], {}) || {}, ['teacherComment'], ''))).filter(Boolean);
       const taskReviewUrls = tasks.map(task => safeUrl(pick(pick(task, ['feedback'], {}) || {}, ['viewUrl'], ''))).filter(Boolean);
@@ -3106,9 +3104,9 @@ html.vn-national-day-2026-root body .assignment.session {
       });
       const homeworkMeta = isRetakeAssignment
         ? retakeAssignmentHasScore
-          ? { cls: 'checked', label: 'Đã có điểm làm lại' }
+          ? submissionReceivedMeta_(privateAssignment)
           : retakeAssignmentSubmitted
-            ? { cls: 'wait', label: 'Đã nộp bài' }
+            ? submissionReceivedMeta_(privateAssignment)
             : submissionMissingMeta_(privateAssignment)
         : meta;
       const paperDueHtml = nonSubmissionWebActivity && paperHomework && due
@@ -3285,9 +3283,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const firstTask = arr(item && item.tasks)[0] || {};
       const learningUrl = parentLearningUrl_(safeUrl(pick(item, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')) || safeUrl(pick(firstTask, ['taskUrl', 'url', 'actionUrl', 'learningUrl'], '')));
       const reviewUrl = safeUrl(pick(item, ['viewUrl', 'reviewUrl'], ''));
-      const submissionText = item.contentMissing ? 'Đã nhận lượt gửi nhưng bài trống — chưa có video/tệp đính kèm' : submissionAttempts.length > 1
-        ? `Đã nhận ${submissionAttempts.length} lần`
-        : submittedAt ? 'Đã nộp lúc ' + submittedAt : submitted ? 'Đã nộp bài' : submissionMissingText_(item);
+      const submissionText = item.contentMissing || submitted || submissionAttempts.length ? submissionReceiptText_(item,submissionAttempts.length,submittedAt) : submissionMissingText_(item);
       const historyHtml = submissionHistoryHtml(submissionAttempts, reviewUrl);
       const needsReview = feedbackNeedsReview(comment);
       return `<article class="card sky" data-pending-target data-assignment-id="${escapeHtml(text(pick(item, ['id'], '')))}" data-task-id="${escapeHtml(text(pick(firstTask, ['id'], '')))}" data-pending-title="${escapeHtml(matchKey(title))}">
@@ -3295,7 +3291,7 @@ html.vn-national-day-2026-root body .assignment.session {
         <h3 class="card-title">${escapeHtml(title)}</h3>
         ${description ? `<p class="soft">${nl2br(description)}</p>` : ''}
         ${score !== '' && score !== null ? `<p><strong>Kết quả: ${escapeHtml(score)}</strong></p>` : ''}
-        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? nl2br(comment) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
+        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${item.contentMissing ? 'is-missing' : submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? nl2br(comment) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
         ${due ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
         ${actionLinks(item, true, 'Mở bài tự luyện')}
       </article>`;
@@ -3649,11 +3645,12 @@ html.vn-national-day-2026-root body .assignment.session {
     }
     function statusMeta(item) {
       const meta=submissionOriginalStatusMeta_(item);
-      if(item&&item.contentMissing)return {cls:'todo',label:'Bài đã gửi nhưng còn trống'};
+      if(item&&item.contentMissing)return {cls:'todo',label:'Chưa nộp'};
       const received=Boolean(item&&(item.submitted||item.submittedAt||arr(item.submissionAttempts).length));
+      if(received)return submissionReceivedMeta_(item);
       if(!received&&['todo','late'].includes(meta.cls)&&!submissionCan_(item))return submissionMissingMeta_(item);
       if(!received&&submissionCan_(item))return submissionMissingMeta_(item);
-      return meta;
+      return ['wait','checked','done'].includes(meta.cls)?submissionReceivedMeta_(item):meta;
     }
 
     function childTaskCard(item) {
@@ -3868,11 +3865,11 @@ function testCard(item) {
       const retakeDisplayMeta = !retakeAvailable
         ? { cls: 'todo', label: 'Chưa giao' }
         : hasRetakeScore
-          ? { cls: 'checked', label: 'Đã có điểm làm lại' }
+          ? submissionReceivedMeta_(retake)
           : declaredAttemptCount || retakeSubmittedAt
-            ? { cls: 'wait', label: 'Đã nộp bài' }
-            : submissionCan_(retake) ? { cls: 'todo', label: 'Chưa làm' } : {cls:'submission-unverified',label:''};
-      const attemptLabel = declaredAttemptCount ? `Đã nộp ${declaredAttemptCount} lần` : retakeDisplayMeta.label;
+            ? submissionReceivedMeta_(retake)
+            : submissionMissingMeta_(retake);
+      const attemptLabel = declaredAttemptCount ? submissionReceiptText_(retake,declaredAttemptCount,'') : retakeDisplayMeta.label;
       const attemptCards = attempts.map((attempt, index) => {
         const attemptNumber = Number(pick(attempt, ['attempt', 'attemptNumber'], index + 1)) || index + 1;
         const submittedAt = text(pick(attempt, ['submittedAt'], ''));
@@ -3884,7 +3881,7 @@ function testCard(item) {
           : '');
         const resultLabel = scoreText
           ? `Điểm ${scoreText}`
-          : 'Đã nộp bài';
+          : 'Đã nhận';
         const viewUrl = safeUrl(pick(attempt, ['viewUrl'], index === attempts.length - 1 ? retakeViewUrl : ''));
         return `<div class="retake-attempt"><div class="retake-attempt__head"><strong>Lần ${attemptNumber}</strong><time>${escapeHtml(submittedAt || 'Ngày giờ đang cập nhật')}</time></div><div class="retake-attempt__result">${escapeHtml(resultLabel)}</div>${viewUrl ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(viewUrl)}" target="_blank" rel="noopener">Xem bài lần ${attemptNumber}</a></div>` : ''}</div>`;
       }).join('');
@@ -4872,15 +4869,16 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     function submissionCan_(item) { return submissionGuard_.can(item); }
     function submissionMissingMeta_(item) {
       const deadline=item&&item.directReceiptDeadline;
-      if(submissionCan_(item))return deadline&&deadline.pending?{cls:deadline.missing?'late':'todo',label:deadline.missing?'Chưa nộp · Quá hạn':'Cần nộp bài'}:{cls:'neutral',label:'Chưa ghi nhận bài nộp'};
-      const state=submissionOwner_.readState,resolution=item&&item.directReceiptResolution,exclusion=item&&item.directReceiptExclusion;
-      if(state==='loading'||state==='idle')return {cls:'neutral receipt-loading',label:'Đang đọc nguồn bài nộp'};
-      if(resolution==='not-current'){
-        if(exclusion==='before-policy-cutoff')return {cls:'neutral',label:'Không tính bài thiếu',detail:'Bài giao trước 01/09/2026.'};
-        if(exclusion==='outside-authority-horizon')return {cls:'neutral',label:'Ngoài đợt nhắc hiện tại',detail:'Bài nằm ngoài khoảng thời gian đang kiểm tra.'};
-        return {cls:'neutral',label:'Không có trong lịch hiện tại',detail:'Bài được giữ lại để xem; chưa kết luận tình trạng nộp.'};
-      }
-      return {cls:'neutral receipt-unavailable',label:resolution==='authority-unavailable'?'Chưa xác minh được lịch giao bài':'Chưa đọc được nguồn bài nộp'};
+      if(submissionCan_(item))return {cls:deadline&&deadline.missing?'late':'todo',label:'Chưa nộp'};
+      return {cls:'neutral receipt-loading',label:'Đang xác minh'};
+    }
+    function submissionReceivedMeta_(item) {
+      return item&&item.isLate?{cls:'late',label:'Nộp muộn'}:{cls:'wait',label:'Đã nhận'};
+    }
+    function submissionReceiptText_(item,count,submittedAt) {
+      if(item&&item.contentMissing)return 'Chưa nộp — bài gửi trống, thiếu video hoặc tệp.';
+      const meta=submissionReceivedMeta_(item);
+      return meta.label+(count>1?' · '+count+' lần':'')+(submittedAt?' · '+submittedAt:'');
     }
     function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
     const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,retryTransientSources:true,
