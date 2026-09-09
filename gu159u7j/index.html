@@ -99,6 +99,7 @@ const kidsApi = (() => {
     if(action==='submissions')url.searchParams.set('authorityScope','reminders');
     url.searchParams.set('token', token);
     url.searchParams.set('force', force ? '1' : '0');
+    if (initialBootstrap && action === 'bootstrap' && !force) url.searchParams.set('opening', '1');
     url.searchParams.set('_', String(Date.now()));
     const controller = new AbortController();
     if (action === 'check') checkController = controller;
