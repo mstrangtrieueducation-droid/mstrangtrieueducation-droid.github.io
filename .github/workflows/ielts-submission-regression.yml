@@ -16,6 +16,7 @@ jobs:
           node-version: 22
       - run: npm install --no-save playwright@1.58.2
       - run: npx playwright install --with-deps chromium
+      - run: node tests/ielts-submission/contract.test.cjs --root . --kind main --manifest tests/ielts-submission/contract.json
       - run: node tests/ielts-submission/client.test.cjs
       - run: node tests/ielts-submission/cross-tab.test.cjs
       - run: DENY_LOCAL=1 node tests/ielts-submission/cross-tab.test.cjs

@@ -1,0 +1,771 @@
+{
+  "version": 1,
+  "kind": "main",
+  "publicBase": "/",
+  "pages": [
+    {
+      "file": "ielts-nghe/0QSaUrdQLdjxKw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/1yW5-VrQaAqD6Q.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/2CjFgU3nC88GYQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/_t-9SM0knx3Q1Q.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/a2dl_GcHO7x_nA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/Ceb44jx6RXIHeQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/EkauqJP9qMbqDg.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/eynKYAL3Kp5PLA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/GkqQdR9PaccFaw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/H8FtDYyNBGglxA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/hTmc9UwUQjYiEw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/IwUnyAyHc941Jw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/JLwga_1Y8MhFtg.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/kBsiiY9jxx-DoQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/kDhtclbcVFR0MQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/kVaCd8c1IhCk9A.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/l20uXqxGUl25kA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/l3QqnVDpjYDzQg.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/lChoPJ-jbgrbTQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/lLNMXvz0qJBoLg.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/miJzoyPUWDFBEw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/mjzLlZvW_FxioA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/n1Xd9eV8oBlDfA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/p7-GQi9XfW3KtQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/pCkKyy0NwioqGQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/pott0DKoYSJ0PQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/Q3OjhOm4tdgLSw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/QHTYHlf8qBkoKQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/Qvhs6LfkgpODkg.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/RPjxTm8AJlECxA.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/T8Sw1Arp4e7Qbg.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/TQf1vvpApv-Z9A.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/tqTyL_Awgx4bZw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/UF-slkJKlzQpqQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/Woefr5DlysqbsQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/Wqxda4CuMrhqtQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/wuPMpF5RcInlng.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-nghe/YDYN6SY4YuVurQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/z1tIp6UWiFs0ZQ.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "record.finalIntent.payload",
+        "listeningWrite(studentStoreKey(owner)"
+      ]
+    },
+    {
+      "file": "ielts-nghe/ZjX0AHZPPKW0Dw.html",
+      "expected": [
+        {
+          "role": "client",
+          "file": "ielts-nghe/submission-client.1608db39982c.js"
+        }
+      ],
+      "inline": [
+        "const SCHEMA_VERSION=4;",
+        "window.IELTSSubmission.listening(",
+        "window.IELTSSubmission.subscribe?.(",
+        "listeningReceipt(",
+        "window.IELTSSubmission.enqueueListening(",
+        "record.final.payloads[part.key]",
+        "persistStudentState(record,current())"
+      ]
+    },
+    {
+      "file": "ielts-full-test/index.html",
+      "expected": [
+        {
+          "role": "runtime",
+          "file": "ielts-full-test/assets/full-durable.fc6ac12f64ec.js"
+        },
+        {
+          "role": "module",
+          "file": "ielts-full-test/assets/index-92ed559b7fbc.js"
+        }
+      ],
+      "inline": []
+    },
+    {
+      "file": "ielts-full-test/404.html",
+      "expected": [
+        {
+          "role": "runtime",
+          "file": "ielts-full-test/assets/full-durable.fc6ac12f64ec.js"
+        },
+        {
+          "role": "module",
+          "file": "ielts-full-test/assets/index-92ed559b7fbc.js"
+        }
+      ],
+      "inline": []
+    }
+  ],
+  "assets": [
+    {
+      "file": "ielts-nghe/submission-client.1608db39982c.js",
+      "sha256": "1608db39982c70e90c33691bfaa88b6469122679f4c3b33dc7d67015af7f5924",
+      "requires": [
+        "enqueueListening(",
+        "subscribe(listener)",
+        "async lookup(",
+        "indexedDB.open",
+        "SUBMISSION_PAYLOAD_CHANGED",
+        "validateReceipt(payload"
+      ]
+    },
+    {
+      "file": "ielts-full-test/assets/full-durable.fc6ac12f64ec.js",
+      "sha256": "fc6ac12f64ecdfc5d3bb363db156d01b8b2a715a68aa8f6865e93ec5bbbd85a9",
+      "requires": [
+        "root.IELTSFullDurable=api",
+        "indexedDB.open",
+        "payloadFingerprint",
+        "moduleConfirmed",
+        "requestId"
+      ]
+    },
+    {
+      "file": "ielts-full-test/assets/index-92ed559b7fbc.js",
+      "sha256": "39ec75b6d9210f9bea2795f1c1731d7fd7c1565441f181e9a00701edfdea9dba",
+      "requires": [
+        "window.IELTSFullDurable.register(",
+        "window.IELTSFullDurable.submit(",
+        "window.IELTSFullDurable.subscribe(",
+        "window.IELTSFullDurable.writeDraft(",
+        "window.IELTSFullDurable.readDraft("
+      ]
+    }
+  ]
+}
