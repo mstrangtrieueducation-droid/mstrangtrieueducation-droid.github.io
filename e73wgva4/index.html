@@ -583,6 +583,7 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
 .wr-notebook h5{font-size:20px;margin:6px 0 13px;font-weight:850;line-height:1.4}.wr-notebook h6{font-size:14px;margin:15px 0 7px;line-height:1.5}.wr-notebook p,.wr-notebook li{font-size:14px;line-height:1.8}.wr-notebook p{margin:7px 0}.wr-notebook ul{padding-left:22px;margin:8px 0 12px}
 .wr-notebook-blocked{border-color:#e9bab1;border-left-color:#b74334;background:#fff2ed}.wr-notebook-blocked h5{color:#a73227}.wr-notebook-complete{border-color:#c4e3d7;border-left-color:#258269;background:#eef9f4}.wr-notebook-complete h5{color:#186c54}.wr-notebook-freshness{font-weight:700;color:#5d6470}.wr-notebook-steps{margin-top:18px}.wr-notebook-details{margin-top:16px;padding-top:13px;border-top:1px solid #d9dfe6}.wr-notebook-details summary{font-size:14px;font-weight:750;cursor:pointer}.wr-notebook-issue{padding:7px 0 12px;border-bottom:1px solid #dfe5ed}.wr-notebook-issue:last-child{border-bottom:0}.wr-notebook-action{font-weight:650}.wr-notebook .wr-button{display:inline-flex;margin:10px 8px 0 0;text-decoration:none}.wr-notebook .wr-submitted{font-size:12px;color:#63768b;margin-top:15px}
 @media(max-width:600px){.wr-notebook{padding:17px 16px}.wr-notebook h5{font-size:18px}}
+.wr-notebook-quick{padding:17px 20px;border-left-width:4px}.wr-notebook-quick h5{font-size:16px;margin:0 0 7px}.wr-notebook-quick .wr-notebook-details{margin-top:10px;padding-top:9px}.wr-notebook-quick .wr-notebook-hold{font-size:12px;color:#7d4a3d}.wr-notebook-quick summary:focus-visible{outline:3px solid #60a3d8;outline-offset:3px}
 
 </style>
 </head>
@@ -4327,6 +4328,19 @@ const ieltsWritingReviews_ = (() => {
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
     const latestNote = !current ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
+    if (item.reviewMode === 'quick_check') {
+      const notebookLinks = array(item.notebookUrls).map((value, index) => {
+        const url = ieltsWritingAssignments_.safeUrl(typeof value === 'string' ? value : value && value.url);
+        return url ? '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Mở PDF vở' + (item.notebookUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>' : '';
+      }).join('');
+      const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
+        ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
+      const quickTitle = !current ? title : complete || failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở';
+      return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
+        (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
+        (failed && hasWriting ? '<p class="wr-notebook-hold">Bài viết chờ vở đạt yêu cầu.</p>' : '') + latestSubmission +
+        (notebookLinks ? '<details class="wr-notebook-details"><summary>Xem vở lần nộp mới nhất</summary>' + notebookLinks + '</details>' : '') + '</section>';
+    }
     const issues = array(item.issues).map(issue => {
       const pages = [...new Set(array(issue.notebookPages).map(p => Number(p.page)).filter(n => Number.isInteger(n) && n > 0))];
       return '<article class="wr-notebook-issue"><h6>' + escape(issue.section || 'Phần cần bổ sung') + (pages.length ? ' · Vở trang ' + escape(pages.join(', ')) : '') + '</h6>' + prose(issue.evidence) + (issue.action ? '<p class="wr-notebook-action">' + inline(issue.action) + '</p>' : '') + '</article>';
