@@ -4126,7 +4126,8 @@ const ieltsWritingAssignments_ = (() => {
 /* IELTS_WRITING_FEEDBACK_V1: personal results only, with live bearer authorization. */
 const ieltsWritingReviews_ = (() => {
   'use strict';
-  let identity = '', generation = 0, status = 'idle', reviews = [], inFlight = null, lastFetch = 0;
+  const REFRESH_INTERVAL_MS = 180000;
+  let identity = '', generation = 0, status = 'idle', reviews = [], sourceStates = [], inFlight = null, lastFetch = 0, hasLoaded = false, refreshing = false;
   let dialog = null, opener = null, scrollBefore = '', selectedReview = null;
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
   const normalizedName = value => String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleUpperCase('vi');
@@ -4147,7 +4148,7 @@ const ieltsWritingReviews_ = (() => {
     selectedReview = null;
   }
   function clear() {
-    generation++; identity = ''; reviews = []; status = 'idle'; inFlight = null; lastFetch = 0;
+    generation++; identity = ''; reviews = []; sourceStates = []; status = 'idle'; inFlight = null; lastFetch = 0; hasLoaded = false; refreshing = false;
     if (dialog) { close(); dialog.remove(); dialog = null; }
   }
   function current() {
@@ -4168,12 +4169,38 @@ const ieltsWritingReviews_ = (() => {
     if (state.active === 'writing') renderSkill('writing');
     if (state.active === 'overview') renderOverview();
   }
+  function sourceState(assignmentCode, taskNumber) {
+    return sourceStates.find(item => code(item.assignmentCode) === code(assignmentCode) && Number(item.taskNumber) === Number(taskNumber)) || {state:'source_unavailable'};
+  }
+  function isCurrentReview(record) {
+    return Boolean(record && sourceState(record.assignmentCode, record.taskNumber).state === 'current' &&
+      sourceState(record.assignmentCode, record.taskNumber).currentResultId === record.resultId);
+  }
+  function readSourceStates(data) {
+    const allowed = ['current','pending','empty_submission','ambiguous_source','source_error','source_unavailable','not_submitted'];
+    const entries = array(data.sourceStates), seen = new Set();
+    const valid = entries.every(item => {
+      if (!item || !code(item.assignmentCode) || !Number.isInteger(item.taskNumber) || item.taskNumber < 1 || item.taskNumber > 50 || !allowed.includes(item.state)) return false;
+      const group = code(item.assignmentCode) + '|' + item.taskNumber;
+      if (seen.has(group)) return false; seen.add(group);
+      return item.state !== 'current' || typeof item.currentResultId === 'string' && data.reviews.some(record =>
+        record.resultId === item.currentResultId && code(record.assignmentCode) === code(item.assignmentCode) && Number(record.taskNumber) === item.taskNumber);
+    });
+    // Missing or invalid freshness evidence must not promote a historical review.
+    return valid ? entries : [];
+  }
   async function refresh(force = false) {
-    if (!current()) return;
+    if (!current() || document.visibilityState === 'hidden') return;
     if (inFlight) return inFlight;
-    if (!force && (status === 'ready' || status === 'error' || Date.now() - lastFetch < 30000)) return;
+    if (!force && lastFetch && Date.now() - lastFetch < (hasLoaded ? REFRESH_INTERVAL_MS : 30000)) return;
     const epoch = generation, startedFor = identity;
-    status = 'loading'; lastFetch = Date.now();
+    lastFetch = Date.now(); refreshing = true;
+    if (!hasLoaded) status = 'loading';
+    else {
+      // Expire currentness while checking again. Keep the saved review and its
+      // open tab/annotations intact; only freshness labels and counts change.
+      sourceStates = []; updateOpenFreshness(); repaint();
+    }
     const request = ieltsParentAccess.request('writing', force).then(data => {
       if (epoch !== generation || who() !== startedFor) return;
       if (!data || data.className !== ieltsParentAccess.className || data.parentName !== parentState.name ||
@@ -4182,10 +4209,24 @@ const ieltsWritingReviews_ = (() => {
       // Reject a mixed payload as a whole, including malformed/unpublished entries.
       if (data.reviews.some(record => !validRecord(record))) throw new Error('Writing result mismatch');
       reviews = data.reviews.slice().sort((a,b) => String(b.publication.publishedAt || '').localeCompare(String(a.publication.publishedAt || '')));
-      status = 'ready';
-    }).catch(() => { if (epoch === generation && who() === startedFor) { reviews = []; status = 'error'; } })
+      sourceStates = readSourceStates(data);
+      status = 'ready'; hasLoaded = true; refreshing = false; updateOpenFreshness();
+    }).catch(() => {
+      if (epoch === generation && who() === startedFor) {
+        sourceStates = []; refreshing = false;
+        // A transient read failure cannot certify an old review as current.
+        // Its already-authorized historical content remains available in place.
+        if (hasLoaded) { status = 'ready'; updateOpenFreshness(); }
+        else { reviews = []; status = 'error'; }
+      }
+    })
       .finally(() => { if (epoch === generation && who() === startedFor) { inFlight = null; repaint(); } });
     inFlight = request; return request;
+  }
+  function updateOpenFreshness() {
+    if (!dialog || !dialog.open || !selectedReview) return;
+    dialog.querySelector('[data-wr-review-label]').textContent = isCurrentReview(selectedReview) ? 'Đã trả bài' : 'Bài chữa lần nộp trước';
+    dialog.querySelector('[data-wr-freshness]').innerHTML = freshnessHtml(selectedReview.assignmentCode, selectedReview.taskNumber, selectedReview);
   }
   function overallHtml(record) { return '<div class="wr-copy wr-overall">' + prose(record.overall) + '</div>'; }
   function submissionDate(value) {
@@ -4194,14 +4235,31 @@ const ieltsWritingReviews_ = (() => {
     const date = new Date(text); if (!Number.isFinite(date.getTime())) return text;
     return new Intl.DateTimeFormat('vi-VN', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Bangkok'}).format(date).replace(', ', ' · ');
   }
+  function freshnessHtml(assignmentCode, taskNumber, record) {
+    if (isCurrentReview(record)) return '';
+    const latest = sourceState(assignmentCode, taskNumber);
+    const messages = {
+      current:'Đã có bài chữa cho lần nộp mới nhất. Em đang xem bài chữa được mở trước đó.',
+      pending:'Lần nộp mới nhất của Đề ' + taskNumber + ' chưa có bài chữa theo tiêu chí hiện hành.',
+      empty_submission:'Lần gửi mới nhất để trống Đề ' + taskNumber + '. Chưa có bài viết mới để chấm.',
+      ambiguous_source:'Có các bài Đề ' + taskNumber + ' khác nội dung cùng thời điểm nộp. Cần đối chiếu nguồn trước khi chấm.',
+      source_error:'Thông tin tên hoặc thời điểm nộp Đề ' + taskNumber + ' cần được đối chiếu trước khi chấm.',
+      not_submitted:'Chưa tìm thấy bài nộp Đề ' + taskNumber + ' trong nguồn chấm hiện tại.',
+      source_unavailable:refreshing ? 'Đang kiểm tra lần nộp mới nhất của Đề ' + taskNumber + '…' : 'Chưa xác minh được lần nộp mới nhất của Đề ' + taskNumber + '.'
+    };
+    const message = messages[latest.state] || messages.source_unavailable;
+    return '<p class="wr-status" role="status">' + escape(message) + (latest.submittedAt ? ' <span>Lần gửi: ' + escape(submissionDate(latest.submittedAt)) + '.</span>' : '') +
+      (record ? ' Bài chữa bên dưới được lưu từ lần chấm trước.' : '') + '</p>';
+  }
   function card(record, assignment, task) {
     const label = assignment.weekCode + ' · Đề ' + task.taskNumber;
     const head = '<h5>' + escape(label) + '</h5>' + (task.title ? '<p class="wr-task-title">' + escape(task.title) + '</p>' : '');
     if (!record) return '<article class="wr-summary wr-pending" data-wr-task="' + task.taskNumber + '">' + head +
-      '<p class="wr-status" role="status">Bài chữa Đề ' + task.taskNumber + ' chưa được trả. Nhận xét sẽ hiện tại đây khi có kết quả.</p></article>';
-    return '<article class="wr-summary" data-wr-task="' + task.taskNumber + '"><span class="wr-kicker">Bài chữa của Cô · Đã trả</span>' + head +
+      freshnessHtml(assignment.assignmentCode, task.taskNumber, null) + '</article>';
+    return '<article class="wr-summary" data-wr-task="' + task.taskNumber + '"><span class="wr-kicker">' + (isCurrentReview(record) ? 'Bài chữa của Cô · Đã trả' : 'Bài chữa lần nộp trước') + '</span>' + head +
+      freshnessHtml(assignment.assignmentCode, task.taskNumber, record) +
       '<span class="wr-verdict">' + escape(record.learningVerdict) + '</span>' + (record.submissionStatus === 'wrong_task' ? '<p class="wr-wrong-task">Bài nộp chưa đúng đề</p>' : '') + overallHtml(record) +
-      '<p class="wr-submitted">Bài em nộp: ' + escape(submissionDate(record.source && record.source.submittedAt)) + ' · ' + escape(record.originalWordCount) + ' từ</p>' +
+      '<p class="wr-submitted">Bài em nộp: ' + escape(submissionDate(record.submittedAt || record.source && record.source.submittedAt)) + ' · ' + escape(record.originalWordCount) + ' từ</p>' +
       '<button class="wr-button" type="button" data-wr-open="' + escape(record.resultId) + '" aria-label="Xem bài chữa ' + escape(label) + '">Xem bài chữa</button></article>';
   }
   function loadStatus() {
@@ -4227,9 +4285,9 @@ const ieltsWritingReviews_ = (() => {
   }
   function groupHtml(assignment) {
     const results = assignment.tasks.map(task => reviews.find(record => code(record.assignmentCode) === assignment.assignmentCode && Number(record.taskNumber) === task.taskNumber));
-    const count = results.filter(Boolean).length;
+    const count = results.filter(isCurrentReview).length;
     return '<section class="wr-assignment" aria-label="Nhận xét của Cô · Writing ' + escape(assignment.weekCode) + '">' +
-      '<header class="wr-feedback-head"><h4>Nhận xét của Cô</h4><p>Writing ' + escape(assignment.weekCode) + (status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa' : '') + '</p></header>' +
+      '<header class="wr-feedback-head"><h4>Nhận xét của Cô</h4><p>Writing ' + escape(assignment.weekCode) + (status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa cho lần nộp mới nhất' : '') + '</p></header>' +
       (status === 'ready' ? '<div class="wr-exercises">' + assignment.tasks.map((task,index) => card(results[index], assignment, task)).join('') + '</div>' : loadStatus()) + '</section>';
   }
   function overviewHtml() {
@@ -4329,7 +4387,7 @@ const ieltsWritingReviews_ = (() => {
     const revisionLabel = record.revisionLabel || 'Bản sửa gợi ý';
     const revision = revisionHtml(record);
     dialog.innerHTML = '<header class="wr-head"><div><span class="wr-kicker">' + escape(record.className) + ' · ' + escape(assignment.weekCode) + ' · Đề ' + task.taskNumber + '</span><h2 id="wr-title">Bài chữa của Cô</h2><p>' + escape(record.studentName) + '</p></div><button class="wr-close" type="button" aria-label="Đóng bài chữa" data-wr-close>×</button></header>' +
-      '<div class="wr-body"><div class="wr-top"><span class="wr-verdict">' + escape(record.learningVerdict) + '</span>' + (record.submissionStatus === 'wrong_task' ? '<strong class="wr-wrong-task">Bài nộp chưa đúng đề</strong>' : '') + '<small>Bài gốc: ' + escape(record.originalWordCount) + ' từ</small><small>Đã trả bài</small></div>' +
+      '<div class="wr-body"><div class="wr-top"><span class="wr-verdict">' + escape(record.learningVerdict) + '</span>' + (record.submissionStatus === 'wrong_task' ? '<strong class="wr-wrong-task">Bài nộp chưa đúng đề</strong>' : '') + '<small>Bài gốc: ' + escape(record.originalWordCount) + ' từ</small><small data-wr-review-label>' + (isCurrentReview(record) ? 'Đã trả bài' : 'Bài chữa lần nộp trước') + '</small></div><div data-wr-freshness>' + freshnessHtml(record.assignmentCode, record.taskNumber, record) + '</div>' +
       promptHtml(assignment,task) +
       '<div class="wr-context"><section class="wr-section"><h3>Nhận xét của Cô</h3>' + overallHtml(record) + '</section><section class="wr-section"><h3>Cách em chia dữ liệu</h3><div class="wr-copy">' + prose(record.dataGrouping) + '</div></section></div>' +
       '<section class="wr-section wr-writing"><header class="wr-writing-head"><h3>Bài em đã nộp</h3><div class="wr-tabs" role="tablist" aria-label="Phiên bản bài viết"><button class="wr-tab" type="button" role="tab" id="wr-tab-original" aria-controls="wr-original" aria-selected="true" data-wr-tab="original">Bài viết gốc - kèm chú thích</button><button class="wr-tab" type="button" role="tab" id="wr-tab-revision" aria-controls="wr-revision" aria-selected="false" tabindex="-1" data-wr-tab="revision">' + escape(revisionLabel) + '</button></div></header>' +
@@ -4376,6 +4434,10 @@ const ieltsWritingReviews_ = (() => {
   parentRender_=function(){const result=baseRender.apply(this,arguments);if(who())refresh();return result;};
   const baseResume=parentQuietResume_;
   parentQuietResume_=async function(){const result=await baseResume.apply(this,arguments);if(who())refresh(true);return result;};
+  window.setInterval(() => {
+    if (document.visibilityState === 'hidden' || !current() || !hasLoaded || inFlight) return;
+    refresh();
+  }, 30000);
   const baseOverview=renderOverview;
   renderOverview=function(){const result=baseOverview.apply(this,arguments);const host=document.getElementById('panel-overview');if(host&&state.student&&who())host.insertAdjacentHTML('beforeend',overviewHtml());return result;};
   return {assignmentHtml,homeworkStatusHtml,refresh,clear};
