@@ -577,6 +577,8 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
 @media(max-width:800px){.wr-prompt figure{padding:4px;margin:14px 0 8px}.wr-summary{padding:15px}.wr-feedback-head h4{font-size:18px}.wr-tabs{min-width:0}.wr-tab{min-width:0;overflow-wrap:anywhere}.wr-prompt-text,.wr-summary .wr-overall p{font-size:14px}}
 .wr-assignment{margin-top:18px;padding:20px;border:1px solid #b9cede;border-radius:17px;background:#edf3f8;box-shadow:0 8px 26px #1232570d}.wr-feedback-head{margin:-20px -20px 20px;padding:18px 20px;background:#143a60;border-radius:16px 16px 0 0;border-bottom:4px solid #dbb05e}.wr-feedback-head h4{color:#fff;font-size:22px;font-weight:850;margin:0 0 5px}.wr-feedback-head p{color:#d9e6f2;font-size:13px}.wr-assignment .wr-summary{padding:21px;border-color:#c7d7e6;border-left:4px solid #d4aa58}.wr-assignment .wr-summary h5{font-size:18px}.wr-assignment .wr-summary .wr-overall,.wr-assignment .wr-summary .wr-overall p{font-size:15px;line-height:1.9}.wr-assignment .wr-pending{border-left-color:#bccbd8;background:#f5f8fb}
 @media(max-width:600px){.wr-assignment{padding:13px;border-radius:13px}.wr-feedback-head{margin:-13px -13px 14px;padding:16px;border-radius:12px 12px 0 0}.wr-feedback-head h4{font-size:20px}.wr-assignment .wr-summary{padding:16px}.wr-assignment .wr-summary .wr-overall,.wr-assignment .wr-summary .wr-overall p{font-size:14px}}
+.wr-revision .wr-essay{white-space:pre-wrap}.wr-revision-legend{margin:0 0 20px;padding:11px 14px;border:1px solid #b9d8c9;border-left:4px solid #337f63;border-radius:8px;background:#f0f8f3;color:#28583f;font-size:12px;line-height:1.7}.wr-revision-change{padding:1px 0;border-radius:2px;background:#d9efdf;color:inherit;text-decoration-line:underline;text-decoration-color:#337f63;text-decoration-thickness:1px;text-underline-offset:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+@media(forced-colors:active){.wr-revision-change{background:Mark;color:MarkText;text-decoration-color:MarkText}.wr-revision-legend{border-color:CanvasText}}
 
 </style>
 </head>
@@ -4254,6 +4256,58 @@ const ieltsWritingReviews_ = (() => {
   function notesHtml(record) {
     return array(record.annotations).map((note,index) => '<article class="wr-note' + (note.severity === 'serious' ? ' is-serious' : '') + '" id="wr-note-' + index + '" tabindex="-1"><h5>' + escape(note.label || note.id) + ' · ' + inline(note.title) + '</h5><div class="wr-copy">' + prose(note.bodyMarkdown) + '</div>' + (array(note.anchors).length ? '<button class="wr-note-jump" type="button" data-wr-back="' + index + '">Về đoạn được chú thích</button>' : '') + '</article>').join('');
   }
+  function revisionHtml(record) {
+    const paragraphs = array(record.suggestedRevisionParagraphs).map(p => String(p ?? ''));
+    const plain = () => paragraphs.map(p => '<p>' + escape(p) + '</p>').join('');
+    if (record.revisionKind === 'scaffold' || record.submissionStatus === 'wrong_task') return {
+      essay:plain(), legend:'Đây là khung hướng dẫn viết lại đúng đề, chưa phải bản sửa từ bài em đã nộp.'
+    };
+    const source = record.originalEssay, revised = paragraphs.join('\n\n');
+    // Compare exact words and punctuation, ignoring whitespace for matching only.
+    // Offset slices always render the saved revision verbatim; no grading text is edited.
+    const tokens = text => Array.from(text.matchAll(/[\p{L}\p{M}\p{N}]+(?:['’][\p{L}\p{M}\p{N}]+)*|[^\s]/gu), match => ({text:match[0],start:match.index,end:match.index+match[0].length}));
+    const unavailable = {essay:plain(),legend:'Bản sửa được giữ nguyên. Bài quá dài để tô thay đổi chi tiết; em đối chiếu với tab Bài viết gốc - kèm chú thích.'};
+    if (source.length + revised.length > 200000) return unavailable;
+    const before = tokens(source), after = tokens(revised);
+    if (before.length + after.length > 12000) return unavailable;
+    let prefix = 0, endBefore = before.length, endAfter = after.length;
+    while (prefix < endBefore && prefix < endAfter && before[prefix].text === after[prefix].text) prefix++;
+    while (endBefore > prefix && endAfter > prefix && before[endBefore-1].text === after[endAfter-1].text) { endBefore--; endAfter--; }
+    const rows = endBefore-prefix, cols = endAfter-prefix;
+    // At most ~4 MB and one million comparisons, including malformed long input.
+    if ((rows+1)*(cols+1) > 1000000) return unavailable;
+    const table = new Uint32Array((rows+1)*(cols+1)), stride = cols+1;
+    for (let i=rows-1;i>=0;i--) for (let j=cols-1;j>=0;j--) table[i*stride+j] = before[prefix+i].text === after[prefix+j].text
+      ? table[(i+1)*stride+j+1]+1 : Math.max(table[(i+1)*stride+j],table[i*stride+j+1]);
+    const changed = new Set(); let i=0,j=0,deleted=0;
+    while (i<rows || j<cols) {
+      if (i<rows && j<cols && before[prefix+i].text === after[prefix+j].text) {i++;j++;}
+      else if (i<rows && (j===cols || table[(i+1)*stride+j] >= table[i*stride+j+1])) {i++;deleted++;}
+      else {changed.add(prefix+j);j++;}
+    }
+    const intervals = [];
+    after.forEach((token,index) => {
+      if (!changed.has(index)) return;
+      const previous = intervals[intervals.length-1];
+      if (previous && changed.has(index-1)) previous.end=token.end;
+      else intervals.push({start:token.start,end:token.end});
+    });
+    let offset=0;
+    const essay = paragraphs.map(paragraph => {
+      const start=offset,end=start+paragraph.length; offset=end+2;
+      let cursor=start,html='';
+      intervals.forEach(interval => {
+        const from=Math.max(start,interval.start),to=Math.min(end,interval.end);
+        if (from>=to) return;
+        html+=escape(revised.slice(cursor,from))+'<mark class="wr-revision-change">'+escape(revised.slice(from,to))+'</mark>';cursor=to;
+      });
+      return '<p>'+html+escape(revised.slice(cursor,end))+'</p>';
+    }).join('');
+    const legend = intervals.length ? 'Phần tô xanh và gạch chân là chỗ Cô đã sửa hoặc bổ sung so với bài em nộp.'
+      : deleted ? 'Bản sửa có lược bỏ từ hoặc dấu câu; những từ và dấu câu còn lại được giữ nguyên.'
+      : 'Bản sửa giữ nguyên các từ và dấu câu của bài em nộp.';
+    return {essay,legend:legend+(deleted ? ' Phần đã lược bỏ không xuất hiện trong bản sửa; em đối chiếu ở tab Bài viết gốc - kèm chú thích.' : '')};
+  }
   function promptHtml(assignment, task) {
     const label = 'Đề ' + task.taskNumber;
     return '<section class="wr-section wr-prompt"><h3>Đề bài gốc · ' + escape(label) + '</h3>' +
@@ -4273,13 +4327,14 @@ const ieltsWritingReviews_ = (() => {
     dialog = document.createElement('dialog'); dialog.className = 'wr-dialog'; dialog.setAttribute('aria-labelledby','wr-title');
     const knowledgeRows = array(record.knowledge && record.knowledge.rows);
     const revisionLabel = record.revisionLabel || 'Bản sửa gợi ý';
+    const revision = revisionHtml(record);
     dialog.innerHTML = '<header class="wr-head"><div><span class="wr-kicker">' + escape(record.className) + ' · ' + escape(assignment.weekCode) + ' · Đề ' + task.taskNumber + '</span><h2 id="wr-title">Bài chữa của Cô</h2><p>' + escape(record.studentName) + '</p></div><button class="wr-close" type="button" aria-label="Đóng bài chữa" data-wr-close>×</button></header>' +
       '<div class="wr-body"><div class="wr-top"><span class="wr-verdict">' + escape(record.learningVerdict) + '</span>' + (record.submissionStatus === 'wrong_task' ? '<strong class="wr-wrong-task">Bài nộp chưa đúng đề</strong>' : '') + '<small>Bài gốc: ' + escape(record.originalWordCount) + ' từ</small><small>Đã trả bài</small></div>' +
       promptHtml(assignment,task) +
       '<div class="wr-context"><section class="wr-section"><h3>Nhận xét của Cô</h3>' + overallHtml(record) + '</section><section class="wr-section"><h3>Cách em chia dữ liệu</h3><div class="wr-copy">' + prose(record.dataGrouping) + '</div></section></div>' +
       '<section class="wr-section wr-writing"><header class="wr-writing-head"><h3>Bài em đã nộp</h3><div class="wr-tabs" role="tablist" aria-label="Phiên bản bài viết"><button class="wr-tab" type="button" role="tab" id="wr-tab-original" aria-controls="wr-original" aria-selected="true" data-wr-tab="original">Bài viết gốc - kèm chú thích</button><button class="wr-tab" type="button" role="tab" id="wr-tab-revision" aria-controls="wr-revision" aria-selected="false" tabindex="-1" data-wr-tab="revision">' + escape(revisionLabel) + '</button></div></header>' +
       '<div class="wr-pane" id="wr-original" role="tabpanel" aria-labelledby="wr-tab-original"><div class="wr-original-grid"><div class="wr-essay-col"><p class="wr-essay-hint">Chọn phần được đánh dấu để đọc chú thích của Cô. Màu đỏ là lỗi cần sửa trước.</p><div class="wr-essay" lang="en">' + originalHtml(record) + '</div></div><aside class="wr-notes" aria-label="Chú thích của Cô"><h4>' + array(record.annotations).length + ' chú thích</h4>' + notesHtml(record) + '</aside></div></div>' +
-      '<div class="wr-pane" id="wr-revision" role="tabpanel" aria-labelledby="wr-tab-revision" hidden><div class="wr-revision">' + (record.revisionKind === 'scaffold' ? '<p class="wr-scaffold-label">' + escape(revisionLabel) + '</p>' : '') + '<p class="wr-essay-hint">' + escape(record.suggestedRevisionWordCount) + ' từ · Đọc cách sửa và vận dụng kiến thức vào bài của em.</p><div class="wr-essay" lang="en">' + array(record.suggestedRevisionParagraphs).map(p => '<p>' + escape(p) + '</p>').join('') + '</div><div class="wr-applied"><h4>Kiến thức đã áp dụng</h4><ul class="wr-copy">' + array(record.appliedKnowledge).map(item => '<li>' + inline(item) + '</li>').join('') + '</ul></div></div></div></section>' +
+      '<div class="wr-pane" id="wr-revision" role="tabpanel" aria-labelledby="wr-tab-revision" hidden><div class="wr-revision">' + (record.revisionKind === 'scaffold' ? '<p class="wr-scaffold-label">' + escape(revisionLabel) + '</p>' : '') + '<p class="wr-essay-hint">' + escape(record.suggestedRevisionWordCount) + ' từ · Đọc cách sửa và vận dụng kiến thức vào bài của em.</p><p class="wr-revision-legend" id="wr-revision-legend">' + escape(revision.legend) + '</p><div class="wr-essay" lang="en" aria-describedby="wr-revision-legend">' + revision.essay + '</div><div class="wr-applied"><h4>Kiến thức đã áp dụng</h4><ul class="wr-copy">' + array(record.appliedKnowledge).map(item => '<li>' + inline(item) + '</li>').join('') + '</ul></div></div></div></section>' +
       '<section class="wr-section"><h3>Kiến thức đã được ghi chép và giảng kỹ</h3><div class="wr-knowledge"><table><thead><tr><th scope="col">Kỹ thuật</th><th scope="col">Mức vận dụng</th><th scope="col">Bằng chứng</th></tr></thead><tbody>' + knowledgeRows.map(row => '<tr><td>' + inline(row.technique) + '</td><td>' + inline(row.application) + '</td><td>' + inline(row.evidence) + '</td></tr>').join('') + '</tbody></table></div></section>' +
       '<section class="wr-section"><h3>Việc em làm tiếp</h3><ol class="wr-next wr-copy">' + array(record.nextSteps).map(step => '<li>' + inline(step) + '</li>').join('') + '</ol></section><div class="wr-scope">' + prose(record.scopeMarkdown) + '</div></div>';
     document.body.appendChild(dialog); dialog.showModal(); document.body.style.overflow = 'hidden';
