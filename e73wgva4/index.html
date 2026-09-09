@@ -579,6 +579,10 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
 @media(max-width:600px){.wr-assignment{padding:13px;border-radius:13px}.wr-feedback-head{margin:-13px -13px 14px;padding:16px;border-radius:12px 12px 0 0}.wr-feedback-head h4{font-size:20px}.wr-assignment .wr-summary{padding:16px}.wr-assignment .wr-summary .wr-overall,.wr-assignment .wr-summary .wr-overall p{font-size:14px}}
 .wr-revision .wr-essay{white-space:pre-wrap}.wr-revision-legend{margin:0 0 20px;padding:11px 14px;border:1px solid #b9d8c9;border-left:4px solid #337f63;border-radius:8px;background:#f0f8f3;color:#28583f;font-size:12px;line-height:1.7}.wr-revision-change{padding:1px 0;border-radius:2px;background:#d9efdf;color:inherit;text-decoration-line:underline;text-decoration-color:#337f63;text-decoration-thickness:1px;text-underline-offset:4px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 @media(forced-colors:active){.wr-revision-change{background:Mark;color:MarkText;text-decoration-color:MarkText}.wr-revision-legend{border-color:CanvasText}}
+.wr-notebook{margin:18px 0;padding:23px 25px;border:1px solid #d3dfec;border-left:6px solid #627b97;border-radius:14px;background:#f4f7fb;overflow-wrap:anywhere;color:#263f58}
+.wr-notebook h5{font-size:20px;margin:6px 0 13px;font-weight:850;line-height:1.4}.wr-notebook h6{font-size:14px;margin:15px 0 7px;line-height:1.5}.wr-notebook p,.wr-notebook li{font-size:14px;line-height:1.8}.wr-notebook p{margin:7px 0}.wr-notebook ul{padding-left:22px;margin:8px 0 12px}
+.wr-notebook-blocked{border-color:#e9bab1;border-left-color:#b74334;background:#fff2ed}.wr-notebook-blocked h5{color:#a73227}.wr-notebook-complete{border-color:#c4e3d7;border-left-color:#258269;background:#eef9f4}.wr-notebook-complete h5{color:#186c54}.wr-notebook-freshness{font-weight:700;color:#5d6470}.wr-notebook-steps{margin-top:18px}.wr-notebook-details{margin-top:16px;padding-top:13px;border-top:1px solid #d9dfe6}.wr-notebook-details summary{font-size:14px;font-weight:750;cursor:pointer}.wr-notebook-issue{padding:7px 0 12px;border-bottom:1px solid #dfe5ed}.wr-notebook-issue:last-child{border-bottom:0}.wr-notebook-action{font-weight:650}.wr-notebook .wr-button{display:inline-flex;margin:10px 8px 0 0;text-decoration:none}.wr-notebook .wr-submitted{font-size:12px;color:#63768b;margin-top:15px}
+@media(max-width:600px){.wr-notebook{padding:17px 16px}.wr-notebook h5{font-size:18px}}
 
 </style>
 </head>
@@ -4047,7 +4051,7 @@ function ielts48OpenPendingHomeworkV32_(){
 </script>
 <script>
 /* IELTS_WRITING_ASSIGNMENTS_MANIFEST_V1 */
-window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view"},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view"}]}]};
+window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","notebook":true,"tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view"},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view"}]}]};
 /* IELTS_WRITING_ASSIGNMENT_HELPERS_V1: shared, public assignment metadata only. */
 const ieltsWritingAssignments_ = (() => {
   'use strict';
@@ -4080,8 +4084,14 @@ const ieltsWritingAssignments_ = (() => {
       if (!array(entry.classNames).includes(className)) return;
       const assignmentCode = code(entry.assignmentCode);
       const week = Number(assignmentCode.match(/W(\d+)$/)?.[1]);
-      const enabledFromWeek = Number(entry.enabledFromWeek || 9);
-      if (!assignmentCode || !Number.isFinite(enabledFromWeek) || week < Math.max(9, enabledFromWeek)) return;
+      const notebook = entry.notebook === true;
+      const enabledFromWeek = Number(entry.enabledFromWeek || (notebook ? 5 : 9));
+      if (!assignmentCode || !Number.isFinite(enabledFromWeek) || week < Math.max(notebook ? 5 : 9, enabledFromWeek)) return;
+      if (notebook && !groups.has(assignmentCode)) {
+        groups.set(assignmentCode, {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:true,
+          lessonUrls:[lessonKey(entry.lessonUrl)].filter(Boolean), tasks:[]});
+      }
+      if (notebook) groups.get(assignmentCode).notebook = true;
       const tasks = Array.isArray(entry.tasks) ? entry.tasks : [entry];
       tasks.forEach(task => {
         if (!task || task.enabled === false || task.autoGrade === false) return;
@@ -4089,7 +4099,7 @@ const ieltsWritingAssignments_ = (() => {
         if (!Number.isInteger(taskNumber) || taskNumber < 1 || taskNumber > 50) return;
         let group = groups.get(assignmentCode);
         if (!group) {
-          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), lessonUrls:[], tasks:[]};
+          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:false, lessonUrls:[], tasks:[]};
           groups.set(assignmentCode, group);
         }
         [entry.lessonUrl, task.lessonUrl].map(lessonKey).filter(Boolean).forEach(url => {
@@ -4127,7 +4137,7 @@ const ieltsWritingAssignments_ = (() => {
 const ieltsWritingReviews_ = (() => {
   'use strict';
   const REFRESH_INTERVAL_MS = 180000;
-  let identity = '', generation = 0, status = 'idle', reviews = [], sourceStates = [], inFlight = null, lastFetch = 0, hasLoaded = false, refreshing = false;
+  let identity = '', generation = 0, status = 'idle', reviews = [], sourceStates = [], notebookStates = [], inFlight = null, lastFetch = 0, hasLoaded = false, refreshing = false;
   let dialog = null, opener = null, scrollBefore = '', selectedReview = null;
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
   const normalizedName = value => String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleUpperCase('vi');
@@ -4148,7 +4158,7 @@ const ieltsWritingReviews_ = (() => {
     selectedReview = null;
   }
   function clear() {
-    generation++; identity = ''; reviews = []; sourceStates = []; status = 'idle'; inFlight = null; lastFetch = 0; hasLoaded = false; refreshing = false;
+    generation++; identity = ''; reviews = []; sourceStates = []; notebookStates = []; status = 'idle'; inFlight = null; lastFetch = 0; hasLoaded = false; refreshing = false;
     if (dialog) { close(); dialog.remove(); dialog = null; }
   }
   function current() {
@@ -4189,6 +4199,19 @@ const ieltsWritingReviews_ = (() => {
     // Missing or invalid freshness evidence must not promote a historical review.
     return valid ? entries : [];
   }
+  function readNotebookStates(data) {
+    if (data.notebookStates === undefined) return [];
+    if (!Array.isArray(data.notebookStates)) throw new Error('Notebook response mismatch');
+    const seen = new Set();
+    for (const item of data.notebookStates) {
+      if (!item || item.className !== ieltsParentAccess.className || normalizedName(item.studentName) !== normalizedName(parentState.name) ||
+          !code(item.assignmentCode) || seen.has(code(item.assignmentCode)) || typeof item.state !== 'string' ||
+          typeof item.current !== 'boolean' || typeof item.historical !== 'boolean' ||
+          !['notebook_only','notebook_and_writing'].includes(item.homeworkMode)) throw new Error('Notebook identity mismatch');
+      seen.add(code(item.assignmentCode));
+    }
+    return data.notebookStates;
+  }
   async function refresh(force = false) {
     if (!current() || document.visibilityState === 'hidden') return;
     if (inFlight) return inFlight;
@@ -4199,7 +4222,7 @@ const ieltsWritingReviews_ = (() => {
     else {
       // Expire currentness while checking again. Keep the saved review and its
       // open tab/annotations intact; only freshness labels and counts change.
-      sourceStates = []; updateOpenFreshness(); repaint();
+      sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall)})); updateOpenFreshness(); repaint();
     }
     const request = ieltsParentAccess.request('writing', force).then(data => {
       if (epoch !== generation || who() !== startedFor) return;
@@ -4208,12 +4231,14 @@ const ieltsWritingReviews_ = (() => {
           !Array.isArray(data.reviews)) throw new Error('Writing identity mismatch');
       // Reject a mixed payload as a whole, including malformed/unpublished entries.
       if (data.reviews.some(record => !validRecord(record))) throw new Error('Writing result mismatch');
+      const checkedNotebooks = readNotebookStates(data);
       reviews = data.reviews.slice().sort((a,b) => String(b.publication.publishedAt || '').localeCompare(String(a.publication.publishedAt || '')));
+      notebookStates = checkedNotebooks;
       sourceStates = readSourceStates(data);
       status = 'ready'; hasLoaded = true; refreshing = false; updateOpenFreshness();
     }).catch(() => {
       if (epoch === generation && who() === startedFor) {
-        sourceStates = []; refreshing = false;
+        sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall)})); refreshing = false;
         // A transient read failure cannot certify an old review as current.
         // Its already-authorized historical content remains available in place.
         if (hasLoaded) { status = 'ready'; updateOpenFreshness(); }
@@ -4287,8 +4312,35 @@ const ieltsWritingReviews_ = (() => {
     const results = assignment.tasks.map(task => reviews.find(record => code(record.assignmentCode) === assignment.assignmentCode && Number(record.taskNumber) === task.taskNumber));
     const count = results.filter(isCurrentReview).length;
     return '<section class="wr-assignment" aria-label="Nhận xét của Cô · Writing ' + escape(assignment.weekCode) + '">' +
-      '<header class="wr-feedback-head"><h4>Nhận xét của Cô</h4><p>Writing ' + escape(assignment.weekCode) + (status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa cho lần nộp mới nhất' : '') + '</p></header>' +
-      (status === 'ready' ? '<div class="wr-exercises">' + assignment.tasks.map((task,index) => card(results[index], assignment, task)).join('') + '</div>' : loadStatus()) + '</section>';
+      '<header class="wr-feedback-head"><h4>Nhận xét của Cô</h4><p>Writing ' + escape(assignment.weekCode) + (assignment.tasks.length && status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa cho lần nộp mới nhất' : '') + '</p></header>' +
+      (status === 'ready' ? notebookHtml(assignment) + (assignment.tasks.length ? '<div class="wr-exercises">' + assignment.tasks.map((task,index) => card(results[index], assignment, task)).join('') + '</div>' : '') : loadStatus()) + '</section>';
+  }
+  function notebookHtml(assignment) {
+    const item = notebookStates.find(entry => code(entry.assignmentCode) === assignment.assignmentCode);
+    if (!item) return assignment.notebook ? '<section class="wr-notebook wr-notebook-pending"><h5>Vở chép · Nhận xét của Cô</h5><p>Chưa có kết quả kiểm tra vở. Bài viết mới chỉ được chấm sau khi vở đạt yêu cầu.</p></section>' : '';
+    const current = item.current && !refreshing;
+    const failed = current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
+    const complete = current && item.state === 'notebook_complete';
+    const title = !current ? (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại') :
+      failed ? (item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
+      complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
+    const latestNote = !current ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại. Bài viết mới tiếp tục chờ kiểm tra vở.') + '</p>' +
+      (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
+    const issues = array(item.issues).map(issue => {
+      const pages = [...new Set(array(issue.notebookPages).map(p => Number(p.page)).filter(n => Number.isInteger(n) && n > 0))];
+      return '<article class="wr-notebook-issue"><h6>' + escape(issue.section || 'Phần cần bổ sung') + (pages.length ? ' · Vở trang ' + escape(pages.join(', ')) : '') + '</h6>' + prose(issue.evidence) + (issue.action ? '<p class="wr-notebook-action">' + inline(issue.action) + '</p>' : '') + '</article>';
+    }).join('');
+    const handwriting = array(item.handwriting && item.handwriting.evidence).map(text => '<li>' + inline(text) + '</li>').join('');
+    const sources = array(item.sourceUrls).map((value, index) => {
+      const url = ieltsWritingAssignments_.safeUrl(typeof value === 'string' ? value : value && value.url);
+      return url ? '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Tài liệu Cô giao' + (item.sourceUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>' : '';
+    }).join('');
+    return '<section class="wr-notebook ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>' + escape(title) + '</h5>' + latestNote +
+      (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Vở đang chờ kiểm tra theo tài liệu được giao.') + '</p>') +
+      (array(item.nextSteps).length ? '<div class="wr-notebook-steps"><strong>Việc em cần làm</strong><ul>' + item.nextSteps.map(text => '<li>' + inline(text) + '</li>').join('') + '</ul></div>' : '') +
+      (issues || handwriting ? '<details class="wr-notebook-details"><summary>Xem phần cần sửa và nhận xét chữ viết</summary>' + issues + (handwriting ? '<h6>Chữ viết và bản chụp</h6><ul>' + handwriting + '</ul>' : '') + '</details>' : '') +
+      '<p class="wr-submitted">' + (item.historical && item.reviewSubmittedAt ? 'Vở của nhận xét này: ' + escape(submissionDate(item.reviewSubmittedAt)) : item.submittedAt ? 'Vở nộp: ' + escape(submissionDate(item.submittedAt)) : '') + (item.checkedAt ? ' · Kiểm tra: ' + escape(submissionDate(item.checkedAt)) : '') + '</p>' +
+      (item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '') + sources + '</section>';
   }
   function overviewHtml() {
     if (!current()) return '';

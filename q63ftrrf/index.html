@@ -3170,7 +3170,7 @@ function ielts48OpenPendingHomeworkV32_(){
 </script>
 <script>
 /* IELTS_WRITING_ASSIGNMENTS_MANIFEST_V1 */
-window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view"},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view"}]}]};
+window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","notebook":true,"tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view"},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view"}]}]};
 /* IELTS_WRITING_ASSIGNMENT_HELPERS_V1: shared, public assignment metadata only. */
 const ieltsWritingAssignments_ = (() => {
   'use strict';
@@ -3203,8 +3203,14 @@ const ieltsWritingAssignments_ = (() => {
       if (!array(entry.classNames).includes(className)) return;
       const assignmentCode = code(entry.assignmentCode);
       const week = Number(assignmentCode.match(/W(\d+)$/)?.[1]);
-      const enabledFromWeek = Number(entry.enabledFromWeek || 9);
-      if (!assignmentCode || !Number.isFinite(enabledFromWeek) || week < Math.max(9, enabledFromWeek)) return;
+      const notebook = entry.notebook === true;
+      const enabledFromWeek = Number(entry.enabledFromWeek || (notebook ? 5 : 9));
+      if (!assignmentCode || !Number.isFinite(enabledFromWeek) || week < Math.max(notebook ? 5 : 9, enabledFromWeek)) return;
+      if (notebook && !groups.has(assignmentCode)) {
+        groups.set(assignmentCode, {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:true,
+          lessonUrls:[lessonKey(entry.lessonUrl)].filter(Boolean), tasks:[]});
+      }
+      if (notebook) groups.get(assignmentCode).notebook = true;
       const tasks = Array.isArray(entry.tasks) ? entry.tasks : [entry];
       tasks.forEach(task => {
         if (!task || task.enabled === false || task.autoGrade === false) return;
@@ -3212,7 +3218,7 @@ const ieltsWritingAssignments_ = (() => {
         if (!Number.isInteger(taskNumber) || taskNumber < 1 || taskNumber > 50) return;
         let group = groups.get(assignmentCode);
         if (!group) {
-          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), lessonUrls:[], tasks:[]};
+          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:false, lessonUrls:[], tasks:[]};
           groups.set(assignmentCode, group);
         }
         [entry.lessonUrl, task.lessonUrl].map(lessonKey).filter(Boolean).forEach(url => {
@@ -3253,7 +3259,7 @@ const base=assignmentCard;
 assignmentCard=function(item){
   const html=base.apply(this,arguments),assignment=ieltsWritingAssignments_.forItem(item);
   if(!assignment)return html;
-  const notice='<aside class="wr-public-note"><strong>Bài chữa Writing '+escape(assignment.weekCode)+' · '+assignment.tasks.length+' đề</strong>Em mở hồ sơ cá nhân bằng đường link riêng Cô đã gửi, vào Writing hoặc Kết quả cá nhân để đọc nhận xét từng đề và chọn “Xem bài chữa”.</aside>';
+  const notice='<aside class="wr-public-note"><strong>Bài chữa Writing '+escape(assignment.weekCode)+(assignment.tasks.length?' · '+assignment.tasks.length+' đề':' · Vở chép')+'</strong>Em mở hồ sơ cá nhân bằng đường link riêng Cô đã gửi, vào Writing hoặc Kết quả cá nhân để đọc nhận xét của Cô.</aside>';
   const end=html.lastIndexOf('</article>');
   return end<0?html:html.slice(0,end)+notice+html.slice(end);
 };
