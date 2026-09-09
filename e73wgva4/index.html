@@ -575,6 +575,8 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
 @media(max-width:800px){.wr-context{grid-template-columns:1fr}.wr-original-grid{grid-template-columns:1fr}.wr-notes{border-left:0;border-top:1px solid #dce5ef;max-height:none}.wr-writing-head{align-items:flex-start;flex-direction:column}.wr-tabs{width:100%}.wr-tab{flex:1}.wr-dialog{width:calc(100vw - 12px);max-height:calc(100dvh - 12px);border-radius:14px}.wr-body{padding:12px;gap:12px}.wr-head{padding:16px}.wr-head h2{font-size:18px}.wr-section{padding:18px}.wr-writing{padding:0}.wr-essay-col,.wr-revision{padding:20px}.wr-essay{font-size:15px}}
 .wr-assignment{min-width:0}.wr-feedback-head{padding:0 0 13px;border-bottom:2px solid #cbddeb;margin-bottom:15px}.wr-feedback-head h4{font-size:19px;line-height:1.4;color:#143c63;margin:0 0 4px}.wr-feedback-head p{font-size:12px;line-height:1.6;color:#536981;margin:0}.wr-exercises{display:grid;gap:16px}.wr-summary{min-width:0;overflow-wrap:anywhere}.wr-summary h5{font-size:16px;color:#163c64;line-height:1.5;margin:5px 0}.wr-summary .wr-task-title{font-weight:600;font-size:12px;margin:0 0 10px}.wr-summary .wr-overall{margin-top:14px;color:#23415c;font-size:14px;line-height:1.8}.wr-summary .wr-overall p{font-size:14px;color:inherit;line-height:inherit;margin:0 0 12px}.wr-summary .wr-overall p:last-child{margin-bottom:0}.wr-summary .wr-submitted{border-top:1px solid #e0e7ee;padding-top:11px;margin-top:15px}.wr-pending{background:#f7f9fc;border-style:dashed;box-shadow:none}.wr-pending .wr-status{margin:0;padding:3px 0}.wr-result-list{grid-template-columns:1fr;gap:24px}.wr-prompt h4{font-size:14px;line-height:1.6;margin:0 0 10px;color:#34526f}.wr-prompt-text{font-size:14px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;color:#23415c}.wr-prompt figure{margin:18px 0 12px;padding:12px;border:1px solid #e0e7ef;border-radius:10px;background:#fff;text-align:center}.wr-prompt-image{display:block;width:auto;max-width:100%;height:auto;max-height:580px;object-fit:contain;margin:0 auto}.wr-source-link{display:inline-block;padding:6px 0;color:#185888;font-size:12px;line-height:1.6;text-decoration:underline;text-underline-offset:3px}.wr-source-link:focus-visible{outline:3px solid #60a3d8;outline-offset:3px}.wr-summary .wr-wrong-task,.wr-wrong-task,.wr-scaffold-label{font-size:13px;font-weight:800;line-height:1.6;color:#924132}.wr-scaffold-label{background:#fff2e4;border:1px solid #eac6a0;border-radius:9px;padding:12px;margin:0 0 15px}
 @media(max-width:800px){.wr-prompt figure{padding:4px;margin:14px 0 8px}.wr-summary{padding:15px}.wr-feedback-head h4{font-size:18px}.wr-tabs{min-width:0}.wr-tab{min-width:0;overflow-wrap:anywhere}.wr-prompt-text,.wr-summary .wr-overall p{font-size:14px}}
+.wr-assignment{margin-top:18px;padding:20px;border:1px solid #b9cede;border-radius:17px;background:#edf3f8;box-shadow:0 8px 26px #1232570d}.wr-feedback-head{margin:-20px -20px 20px;padding:18px 20px;background:#143a60;border-radius:16px 16px 0 0;border-bottom:4px solid #dbb05e}.wr-feedback-head h4{color:#fff;font-size:22px;font-weight:850;margin:0 0 5px}.wr-feedback-head p{color:#d9e6f2;font-size:13px}.wr-assignment .wr-summary{padding:21px;border-color:#c7d7e6;border-left:4px solid #d4aa58}.wr-assignment .wr-summary h5{font-size:18px}.wr-assignment .wr-summary .wr-overall,.wr-assignment .wr-summary .wr-overall p{font-size:15px;line-height:1.9}.wr-assignment .wr-pending{border-left-color:#bccbd8;background:#f5f8fb}
+@media(max-width:600px){.wr-assignment{padding:13px;border-radius:13px}.wr-feedback-head{margin:-13px -13px 14px;padding:16px;border-radius:12px 12px 0 0}.wr-feedback-head h4{font-size:20px}.wr-assignment .wr-summary{padding:16px}.wr-assignment .wr-summary .wr-overall,.wr-assignment .wr-summary .wr-overall p{font-size:14px}}
 
 </style>
 </head>
@@ -4184,6 +4186,12 @@ const ieltsWritingReviews_ = (() => {
     inFlight = request; return request;
   }
   function overallHtml(record) { return '<div class="wr-copy wr-overall">' + prose(record.overall) + '</div>'; }
+  function submissionDate(value) {
+    const text = String(value || '');
+    if (!/^\d{4}-\d{2}-\d{2}T/.test(text)) return text;
+    const date = new Date(text); if (!Number.isFinite(date.getTime())) return text;
+    return new Intl.DateTimeFormat('vi-VN', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Bangkok'}).format(date).replace(', ', ' · ');
+  }
   function card(record, assignment, task) {
     const label = assignment.weekCode + ' · Đề ' + task.taskNumber;
     const head = '<h5>' + escape(label) + '</h5>' + (task.title ? '<p class="wr-task-title">' + escape(task.title) + '</p>' : '');
@@ -4191,7 +4199,7 @@ const ieltsWritingReviews_ = (() => {
       '<p class="wr-status" role="status">Bài chữa Đề ' + task.taskNumber + ' chưa được trả. Nhận xét sẽ hiện tại đây khi có kết quả.</p></article>';
     return '<article class="wr-summary" data-wr-task="' + task.taskNumber + '"><span class="wr-kicker">Bài chữa của Cô · Đã trả</span>' + head +
       '<span class="wr-verdict">' + escape(record.learningVerdict) + '</span>' + (record.submissionStatus === 'wrong_task' ? '<p class="wr-wrong-task">Bài nộp chưa đúng đề</p>' : '') + overallHtml(record) +
-      '<p class="wr-submitted">Bài em nộp: ' + escape(record.source && record.source.submittedAt) + ' · ' + escape(record.originalWordCount) + ' từ</p>' +
+      '<p class="wr-submitted">Bài em nộp: ' + escape(submissionDate(record.source && record.source.submittedAt)) + ' · ' + escape(record.originalWordCount) + ' từ</p>' +
       '<button class="wr-button" type="button" data-wr-open="' + escape(record.resultId) + '" aria-label="Xem bài chữa ' + escape(label) + '">Xem bài chữa</button></article>';
   }
   function loadStatus() {
