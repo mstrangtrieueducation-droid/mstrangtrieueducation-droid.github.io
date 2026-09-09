@@ -507,9 +507,8 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
     .ielts-shadowing-steps{padding-left:26px;line-height:1.8;margin:22px 0}.ielts-shadowing-steps li{padding-left:8px;margin:12px 0}.ielts-shadowing-steps li::marker{font-weight:800;color:var(--blue,#1262bd)}
     .ielts-shadowing-deadline{display:flex;justify-content:space-between;gap:16px;padding:16px 20px;border:1px solid #f0d29b;border-radius:14px;background:#fff6e7;color:#81500e}
     @media(max-width:680px){.ielts-shadowing-body{padding:20px 16px}.ielts-shadowing-task{align-items:flex-start;flex-direction:column}.ielts-shadowing-deadline{flex-wrap:wrap}.ielts-shadowing-card h2{overflow-wrap:anywhere}}
-  </style><style>
+  </style><style id="ielts-writing-public-style">
 .wr-public-note{margin:12px 0;padding:13px 16px;border:1px solid #d5e0ed;border-radius:10px;background:#f6f9fd;color:#36536f;font-size:12px;line-height:1.7}.wr-public-note strong{display:block;color:#153c65;margin-bottom:3px}
-
 </style>
 </head>
 <body>
@@ -3170,17 +3169,93 @@ function ielts48OpenPendingHomeworkV32_(){
 // IELTS_PENDING_HOMEWORK_ALERT_UI_END_V32
 </script>
 <script>
+/* IELTS_WRITING_ASSIGNMENTS_MANIFEST_V1 */
+window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view"},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view"}]}]};
+/* IELTS_WRITING_ASSIGNMENT_HELPERS_V1: shared, public assignment metadata only. */
+const ieltsWritingAssignments_ = (() => {
+  'use strict';
+  const array = value => Array.isArray(value) ? value : [];
+  function code(value) {
+    const text = String(value || '').normalize('NFC').trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const match = text.match(/^(?:IELTS-)?WRITING-W0*(\d{1,3})(?:-.*)?$/);
+    return match ? 'IELTS-WRITING-W' + String(Number(match[1])).padStart(2, '0') : '';
+  }
+  function safeUrl(value) {
+    try {
+      if (!String(value || '').trim()) return '';
+      const url = new URL(String(value), document.baseURI);
+      return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
+    } catch (_) { return ''; }
+  }
+  function lessonKey(value) {
+    const safe = safeUrl(value); if (!safe) return '';
+    const url = new URL(safe); return url.origin + url.pathname.replace(/\/+$/, '');
+  }
+  function currentClass() {
+    return String(typeof ieltsParentAccess !== 'undefined' ? ieltsParentAccess.className : typeof state !== 'undefined' && state.dashboard ? state.dashboard.className : '').trim();
+  }
+  function all(className = currentClass()) {
+    const manifest = window.IELTS_WRITING_ASSIGNMENTS;
+    const entries = Array.isArray(manifest) ? manifest : array(manifest && manifest.assignments);
+    const groups = new Map();
+    entries.forEach(entry => {
+      if (!entry || entry.enabled === false || entry.autoGrade === false) return;
+      if (!array(entry.classNames).includes(className)) return;
+      const assignmentCode = code(entry.assignmentCode);
+      const week = Number(assignmentCode.match(/W(\d+)$/)?.[1]);
+      const enabledFromWeek = Number(entry.enabledFromWeek || 9);
+      if (!assignmentCode || !Number.isFinite(enabledFromWeek) || week < Math.max(9, enabledFromWeek)) return;
+      const tasks = Array.isArray(entry.tasks) ? entry.tasks : [entry];
+      tasks.forEach(task => {
+        if (!task || task.enabled === false || task.autoGrade === false) return;
+        const taskNumber = Number(task.taskNumber);
+        if (!Number.isInteger(taskNumber) || taskNumber < 1 || taskNumber > 50) return;
+        let group = groups.get(assignmentCode);
+        if (!group) {
+          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), lessonUrls:[], tasks:[]};
+          groups.set(assignmentCode, group);
+        }
+        [entry.lessonUrl, task.lessonUrl].map(lessonKey).filter(Boolean).forEach(url => {
+          if (!group.lessonUrls.includes(url)) group.lessonUrls.push(url);
+        });
+        if (group.tasks.some(existing => existing.taskNumber === taskNumber)) return;
+        group.tasks.push({taskNumber, title:String(task.title || ''), promptText:String(task.promptText || ''),
+          imageUrl:safeUrl(task.imageUrl), sourceUrl:safeUrl(task.sourceUrl || entry.sourceUrl || task.lessonUrl || entry.lessonUrl)});
+      });
+    });
+    return [...groups.values()].map(group => ({...group, tasks:group.tasks.sort((a,b) => a.taskNumber-b.taskNumber)}));
+  }
+  function forItem(item) {
+    if (!item || item.skill !== 'writing') return null;
+    const values = [item.assignmentCode, item.sourceCode, item.code];
+    const urls = [item.lessonUrl, item.url];
+    array(item.tasks).forEach(task => {
+      if (!task) return;
+      values.push(task.assignmentCode, task.sourceCode, task.code, task.title);
+      urls.push(task.url, task.lessonUrl);
+      array(task.actions).forEach(action => { if (action) urls.push(action.url); });
+    });
+    const codes = [...new Set(values.map(code).filter(Boolean))];
+    // An explicit code is authoritative; a lesson link cannot override it.
+    if (codes.length) return codes.length === 1 ? all().find(entry => entry.assignmentCode === codes[0]) || null : null;
+    const keys = urls.map(lessonKey).filter(Boolean);
+    const matches = all().filter(entry => entry.lessonUrls.some(url => keys.includes(url)));
+    return matches.length === 1 ? matches[0] : null;
+  }
+  return {code, all, forItem, safeUrl};
+})();
+/* IELTS_WRITING_ASSIGNMENT_HELPERS_END_V1 */
+
 /* IELTS_WRITING_PRIVATE_NOTICE_V1: no student data or bearer links. */
 (function(){
+const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const base=assignmentCard;
 assignmentCard=function(item){
-  const html=base.apply(this,arguments);
-  if(!item||item.skill!=='writing')return html;
-  const values=[item.assignmentCode,item.sourceCode,item.code,...(item.tasks||[]).flatMap(task=>[task.assignmentCode,task.code,task.title])];
-  const w09=values.some(value=>/^(?:IELTS-)?WRITING-W0*9(?:-|$)/.test(ielts48CanonicalAssignmentCode_(value))) || (item.id==='writing-chung-9-19082026'&&(item.tasks||[]).some(task=>task.url==='https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/'));
-  if(!w09)return html;
-  const notice='<aside class="wr-public-note"><strong>Bài chữa Writing W09 · Đề 1</strong>Em mở hồ sơ cá nhân bằng đường link riêng Cô đã gửi, vào Writing W09 hoặc Kết quả cá nhân rồi chọn “Xem bài chữa”.</aside>';
-  return html.replace('</article>',notice+'</article>');
+  const html=base.apply(this,arguments),assignment=ieltsWritingAssignments_.forItem(item);
+  if(!assignment)return html;
+  const notice='<aside class="wr-public-note"><strong>Bài chữa Writing '+escape(assignment.weekCode)+' · '+assignment.tasks.length+' đề</strong>Em mở hồ sơ cá nhân bằng đường link riêng Cô đã gửi, vào Writing hoặc Kết quả cá nhân để đọc nhận xét từng đề và chọn “Xem bài chữa”.</aside>';
+  const end=html.lastIndexOf('</article>');
+  return end<0?html:html.slice(0,end)+notice+html.slice(end);
 };
 })();
 </script>
