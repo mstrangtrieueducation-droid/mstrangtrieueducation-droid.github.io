@@ -811,7 +811,7 @@ function renderIeltsShadowingV1_() {
       <header class="assignment-head session-head"><div><span class="badge neutral">SHADOWING</span><h3>${esc(item.assignmentCode)}</h3><p>Ngày giao: ${esc(item.releaseDate)}</p></div><div><p class="eyebrow">BÀI TẬP SHADOWING</p><h2>${esc(item.topic)}</h2></div></header>
       <div class="ielts-shadowing-body"><div class="ielts-shadowing-task"><h3>Yêu cầu bài tập</h3>${safeUrl ? `<a class="task-action" href="${esc(parentLearningUrl_(safeUrl))}" target="_blank" rel="noopener noreferrer">Làm / nộp bài</a>` : ''}</div>
       <ol class="ielts-shadowing-steps">${points.map(function(point) { return `<li>${esc(point)}</li>`; }).join('')}</ol>
-      ${item.dueDate ? `<div class="ielts-shadowing-deadline"><strong>Hạn nộp bài</strong><strong>${esc(item.dueDate)}</strong></div>` : ''}</div>
+      ${item.dueDate ? `<div class="ielts-shadowing-deadline"><strong>Hạn nộp bài</strong><strong>${esc(item.dueDate)}</strong></div>` : ''}${item.directSubmission?parentDirectAttempts_(item,null):parentSubmissionKnown_(item,null)?'<p>'+esc(parentSubmissionLabel_(item,null))+'</p>':parentSubmissionLinks_(item,null)}</div>
     </article>`;
   }).join('');
   host.innerHTML = `<header class="section-head"><p class="eyebrow">IELTS · SHADOWING</p><h2>Bài tập Shadowing</h2><p>Em xem hướng dẫn, luyện theo video và nộp bài tại link của từng bài.</p></header>${cards || empty('Chưa có bài Shadowing được giao.', 'Bài mới sẽ hiển thị khi đến ngày phát hành.')}`;
@@ -1044,12 +1044,12 @@ function assignmentCard(item){
       const latest=skill.records.find(record=>Number.isFinite(record.band));
       const scoreBadge=latest&&latest.isNewScore?'<span class="badge new">ĐIỂM MỚI</span>':'';
       const group=skillId==='speaking'&&state.student.speakingGroupLabel?`<span class="badge neutral">${esc(state.student.speakingGroupLabel)}</span>`:`<span>${skillLabel(skillId)}</span>`;
-      return `<div class="profile-bar"><div><span>Kết quả cá nhân</span><h3>${esc(state.student.name)}</h3></div>${group}</div><div class="grid"><article class="card metric"><span>Band ước tính gần nhất</span><strong>${band(skill.latestBand)}</strong>${scoreBadge}</article><article class="card metric"><span>Bài tập đã theo dõi</span><strong>${skill.trackedCount}</strong><small>Hoàn thành ${skill.completedCount} · Nộp muộn ${skill.lateCount} · Chưa hoàn thành ${skill.missingCount}</small></article></div><div>${skill.records.map(record=>recordCard(record)).join('')}</div>`;
+      return `<div class="profile-bar"><div><span>Kết quả cá nhân</span><h3>${esc(state.student.name)}</h3></div>${group}</div><div class="grid"><article class="card metric"><span>Band ước tính gần nhất</span><strong>${band(skill.latestBand)}</strong>${scoreBadge}</article>${parentSubmissionSummary_(skill)?`<article class="card metric"><span>Bài tập từ tháng 9/2026</span>${parentSubmissionSummary_(skill)}</article>`:''}</div><div>${skill.records.map(record=>recordCard(record)).join('')}</div>`;
     }
 
     function recordCard(record){
       const badgeClass=record.statusType==='done'?'done':record.statusType==='late'?'late':record.statusType==='missing'?'missing':'neutral';
-      return `<article class="card record"><div class="record-top"><div><h4>${esc(record.sessionLabel)}</h4><span class="record-date">${esc(record.date||'')}</span></div><span class="badge ${badgeClass}">${esc(record.homeworkStatus)}</span></div>${Number.isFinite(record.band)?`<div class="band-row"><span class="band">${band(record.band)}</span><span>Band ước tính</span>${record.isNewScore?'<span class="badge new">ĐIỂM MỚI</span>':''}</div>`:''}${record.lessonFeedback?`<div class="feedback-section"><strong>Nhận xét buổi học</strong><p>${esc(record.lessonFeedback)}</p></div>`:''}${record.homeworkFeedback?`<div class="feedback-section"><strong>Nhận xét bài tập về nhà</strong><p>${esc(record.homeworkFeedback)}</p></div>`:''}</article>`;
+      return `<article class="card record"><div class="record-top"><div><h4>${esc(record.sessionLabel)}</h4><span class="record-date">${esc(record.date||'')}</span></div>${parentSubmissionKnown_(null,record)?`<span class="badge ${badgeClass}">${esc(parentSubmissionLabel_(null,record))}</span>`:''}</div>${Number.isFinite(record.band)?`<div class="band-row"><span class="band">${band(record.band)}</span><span>Band ước tính</span>${record.isNewScore?'<span class="badge new">ĐIỂM MỚI</span>':''}</div>`:''}${record.lessonFeedback?`<div class="feedback-section"><strong>Nhận xét buổi học</strong><p>${esc(record.lessonFeedback)}</p></div>`:''}${record.homeworkFeedback?`<div class="feedback-section"><strong>Nhận xét bài tập về nhà</strong><p>${esc(record.homeworkFeedback)}</p></div>`:''}</article>`;
     }
 
 function lookupStudent(){
@@ -1071,7 +1071,7 @@ function lookupStudent(){
   const isWeb=skillId==='reading'||skillId==='listening';
   const primary=has?band(skill.latestBand):(isWeb?'Chưa có bài luyện':'Theo dõi bằng nhận xét');
   const label=has?(isWeb?'Điểm luyện tập gần nhất':'Kết quả đánh giá gần nhất'):(isWeb?'Điểm và chuyên cần trên web':'Không chấm điểm mỗi buổi');
-  return `<article class="card skill-card"><span class="program">${skillLabel(skillId)}</span><h3>${SKILL_META[skillId].vi}</h3><div class="${has?'band':'tracking-label'}">${esc(primary)}</div><p>${esc(label)}</p><small>Đã theo dõi ${skill.trackedCount||0} · Thiếu ${skill.missingCount||0} · Muộn ${skill.lateCount||0}</small></article>`;
+  return `<article class="card skill-card"><span class="program">${skillLabel(skillId)}</span><h3>${SKILL_META[skillId].vi}</h3><div class="${has?'band':'tracking-label'}">${esc(primary)}</div><p>${esc(label)}</p>${parentSubmissionSummary_(skill)}</article>`;
 }
     function overviewRecord(skillId,record){
   const badgeClass=record.statusType==='done'?'done':record.statusType==='late'?'late':record.statusType==='missing'?'missing':'neutral';
@@ -1083,10 +1083,10 @@ function lookupStudent(){
   }else if(skillId==='writing'){
     if(record.homeworkFeedback)detail+=`<p><strong>Nhận xét bài tập:</strong> ${esc(record.homeworkFeedback)}</p>`;
   }else{
-    detail+=`<p><strong>Chuyên cần:</strong> ${esc(record.homeworkStatus||'Chưa ghi nhận')}</p>`;
+    if(parentSubmissionKnown_(null,record))detail+=`<p><strong>Chuyên cần:</strong> ${esc(parentSubmissionLabel_(null,record))}</p>`;
     if(record.homeworkFeedback)detail+=`<p>${esc(record.homeworkFeedback)}</p>`;
   }
-  return `<article class="overview-record"><div><strong>${esc(record.sessionLabel)}</strong><span class="record-date">${esc(record.date||'')}</span></div><div class="overview-record-main"><div class="record-status">${Number.isFinite(record.band)?`<strong>${isWeb?'Điểm luyện tập':'Kết quả đánh giá'} ${band(record.band)}</strong>`:''}<span class="badge ${badgeClass}">${esc(record.homeworkStatus||'Chưa ghi nhận')}</span>${record.isNewScore?'<span class="badge new">KẾT QUẢ MỚI</span>':''}</div>${detail||'<p class="record-date">Chưa có nhận xét.</p>'}</div></article>`;
+  return `<article class="overview-record"><div><strong>${esc(record.sessionLabel)}</strong><span class="record-date">${esc(record.date||'')}</span></div><div class="overview-record-main"><div class="record-status">${Number.isFinite(record.band)?`<strong>${isWeb?'Điểm luyện tập':'Kết quả đánh giá'} ${band(record.band)}</strong>`:''}${parentSubmissionKnown_(null,record)?`<span class="badge ${badgeClass}">${esc(parentSubmissionLabel_(null,record))}</span>`:''}${record.isNewScore?'<span class="badge new">KẾT QUẢ MỚI</span>':''}</div>${detail||'<p class="record-date">Chưa có nhận xét.</p>'}</div></article>`;
 }
     function overviewSkillDetail(skillId,skill){
   const records=((skill&&skill.records)||[]).slice().sort((a,b)=>dateSerial(b.date)-dateSerial(a.date)||(sessionNumberUi(b.sessionLabel)||0)-(sessionNumberUi(a.sessionLabel)||0));
@@ -1979,6 +1979,7 @@ function ielts50UniqueBestMatch_(items,scoreFor){
 }
 
 function ielts50RecordForAssignment_(item){
+  if(item&&item.directRecord)return item.directRecord;
   if(!state.student||!item)return null;
   const skill=state.student.skills&&state.student.skills[item.skill];
   const records=(skill&&skill.records)||[];
@@ -1986,6 +1987,7 @@ function ielts50RecordForAssignment_(item){
 }
 
 function ielts50AssignmentForRecord_(skillId,record,assignments){
+  if(record&&record.directAssignmentId)return (assignments||[]).find(item=>item.id===record.directAssignmentId)||null;
   let matches=(assignments||[]).filter(item=>item.skill===skillId);
   if(skillId==='speaking'&&state.student)matches=matches.filter(ielts50SpeakingAssignmentForStudent_);
   return ielts50UniqueBestMatch_(matches,item=>ielts50RecordMatchScore_(item,record));
@@ -2072,6 +2074,8 @@ function ielts50SelfStudyScoreTextV19_(result){
 }
 
 function ielts50SelfStudyStatusHtmlV19_(item,results,record){
+  if(item&&item.directSubmission)return parentDirectAttempts_(item,record);
+  const sourceVerified=parentSubmissionKnown_(item,record);
   const scored=(Array.isArray(results)?results:results?[results]:[]).filter(ielts50HasScoreV12_);
   let submissions=Array.isArray(record&&record.submissionAttempts)?record.submissionAttempts.filter(entry=>entry&&entry.submittedAt):[];
   if(!submissions.length&&record&&record.submittedAt)submissions=[{attempt:1,label:'Lần 1',submittedAt:record.submittedAt}];
@@ -2109,8 +2113,9 @@ function ielts50SelfStudyStatusHtmlV19_(item,results,record){
     const score=ielts50SelfStudyScoreTextV19_(row.result);
     return `<li class="ielts-self-study-attempt"><strong>${esc(label)}</strong>${row.submittedAt?`<time>${esc(row.submittedAt)}</time>`:'<span>Chưa có giờ nộp</span>'}${score?`<b>${esc(score)}</b>`:'<span>Chưa có điểm</span>'}</li>`;
   }).join('')}</ol>`:'<p class="ielts50-no-attempt">Chưa ghi nhận lần nộp hoặc điểm.</p>';
+  if(!unique.length&&!sourceVerified)return parentSubmissionLinks_(item,record);
   const sourceNote=declared>unique.length?`<small>Nguồn tổng hợp ghi nhận ${declared} lần; hiện có chi tiết ${unique.length} lượt.</small>`:'';
-  return `<section class="ielts-self-study-status${unique.length?'':' is-unrecorded'}"><header><strong>Tình trạng bài làm</strong><span class="badge ${statusClass}">${esc(statusText)}</span></header>${history}${sourceNote}</section>`;
+  return `<section class="ielts-self-study-status${unique.length?'':' is-unrecorded'}"><header><strong>Tình trạng bài làm</strong><span class="badge ${statusClass}">${esc(statusText)}</span></header>${history}${sourceNote}${parentSubmissionLinks_(item,record)}</section>`;
 }
 
 function ielts50TaskInstructionPointsV16_(value){
@@ -2524,15 +2529,17 @@ function ielts50SubmissionAttemptsHtmlV15_(record){
 }
 
 function ielts50AssignmentStatusHtml_(item,record,isSingleTask){
+  const verified=parentSubmissionKnown_(item,record);
   const title='Nhận xét bài tập về nhà';
   if(item.noHomework)return '';
   if(!record){
+    if(!verified)return parentSubmissionLinks_(item,record);
     return `<section class="ielts50-assignment-status is-unrecorded"><p class="ielts50-homework-summary"><strong>${title}:</strong><span>Chưa có ghi nhận.</span></p></section>`;
   }
   const badgeClass=record.statusType==='done'?'done':record.statusType==='late'?'late':record.statusType==='missing'?'missing':'neutral';
   const scopeNote=!isSingleTask?'<small>Ghi nhận chung cho toàn bộ bài; dữ liệu hiện chưa tách riêng từng phần.</small>':'';
   const conflict=record.dataConflict?'<p class="ielts50-data-note">Có dữ liệu chưa thống nhất; vui lòng đối chiếu với giáo viên.</p>':'';
-  return `<section class="ielts50-assignment-status"><p class="ielts50-homework-summary"><strong>${title}:</strong><span class="badge ${badgeClass}">${esc(record.homeworkStatus||'Chưa ghi nhận')}</span>${ielts50SubmissionAttemptsHtmlV15_(record)}</p>${scopeNote}${ielts50FeedbackHtmlV15_(record.homeworkTeacherComment||record.homeworkFeedback,'Chưa có nhận xét của giáo viên.')}${conflict}</section>`;
+  return `<section class="ielts50-assignment-status"><p class="ielts50-homework-summary"><strong>${title}:</strong>${verified?`<span class="badge ${badgeClass}">${esc(parentSubmissionLabel_(item,record))}</span>`:''}${ielts50SubmissionAttemptsHtmlV15_(record)}</p>${scopeNote}${ielts50FeedbackHtmlV15_(record.homeworkTeacherComment||record.homeworkFeedback,'Chưa có nhận xét của giáo viên.')}${conflict}${parentSubmissionLinks_(item,record)}</section>`;
 }
 
 function ielts50RefreshOpenedStudentV11_(name,requestId,retryCount){
@@ -2551,6 +2558,7 @@ function ielts50HabitFromSkills_(skills){
   const habit={evaluatedCount:0,submittedCount:0,completedOnTimeCount:0,submittedTimingUnknownCount:0,lateCount:0,partialCount:0,missingCount:0,issueCount:0,unrecordedCount:0,issueRate:null,label:'Chưa đủ dữ liệu để kết luận'};
   const explicit=['completed','submitted_zalo','late','partial','late_partial','missing'];
   Object.keys(skills||{}).forEach(skillId=>((skills[skillId]&&skills[skillId].records)||[]).forEach(record=>{
+    if(!record.directDeadline||!record.directDeadline.eligible||record.directDeadline.pending&&!record.directDeadline.missing||!parentSubmissionGuard_.can(record))return;
     const code=record.homeworkCode||'not_recorded';
     if(!explicit.includes(code)){habit.unrecordedCount+=1;return}
     habit.evaluatedCount+=1;
@@ -3167,7 +3175,630 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
 
 /* STUDENT_PREFILL_END */
 // Parent portal state is scoped to the bearer token, with server authorization before cache use.
+/* SUBMISSION_STATUS_GUARD_V1: absence requires a current, scoped source check. */
+(function(root){
+  'use strict';
+  function createSubmissionStatusGuard(options){
+    options=options||{};
+    var epoch=0, sequence=0, identity='', channels=new Map(), grants=new WeakMap();
+    function currentIdentity(){
+      try{return String(options.getIdentity&&options.getIdentity()||'');}catch(_){return '';}
+    }
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function reset(){epoch++;identity='';channels.clear();grants=new WeakMap();}
+    function sync(){
+      var value=currentIdentity();
+      if(!value||!visible()){reset();return '';}
+      if(identity!==value){reset();identity=value;}
+      return value;
+    }
+    function validProof(proof){
+      return Boolean(proof&&proof.schema===1&&proof.complete===true&&proof.freshRead===true&&
+        Number.isFinite(proof.verifiedAt)&&proof.verifiedAt>0);
+    }
+    function ticketCurrent(ticket){
+      return Boolean(ticket&&sync()&&ticket.identity===identity&&ticket.epoch===epoch&&
+        channels.get(ticket.channel)===ticket);
+    }
+    function begin(channel){
+      var who=sync();
+      if(!who)return null;
+      var ticket={epoch:epoch,sequence:++sequence,identity:who,channel:String(channel||'receipts'),settled:false};
+      channels.set(ticket.channel,ticket);
+      return ticket;
+    }
+    function grant(ticket,target,proof,conditions){
+      if(!ticketCurrent(ticket)||!target||typeof target!=='object')return false;
+      conditions=conditions||{};
+      grants.set(target,{ticket:ticket,proof:proof,usable:conditions.complete!==false&&conditions.stale!==true});
+      return true;
+    }
+    function accept(ticket,payload,conditions){
+      if(!ticketCurrent(ticket)||!payload||typeof payload!=='object')return false;
+      var seen=new WeakSet();
+      function visit(value,inherited){
+        if(!value||typeof value!=='object'||seen.has(value))return;
+        seen.add(value);
+        var own=Object.prototype.hasOwnProperty.call(value,'submissionVerification');
+        var proof=own?value.submissionVerification:inherited;
+        grant(ticket,value,proof,conditions);
+        Object.keys(value).forEach(function(key){
+          if(key!=='submissionVerification')visit(value[key],proof);
+        });
+      }
+      visit(payload,null);ticket.settled=true;return true;
+    }
+    function authorize(ticket,target,proof,conditions){
+      // A narrow receipt adapter must first match the server's immutable task
+      // key and the live pupil. This binds its result to the existing renderer
+      // object without replacing teacher marks, feedback or assignment links.
+      if(!grant(ticket,target,proof,conditions))return false;
+      ticket.settled=true;return true;
+    }
+    function can(target){
+      var entry=target&&typeof target==='object'&&grants.get(target);
+      return Boolean(entry&&ticketCurrent(entry.ticket)&&entry.ticket.settled&&entry.usable&&validProof(entry.proof));
+    }
+    function fail(ticket){
+      if(!ticketCurrent(ticket))return false;
+      ticket.settled=false;return true;
+    }
+    function transfer(source,target){
+      var entry=source&&typeof source==='object'&&grants.get(source);
+      if(!entry||!ticketCurrent(entry.ticket)||!target||typeof target!=='object')return target;
+      var proof=Object.prototype.hasOwnProperty.call(target,'submissionVerification')?target.submissionVerification:entry.proof;
+      grants.set(target,{ticket:entry.ticket,proof:proof,usable:entry.usable});
+      return target;
+    }
+    return {begin:begin,accept:accept,authorize:authorize,can:can,fail:fail,suspend:reset,clear:reset,
+      transfer:transfer,isCurrent:ticketCurrent,isVerifiedProof:validProof};
+  }
+  root.createSubmissionStatusGuard=createSubmissionStatusGuard;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionStatusGuard:createSubmissionStatusGuard};
+})(typeof globalThis==='object'?globalThis:this);
+
+/* SUBMISSION_RECEIPT_OWNER_V1: one lightweight current-pupil read. */
+(function(root){
+  'use strict';
+  function createSubmissionReceiptOwner(options){
+    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0,sourceRetryCount=0;
+    function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
+    function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset){retryCount=0;sourceRetryCount=0;}}
+    function transientAuthority(payload){
+      var a=payload&&payload.assignmentAuthority;
+      return Boolean(payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
+    }
+    function transientSource(payload){
+      return Boolean(options.retryTransientSources===true&&payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&identity.indexOf(payload.className+'|')===0&&Array.isArray(payload.coverage)&&payload.coverage.some(function(source){return source&&source.complete===false&&source.freshRead===false&&(source.sourceFailure==='SOURCE_BUSY'||source.sourceFailure==='SOURCE_VERSION_CHANGED');}));
+    }
+    function suspend(){needsFresh=true;current=null;options.guard.suspend();}
+    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function refresh(retry){
+      // Only the same internally scheduled job may continue while hidden.
+      var resuming=Boolean(retry&&retry.run===generation&&retry.identity===identity&&isCurrent(retry.run));
+      var active=who();if(!active||!visible()&&!resuming)return Promise.resolve(false);
+      if(active!==identity){clear();identity=active;}
+      if(job){if(needsFresh)queued=true;return job;}
+      cancelRetry(!resuming);
+      var run=++generation,retryNeeded=false,retryKind='';ticket=options.guard.begin('receipts');current=null;needsFresh=!visible();readState='loading';
+      if(visible()&&options.render)options.render();
+      var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
+        if(!isCurrent(run))return false;
+        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
+        // Receipt absence is not a withdrawal of an earlier confirmed receipt.
+        // Keep the server-positive union for this exact identity, even when a
+        // later source snapshot omits an attempt. No local submit event enters it.
+        var merged=new Map();
+        (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
+        payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
+        retryKind=transientAuthority(payload)&&retryCount<2?'authority':transientSource(payload)&&sourceRetryCount<3?'source':'';
+        retryNeeded=Boolean(retryKind);
+        if(!retryNeeded)cancelRetry(true);
+        readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        if(visible()&&options.render)options.render();return true;
+      }).catch(function(){
+        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        return false;
+      }).finally(function(){if(job===task){
+        job=null;
+        if(queued&&visible()&&who()===identity){queued=false;refresh();}
+        else if(retryNeeded&&isCurrent(run)){
+          // Retain this response before a bounded retry. KIDS source-busy
+          // retries are explicitly enabled by its adapter; ordinary errors never retry.
+          var intent={run:run,identity:identity};
+          var delay=retryKind==='source'?[4000,10000,20000][sourceRetryCount]+Math.floor(Math.random()*500):1500;
+          retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job){if(retryKind==='source')sourceRetryCount++;else retryCount++;refresh(intent);}},delay);
+        }
+      }});
+      job=task;return task;
+    }
+    function reapply(target){
+      if(!target||!identity||who()!==identity||!visible())return target;
+      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
+    }
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
+  }
+  root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_DEADLINE_POLICY_V1: dashboard deadlines, September 2026 onward. */
+(function(root){
+  'use strict';
+  var offset=7*3600000,cutover=Date.UTC(2026,8,1)-offset;
+  function time(value,endOfDay){
+    if(typeof value==='number')return Number.isFinite(value)&&value>1e11&&value<=8640000000000000?value:0;
+    var s=String(value||'').trim(),m;
+    if(/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(s))return Date.parse(s)||0;
+    if((m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)))m=[m[0],m[3],m[2],m[1],m[4],m[5],m[6]];
+    else m=s.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?:[·,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if(!m)return 0;
+    var n=m.slice(1).map(function(v){return Number(v||0);}),d=new Date(Date.UTC(n[2],n[1]-1,n[0],n[3],n[4],n[5]));
+    if(d.getUTCFullYear()!==n[2]||d.getUTCMonth()!==n[1]-1||d.getUTCDate()!==n[0]||n[3]>23||n[4]>59||n[5]>59)return 0;
+    return d.getTime()-offset+(endOfDay&&m[4]===undefined?86399999:0);
+  }
+  function first(source,keys,end){for(var i=0;i<keys.length;i++){var v=time(source&&source[keys[i]],end);if(v)return v;}return 0;}
+  function receiptTime(receipt){
+    receipt=receipt||{};
+    // Keep the friendly display unchanged; the original source timestamp is
+    // the canonical comparison value when the backend supplies it.
+    var milliseconds=typeof receipt.submittedAtMs==='number'?time(receipt.submittedAtMs,false):0;
+    return milliseconds||time(receipt.submittedAt,false);
+  }
+  function evaluate(assignment,receipts,options){
+    options=options||{};assignment=assignment||{};
+    // No receipt date, month column, or generatedAt can invent the assigned date.
+    var assigned=first(assignment,['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'],false);
+    var due=first(assignment,['dueAt','deadlineAt','deadlineIso','dueDate','deadline'],true);
+    var eligible=assigned>=cutover&&due>=assigned;
+    var times=(Array.isArray(receipts)?receipts:[]).map(receiptTime).filter(Boolean);
+    var received=times.length>0,complete=received&&options.complete!==false;
+    var completedAt=options.completedAt?time(options.completedAt,false):received?Math.min.apply(null,times):0;
+    var now=typeof options.now==='number'?options.now:Date.now();
+    var pending=Boolean(assigned>=cutover&&assigned<=now&&options.verified===true&&!complete);
+    return {eligible:eligible,assignedAt:assigned,dueAt:due,received:received,complete:complete,
+      late:Boolean(eligible&&complete&&completedAt>due),
+      pending:pending,
+      missing:Boolean(eligible&&options.verified===true&&!complete&&now>due),
+      label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':pending?(eligible&&now>due?'Chưa nộp · Quá hạn':'Cần nộp bài'):''};
+  }
+  var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_ASSIGNMENT_WINDOW_V1: source code reuse stays date-bound. */
+(function(root){
+  'use strict';
+  function assignedAt(assignment){
+    return root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{}).assignedAt;
+  }
+  // Callers provide only source-proven same-family/code candidates, and preserve
+  // any independent class/group lane. Deadlines never truncate valid late work;
+  // only a new occurrence of that same assignment code closes this window.
+  function windowFor(assignment,candidates){
+    var start=assignedAt(assignment),rows=Array.isArray(candidates)?candidates:[],unique=new Map();
+    rows.concat([assignment]).forEach(function(row){
+      var date=assignedAt(row),id=String(row.id||row.assignmentId||'');
+      unique.set(id+'|'+date,row);
+    });
+    rows=Array.from(unique.values());
+    var undated=rows.some(function(row){return !assignedAt(row);});
+    var same=rows.filter(function(row){return assignedAt(row)===start;});
+    var ambiguous=rows.length>1&&(undated||same.length>1);
+    var later=rows.map(assignedAt).filter(function(date){return date>start;});
+    return {start:start,end:later.length?Math.min.apply(null,later):0,ambiguous:ambiguous,known:Boolean(start)&&!ambiguous};
+  }
+  function contains(receipt,assignment,candidates){
+    var window=windowFor(assignment,candidates);
+    var time=root.DirectSubmissionDeadlinePolicy.receiptTime(receipt);
+    if(!time||window.ambiguous)return false;
+    return (!window.start||time>=window.start)&&(!window.end||time<window.end);
+  }
+  var api={assignedAt:assignedAt,windowFor:windowFor,contains:contains};
+  root.DirectSubmissionAssignmentWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_SUBMISSION_HISTORY_V1: reconcile legacy display rows with source receipts. */
+(function(root){
+  'use strict';
+  function list(value){return Array.isArray(value)?value:[];}
+  function text(value){return String(value==null?'':value).trim();}
+  function timestamp(item){
+    item=item||{};
+    var policy=root.DirectSubmissionDeadlinePolicy,value=item.submittedAt,ms=typeof item.submittedAtMs==='number'?policy.time(item.submittedAtMs):0;
+    if(ms)return {start:ms,end:ms};
+    if(typeof value==='number'){ms=policy.time(value);return ms?{start:ms,end:ms}:null;}
+    var s=text(value),m;
+    // Intl vi-VN also produces clock-first timestamps. These are display
+    // formats of the same source time, never a reason to create another attempt.
+    if((m=s.match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s*[,·]?\s+(\d{1,2}[/.]\d{1,2}[/.]\d{4})$/)))s=m[2]+' '+m[1];
+    ms=policy.time(s);
+    if(!ms||!/[ T·,\s]\d{1,2}:\d{2}/.test(s))return null;
+    var resolution=/\d{1,2}:\d{2}:\d{2}\.\d+/.test(s)?1:/\d{1,2}:\d{2}:\d{2}/.test(s)?1000:60000;
+    return {start:ms,end:ms+resolution-1};
+  }
+  function fileKey(value){
+    try{
+      var u=new URL(value);if(u.protocol!=='https:'||u.username||u.password)return '';
+      var match=null,id='';
+      if(u.hostname==='drive.google.com'||u.hostname==='drive.usercontent.google.com'){
+        match=u.pathname.match(/^\/file\/d\/([^/]+)/);id=match?match[1]:u.searchParams.get('id');
+      }else if(u.hostname==='docs.google.com'){
+        match=u.pathname.match(/^\/(?:document|spreadsheets|presentation|drawings)\/d\/([^/]+)/);id=match?match[1]:'';
+      }
+      if(id)return 'drive:'+id;
+      // Forms response/edit URLs are distinct evidence URLs, even when their
+      // parent form ID is the same. Never treat a form as a Drive upload.
+      u.hash='';return u.href;
+    }catch(_){return '';}
+  }
+  function evidence(item){
+    var values=[item.viewUrl,item.reviewUrl,item.fileUrl,item.url].concat(list(item.evidenceUrls),list(item.links).map(function(x){return x&&x.url;}),list(item.submissionFiles).map(function(x){return x&&x.url;}));
+    var found=new Set();
+    values.forEach(function(value){
+      var key=fileKey(value);if(key)found.add(key);
+    });return found;
+  }
+  function evidenceText(value){return text(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');}
+  function genericEvidence(value){return /^(?:file|document|video|pdf|link|upload|attachment|unknown|tep|tai lieu|tep dinh kem|mo bai|xem bai|mo bai da nop|xem bai da nop)$/.test(evidenceText(value));}
+  function genericEvidenceType(value){return /^(?:file|document|link|upload|attachment|unknown|tep|tai lieu)$/.test(evidenceText(value));}
+  function mergeEvidenceItem(before,after){
+    if(typeof before==='string'&&typeof after==='string')return after;
+    var result=Object.assign({},typeof before==='object'?before:{url:before});
+    var next=typeof after==='object'?after:{url:after};
+    Object.keys(next).forEach(function(key){
+      var value=next[key];if(value===undefined||value===null||value==='')return;
+      var previous=result[key],available=previous!==undefined&&previous!==null&&previous!=='';
+      // Prefer the current URL for an identical file, retain a specific legacy
+      // caption/type, and add metadata that was previously unavailable.
+      if(key==='url'||!available)result[key]=value;
+      else if(key==='label'&&genericEvidence(previous)&&!genericEvidence(value))result[key]=value;
+      else if(key==='type'&&genericEvidenceType(previous)&&!genericEvidenceType(value))result[key]=value;
+    });
+    return result;
+  }
+  function mergeEvidenceArrays(before,after){
+    var rows=[],byKey=new Map();
+    list(before).concat(list(after)).forEach(function(value){
+      if(value===undefined||value===null||value==='')return;
+      var url=typeof value==='string'?value:value&&value.url;
+      var key=fileKey(url)||'metadata:'+JSON.stringify(value);
+      if(byKey.has(key)){var index=byKey.get(key);rows[index]=mergeEvidenceItem(rows[index],value);}
+      else{byKey.set(key,rows.length);rows.push(typeof value==='object'?Object.assign({},value):value);}
+    });
+    return rows;
+  }
+  function enrich(before,after){
+    var result=Object.assign({},before);
+    Object.keys(after).forEach(function(key){
+      var value=after[key];
+      if(value===undefined||value===null||value===''||Array.isArray(value)&&!value.length)return;
+      if(['evidenceUrls','links','submissionFiles'].includes(key)&&Array.isArray(value)){result[key]=mergeEvidenceArrays(result[key],value);return;}
+      result[key]=value;
+    });
+    return result;
+  }
+  function merge(existing,incoming,options){
+    options=options||{};
+    var scope=typeof options.scope==='function'?function(item){return text(options.scope(item));}:function(){return 'bound-task';};
+    var rows=[],ids=new Map();
+    list(existing).concat(list(incoming)).forEach(function(item){
+      if(!item||typeof item!=='object')return;
+      var copy=Object.assign({},item),id=text(copy.receiptId),lane=scope(copy),key=lane+'\u0000'+id;
+      if(id&&ids.has(key)){var index=ids.get(key);rows[index]=enrich(rows[index],copy);}
+      else{if(id)ids.set(key,rows.length);rows.push(copy);}
+    });
+    function compatible(legacy,direct){
+      var lane=scope(legacy);if(!lane||lane!==scope(direct))return false;
+      for(var k of ['family','part'])if(text(legacy[k])&&text(direct[k])&&text(legacy[k])!==text(direct[k]))return false;
+      var a=timestamp(legacy),b=timestamp(direct);
+      if(!a||!b||a.start>b.end||b.start>a.end)return false;
+      var left=evidence(legacy),right=evidence(direct);
+      if(left.size&&right.size&&!Array.from(left).some(function(key){return right.has(key);}))return false;
+      return true;
+    }
+    // Match one legacy row to one source receipt. Ambiguous same-minute rows
+    // are preserved; distinct native IDs are never collapsed by clock or file.
+    var direct=[],legacy=[],candidates=new Map(),reverse=new Map(),removed=new Set();
+    rows.forEach(function(row,index){(text(row.receiptId)?direct:legacy).push(index);});
+    legacy.forEach(function(index){
+      var matches=direct.filter(function(other){return compatible(rows[index],rows[other]);});
+      candidates.set(index,matches);
+      matches.forEach(function(other){reverse.set(other,(reverse.get(other)||0)+1);});
+    });
+    legacy.forEach(function(index){
+      var matches=candidates.get(index);
+      if(matches.length!==1||reverse.get(matches[0])!==1)return;
+      var other=matches[0];rows[other]=enrich(rows[index],rows[other]);removed.add(index);
+    });
+    var result=rows.filter(function(_,index){return !removed.has(index);});
+    result.sort(function(a,b){
+      var left=timestamp(a),right=timestamp(b);
+      if(left&&right&&left.start!==right.start)return left.start-right.start;
+      if(left&&!right)return -1;if(!left&&right)return 1;
+      return text(a.receiptId).localeCompare(text(b.receiptId));
+    });
+    if(options.numbered!==false)result=result.map(function(row,index){
+      var item=Object.assign({},row);
+      if(item.sourceAttempt===undefined)item.sourceAttempt=item.attempt===undefined?null:item.attempt;
+      item.attempt=index+1;if(Object.prototype.hasOwnProperty.call(item,'label'))item.label='Lần '+item.attempt;
+      return item;
+    });
+    return result;
+  }
+  var api={merge:merge,timestamp:timestamp,fileKey:fileKey};root.DirectSubmissionHistory=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* IELTS_DIRECT_ASSIGNMENT_RESOLVER_V1: exact owned route/config and explicit authored codes only. */
+(function(root){
+'use strict';
+var routes={"/ielts-reading-web/0a58769939e0a0/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T02-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/3cc9b3cc60f6d5/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T02-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/a2066bb686dc33/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T02-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/aed5ad0ba6dd89/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T03-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/c612117a403de9/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T03-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/4826bbe4bcb5f4/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T03-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/b8440a46d5d5f6/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T04-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/a6b90b2e81437c/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T04-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/271769222feda2/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T04-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/e18338b8174730/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T05-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/0d1ed2605c8789/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T05-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/21d181f01ad0b9/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T05-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/9cc5758d751268/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T06-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/00ff25c5793888/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T06-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/e13aba3ccafc03/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T06-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/19c3bd07ea6523/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T07-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/0d3d7f278e4a1c/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T07-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/07a8a8142ac5fb/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T07-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/bd1f59c5fb3c55/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T08-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/6bd7fb24bbd064/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T08-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/e99ada309769e0/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T08-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/939b4bd5b464bc/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T09-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/c0088c13afc3e9/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T09-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/adddf2ed73f2a5/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T09-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/3d923ead041a6e/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T10-P01","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/bc207c99b3d694/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T10-P02","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/8049da9f63ea7d/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T10-P03","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/35dd5c9da4abce/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T11","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/f23b106fc7d2ee/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T12","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/fbb760483c2dab/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T13","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/2ca79d398722f9/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T14","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/e41040e57f05d0/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T15","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/c634011c0577a1/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T16","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/ae3a33344a8799/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T17","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/5b4ef13d35457b/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T18","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/916d4ce6b16051/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T19","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/11cff754b246a7/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T20","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/350cf5ffce3e7a/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T21","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/9faca690d9d4b3/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T22","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-reading-web/cfda87a706e957/":{"family":"SELF_READING","code":"IELTS-SELF-READING-T23","source":"parent-prefill-review/program-rollout/ielts-assets/0d939bf17278ea537921.js"},"/ielts-nghe/JLwga_1Y8MhFtg.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L08","source":"parent-prefill-review/program-rollout/ielts-assets/062a7eecef5286c89dac.html"},"/ielts-nghe/T8Sw1Arp4e7Qbg.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L07","source":"parent-prefill-review/program-rollout/ielts-assets/8d9d6ae3dcf41a707644.html"},"/ielts-nghe/YDYN6SY4YuVurQ.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L15","source":"parent-prefill-review/program-rollout/ielts-assets/ceaa3dc4dd76b1c827f2.html"},"/ielts-nghe/_t-9SM0knx3Q1Q.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L25","requiredParts":["1-2","3-4"],"source":"parent-prefill-review/program-rollout/ielts-assets/233a7341cb3b7e478a7d.html"},"/ielts-nghe/a2dl_GcHO7x_nA.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L16","source":"parent-prefill-review/program-rollout/ielts-assets/fe480dd0f9a55f2ce599.html"},"/ielts-nghe/hTmc9UwUQjYiEw.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L24","requiredParts":["1-2","3-4"],"source":"parent-prefill-review/program-rollout/ielts-assets/ddd7b5227ff7f6370ecd.html"},"/ielts-nghe/n1Xd9eV8oBlDfA.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L09","source":"parent-prefill-review/program-rollout/ielts-assets/400498feb826acc23981.html"},"/ielts-nghe/pCkKyy0NwioqGQ.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L23","requiredParts":["1-2","3-4"],"source":"parent-prefill-review/program-rollout/ielts-assets/1028a20e60ebe82bd6d6.html"},"/ielts-nghe/z1tIp6UWiFs0ZQ.html":{"family":"SELF_LISTENING","code":"IELTS-SELF-LISTENING-L17","source":"parent-prefill-review/program-rollout/ielts-assets/af9e6db0bbabd6b4d3fb.html"}};
+// IELTS_WRITING_PUBLISHED_ROUTES_V1: source forms and authored submission codes verified per published lesson.
+[
+["s02","2311b1604d89ad71e781c10544e6ba7f","HW_READING","IELTS-READING-B02"],
+["s03","5e1a9d0e7fdc88888c87b4db8d7755cd","HW_READING","IELTS-READING-B03"],
+["s04","058dcb6452b7394d4a10dd3a7d442030","HW_LISTENING","IELTS-LISTENING-B04"],
+["s05","02288cfe2ae189a1316ec8afdd293eb4","HW_WRITING","IELTS-WRITING-W05"],
+["s06","5de25728ff10baa8bff4d624fc1ffcff","HW_WRITING","IELTS-WRITING-W06"],
+["s07","c84809a951127d85acfe55b893e70254","HW_WRITING","IELTS-WRITING-W07"],
+["s08","24ed3e69517f59fe320edbc4bfd48eac","HW_WRITING","IELTS-WRITING-W08"],
+["s09","20698a99cfb9eedc42902ba85b113111","HW_WRITING","IELTS-WRITING-W09"],
+["s10","3fbd7746cb99cdb6654795d109d739f0","HW_WRITING","IELTS-WRITING-W10"],
+["s12","8c13695e1198bcde8adfb0af77202557","HW_WRITING","IELTS-WRITING-W12"],
+["s13","35ed60d173560cc633f5c5f4d632fe9f","HW_WRITING","IELTS-WRITING-W13"],
+["s14","072c3f4e84bee0e94a2845bf8ccbb56e","HW_WRITING","IELTS-WRITING-W14"],
+["s15","20a6a48c27600cb68cd41ebabff81731","HW_WRITING","IELTS-WRITING-W15"],
+["s16","8d909efa16b4b7c68669ee3d36f313c0","HW_WRITING","IELTS-WRITING-W16"],
+["s17","900ebddf72aa0ef9aff4a72f1d69174c","HW_WRITING","IELTS-WRITING-W17"],
+["s18","a04daf5a9195a9de72617be66c4b895c","HW_WRITING","IELTS-WRITING-W18"],
+["s19","e571ef794d1426286edf658b57d8d81b","HW_WRITING","IELTS-WRITING-W19"],
+["s21","42abcddff3b54607e74a3eb0c074dd5f","HW_WRITING","IELTS-WRITING-W21"],
+["s22","c6d3b342a4bcf298387d6636147fb67f","HW_WRITING","IELTS-WRITING-W22"],
+["s23","7215608aba86392dc505990fd6d2cc9e","HW_WRITING","IELTS-WRITING-W23"],
+["s24","82c0b2f0b706e850a6e623364ae196be","HW_WRITING","IELTS-WRITING-W24"],
+["s25","32927ac0fb9fd9921de593e159a8de20","HW_WRITING","IELTS-WRITING-W25"],
+["s26","2f239909d3c1bcf3a230d4d7c65d2b91","HW_WRITING","IELTS-WRITING-W26"],
+["s27","3a85d2d66d1be5524eec264643991ea5","HW_WRITING","IELTS-WRITING-W27"],
+["s28","5b26260f94b2555bed933ac3d6d37bc0","HW_WRITING","IELTS-WRITING-W28"],
+["s29","82430981005946a2c625cd938e4a5478","HW_WRITING","IELTS-WRITING-W29"],
+["s30","1efea40df9e9bcf8167b8fe197b076e9","HW_WRITING","IELTS-WRITING-W30"],
+["s31","f6e9cb146d430b51bac5e6e98cad9740","HW_WRITING","IELTS-WRITING-W31"],
+["s33","a12eb8d32454da6111c618c3fc10297c","HW_WRITING","IELTS-WRITING-W33"],
+["s35","a54ec5d492a7061deb2d75884b175343","HW_WRITING","IELTS-WRITING-W35"],
+["s36","8a39c4d2fc4fa74adeb36a3d445c63ab","HW_WRITING","IELTS-WRITING-W36"],
+["s39","121ddf259d50ec8a35f2c863c697a409","HW_WRITING","IELTS-WRITING-W39"]
+].forEach(function(row){var route={family:row[2],code:row[3],source:"verified published lesson submission source + opaque-url-map.json"};routes["/vocabulary-reading-web/ielts-writing/"+row[0]+"/"]=route;routes["/vocabulary-reading-web/ielts-writing/"+row[1]+"/"]=route;});
+// IELTS_LISTENING_WEEK01_ROUTE_V1: published page posts Tuần 01 to the verified Listening receipt sheet.
+routes["/ielts-nghe/RPjxTm8AJlECxA.html"]={family:"SELF_LISTENING",code:"IELTS-SELF-LISTENING-L01",source:"published page DATA.weekId + submitListening receipt contract"};
+// IELTS_SPEAKING_OWNED_ROUTES_V1: exact published lessons, grounded in their submission links.
+Object.assign(routes,{"/vocabulary-reading-web/ielts-speaking/s01/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S01","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/5059ce090fd4d730cb80cbbb8ea4177f/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S01","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s02/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S02","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/d1ea8070a3b036d7302c23be2b3e47d0/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S02","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s03/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S03","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/385cd802b39c66017624f4a497f4c9b6/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S03","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s04/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S04","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/b9a63a5c4d9b84eeb311be9f33edafef/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S04","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s05/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S05","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/a199eac0783bb80401c9bee3a6762a73/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S05","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s06/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S06","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/da63262817e0d94247e0551bff263a44/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S06","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s07/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S07","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/dffc4ee75a29dd1458bea81c4723f0d3/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S07","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s10/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S10","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/2e21e285377bbc958bc9c1a746929c69/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S10","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s11/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S11","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/73065011a1be9af67e69d538be4ed8fd/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S11","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s12/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S12","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/8d5c3a969c38454d5e686676bf4d94e8/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S12","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s13/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S13","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/80ec56fbc2b08ec484a877235e3d95ef/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S13","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s14/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S14","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/dc9400d616c1a3e61397498babec210c/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S14","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s15/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S15","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/b52a6d1349909b76d78c7895c8994733/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S15","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s16/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S16","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/59c0bbd18b6d68a252ff29748372575e/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S16","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s19/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S19","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/a941ce876b705bdf6c31bee6294cd38e/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S19","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s20/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S20","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/a57bb5dee53f8622750ddbd7a949a25d/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S20","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s21/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S21","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/201752d2dd0f05b270640781e8befc17/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S21","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s22/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S22","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/b4c3c7cdf22bdc51c276dfe3601fa78e/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S22","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s23/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S23","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/bf8dcc35ba8194c48494108fc11b8abf/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S23","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s24/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S24","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/562b69969a80a890f5303f8dfd8d5228/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S24","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s25/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S25","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/f53be3605fe03bfb32a17ae5e2411cff/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S25","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s26/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S26","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/bdeb2889d60ba4d314af0ae52f729e6a/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S26","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s27/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S27","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/92a38ec1db8e3684eb1aac89dcc2b15d/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S27","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s28/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S28","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/f15a409ae9725a4f9d45dcaed78f7dff/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S28","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s31/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S31","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/2736c917823e4771d8a4b8c219523b9c/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S31","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s32/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S32","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/da4e65f4e7a8185d559617e5fa3af6ce/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S32","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s33/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S33","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/77605ccde1a4ad9c3f0792ad86d694b7/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S33","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s34/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S34","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/552471bd656d959f0589c7f6cc2384c7/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S34","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s35/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S35","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/cbe3fab28d0c11cb66d826e0b998276f/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S35","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s36/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S36","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/97cfe5cf47c9a40a406e27d332003b47/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S36","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s37/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S37","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/a465e2136cb3a56c4f8cf1ac359bda57/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S37","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/s38/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S38","source":"verified lesson submission link + opaque-url-map.json"},"/vocabulary-reading-web/ielts-speaking/b224e166d10a70ce8eb91af0bc61a238/":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S38","source":"verified lesson submission link + opaque-url-map.json"}});
+
+var urlRoutes={"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-25":{"family":"HW_WRITING","code":"IELTS-WRITING-W25","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\575269b4779cdabe.html"},"https://docs.google.com/forms/d/1iKdkRPn8wTjZYfdQK_X5lHDmy0JCg5yRYjtJnWGQ13g/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W25","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSdPn2n4VoU_ZtSLvHAVcCz7zXF5kQHZKcOIO6FK733GDDSekg/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W25","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-24":{"family":"HW_WRITING","code":"IELTS-WRITING-W24","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\f9003bb3d63c190b.html"},"https://docs.google.com/forms/d/1fkTopNzXgtqrzQZrjeOYpHEiN_mzMtbQvCyb3-33ucs/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W24","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSc5poipLOkd-4TaOgY9MmVzMykUVR1hjPadBxT3UCj0OX4QEg/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W24","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-29":{"family":"HW_WRITING","code":"IELTS-WRITING-W29","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\9944870047eaf1a4.html"},"https://docs.google.com/forms/d/1Q9tiom4XI6WBf1hhBWQASso-7-lqls3xfyRgVcsx14s/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W29","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSfpJw_6L8J7t3-B1VNkccTKObCBczFCetB7k_vWeCVvt10KBA/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W29","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-28":{"family":"HW_WRITING","code":"IELTS-WRITING-W28","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\5eb1fd8e78948a78.html"},"https://docs.google.com/forms/d/1ynoBn6OUTctQl0frg93d_aKmxESsdvjd0udTP2WEmyE/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W28","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSftxJOtvm8sLlzju9NqAAUPL0wtB9olvnQLT3zK9SsU30KMsQ/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W28","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-27":{"family":"HW_WRITING","code":"IELTS-WRITING-W27","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\8560cb0f63e0b5d4.html"},"https://docs.google.com/forms/d/1jRYO1mbdH_xGxr6bEKG0YHJUCbKNVB0yBSHxM_Ad5bI/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W27","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSc_1aePmqhzR_5736K7FPlCH1A7OS9mYuBxmCfBIozIS9e1WA/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W27","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-19":{"family":"HW_WRITING","code":"IELTS-WRITING-W19","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\8ff4617db7eac1ce.html"},"https://docs.google.com/forms/d/1aUSO3XsbRnvxz1w7T0gFK34VPeanAXdE1gFItDDW7Dc/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W19","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSdItqTuVlEZGy4vOse2jYuZbsKTj28iNS2I31mWRmF_z5c8aQ/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W19","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-18":{"family":"HW_WRITING","code":"IELTS-WRITING-W18","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\adc60b3c8b985838.html"},"https://docs.google.com/forms/d/1DN19y5Ylcixqd2Y3AmjInZYbVaM_nH4YabzIC3cf7fU/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W18","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSdq-nlRnWZDlxoY2Iw87SQv_KKigukvl6rY_vc5LiqIb9U7Ag/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W18","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-10":{"family":"HW_WRITING","code":"IELTS-WRITING-W10","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\394cf6f09a3ed297.html"},"https://docs.google.com/forms/d/1O8qnGLD1aQywmrXmYT6dJ2YbT1mBNxjrxpoawnB1yRM/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W10","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSdEE8x74-dj7NhFRKBqZsf0g3T_vIPCjsw9sXjuNZu5e5r2lA/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W10","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-09":{"family":"HW_WRITING","code":"IELTS-WRITING-W09","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\1eab9bde43c79715.html"},"https://docs.google.com/forms/d/1Rugd99LL3bY0JnstHKaPnDwFRCurw_ShbU19Jgd_vco/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W09","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLSeTsMsYIiYZ2uH86e3X7FqipdO9Y7KDSGlIN7-X1_MyxO2cig/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W09","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/w7k4n9t346/buoi-hoc-viet-so-08":{"family":"HW_WRITING","code":"IELTS-WRITING-W08","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\cae15c2f6aa7e198.html"},"https://docs.google.com/forms/d/17MQkay4baPs_R4GVBshnvWs1q5psohEDNxuRv7UrSgQ/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W08","source":"native-writing-form-mappings.json"},"https://docs.google.com/forms/d/e/1FAIpQLScB6sw0kH9j6Iw1X8io2wJZX9AkGJA0yQ82v8f5t4bGecDp4g/viewform":{"family":"HW_WRITING","code":"IELTS-WRITING-W08","source":"native-writing-form-mappings.json"},"https://sites.google.com/view/ielts-speaking-ms-trang-trieu/buổi-học-nói-số-01":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S01","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\a825925029b60f6d.html"},"https://forms.gle/4DK1WrGf6eWdaJiNA":{"family":"HW_SPEAKING","code":"IELTS-SPEAKING-S01","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\a825925029b60f6d.html"},"https://sites.google.com/view/w7k4n9t346/buổi-03-chốt-kĩ-năng-đọc-hiểu":{"family":"HW_READING","code":"IELTS-READING-B03","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\5df67c6de84d0694.html"},"https://ielts-reading-buoi-02-2026.mstrangtrieuenglishh.chatgpt.site/buoi-03/index.html":{"family":"HW_READING","code":"IELTS-READING-B03","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\5df67c6de84d0694.html"},"https://docs.google.com/forms/d/e/1FAIpQLSd3oLsJS5byrNL_5Wp0y3ISiLxk2HAyIq6zahJVAcTW2rdvHQ/viewform":{"family":"HW_READING","code":"IELTS-READING-B03","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\5df67c6de84d0694.html"},"https://sites.google.com/view/w7k4n9t346/buổi-02-quy-trình-đọc-hoàn-chỉnh":{"family":"HW_READING","code":"IELTS-READING-B02","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\e7bf62571f605e12.html"},"https://ielts-reading-buoi-02-2026.mstrangtrieuenglishh.chatgpt.site/lesson/index.html":{"family":"HW_READING","code":"IELTS-READING-B02","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\e7bf62571f605e12.html"},"https://docs.google.com/forms/d/e/1FAIpQLSeuzrSxSIvxOJ1lGLrfDPznl2o0TrSahlkpd_C1zTY9aFEjVg/viewform":{"family":"HW_READING","code":"IELTS-READING-B02","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\e7bf62571f605e12.html"},"https://sites.google.com/view/w7k4n9t346/r01-k7m4q2":{"family":"HW_READING","code":"IELTS-READING-B01","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\1fed01a99030f453.html"},"https://mstrangtrieueducation-droid.github.io/ir01-k7m4q2/":{"family":"HW_READING","code":"IELTS-READING-B01","source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\1fed01a99030f453.html"},"https://docs.google.com/forms/d/e/1FAIpQLSfyH-ClXNpczRXxKSOJa705R27RzKb03ZQQGNcX8gudt2YkJw/viewform":{"family":"HW_READING","code":"IELTS-READING-B01","requiredQuery":{"entry.1040067335":"IELTS-READING-B01"},"source":"C:\\Users\\Ms Trang Trieu\\Desktop\\Ms Trang Trieu\\submission-status-review\\ielts-legacy-source\\1fed01a99030f453.html"}};
+var shadowingRoutes={"#/bai/0725648e756956b25bc0aafd":{"family":"SELF_SHADOWING","code":"SHADOW-L1-001","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/4619a4eb429ef43afa134699":{"family":"SELF_SHADOWING","code":"SHADOW-L1-002","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/20b9c9d48377d75a22ce894c":{"family":"SELF_SHADOWING","code":"SHADOW-L1-003","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/fb07daedbacb30e90869b1be":{"family":"SELF_SHADOWING","code":"SHADOW-L1-004","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/2991427f423f1ead7b1a12c1":{"family":"SELF_SHADOWING","code":"SHADOW-L1-005","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/57533973de648c36cb75d3ca":{"family":"SELF_SHADOWING","code":"SHADOW-L1-006","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/bd0f111ee8cd1b8e5ad4f17f":{"family":"SELF_SHADOWING","code":"SHADOW-L1-007","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/ec8159cfa357490836d348cc":{"family":"SELF_SHADOWING","code":"SHADOW-L1-008","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/017b5dd62ba186fd690a2468":{"family":"SELF_SHADOWING","code":"SHADOW-L1-009","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/6ca3e54b305e639e0dc6bc52":{"family":"SELF_SHADOWING","code":"SHADOW-L1-010","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/5818ddbf52ac5da43361284f":{"family":"SELF_SHADOWING","code":"SHADOW-L1-011","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/5329a2cd1ffe78fa879c6b36":{"family":"SELF_SHADOWING","code":"SHADOW-L1-012","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/2e9808244b8121967fc38039":{"family":"SELF_SHADOWING","code":"SHADOW-L1-013","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/447dbb954c0e69bb9464a86a":{"family":"SELF_SHADOWING","code":"SHADOW-L1-014","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/42e71da378a0a8480ce25085":{"family":"SELF_SHADOWING","code":"SHADOW-L1-015","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e2b66d9169fcf711265e5687":{"family":"SELF_SHADOWING","code":"SHADOW-L1-016","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/6cc70342013f714075958732":{"family":"SELF_SHADOWING","code":"SHADOW-L1-017","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/7dba49d1903236bd31347964":{"family":"SELF_SHADOWING","code":"SHADOW-L1-018","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e3e95ec85d2a9fd96f5562f5":{"family":"SELF_SHADOWING","code":"SHADOW-L1-019","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/422b2ece54108117a2f0d65b":{"family":"SELF_SHADOWING","code":"SHADOW-L1-020","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/642e856a18c5867b8b06b284":{"family":"SELF_SHADOWING","code":"SHADOW-L1-021","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/48ccc2877e236c2063c1b4b8":{"family":"SELF_SHADOWING","code":"SHADOW-L1-022","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/ed2728b336afc7e4a6b1532c":{"family":"SELF_SHADOWING","code":"SHADOW-L1-023","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/58e1906d8b429a4426fdcd3f":{"family":"SELF_SHADOWING","code":"SHADOW-L1-024","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/9e46d00b1cee728d31dd0236":{"family":"SELF_SHADOWING","code":"SHADOW-L1-025","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/28656519dc54ee844295e78a":{"family":"SELF_SHADOWING","code":"SHADOW-L1-026","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/061c660dbb4e730675fba827":{"family":"SELF_SHADOWING","code":"SHADOW-L1-027","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/b327f156dbff9d61e25d123b":{"family":"SELF_SHADOWING","code":"SHADOW-L1-028","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/066c4ad4ca8fd9e963c7b9e4":{"family":"SELF_SHADOWING","code":"SHADOW-L1-029","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f315b4899e32c6720faee5f4":{"family":"SELF_SHADOWING","code":"SHADOW-L1-030","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/deb1fd3c804822f539c2a619":{"family":"SELF_SHADOWING","code":"SHADOW-L1-031","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/46b6868964d04a1935444859":{"family":"SELF_SHADOWING","code":"SHADOW-L1-032","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/52dc4295602335c01d46ba4c":{"family":"SELF_SHADOWING","code":"SHADOW-L1-033","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/bc76d63ec146de499e802895":{"family":"SELF_SHADOWING","code":"SHADOW-L1-034","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/c60959a84c53ec4d4e24174f":{"family":"SELF_SHADOWING","code":"SHADOW-L1-035","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0700c512367f4fdb0cb03be6":{"family":"SELF_SHADOWING","code":"SHADOW-L1-036","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/aece86da372bf490e31ebbeb":{"family":"SELF_SHADOWING","code":"SHADOW-L1-037","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/c478a13cc315e455a8ed144d":{"family":"SELF_SHADOWING","code":"SHADOW-L1-038","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/c2f81d0044960300d51e657e":{"family":"SELF_SHADOWING","code":"SHADOW-L1-039","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/2e866fc1a962362f02d39927":{"family":"SELF_SHADOWING","code":"SHADOW-L1-040","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/9134a2110a34b8c95fbaf720":{"family":"SELF_SHADOWING","code":"SHADOW-L1-041","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/c168757bc82549842378a1f5":{"family":"SELF_SHADOWING","code":"SHADOW-L1-042","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/5e0bb60889745a03307c6f03":{"family":"SELF_SHADOWING","code":"SHADOW-L1-043","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/7458ce52b08fd2e31ffee3b8":{"family":"SELF_SHADOWING","code":"SHADOW-L1-044","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/6fa1726a25fbd4a01881f443":{"family":"SELF_SHADOWING","code":"SHADOW-L1-045","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/bee362641ccacae6a48543b2":{"family":"SELF_SHADOWING","code":"SHADOW-L1-046","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/3f515d0c9496ff91ff6a4740":{"family":"SELF_SHADOWING","code":"SHADOW-L1-047","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0356bd94ebe6930622a27ed3":{"family":"SELF_SHADOWING","code":"SHADOW-L1-048","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0fb1195c0b18ebc80f43ceea":{"family":"SELF_SHADOWING","code":"SHADOW-L1-049","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/8289e58965d2e69833a88378":{"family":"SELF_SHADOWING","code":"SHADOW-L1-050","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/8163bb07bbec60ebb0aa04df":{"family":"SELF_SHADOWING","code":"SHADOW-L1-051","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/1fe8112e26c9ce684efdc803":{"family":"SELF_SHADOWING","code":"SHADOW-L1-052","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/4647495d8351f8bf7e7b8d22":{"family":"SELF_SHADOWING","code":"SHADOW-L1-053","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/44d67faf72386c3b89c0b5b1":{"family":"SELF_SHADOWING","code":"SHADOW-L1-054","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/5730f41d1ff7e29a9fe37d54":{"family":"SELF_SHADOWING","code":"SHADOW-L1-055","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/a9f7f990cbc01283e4925615":{"family":"SELF_SHADOWING","code":"SHADOW-L1-056","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/79774b18994b7e14e4ed8f6d":{"family":"SELF_SHADOWING","code":"SHADOW-L1-057","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/4a0be92ceb877bce9103d3ee":{"family":"SELF_SHADOWING","code":"SHADOW-L1-058","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/1cdefc0e5de270d0890ea551":{"family":"SELF_SHADOWING","code":"SHADOW-L1-059","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/1bc968ba252082b95007b5d7":{"family":"SELF_SHADOWING","code":"SHADOW-L1-060","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e5221f1034a50f8d158e8acc":{"family":"SELF_SHADOWING","code":"SHADOW-L1-061","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/2903ffbf1e92be148c27e38e":{"family":"SELF_SHADOWING","code":"SHADOW-L1-062","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/d2feaf525bd0465308638b5b":{"family":"SELF_SHADOWING","code":"SHADOW-L1-063","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/14421dc25cdf5e6be5b51303":{"family":"SELF_SHADOWING","code":"SHADOW-L1-064","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0f00d1cbfd3e7a23cace4a38":{"family":"SELF_SHADOWING","code":"SHADOW-L1-065","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f207bf05f43aade13fcfee63":{"family":"SELF_SHADOWING","code":"SHADOW-L1-066","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/548abcfc83ce198b475267b6":{"family":"SELF_SHADOWING","code":"SHADOW-L1-067","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e2a9ea9cba11fae209d8af48":{"family":"SELF_SHADOWING","code":"SHADOW-L1-068","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e1f88f13d4a03996df5c980a":{"family":"SELF_SHADOWING","code":"SHADOW-L1-069","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/fc34013d5198ac2df5f1894c":{"family":"SELF_SHADOWING","code":"SHADOW-L1-070","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/6895c48a1feb900fc06f511a":{"family":"SELF_SHADOWING","code":"SHADOW-L1-071","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/66e6d03358a0d5060db8e49e":{"family":"SELF_SHADOWING","code":"SHADOW-L1-072","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f83c8c4c4534c0fa123d7b62":{"family":"SELF_SHADOWING","code":"SHADOW-L1-073","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/44d1b19107637387e1ba3104":{"family":"SELF_SHADOWING","code":"SHADOW-L1-074","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/5f13a2e88c42db3ab0c3f70d":{"family":"SELF_SHADOWING","code":"SHADOW-L1-075","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/1adbea3bb2df881cfb3f5f6d":{"family":"SELF_SHADOWING","code":"SHADOW-L1-076","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f2a110fa82c756b722c3d424":{"family":"SELF_SHADOWING","code":"SHADOW-L1-077","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/b698ac144c3dd7e64b875a78":{"family":"SELF_SHADOWING","code":"SHADOW-L1-078","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/53b8d2da797f55e028b582da":{"family":"SELF_SHADOWING","code":"SHADOW-L1-079","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/c36ec05faf8b0d07abf7f03c":{"family":"SELF_SHADOWING","code":"SHADOW-L1-080","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/4e133eb72658f2d9e440e497":{"family":"SELF_SHADOWING","code":"SHADOW-L1-081","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/9a59b307c8f87ae28f6c038b":{"family":"SELF_SHADOWING","code":"SHADOW-L1-082","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/6438da4458c749d55281f697":{"family":"SELF_SHADOWING","code":"SHADOW-L1-083","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0ec211018907b18e7639fc54":{"family":"SELF_SHADOWING","code":"SHADOW-L1-084","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/b1538c79abfea83ccfd714e3":{"family":"SELF_SHADOWING","code":"SHADOW-L1-085","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/bb1985e954c694d8d8951525":{"family":"SELF_SHADOWING","code":"SHADOW-L1-086","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e8c89fb5790f1515ea830db7":{"family":"SELF_SHADOWING","code":"SHADOW-L1-087","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/4a1fa1ea8bf34f636410fcf1":{"family":"SELF_SHADOWING","code":"SHADOW-L1-088","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/ab5da4ac62b5377a05e80561":{"family":"SELF_SHADOWING","code":"SHADOW-L1-089","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/091590dad2c8f420cc2c5097":{"family":"SELF_SHADOWING","code":"SHADOW-L1-090","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/7b2c7ed27830432d27f1f90f":{"family":"SELF_SHADOWING","code":"SHADOW-L1-091","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e9c9cded4c60f05c00b665cc":{"family":"SELF_SHADOWING","code":"SHADOW-L1-092","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/fc22e6909f76f3889ad283cb":{"family":"SELF_SHADOWING","code":"SHADOW-L1-093","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/c62969f15611a3daba5ad234":{"family":"SELF_SHADOWING","code":"SHADOW-L1-094","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/099e2f61ffedb8fd51445aef":{"family":"SELF_SHADOWING","code":"SHADOW-L1-095","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/27dd9e280ea2ed79f2cf94b3":{"family":"SELF_SHADOWING","code":"SHADOW-L1-096","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0e00f8a46c102a4da32020ab":{"family":"SELF_SHADOWING","code":"SHADOW-L1-097","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/181aeceb1cfe6bd0ea2e97e1":{"family":"SELF_SHADOWING","code":"SHADOW-L1-098","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/ba92223819f1dfda88e8795d":{"family":"SELF_SHADOWING","code":"SHADOW-L1-099","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/d7324940e50c1bbf1dd7c09d":{"family":"SELF_SHADOWING","code":"SHADOW-L1-100","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/a8c948eba9aa0e2ea6f06a14":{"family":"SELF_SHADOWING","code":"SHADOW-L2-001","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/a52fa223ce6f74d6cd6bf83b":{"family":"SELF_SHADOWING","code":"SHADOW-L2-002","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/62d33b11e8e7a9bd741f0075":{"family":"SELF_SHADOWING","code":"SHADOW-L2-003","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/6364aa8f405ad5a39c882786":{"family":"SELF_SHADOWING","code":"SHADOW-L2-004","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/fcfb61d4fba755062f409c43":{"family":"SELF_SHADOWING","code":"SHADOW-L2-005","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e63184b25114c67a172d5f9d":{"family":"SELF_SHADOWING","code":"SHADOW-L2-006","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/0ed29ff00c7f681a3e0f34d9":{"family":"SELF_SHADOWING","code":"SHADOW-L2-007","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/fe8757309e930b496120a951":{"family":"SELF_SHADOWING","code":"SHADOW-L2-008","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/2522ded155c11bfd4cf03815":{"family":"SELF_SHADOWING","code":"SHADOW-L2-009","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/e02593fefd919c659174b3c9":{"family":"SELF_SHADOWING","code":"SHADOW-L2-010","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/55ca591646fbbc6d8799dd15":{"family":"SELF_SHADOWING","code":"SHADOW-L2-011","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/671354a3444e5cc3642eb59b":{"family":"SELF_SHADOWING","code":"SHADOW-L2-012","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/ed47df7e9fe57382a80a77f3":{"family":"SELF_SHADOWING","code":"SHADOW-L2-013","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/42047dcb363229a8132b1b17":{"family":"SELF_SHADOWING","code":"SHADOW-L2-014","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/73e79e94d44bbd82bb224cd2":{"family":"SELF_SHADOWING","code":"SHADOW-L2-015","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/5bdca39e7d644757dfb971a0":{"family":"SELF_SHADOWING","code":"SHADOW-L2-016","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/740f41ef3f5c3c3ad4b48af8":{"family":"SELF_SHADOWING","code":"SHADOW-L2-017","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/9f37d29682661ea9dff9f852":{"family":"SELF_SHADOWING","code":"SHADOW-L2-018","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/35622b517e28ead3f17b2581":{"family":"SELF_SHADOWING","code":"SHADOW-L2-019","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f1bbd4023d59aea05a27b2e0":{"family":"SELF_SHADOWING","code":"SHADOW-L2-020","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/3ecf60b294f3c1603ee80b00":{"family":"SELF_SHADOWING","code":"SHADOW-L2-021","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/18c42f1e58b2d501e3cb62ff":{"family":"SELF_SHADOWING","code":"SHADOW-L2-022","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/80b1a414aa1049c32d8316cc":{"family":"SELF_SHADOWING","code":"SHADOW-L2-023","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/218192b0ff7a4eb1671d8b5a":{"family":"SELF_SHADOWING","code":"SHADOW-L2-024","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/077185e76112209a4314e1cc":{"family":"SELF_SHADOWING","code":"SHADOW-L2-025","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/3846cf9c27e543333856dce1":{"family":"SELF_SHADOWING","code":"SHADOW-L2-026","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f819696cf6c82712de3d637a":{"family":"SELF_SHADOWING","code":"SHADOW-L2-027","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/05929769e1a7581962264362":{"family":"SELF_SHADOWING","code":"SHADOW-L2-028","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/9183ba69a0f1b895e1a2c96a":{"family":"SELF_SHADOWING","code":"SHADOW-L2-029","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/cd2f0c72b28ce52c1162d53b":{"family":"SELF_SHADOWING","code":"SHADOW-L2-030","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/7ca38c7a775d4083551b3f9a":{"family":"SELF_SHADOWING","code":"SHADOW-L2-031","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/53fb41f72e6e0e818aff832e":{"family":"SELF_SHADOWING","code":"SHADOW-L2-032","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/f29935a7edc8b612fe894b27":{"family":"SELF_SHADOWING","code":"SHADOW-L2-033","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/2c23d73d3d76a9b6af823d94":{"family":"SELF_SHADOWING","code":"SHADOW-L2-034","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/1e34728aa1cd6dab10850b36":{"family":"SELF_SHADOWING","code":"SHADOW-L2-035","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/18ef3c07e5296880b813ed59":{"family":"SELF_SHADOWING","code":"SHADOW-L2-036","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/7432151064fa47c358face67":{"family":"SELF_SHADOWING","code":"SHADOW-L2-037","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/d9fe1e6ec91786f2c7dcecbb":{"family":"SELF_SHADOWING","code":"SHADOW-L2-038","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/d3703d099489560f75027e54":{"family":"SELF_SHADOWING","code":"SHADOW-L2-039","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"},"#/bai/07c7e0d4afacab77bb7bd194":{"family":"SELF_SHADOWING","code":"SHADOW-L2-040","source":"parent-prefill-review/program-rollout/fighter-assets/cce66b4b9b253d3a01a9.json"}};
+function canonical(v){var s=String(v||'').trim().toUpperCase(),m=s.match(/^IELTS-(SELF-READING-(?:T\d+(?:-P\d+)?|R\d+)|SELF-LISTENING-L\d+|READING-B\d+|LISTENING-B\d+|WRITING-W\d+|SPEAKING-S\d+)$/);if(!m)return null;var code=s.replace(/\d+/g,function(n){return String(Number(n)).padStart(2,'0');});return {code:code,family:code.includes('SELF-READING')?'SELF_READING':code.includes('SELF-LISTENING')?'SELF_LISTENING':'HW_'+code.split('-')[1]};}
+function resolve(item){
+ if(!item||item.noHomework)return [];
+ var out=[],tasks=Array.isArray(item.tasks)?item.tasks:[];
+ function add(v){if(v&&!out.some(function(x){return x.family===v.family&&x.code===v.code;}))out.push(JSON.parse(JSON.stringify(v)));}
+ tasks.forEach(function(task){
+  var route=null;try{var u=new URL(task.url);if(u.origin==='https://mstrangtrieueducation-droid.github.io'&&(u.pathname==='/student-learning/'||u.pathname==='/kids-learning/')){if(u.searchParams.getAll('lesson').length!==1)throw Error('Ambiguous viewer');u=new URL(u.searchParams.get('lesson'));}if(u.protocol==='https:'&&!u.username&&!u.password){route=urlRoutes[u.origin+decodeURI(u.pathname)]||null;if(!route&&u.origin==='https://mstrangtrieueducation-droid.github.io'){route=routes[u.pathname]||(/^\/shadowing-quests\/(?:index\.html)?$/.test(u.pathname)?shadowingRoutes[u.hash]:null)||null;if(!route&&/^\/(?:vocab-submit|vf2-submit|notebook-submit)\/(?:index\.html)?$/.test(u.pathname)&&u.searchParams.getAll('code').length===1)route=canonical(u.searchParams.get('code'));}}}catch(_){}
+  if(route&&route.requiredQuery){var validQuery=Object.keys(route.requiredQuery).every(function(k){return u.searchParams.getAll(k).length===1&&u.searchParams.get(k)===route.requiredQuery[k];});if(!validQuery)route=null;}
+  if(route){add(route);return;}
+  var text=String(task.instructions||'')+'\n'+String(task.title||'');
+  var explicit=text.match(/Mã\s+bài\s*[:：]?\s*((?:IELTS[- ](?:WRITING|SPEAKING)[- ])?[WS]\d+)\b/ig)||[];
+  explicit.forEach(function(label){var m=label.match(/([WS])(\d+)\b/i);if(m)add({family:m[1].toUpperCase()==='W'?'HW_WRITING':'HW_SPEAKING',code:'IELTS-'+(m[1].toUpperCase()==='W'?'WRITING-W':'SPEAKING-S')+String(Number(m[2])).padStart(2,'0'),source:'explicit Schedule task instructions'});});
+ });
+ if(!out.length)add(canonical(item.assignmentCode||item.sourceCode));
+ return out;
+}
+var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssignmentResolver=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* DIRECT_GRADING_SHEET_PROJECTORS_V1: receipts do not replace teacher marks. */
+(function(root){
+  'use strict';
+  function list(v){return Array.isArray(v)?v:[];}
+  function code(v){return String(v||'').trim().toUpperCase().replace(/[_\s]+/g,'-');}
+  function coverageFor(payload,family,key){
+    return list(payload&&payload.coverage).find(function(c){
+      if(!c||c.family!==family||!c.complete||!c.freshRead)return false;
+      if(list(c.codes).some(function(v){return code(v)===key;}))return true;
+      return list(c.codePatterns).some(function(pattern){
+        if(typeof pattern!=='string'||pattern.length>160||pattern[0]!=='^'||pattern.slice(-1)!=='$')return false;
+        try{return new RegExp(pattern).test(key);}catch(_){return false;}
+      });
+    })||null;
+  }
+  function authorize(guard,ticket,target,coverage){
+    if(ticket&&target&&coverage)guard.authorize(ticket,target,{schema:1,complete:true,freshRead:true,verifiedAt:Number(coverage.verifiedAt)},{complete:true,stale:false});
+  }
+  function receiptLinks(receipts){
+    var found=new Map();
+    receipts.forEach(function(r){
+      list(r.links).concat(r.viewUrl?[{label:'Mở bài đã nộp',url:r.viewUrl}]:[]).forEach(function(link){
+        try{var u=new URL(link.url);if(u.protocol==='https:'&&!u.username&&!u.password)found.set(u.href,{label:String(link.label||'Mở bài đã nộp'),url:u.href});}catch(_){}
+      });
+    });return Array.from(found.values());
+  }
+  function timeOf(r){return Number.isFinite(r.submittedAt)?r.submittedAt:Number(r.submittedAtMs||Date.parse(r.submittedAt)||0);}
+  function displayAt(value){if(!Number.isFinite(value))return String(value||'');return new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(value));}
+  function sorted(receipts){return receipts.slice().sort(function(a,b){return timeOf(a)-timeOf(b);});}
+  function attempts(receipts){return sorted(receipts).map(function(r,i){return {id:r.id,receiptId:r.id,contentStatus:r.contentStatus,part:r.part,code:r.code,family:r.family,attempt:Number(r.attempt)||i+1,label:'Lần '+(Number(r.attempt)||i+1),submittedAt:displayAt(r.submittedAt),submittedAtMs:r.submittedAtMs,links:r.links,viewUrl:r.viewUrl,score:r.score,maximum:r.maximum,scoreSource:r.scoreSource};});}
+  function sameLane(left,right){return String(left&&left.scheduleClassName||left&&left.className||'').trim()===String(right&&right.scheduleClassName||right&&right.className||'').trim();}
+  function occurrenceCandidates(item,family,key,items,resolve){
+    return items.filter(function(other){
+      return other&&!other.noHomework&&sameLane(item,other)&&list(resolve(other)).some(function(m){return m.family===family&&code(m.code)===key;});
+    });
+  }
+  function recordInOccurrence(record,item,maps,items){
+    return maps.every(function(map){
+      var candidates=occurrenceCandidates(item,map.family,code(map.code),items,root.IeltsDirectAssignmentResolver.resolve);
+      var dates=new Set(candidates.map(function(other){return root.DirectSubmissionAssignmentWindow.assignedAt(other);}));
+      if(dates.size<2)return true;
+      var date=root.DirectSubmissionAssignmentWindow.assignedAt(record);
+      return Boolean(date)&&root.DirectSubmissionAssignmentWindow.contains({submittedAt:date},item,candidates);
+    });
+  }
+  function priorContent(item,record,map,part,candidates){
+    if(!root.DirectSubmissionAssignmentWindow.windowFor(item,candidates).known)return [];
+    var key=code(map.code),sources=[item,record].filter(Boolean),rows=[];
+    sources.forEach(function(source){
+      list(source.directSubmission&&source.directSubmission.receipts).concat(list(source.directSubmission&&source.directSubmission.contentEvidence),list(source.submissionAttempts),[source]).forEach(function(row){
+        if(!row||row.contentStatus==='empty')return;
+        var sourceCode=code(row.code||row.assignmentCode||row.sourceCode||source.assignmentCode||source.sourceCode);
+        if(sourceCode!==key||row.family&&row.family!==map.family||part&&row.part!==part)return;
+        if(!root.DirectSubmissionAssignmentWindow.contains(row,item,candidates))return;
+        var links=receiptLinks([row]);
+        // Classroom bands and completion words are not original scoring proof.
+        var scored=row.scoreSource==='original-grading'&&Number.isFinite(row.score)&&Number.isFinite(row.maximum)&&row.maximum>0&&row.score>=0&&row.score<=row.maximum;
+        if(!links.length&&!scored)return;
+        rows.push(Object.assign({},row,{code:key,family:map.family,part:part||row.part||'',submittedAt:root.DirectSubmissionDeadlinePolicy.receiptTime(row),links:links}));
+      });
+    });
+    var unique=new Map();rows.forEach(function(row){unique.set(JSON.stringify([row.id||row.receiptId||'',row.family,row.code,row.part,root.DirectSubmissionDeadlinePolicy.receiptTime(row),receiptLinks([row]).map(function(link){return link.url;}).sort()]),row);});
+    return sorted(Array.from(unique.values()));
+  }
+  function projectIeltsSubmissions(target,payload,ticket,guard,options){
+    if(!target||!target.dashboard||!target.student||!payload)return target;
+    options=options||{};
+    var student=target.student,all=list(payload.receipts);student.skills=student.skills||{};
+    var assignmentItems=list(target.dashboard.assignments).concat(list(target.dashboard.shadowingAssignments));
+    assignmentItems.forEach(function(item){
+      if(!item||item.noHomework)return;
+      var skill=String(item.skill||'').toLowerCase();if(!['reading','listening','writing','speaking','shadowing'].includes(skill))return;
+      if(options.eligible&&!options.eligible(item,student,target.dashboard))return;
+      var maps=root.IeltsDirectAssignmentResolver.resolve(item);if(!maps.length)return;
+      var bucket=skill==='shadowing'?{records:[]}:(student.skills[skill]||(student.skills[skill]={records:[]}));bucket.records=list(bucket.records);
+      var matching=bucket.records.filter(function(r){return r.directAssignmentId===item.id;});
+      var available=bucket.records.filter(function(r){return (!r.directAssignmentId||r.directAssignmentId===item.id)&&recordInOccurrence(r,item,maps,assignmentItems);});
+      var record=matching.length===1?matching[0]:options.matchRecord?options.matchRecord(item,available):null;
+      if(!record&&maps.length===1){matching=available.filter(function(r){return code(r.assignmentCode||r.sourceCode)===code(maps[0].code);});if(matching.length===1)record=matching[0];}
+      var parts=maps.flatMap(function(map){return (list(map.requiredParts).length?map.requiredParts:['']).map(function(part){
+        var candidates=occurrenceCandidates(item,map.family,code(map.code),assignmentItems,root.IeltsDirectAssignmentResolver.resolve);
+        var window=root.DirectSubmissionAssignmentWindow.windowFor(item,candidates);
+        var found=all.filter(function(r){return r&&r.family===map.family&&code(r.code)===code(map.code)&&r.id&&root.DirectSubmissionAssignmentWindow.contains(r,item,candidates)&&(!part||r.part===part);});
+        return {map:map,part:part,receipts:sorted(found),content:sorted(found.filter(function(r){return r.contentStatus!=='empty';}).concat(priorContent(item,record,map,part,candidates))),coverage:window.known?coverageFor(payload,map.family,code(map.code)):null};
+      });});
+      var unique=new Map();parts.forEach(function(p){p.receipts.forEach(function(r){unique.set(r.id,r);});});
+      var found=sorted(Array.from(unique.values())),complete=parts.every(function(p){return p.content.length>0;}),covered=parts.every(function(p){return Boolean(p.coverage);});
+      var coverage=covered?{verifiedAt:Math.min.apply(null,parts.map(function(p){return p.coverage.verifiedAt;}))}:null;
+      var verified=Boolean(ticket&&coverage),key=maps.map(function(m){return m.code;}).join('|');
+      var completedAt=complete?Math.max.apply(null,parts.map(function(p){return timeOf(p.content[0]);})):0;
+      item.directDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(item,found,{complete:complete,completedAt:completedAt,verified:verified});
+      item.directReceiptSource=true;
+      item.contentMissing=parts.some(function(p){return p.receipts.length>0&&p.content.length===0;});
+      if(skill==='shadowing'){
+        authorize(guard,ticket,item,coverage);
+        if(found.length)item.directSubmission={receipts:found,contentEvidence:parts.flatMap(function(p){return p.content;}),links:receiptLinks(found.concat(parts.flatMap(function(p){return p.content;}))),complete:complete};
+        return;
+      }
+
+      authorize(guard,ticket,item,coverage);
+      if((found.length||verified)&&!record){record={id:'receipt-'+String(item.id||key),sourceRecordId:'receipt-'+key,skill:skill,assignmentCode:item.assignmentCode||key,sourceCode:item.sourceCode||key,sessionLabel:item.session||'',date:item.lessonDate||'',homeworkEligible:true};bucket.records.push(record);}
+      if(record){
+        record.directAssignmentId=item.id;record.directDeadline=item.directDeadline;record.directReceiptSource=true;record.contentMissing=item.contentMissing;
+        // Receipt status has its own source; teacher marks, prose and stars are never replaced.
+        record.directOriginalHomework=record.directOriginalHomework||{code:record.homeworkCode,status:record.homeworkStatus,type:record.statusType};
+        var deadline=item.directDeadline;
+        record.homeworkCode=complete?(deadline.late?'late':deadline.eligible?'completed':'submitted_zalo'):deadline.missing?'missing':deadline.pending?'pending':'not_recorded';
+        record.homeworkStatus=item.contentMissing?'Đã nhận lượt gửi nhưng bài trống':deadline.label;record.statusType=complete?(deadline.late?'late':'done'):deadline.missing?'missing':deadline.pending?'pending':'neutral';
+        item.directRecord=record;authorize(guard,ticket,record,coverage);
+      }
+      if(!found.length)return;
+      var ordered=sorted(found),last=ordered[ordered.length-1],first=ordered[0];
+      item.directSubmission={receipts:ordered,contentEvidence:parts.flatMap(function(p){return p.content;}),links:receiptLinks(ordered.concat(parts.flatMap(function(p){return p.content;}))),complete:complete,parts:parts.map(function(p){return {code:p.map.code,part:p.part,received:p.receipts.length>0};})};
+      Object.assign(record,{submitted:complete,submissionState:complete?'submitted':'partial',submittedAt:displayAt(first.submittedAt),lastSubmittedAt:displayAt(last.submittedAt),directSubmission:item.directSubmission});
+      var incomingAttempts=attempts(ordered.filter(function(r){return r.receiptType!=='grading-summary';}));
+      record.submissionAttempts=root.DirectSubmissionHistory.merge(list(record.submissionAttempts),incomingAttempts,{scope:function(a){
+        var part=a.part?'part:'+String(a.part):'bound-assignment';
+        if(maps.length===1)return part;var sourceCode=code(a.code||a.assignmentCode||a.sourceCode);return sourceCode?sourceCode+'|'+part:'';
+      }});
+      // Teacher band/comments/classroom assessments are intentionally untouched.
+      if(item.isSelfStudy){
+        var incomingResults=ordered.filter(function(r){return r.receiptType!=='grading-summary'&&Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource;}).map(function(r){
+          return {receiptId:r.id,skill:skill,assignmentCode:code(r.code),code:code(r.code),part:r.part,raw:r.score,max:r.maximum,submittedAt:displayAt(r.submittedAt),submittedAtMs:r.submittedAtMs,attempt:Number(r.attempt)||null,display:r.score+'/'+r.maximum,scoreSource:r.scoreSource,links:r.links,viewUrl:r.viewUrl};
+        });
+        student.selfStudyResults=root.DirectSubmissionHistory.merge(list(student.selfStudyResults),incomingResults,{numbered:false,scope:function(result){
+          var skillKey=String(result.skill||'').toLowerCase(),assignmentKey=code(result.assignmentCode||result.code||result.sourceCode);
+          return skillKey&&assignmentKey?skillKey+'|'+assignmentKey+'|'+String(result.part||''):'';
+        }});
+      }
+    });return target;
+  }
+  function taTaskCode(task,routeCodes){
+    if(!task||task.type!=='redo')return '';
+    try{
+      var u=new URL(task.url),origin='https://mstrangtrieueducation-droid.github.io';if(u.origin!==origin||u.username||u.password)return '';
+      if(u.pathname==='/student-learning/'||u.pathname==='/kids-learning/')u=new URL(u.searchParams.get('lesson'));
+      if(u.origin!==origin||u.username||u.password)return '';
+      var slug=u.pathname.split('/').filter(Boolean).pop();if(routeCodes&&routeCodes[slug])return routeCodes[slug];
+    }catch(_){}
+    return '';
+  }
+  function projectTaSubmissions(target,payload,ticket,guard,routeCodes){
+    if(!target||!target.dashboard||!target.student||!payload)return target;
+    var student=target.student;student.assignments=list(student.assignments);
+    var assignmentItems=list(target.dashboard.assignments).concat(list(target.dashboard.selfStudyAssignments));
+    assignmentItems.forEach(function(assignment){
+      var record=student.assignments.find(function(r){return r.id&&r.id===assignment.id;});
+      list(assignment.tasks).forEach(function(task){
+        var key=taTaskCode(task,routeCodes);if(!key)return; // Theory and all hand-entered work retain their original source.
+        var family='TA_RETAKE',candidates=occurrenceCandidates(assignment,family,key,assignmentItems,function(other){return list(other.tasks).map(function(t){return {family:'TA_RETAKE',code:taTaskCode(t,routeCodes)};});});
+        var window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,candidates);
+        var found=list(payload.receipts).filter(function(r){return r&&r.family===family&&code(r.code)===key&&r.id&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,candidates);});
+        var coverage=window.known?coverageFor(payload,family,key):null;authorize(guard,ticket,task,coverage);
+        task.directDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(ticket&&coverage)});
+        if(!found.length)return;
+        var direct={receipts:sorted(found),links:receiptLinks(found)};task.directSubmission=direct;
+        if(!record){record={id:assignment.id,session:assignment.session,lessonDate:assignment.lessonDate,topic:assignment.topic,tasks:[]};student.assignments.push(record);}
+        var status=list(record.tasks).find(function(r){return r.type==='redo'&&r.title===task.title;});
+        if(!status){status={type:'redo',title:task.title};record.tasks=list(record.tasks);record.tasks.push(status);}
+        Object.assign(status,{tracked:true,completed:true,state:'done',status:task.directDeadline.label,directSubmission:direct,directDeadline:task.directDeadline,sourceCode:key});authorize(guard,ticket,status,coverage);
+      });
+    });return target;
+  }
+  var api={coverageFor:coverageFor,receiptLinks:receiptLinks,displayAt:displayAt,projectIeltsSubmissions:projectIeltsSubmissions,projectTaSubmissions:projectTaSubmissions,taTaskCode:taTaskCode};
+  root.DirectGradingSheetProjectors=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
 var parentState={authorized:false,locked:false,name:'',revision:'',directory:null,dashboard:null,profile:null,requestId:0,checking:false};
+
+// SHARED_PARENT_SESSION_V1: keep the view and pending work on ordinary tab changes.
+function parentReceiptIdentity_(){return parentState.authorized&&!parentState.locked?ieltsParentAccess.className+'|'+parentState.revision+'|'+parentState.name:'';}
+const parentSubmissionGuard_=createSubmissionStatusGuard({getIdentity:parentReceiptIdentity_,isVisible:()=>!document.hidden});
+const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>!document.hidden,
+ request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>ielts50AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts50UniqueBestMatch_(records,record=>ielts50RecordMatchScore_(item,record))}),
+ render:()=>{if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile&&!document.hidden){parentState.renderedProfile=null;parentRender_();}}
+});
+function parentSubmissionKnown_(item,record){if(item&&item.directReceiptSource||record&&record.directReceiptSource){return Boolean(item&&item.directSubmission||record&&record.directSubmission||parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending||parentSubmissionGuard_.can(record)&&record.directDeadline&&record.directDeadline.pending);}return Boolean(record&&(record.submitted===true||record.submittedAt||record.statusType==='done')||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}
+function parentSubmissionLabel_(item,record){if(item&&item.contentMissing||record&&record.contentMissing)return 'Đã nhận lượt gửi nhưng bài trống';const deadline=item&&item.directDeadline||record&&record.directDeadline;return deadline?deadline.label:record&&record.homeworkStatus||'';}
+function parentSubmissionProblem_(item,record){return item&&item.contentMissing||record&&record.contentMissing?'<div class="direct-empty-submission" style="border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px"><strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có nội dung bài làm, video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p></div>':'';}
+function parentSubmissionLinks_(item,record){const value=item&&item.directSubmission||record&&record.directSubmission;return (!parentSubmissionKnown_(item,record)?'<p class="direct-source-status">'+(['idle','loading'].includes(parentReceiptOwner_.readState)?'Đang đọc nguồn bài nộp':'Chưa đọc được nguồn bài nộp')+'</p>':'')+parentSubmissionProblem_(item,record)+(value&&value.links&&value.links.length?'<div class="direct-submission-links">'+value.links.map(link=>'<a class="button small secondary" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>':'');}
+function parentDirectAttempts_(item,record){const direct=item&&item.directSubmission||record&&record.directSubmission;if(!direct)return '';return '<section class="direct-submission-results"><strong>'+esc(parentSubmissionLabel_(item,record))+'</strong>'+direct.receipts.filter(r=>r.receiptType!=='grading-summary').map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+(r.part?' · Sections '+esc(r.part):'')+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(r.contentStatus==='empty'?' · <b>Lượt gửi trống, chưa có nội dung/video/tệp.</b>':'')+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <b>'+esc(r.score)+'/'+esc(r.maximum)+'</b>':'')+'</p>').join('')+parentSubmissionLinks_(item,record)+'</section>';}
+function parentSubmissionSummary_(skill){const records=(skill&&skill.records||[]).filter(r=>r.directDeadline&&(r.directDeadline.pending||r.directDeadline.eligible&&r.directDeadline.complete)&&parentSubmissionGuard_.can(r));if(!records.length)return '';return '<small>Đã ghi nhận '+records.filter(r=>r.directSubmission&&r.directSubmission.complete).length+' · Cần nộp '+records.filter(r=>r.directDeadline.pending).length+' · Quá hạn '+records.filter(r=>r.directDeadline.missing).length+' · Muộn '+records.filter(r=>r.directDeadline.late).length+'</small>';}
+async function parentQuietResume_(){
+ if(parentState.checking)return;parentState.checking=true;const id=parentState.requestId;
+ try{const data=await ieltsParentAccess.request('check');if(id!==parentState.requestId||parentState.locked)return;
+  if(data.name!==parentState.name||data.rosterRevision!==parentState.revision){ieltsParentLock_('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');return;}
+  parentReceiptOwner_.refresh();
+ }catch(error){if(id===parentState.requestId&&error.code==='INVALID_LINK')ieltsParentLock_('Liên kết này không còn hợp lệ.');}
+ finally{parentState.checking=false;}
+}
+
+function parentReceiptSpeakingForStudent_(item,student,dashboard){
+  if(!student||!student.speakingGroup)return true;
+  const group=student.speakingGroup;
+  if(group!=='group1'&&group!=='group2')return true;
+  const text=slug([item.groupLabel,item.scheduleClassName,item.program,item.session].filter(Boolean).join(' '));
+  const classNumber=String((dashboard&&dashboard.className)||'').match(/\d+/);
+  const groupNumber=group==='group1'?'1':'2';
+  const classGroup=classNumber?new RegExp('(?:^|-)'+classNumber[0]+'-'+groupNumber+'(?:-|$)'):null;
+  return Boolean((classGroup&&classGroup.test(text))||new RegExp('(?:^|-)group-?'+groupNumber+'(?:-|$)|(?:^|-)nhom-?'+groupNumber+'(?:-|$)').test(text));
+}
+
 function parentOpening_(message,name){
   const card=document.getElementById('parent-opening');
   card.hidden=false;
@@ -3176,6 +3807,7 @@ function parentOpening_(message,name){
   document.getElementById('parent-opening-name').classList.toggle('is-waiting',!name);
 }
 function ieltsParentLock_(message){
+  parentReceiptOwner_.clear();
   parentState.authorized=false;parentState.locked=true;parentState.requestId++;
   parentState.profile=null;parentState.dashboard=null;state.student=null;state.dashboard=null;
   document.getElementById('portal-shell').hidden=true;
@@ -3216,12 +3848,13 @@ function parentRender_(){
   const wasOpen=!document.getElementById('portal-shell').hidden;
   if(wasOpen&&parentState.renderedDashboard===parentState.dashboard&&parentState.renderedProfile===parentState.profile)return true;
   const scrollLeft=window.scrollX||0,scrollTop=window.scrollY||0;
-  const data=parentState.dashboard;
+  const projected=parentReceiptOwner_.reapply({dashboard:JSON.parse(JSON.stringify(parentState.dashboard)),student:JSON.parse(JSON.stringify(parentState.profile.student))});
+  const data=projected.dashboard;
   data.studentDirectory=parentState.directory;
-  state.student=parentState.profile.student;
+  state.student=projected.student;
   boot(data);
   if(wasOpen)window.scrollTo({left:scrollLeft,top:scrollTop,behavior:'auto'});
-  parentState.renderedDashboard=data;parentState.renderedProfile=parentState.profile;
+  parentState.renderedDashboard=parentState.dashboard;parentState.renderedProfile=parentState.profile;
   document.getElementById('parent-opening').hidden=true;
   document.getElementById('student-gate').hidden=true;
   document.getElementById('change-student-button').hidden=true;
@@ -3263,6 +3896,7 @@ async function parentLoad_(id){
 }
 async function startIeltsParentPortal_(){
   if(parentState.checking)return;
+  if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile){await parentQuietResume_();return;}
   parentState.checking=true;parentState.locked=false;parentState.authorized=false;
   const id=++parentState.requestId;
   state.student=null;document.getElementById('portal-shell').hidden=true;
@@ -3275,6 +3909,7 @@ async function startIeltsParentPortal_(){
     if(!data.name||!data.rosterRevision||!data.studentDirectory||data.studentDirectory.all.length!==1||data.studentDirectory.all[0].name!==data.name)throw new Error('Liên kết chưa xác định được học viên.');
     parentState.authorized=true;parentState.name=data.name;parentState.revision=data.rosterRevision;parentState.directory=data.studentDirectory;
     parentOpening_('Đang tải lịch học và kết quả của con…',data.name);
+    parentReceiptOwner_.refresh();
     parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
     document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';await parentLoad_(id);
   }catch(error){if(id===parentState.requestId)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');}
@@ -3294,15 +3929,10 @@ setInterval(async function(){
   try{
     const data=await ieltsParentAccess.request('check');
     if(data.name!==parentState.name||data.rosterRevision!==parentState.revision)startIeltsParentPortal_();
-  }catch(error){ieltsParentLock_(error.message||'Chưa thể xác nhận liên kết. Vui lòng thử lại.');}
+  }catch(error){if(error.code==='INVALID_LINK')ieltsParentLock_(error.message||'Liên kết không còn hợp lệ.');}
 },60000);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!parentState.checking)startIeltsParentPortal_()});
-window.addEventListener('pagehide',()=>{
-  parentState.authorized=false;parentState.requestId++;ieltsParentAccess.invalidate();
-  document.getElementById('portal-shell').hidden=true;
-  const gate=document.getElementById('ielts-pending-work-gate');if(gate)gate.remove();
-  parentOpening_('Đang mở hồ sơ của con…','');
-});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){parentReceiptOwner_.suspend();ielts50ClearPendingHomeworkV32_();}else if(!parentState.checking)startIeltsParentPortal_()});
+window.addEventListener('pagehide',()=>{parentReceiptOwner_.suspend();ielts50ClearPendingHomeworkV32_();});
 window.addEventListener('pageshow',event=>{if(event.persisted){parentState.checking=false;startIeltsParentPortal_()}});
 
 
@@ -3337,44 +3967,7 @@ var ieltsPendingCurrentV32_=null;
 
 function ielts50PendingHomeworkEntriesV32_(){
   if(!state.student||!state.dashboard)return [];
-  var pendingCodes={missing:true,partial:true,late_partial:true,not_recorded:true};
-  var assignments=(state.dashboard.assignments||[]).filter(function(item){
-    return item&&dateSerial(item.lessonDate)>=dateSerial('10/08/2026')&&
-      ielts50AssignmentEligibleForStudentV35_(state.student,item)&&!ielts50NoHomeworkItemV22_(item);
-  });
-  var entries=[];
-  var seen={};
-  function actionableAssignment(item){
-    return (Array.isArray(item&&item.tasks)?item.tasks:[]).some(function(task){
-      var actions=task&&Array.isArray(task.actions)?task.actions:[];
-      return Boolean(task&&(actions.some(function(action){return action&&String(action.url||'').trim();})||String(task.url||'').trim()));
-    });
-  }
-  function addEntry(skillId,item){
-    if(!item||!actionableAssignment(item))return;
-    var id=String(item.id||item.sourceCode||'');
-    var key=skillId+'|'+id;
-    if(!id||seen[key])return;
-    seen[key]=true;
-    entries.push({tab:skillId,id:id,label:skillLabel(skillId)+' · '+String(item.session||item.topic||'Bài tập')});
-  }
-  Object.keys(state.student.skills||{}).forEach(function(skillId){
-    var records=(state.student.skills[skillId]&&state.student.skills[skillId].records)||[];
-    records.forEach(function(record){
-      var homeworkCode=String(record&&record.homeworkCode||'').trim().toLowerCase();
-      if(!record||record.homeworkEligible===false||!pendingCodes[homeworkCode])return;
-      var item=ielts50AssignmentForRecord_(skillId,record,assignments);
-      if(!item)return;
-      if(item.isSelfStudy&&(item.skill==='reading'||item.skill==='listening')&&ielts50SelfStudyForAssignmentV17_(item).length)return;
-      addEntry(skillId,item);
-    });
-  });
-  assignments.forEach(function(item){
-    if(!item.isSelfStudy||(item.skill!=='reading'&&item.skill!=='listening'))return;
-    if(ielts50SelfStudyForAssignmentV17_(item).length)return;
-    addEntry(item.skill,item);
-  });
-  return entries;
+  return (state.dashboard.assignments||[]).filter(item=>item&&ielts50AssignmentEligibleForStudentV35_(state.student,item)&&!ielts50NoHomeworkItemV22_(item)&&parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending).map(item=>({tab:item.skill,id:String(item.id),label:skillLabel(item.skill)+' · '+String(item.session||item.topic||'Bài tập')+(item.contentMissing?' · Bài đã gửi nhưng còn trống':'')}));
 }
 
 function ielts50EnsurePendingUiV32_(){
