@@ -4562,7 +4562,8 @@ const ieltsWritingReviews_ = (() => {
   const baseResume=parentQuietResume_;
   parentQuietResume_=async function(){const result=await baseResume.apply(this,arguments);if(who())refresh(true);return result;};
   window.setInterval(() => {
-    if (document.visibilityState === 'hidden' || !current() || !hasLoaded || inFlight) return;
+    // The first read can fail too; refresh() throttles retries until it succeeds.
+    if (document.visibilityState === 'hidden' || !current() || inFlight) return;
     refresh();
   }, 30000);
   const baseOverview=renderOverview;
