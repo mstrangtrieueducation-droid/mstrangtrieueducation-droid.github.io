@@ -5076,6 +5076,12 @@ function writtenTestDisplayTitle_(item) {
     }
     function parentRecoveryNext_(recovery) {
       if(!recovery||parentForceRecovery_!==recovery||recovery.finalUsed)return null;
+      // An older backend may still need its original forced repair. Allow one
+      // such episode after three complete stale normal replies, never on errors.
+      if(recovery.normalBackground&&recovery.normalStaleReads>=3){
+        parentForceRecovery_=null;
+        return {force:true,quiet:parentBootstrapPainted_,attempt:0,delay:0};
+      }
       const offsets=[5,20,50,80,120,180,270,420],elapsed=Math.max(0,Date.now()-recovery.startedAt);
       // A slow read or suspended timer skips missed checkpoints; it never
       // creates a burst. The final check remains available after the window.
@@ -5216,10 +5222,21 @@ function writtenTestDisplayTitle_(item) {
         if(!retained||!parentPackageWarning_)parentPackage_=value;
         app.dashboardLoad.inFlight=false;app.profileLoad.inFlight=false;app.profileLoad.busy=false;
         const recovered=job.recovery&&parentRecoveryReady_(value,job.recovery);
+        if(job.recovery&&job.recovery.normalBackground&&!recovered&&!parentPackagePartial_(value)&&!parentPackageWarning_)job.recovery.normalStaleReads+=1;
         if(force||recovered){if(!job.recovery||parentForceRecovery_===job.recovery)parentForceRecovery_=null;}
         if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,!job.recovery||Boolean(recovered));
         if(job.recovery){if(!recovered&&!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
-        else if(!force&&(stale||parentPackageWarning_))next={force:true,quiet:true,attempt:0,delay:0};
+        else if(!force&&(stale||parentPackageWarning_)){
+          // KIDS_PARENT_NORMAL_BACKGROUND_RECOVERY_V1: a complete visible pair
+          // can reconcile through the ordinary source-age/generation checks.
+          // Keep partial-data repair and explicit refresh on their original lane.
+          if(stale&&!parentPackagePartial_(value)&&!parentPackageWarning_&&parentBootstrapPainted_){
+            const saved=parentPackage_;
+            parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),startedAt:Date.now(),nextIndex:0,calls:0,finalUsed:false,normalBackground:true,normalStaleReads:0,
+              before:saved?[Number(saved.dashboard.snapshotBuiltAt),Number(saved.profile.sourceModelBuiltAt),Number(saved.profile.snapshotBuiltAt)]:null};
+            next=parentRecoveryNext_(parentForceRecovery_);
+          }else next={force:true,quiet:true,attempt:0,delay:0};
+        }
         return true;
       }).catch(error=>{
         if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
