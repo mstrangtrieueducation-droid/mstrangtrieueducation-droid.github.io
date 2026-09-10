@@ -3867,9 +3867,9 @@ function parentAccept_(kind,data,id){
   if(id!==parentState.requestId||!parentPayloadValid_(kind,data))return false;
   parentState[kind]=data;parentCacheWrite_(kind,data);parentRender_();return true;
 }
-async function parentLoad_(id){
+async function parentLoad_(id,prefetch){
   const loadDashboard=async()=>{
-    let data=await ieltsParentAccess.request('dashboard');
+    let data=await (prefetch&&prefetch.dashboard||ieltsParentAccess.request('dashboard'));
     if(id!==parentState.requestId)return;
     parentAccept_('dashboard',data,id);
     if(data.coldShell||data.needsBackgroundRefresh){
@@ -3878,7 +3878,7 @@ async function parentLoad_(id){
     }
   };
   const loadProfile=async()=>{
-    let data=await ieltsParentAccess.request('profile');
+    let data=await (prefetch&&prefetch.profile||ieltsParentAccess.request('profile'));
     if(id!==parentState.requestId)return;
     if(data.cacheWarming||!data.found||data.studentDataStale){
       parentAccept_('profile',data,id);
@@ -3892,7 +3892,7 @@ async function parentLoad_(id){
     const failed=results.find(x=>x.status==='rejected');
     parentOpening_(failed?failed.reason.message:'Dữ liệu của con đang được chuẩn bị.',parentState.name);
     document.getElementById('parent-retry').hidden=false;
-  }else setSync('ok','Đã kiểm tra dữ liệu của con');
+  }else{setSync('ok','Đã kiểm tra dữ liệu của con');parentReceiptOwner_.refresh();}
 }
 async function startIeltsParentPortal_(){
   if(parentState.checking)return;
@@ -3903,15 +3903,18 @@ async function startIeltsParentPortal_(){
   document.getElementById('student-gate').hidden=true;document.getElementById('app-loading').hidden=true;
   document.getElementById('parent-retry').hidden=true;
   parentOpening_('Đang mở hồ sơ của con…','');
+  // IELTS_PARENT_PARALLEL_BOOT_V1
+  const checkRequest=ieltsParentAccess.request('check');
+  const parentPrefetch={dashboard:ieltsParentAccess.request('dashboard'),profile:ieltsParentAccess.request('profile')};
+  parentPrefetch.dashboard.catch(function(){});parentPrefetch.profile.catch(function(){});
   try{
-    const data=await ieltsParentAccess.request('check');
+    const data=await checkRequest;
     if(id!==parentState.requestId)return;
     if(!data.name||!data.rosterRevision||!data.studentDirectory||data.studentDirectory.all.length!==1||data.studentDirectory.all[0].name!==data.name)throw new Error('Liên kết chưa xác định được học viên.');
     parentState.authorized=true;parentState.name=data.name;parentState.revision=data.rosterRevision;parentState.directory=data.studentDirectory;
     parentOpening_('Đang tải lịch học và kết quả của con…',data.name);
-    parentReceiptOwner_.refresh();
     parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
-    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';await parentLoad_(id);
+    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';await parentLoad_(id,parentPrefetch);
   }catch(error){if(id===parentState.requestId)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');}
   finally{parentState.checking=false}
 }
