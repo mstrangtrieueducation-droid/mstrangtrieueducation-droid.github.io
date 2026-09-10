@@ -4233,7 +4233,7 @@ const ieltsWritingReviews_ = (() => {
     else {
       // Expire currentness while checking again. Keep the saved review and its
       // open tab/annotations intact; only freshness labels and counts change.
-      sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall)})); updateOpenFreshness(); repaint();
+      sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall),receiptStatus:undefined})); updateOpenFreshness(); repaint();
     }
     const request = ieltsParentAccess.request('writing', force).then(data => {
       if (epoch !== generation || who() !== startedFor) return;
@@ -4249,7 +4249,7 @@ const ieltsWritingReviews_ = (() => {
       status = 'ready'; hasLoaded = true; refreshing = false; updateOpenFreshness();
     }).catch(() => {
       if (epoch === generation && who() === startedFor) {
-        sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall)})); refreshing = false;
+        sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall),receiptStatus:undefined})); refreshing = false;
         // A transient read failure cannot certify an old review as current.
         // Its already-authorized historical content remains available in place.
         if (hasLoaded) { status = 'ready'; updateOpenFreshness(); }
@@ -4307,9 +4307,13 @@ const ieltsWritingReviews_ = (() => {
     const assignment = ieltsWritingAssignments_.forItem(item); if (!assignment) return '';
     return groupHtml(assignment);
   }
+  function hasAssignmentResults(assignment) {
+    return reviews.some(record => code(record.assignmentCode) === assignment.assignmentCode) ||
+      notebookStates.some(record => code(record.assignmentCode) === assignment.assignmentCode);
+  }
   function homeworkStatusHtml(item, legacyHtml) {
     const assignment = ieltsWritingAssignments_.forItem(item);
-    if (!assignment || (assignment.reviewDriven && !reviews.some(record => code(record.assignmentCode) === assignment.assignmentCode))) return legacyHtml;
+    if (!assignment || (assignment.reviewDriven && !hasAssignmentResults(assignment))) return legacyHtml;
     // Replace feedback prose in this display fragment only. Submission badges,
     // attempts, timestamps, missing/late alerts and source links stay intact.
     const retained = document.createElement('template');
@@ -4321,7 +4325,7 @@ const ieltsWritingReviews_ = (() => {
     return retained.innerHTML + assignmentHtml(item);
   }
   function groupHtml(assignment) {
-    if (assignment.reviewDriven && !reviews.some(record => code(record.assignmentCode) === assignment.assignmentCode)) return '';
+    if (assignment.reviewDriven && !hasAssignmentResults(assignment)) return '';
     const results = assignment.tasks.map(task => reviews.find(record => code(record.assignmentCode) === assignment.assignmentCode && Number(record.taskNumber) === task.taskNumber));
     const count = results.filter(isCurrentReview).length;
     return '<section class="wr-assignment" aria-label="Nhận xét của Cô · Writing ' + escape(assignment.weekCode) + '">' +
@@ -4335,10 +4339,13 @@ const ieltsWritingReviews_ = (() => {
     const current = item.current && !refreshing;
     const failed = current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
     const complete = current && item.state === 'notebook_complete';
-    const title = !current ? (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại') :
+    // Receipt evidence is separate from a current check. Access failures and
+    // refreshes must never turn an unknown receipt into a missing notebook.
+    const receiptTitle = item.receiptStatus === 'submitted' ? 'Đã nộp vở' : item.receiptStatus === 'not_submitted' ? 'Chưa nộp vở' : '';
+    const title = !current ? (receiptTitle || (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại')) :
       failed ? (item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
-    const latestNote = !current ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
+    const latestNote = !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
     if (item.reviewMode === 'quick_check') {
       const notebookLinks = array(item.notebookUrls).map((value, index) => {
@@ -4347,7 +4354,7 @@ const ieltsWritingReviews_ = (() => {
       }).join('');
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
-      const quickTitle = !current ? title : complete || failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở';
+      const quickTitle = receiptTitle || (!current ? title : complete || failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
         (failed && hasWriting ? '<p class="wr-notebook-hold">Bài viết chờ vở đạt yêu cầu.</p>' : '') + latestSubmission +
