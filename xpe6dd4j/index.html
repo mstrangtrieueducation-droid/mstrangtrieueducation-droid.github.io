@@ -4311,18 +4311,43 @@ const ieltsWritingReviews_ = (() => {
     return reviews.some(record => code(record.assignmentCode) === assignment.assignmentCode) ||
       notebookStates.some(record => code(record.assignmentCode) === assignment.assignmentCode);
   }
+  function submissionSummary(assignment) {
+    if (!current() || status !== 'ready' || refreshing || !assignment.tasks.length) return '';
+    const latest = assignment.tasks.map(task => ({...sourceState(assignment.assignmentCode, task.taskNumber),taskNumber:task.taskNumber}));
+    if (!latest.every(item => ['current','pending','empty_submission','not_submitted'].includes(item.state))) return '';
+    const submitted = latest.filter(item => ['current','pending'].includes(item.state));
+    const missing = latest.filter(item => !['current','pending'].includes(item.state));
+    let summary = submitted.length ? 'Đã nộp ' + submitted.length + '/' + latest.length + ' bài viết' : 'Chưa nộp bài viết';
+    if (submitted.length && missing.length) summary += ' · Chưa nộp: ' + missing.map(item => 'Đề ' + item.taskNumber + (item.state === 'empty_submission' ? ' (để trống)' : '')).join(', ');
+    else if (!submitted.length && missing.some(item => item.state === 'empty_submission')) summary += ' · Để trống: ' + missing.filter(item => item.state === 'empty_submission').map(item => 'Đề ' + item.taskNumber).join(', ');
+    const times = submitted.map(item => Date.parse(item.submittedAt)).filter(Number.isFinite);
+    if (times.length) summary += ' · ' + submissionDate(new Date(Math.max(...times)).toISOString());
+    return summary;
+  }
   function homeworkStatusHtml(item, legacyHtml) {
     const assignment = ieltsWritingAssignments_.forItem(item);
-    if (!assignment || (assignment.reviewDriven && !hasAssignmentResults(assignment))) return legacyHtml;
+    if (!assignment) return legacyHtml;
+    const summary = submissionSummary(assignment);
+    const feedbackActive = !assignment.reviewDriven || hasAssignmentResults(assignment);
+    if (!feedbackActive && !summary) return legacyHtml;
     // Replace feedback prose in this display fragment only. Submission badges,
     // attempts, timestamps, missing/late alerts and source links stay intact.
     const retained = document.createElement('template');
     retained.innerHTML = legacyHtml || '';
-    retained.content.querySelectorAll('.ielts-feedback-message,.ielts-feedback-empty').forEach(node => node.remove());
-    retained.content.querySelectorAll('p > strong').forEach(node => {
-      if (node.textContent.trim().replace(/:$/, '') === 'Nhận xét bài tập về nhà') node.textContent = 'Tình trạng nộp bài:';
+    if (feedbackActive) {
+      retained.content.querySelectorAll('.ielts-feedback-message,.ielts-feedback-empty').forEach(node => node.remove());
+      retained.content.querySelectorAll('p > strong').forEach(node => {
+        if (node.textContent.trim().replace(/:$/, '') === 'Nhận xét bài tập về nhà') node.textContent = 'Tình trạng nộp bài:';
+      });
+    }
+    // A complete fresh read can replace the legacy source warning without
+    // changing deadline, missing/late badges, attempts or receipt metadata.
+    if (summary) retained.content.querySelectorAll('p.direct-source-status').forEach(node => {
+      const receipt = document.createElement('p');
+      receipt.className = 'wr-submitted wr-receipt-summary'; receipt.textContent = summary;
+      node.replaceWith(receipt);
     });
-    return retained.innerHTML + assignmentHtml(item);
+    return retained.innerHTML + (feedbackActive ? assignmentHtml(item) : '');
   }
   function groupHtml(assignment) {
     if (assignment.reviewDriven && !hasAssignmentResults(assignment)) return '';
