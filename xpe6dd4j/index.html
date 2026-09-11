@@ -579,7 +579,7 @@ body.ielts46-fighter9-style .deadline{display:flex;justify-content:space-between
 @media(forced-colors:active){.wr-revision-change{background:Mark;color:MarkText;text-decoration-color:MarkText}.wr-revision-legend{border-color:CanvasText}}
 .wr-notebook{margin:18px 0;padding:23px 25px;border:1px solid #d3dfec;border-left:6px solid #627b97;border-radius:14px;background:#f4f7fb;overflow-wrap:anywhere;color:#263f58}
 .wr-notebook h5{font-size:20px;margin:6px 0 13px;font-weight:850;line-height:1.4}.wr-notebook h6{font-size:14px;margin:15px 0 7px;line-height:1.5}.wr-notebook p,.wr-notebook li{font-size:14px;line-height:1.8}.wr-notebook p{margin:7px 0}.wr-notebook ul{padding-left:22px;margin:8px 0 12px}
-.wr-notebook-blocked{border-color:#e9bab1;border-left-color:#b74334;background:#fff2ed}.wr-notebook-blocked h5{color:#a73227}.wr-notebook-complete{border-color:#c4e3d7;border-left-color:#258269;background:#eef9f4}.wr-notebook-complete h5{color:#186c54}.wr-notebook-freshness{font-weight:700;color:#5d6470}.wr-notebook-steps{margin-top:18px}.wr-notebook-details{margin-top:16px;padding-top:13px;border-top:1px solid #d9dfe6}.wr-notebook-details summary{font-size:14px;font-weight:750;cursor:pointer}.wr-notebook-issue{padding:7px 0 12px;border-bottom:1px solid #dfe5ed}.wr-notebook-issue:last-child{border-bottom:0}.wr-notebook-action{font-weight:650}.wr-notebook .wr-button{display:inline-flex;margin:10px 8px 0 0;text-decoration:none}.wr-notebook .wr-submitted{font-size:12px;color:#63768b;margin-top:15px}
+.wr-notebook-blocked{border:2px solid #df7768;border-left:8px solid #b52c20;background:#fff0ed;box-shadow:0 8px 22px #a8322720}.wr-notebook-blocked h5{color:#92261e}.wr-notebook-alert{margin:13px 0 10px;padding:14px 16px;border-radius:10px;background:#b52c20;color:#fff;font-size:16px;line-height:1.55;box-shadow:0 3px 10px #8f1e1633}.wr-notebook-alert strong{display:block}.wr-notebook-reason{margin:0!important;color:#71362f;font-weight:650}.wr-notebook-complete{border-color:#c4e3d7;border-left-color:#258269;background:#eef9f4}.wr-notebook-complete h5{color:#186c54}.wr-notebook-freshness{font-weight:700;color:#5d6470}.wr-notebook-steps{margin-top:18px}.wr-notebook-details{margin-top:16px;padding-top:13px;border-top:1px solid #d9dfe6}.wr-notebook-details summary{font-size:14px;font-weight:750;cursor:pointer}.wr-notebook-issue{padding:7px 0 12px;border-bottom:1px solid #dfe5ed}.wr-notebook-issue:last-child{border-bottom:0}.wr-notebook-action{font-weight:650}.wr-notebook .wr-button{display:inline-flex;margin:10px 8px 0 0;text-decoration:none}.wr-notebook .wr-submitted{font-size:12px;color:#63768b;margin-top:15px}
 @media(max-width:600px){.wr-notebook{padding:17px 16px}.wr-notebook h5{font-size:18px}}
 .wr-notebook-quick{padding:17px 20px;border-left-width:4px}.wr-notebook-quick h5{font-size:16px;margin:0 0 7px}.wr-notebook-quick .wr-notebook-details{margin-top:10px;padding-top:9px}.wr-notebook-quick .wr-notebook-hold{font-size:12px;color:#7d4a3d}.wr-notebook-quick summary:focus-visible{outline:3px solid #60a3d8;outline-offset:3px}
 .wr-task2-grid{display:grid;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}.wr-task2-grid article{padding:20px;border:1px solid #dce5ef;border-radius:14px;overflow-wrap:anywhere}.wr-task2-grid h4{margin:0 0 12px}.wr-task2-grid blockquote{margin:12px 0;padding:8px 14px;border-left:3px solid #6c9cbb;color:#36556b}.wr-task2-grid details,.wr-task2-outline details{margin-top:14px}.wr-task2-grid summary,.wr-task2-outline summary{cursor:pointer;color:#175b89}.wr-task2-grid .wr-verdict{display:inline-block;margin-bottom:8px}@media(max-width:700px){.wr-task2-grid{grid-template-columns:1fr}.wr-task2-grid article{padding:14px}}
@@ -4261,6 +4261,7 @@ const ieltsWritingReviews_ = (() => {
       if (!item || item.className !== ieltsParentAccess.className || normalizedName(item.studentName) !== normalizedName(parentState.name) ||
           !code(item.assignmentCode) || seen.has(code(item.assignmentCode)) || typeof item.state !== 'string' ||
           typeof item.current !== 'boolean' || typeof item.historical !== 'boolean' ||
+          (item.essayGradingLocked !== undefined && typeof item.essayGradingLocked !== 'boolean') ||
           !['notebook_only','notebook_and_writing'].includes(item.homeworkMode)) throw new Error('Notebook identity mismatch');
       seen.add(code(item.assignmentCode));
     }
@@ -4396,9 +4397,17 @@ const ieltsWritingReviews_ = (() => {
     if (assignment.reviewDriven && !hasAssignmentResults(assignment)) return '';
     const results = assignment.tasks.map(task => reviews.find(record => code(record.assignmentCode) === assignment.assignmentCode && Number(record.taskNumber) === task.taskNumber));
     const count = results.filter(isCurrentReview).length;
+    const essayBlocked = writingBlockedByNotebook(assignment);
+    const subtitle = essayBlocked ? ' · Vở chưa đạt yêu cầu' :
+      assignment.tasks.length && status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa cho lần nộp mới nhất' : '';
     return '<section class="wr-assignment" aria-label="Nhận xét của Cô · Writing ' + escape(assignment.weekCode) + '">' +
-      '<header class="wr-feedback-head"><h4>Nhận xét của Cô</h4><p>Writing ' + escape(assignment.weekCode) + (assignment.tasks.length && status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa cho lần nộp mới nhất' : '') + '</p></header>' +
-      (status === 'ready' ? notebookHtml(assignment) + (assignment.tasks.length ? '<div class="wr-exercises">' + assignment.tasks.map((task,index) => card(results[index], assignment, task)).join('') + '</div>' : '') : loadStatus()) + '</section>';
+      '<header class="wr-feedback-head"><h4>Nhận xét của Cô</h4><p>Writing ' + escape(assignment.weekCode) + subtitle + '</p></header>' +
+      (status === 'ready' ? notebookHtml(assignment) + (assignment.tasks.length && !essayBlocked ? '<div class="wr-exercises">' + assignment.tasks.map((task,index) => card(results[index], assignment, task)).join('') + '</div>' : '') : loadStatus()) + '</section>';
+  }
+  function writingBlockedByNotebook(assignment) {
+    const item = notebookStates.find(entry => code(entry.assignmentCode) === assignment.assignmentCode);
+    return Boolean(item && item.homeworkMode === 'notebook_and_writing' && !refreshing &&
+      (item.essayGradingLocked === true || (item.current && item.state !== 'notebook_complete')));
   }
   function notebookHtml(assignment) {
     const item = notebookStates.find(entry => code(entry.assignmentCode) === assignment.assignmentCode);
@@ -4407,6 +4416,8 @@ const ieltsWritingReviews_ = (() => {
     const current = item.current && !refreshing;
     const failed = current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
     const complete = current && item.state === 'notebook_complete';
+    const finalLock = item.essayGradingLocked === true;
+    const writingBlocked = hasWriting && !refreshing && (finalLock || (current && !complete));
     // Receipt evidence is separate from a current check. Access failures and
     // refreshes must never turn an unknown receipt into a missing notebook.
     const receiptTitle = item.receiptStatus === 'submitted' ? 'Đã nộp vở' : item.receiptStatus === 'not_submitted' ? 'Chưa nộp vở' : '';
@@ -4423,11 +4434,13 @@ const ieltsWritingReviews_ = (() => {
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
       const quickTitle = receiptTitle || (!current ? title : complete || failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
+      if (writingBlocked) return '<section class="wr-notebook wr-notebook-quick wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><p class="wr-notebook-reason">' + inline(finalLock ? 'Kết quả này đã được chốt. Chỉ Cô mới có thể mở lại lượt chấm.' : item.reason || item.overall || 'Vở chưa đạt yêu cầu.') + '</p></section>';
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
         (failed && hasWriting ? '<p class="wr-notebook-hold">Bài viết chờ vở đạt yêu cầu.</p>' : '') + latestSubmission +
         (notebookLinks ? '<details class="wr-notebook-details"><summary>Xem vở lần nộp mới nhất</summary>' + notebookLinks + '</details>' : '') + '</section>';
     }
+    if (writingBlocked) return '<section class="wr-notebook wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><p class="wr-notebook-reason">' + inline(finalLock ? 'Kết quả này đã được chốt. Chỉ Cô mới có thể mở lại lượt chấm.' : item.reason || item.overall || 'Vở chưa đạt yêu cầu.') + '</p></section>';
     const issues = array(item.issues).map(issue => {
       const pages = [...new Set(array(issue.notebookPages).map(p => Number(p.page)).filter(n => Number.isInteger(n) && n > 0))];
       return '<article class="wr-notebook-issue"><h6>' + escape(issue.section || 'Phần cần bổ sung') + (pages.length ? ' · Vở trang ' + escape(pages.join(', ')) : '') + '</h6>' + prose(issue.evidence) + (issue.action ? '<p class="wr-notebook-action">' + inline(issue.action) + '</p>' : '') + '</article>';
