@@ -4418,6 +4418,10 @@ const ieltsWritingReviews_ = (() => {
     const complete = current && item.state === 'notebook_complete';
     const finalLock = item.essayGradingLocked === true;
     const writingBlocked = hasWriting && !refreshing && (finalLock || (current && !complete));
+    const blockedNotebookUrls = array(item.notebookUrls).map(value => ieltsWritingAssignments_.safeUrl(typeof value === 'string' ? value : value && value.url)).filter(Boolean);
+    const blockedNotebookLinks = blockedNotebookUrls.map((url, index) => '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Mở vở đã nộp' + (blockedNotebookUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>').join('');
+    const blockedHtml = () => '<section class="wr-notebook wr-notebook-quick wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><div class="wr-notebook-reason"><strong>Lý do vở chưa đạt:</strong>' + prose(item.overall || item.reason || 'Vở chưa đáp ứng yêu cầu của bài được giao.') + '</div>' +
+      (item.submittedAt ? '<p class="wr-submitted">Đã nhận vở: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '') + blockedNotebookLinks + '</section>';
     // Receipt evidence is separate from a current check. Access failures and
     // refreshes must never turn an unknown receipt into a missing notebook.
     const receiptTitle = item.receiptStatus === 'submitted' ? 'Đã nộp vở' : item.receiptStatus === 'not_submitted' ? 'Chưa nộp vở' : '';
@@ -4434,13 +4438,13 @@ const ieltsWritingReviews_ = (() => {
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
       const quickTitle = receiptTitle || (!current ? title : complete || failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
-      if (writingBlocked) return '<section class="wr-notebook wr-notebook-quick wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><p class="wr-notebook-reason">' + inline(finalLock ? 'Kết quả này đã được chốt. Chỉ Cô mới có thể mở lại lượt chấm.' : item.reason || item.overall || 'Vở chưa đạt yêu cầu.') + '</p></section>';
+      if (writingBlocked) return blockedHtml();
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
         (failed && hasWriting ? '<p class="wr-notebook-hold">Bài viết chờ vở đạt yêu cầu.</p>' : '') + latestSubmission +
         (notebookLinks ? '<details class="wr-notebook-details"><summary>Xem vở lần nộp mới nhất</summary>' + notebookLinks + '</details>' : '') + '</section>';
     }
-    if (writingBlocked) return '<section class="wr-notebook wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><p class="wr-notebook-reason">' + inline(finalLock ? 'Kết quả này đã được chốt. Chỉ Cô mới có thể mở lại lượt chấm.' : item.reason || item.overall || 'Vở chưa đạt yêu cầu.') + '</p></section>';
+    if (writingBlocked) return blockedHtml();
     const issues = array(item.issues).map(issue => {
       const pages = [...new Set(array(issue.notebookPages).map(p => Number(p.page)).filter(n => Number.isInteger(n) && n > 0))];
       return '<article class="wr-notebook-issue"><h6>' + escape(issue.section || 'Phần cần bổ sung') + (pages.length ? ' · Vở trang ' + escape(pages.join(', ')) : '') + '</h6>' + prose(issue.evidence) + (issue.action ? '<p class="wr-notebook-action">' + inline(issue.action) + '</p>' : '') + '</article>';
