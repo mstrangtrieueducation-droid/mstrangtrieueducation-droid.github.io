@@ -3897,7 +3897,8 @@ function parentOpening_(message,name){
   document.getElementById('parent-opening-name').textContent=name||'Đang xác nhận học viên…';
   document.getElementById('parent-opening-name').classList.toggle('is-waiting',!name);
 }
-function ieltsParentLock_(message){
+// IELTS_PARENT_TRANSIENT_CACHE_V1: keep cached data on network failure, but never display it before live authorization.
+function ieltsParentLock_(message,purgeCache=true){
   parentReceiptOwner_.clear();
   parentState.authorized=false;parentState.locked=true;parentState.requestId++;
   parentState.profile=null;parentState.dashboard=null;state.student=null;state.dashboard=null;
@@ -3907,7 +3908,7 @@ function ieltsParentLock_(message){
   document.body.style.overflow='';
   parentOpening_(message,'Hồ sơ chưa thể mở');
   document.getElementById('parent-retry').hidden=false;
-  try{localStorage.removeItem(parentCacheKey_('dashboard'));localStorage.removeItem(parentCacheKey_('profile'));}catch(error){}
+  if(purgeCache)try{localStorage.removeItem(parentCacheKey_('dashboard'));localStorage.removeItem(parentCacheKey_('profile'));}catch(error){}
 }
 function parentCacheKey_(kind){return 'ielts-parent-v1:'+ieltsParentAccess.className+':'+ieltsParentAccess.token+':'+kind}
 function parentSourceTime_(data){
@@ -4034,7 +4035,7 @@ async function startIeltsParentPortal_(){
     if(bundle.name!==parentState.name||bundle.rosterRevision!==parentState.revision){const error=new Error('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');error.code='INVALID_LINK';throw error;}
     await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});
   }catch(error){if(id===parentState.requestId){
-    if(error.code==='INVALID_LINK'||!parentState.authorized)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
+    if(error.code==='INVALID_LINK'||!parentState.authorized)ieltsParentLock_('Chưa thể kiểm tra liên kết. Vui lòng bấm Thử lại.',error.code==='INVALID_LINK');
     else setSync('error','Chưa cập nhật được dữ liệu mới.');
   }}
   finally{parentState.checking=false}
