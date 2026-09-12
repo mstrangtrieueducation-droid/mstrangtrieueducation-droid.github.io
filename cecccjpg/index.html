@@ -3054,6 +3054,7 @@ function unitNumber_(value) {
 
 return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
 /* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence, manual preparation preserved. */
+/* FIGHTER_CANONICAL_PDF_PROOF_FORWARD_V1 */
 (function(root){
   'use strict';
   function createFighterReceiptProjector(m){
@@ -3088,7 +3089,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         });
       }).map(row=>{
         const files=list(row.submissionFiles).concat(list(row.links),list(row.evidenceUrls).map(url=>({url})),row.viewUrl?[{url:row.viewUrl}]:[],row.submissionUrl?[{url:row.submissionUrl}]:[]).filter(file=>{try{const u=new URL(file.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch(_){return false;}});
-        return {id:row.id||row.receiptId,code:reference.code,family:reference.family,sourceTab:reference.sourceTab,sourceName:reference.sourceName,submittedAt:row.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(row),evidenceUrls:files.map(file=>file.url),evidenceTypes:list(row.evidenceTypes).concat(files.map(file=>file.type==='pdf'?'document':file.type).filter(Boolean)),components:row.components};
+        return {id:row.id||row.receiptId,code:reference.code,family:reference.family,sourceTab:reference.sourceTab,sourceName:reference.sourceName,submittedAt:row.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(row),evidenceUrls:files.map(file=>file.url),evidenceTypes:list(row.evidenceTypes).concat(files.map(file=>file.type==='pdf'?'document':file.type).filter(Boolean)),components:row.components,canonicalPdf:row.canonicalPdf};
       });
     }
     function received(target,found,assignment,peers){
@@ -3103,7 +3104,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       target.submittedAt=target.submittedAt||found[0].submittedAt;
       if(target.contentMissing){target.completed=false;target.missing=true;target.status='Đã nhận lượt gửi nhưng bài trống';}
       else if(!target.completed)target.status='Đã nộp bài';
-      target.submissionAttempts=root.DirectSubmissionHistory.merge(target.submissionAttempts,found.map((r,i)=>({receiptId:r.id,contentStatus:r.contentStatus,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),attempt:i+1,sourceAttempt:r.attempt||i+1,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,links:r.links,family:r.family,part:r.part})));
+      target.submissionAttempts=root.DirectSubmissionHistory.merge(target.submissionAttempts,found.map((r,i)=>({receiptId:r.id,contentStatus:r.contentStatus,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),attempt:i+1,sourceAttempt:r.attempt||i+1,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,links:r.links,family:r.family,part:r.part,canonicalPdf:r.canonicalPdf})));
       // A receipt proves an upload; it does not silently complete a second
       // required PDF/video/notebook component or replace a teacher comment.
       const types=new Set(content.flatMap(r=>list(r.evidenceTypes)));
@@ -3212,7 +3213,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
         assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,fresh);
         found.forEach(r=>{
-          const item={receiptId:r.id,contentStatus:r.contentStatus,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
+          const item={receiptId:r.id,contentStatus:r.contentStatus,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,canonicalPdf:r.canonicalPdf,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
           if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
             Object.assign(item,{total:r.score,score:r.score,maximum:r.maximum,maxScore:r.maximum,percent:r.percentage,completed:true,status:'Đã có kết quả'});
             if(Number.isFinite(r.listening))item.listening=r.listening;if(Number.isFinite(r.paraphrase))item.paraphrase=r.paraphrase;
@@ -3263,19 +3264,40 @@ window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==
 
 /* FIGHTER_SUBMITTED_FILE_DEDUPE_V1: one file button per source occurrence. */
 /* FIGHTER_CANONICAL_PDF_DISPLAY_V2 */
+/* FIGHTER_CANONICAL_RECEIPT_PDF_V3 */
 function fighterSubmissionFileGroups_(state,fallbackType){
   const list=value=>Array.isArray(value)?value:[],specific=type=>type==='pdf'||type==='video';
   const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set(),canonicalPdfs=new Set(),knownFiles=new Map();
   const history=DirectSubmissionHistory.merge([],list(state.submissionAttempts));
+  const role=file=>String(file.documentRole||file.role||'');
+  function canonicalProof(attempt){
+    const value=attempt&&attempt.canonicalPdf;
+    if(!value||value.proof!=='producer-original'||!attempt.receiptId||attempt.contentStatus==='empty')return null;
+    if(!value.sourceSpreadsheetId||!value.sourceTab||!Number.isInteger(value.sourceRow)||value.sourceRow<2)return null;
+    const time=DirectSubmissionDeadlinePolicy.receiptTime(attempt);
+    if(!time||!Number.isFinite(value.submittedAtMs)||time!==value.submittedAtMs)return null;
+    const key=DirectSubmissionHistory.fileKey(value.url);
+    if(!key||!key.startsWith('drive:'))return null;
+    const evidence=list(attempt.evidenceUrls).concat(list(attempt.links).map(file=>file.url));
+    if(!evidence.some(url=>DirectSubmissionHistory.fileKey(url)===key))return null;
+    return {key,value,file:Object.assign({},value,{type:'pdf',label:'PDF bài đã nộp',documentRole:role(value)})};
+  }
+  function sameSource(file,proof){
+    const value=proof.value;
+    return file.sourceSpreadsheetId===value.sourceSpreadsheetId&&file.sourceTab===value.sourceTab&&
+      Number.isInteger(file.sourceRow)&&file.sourceRow===value.sourceRow&&role(file)===role(value);
+  }
+  function superseded(file,proof){
+    return Boolean(proof&&file.type==='pdf'&&DirectSubmissionHistory.fileKey(file.url)!==proof.key&&sameSource(file,proof));
+  }
   function typed(file){
     const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return null;
     const hint=types.get(key),type=file.type||fallbackType||(state.kind==='shadowing'?'video':'file');
     return {key,file:Object.assign({},knownFiles.get(key)||{},file,{type:!specific(type)&&hint?hint:type})};
   }
   flat.forEach(file=>{const key=DirectSubmissionHistory.fileKey(file&&file.url);if(key&&specific(file.type)&&!types.has(key))types.set(key,file.type);if(key&&file.type==='pdf')canonicalPdfs.add(key);if(key&&(!knownFiles.has(key)||specific(file.type)))knownFiles.set(key,file);});
-  const role=file=>String(file.documentRole||file.role||'');
   function displayedFiles(group){
-    const files=Array.from(group.files.values());
+    const files=Array.from(group.files.values()).filter(file=>!superseded(file,group.canonical));
     // Only a PDF typed by the existing grading-file reader is sufficient to
     // hide raw attachment evidence within this same receipt and document role.
     const pdfRoles=new Set(files.filter(file=>file.type==='pdf'&&canonicalPdfs.has(DirectSubmissionHistory.fileKey(file.url))).map(role));
@@ -3295,12 +3317,19 @@ function fighterSubmissionFileGroups_(state,fallbackType){
     else group.files.set(item.key,Object.assign({},old,item.file,{type:specific(old.type)&&!specific(item.file.type)?old.type:item.file.type}));
   }
   history.forEach((attempt,index)=>{
-    const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map()};groups.push(group);
+    const canonical=canonicalProof(attempt);
+    const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map(),canonical};groups.push(group);
+    if(canonical){types.set(canonical.key,'pdf');canonicalPdfs.add(canonical.key);}
+    function receiptFile(file){
+      const known=knownFiles.get(DirectSubmissionHistory.fileKey(file.url));
+      return canonical&&!role(file)&&!role(known||{})?Object.assign({},file,{documentRole:role(canonical.value)}):file;
+    }
     if(group.receiptId)byReceipt.set(group.receiptId,group);
     list(attempt.submissionFiles).forEach(file=>add(group,file));
-    list(attempt.evidenceUrls).forEach(url=>add(group,{url}));
-    list(attempt.links).forEach(link=>add(group,link));
-    if(attempt.viewUrl)add(group,{url:attempt.viewUrl});
+    list(attempt.evidenceUrls).forEach(url=>add(group,receiptFile({url})));
+    list(attempt.links).forEach(link=>add(group,receiptFile(link)));
+    if(attempt.viewUrl)add(group,receiptFile({url:attempt.viewUrl}));
+    if(canonical)add(group,canonical.file);
   });
   // Flat rows may enrich a known occurrence. Distinct receipt IDs are never
   // collapsed merely because a learner submitted the same file again.
@@ -3311,7 +3340,12 @@ function fighterSubmissionFileGroups_(state,fallbackType){
   });
   groups.forEach(group=>group.files.forEach((_,key)=>claimed.add(key)));
   const unassigned={receiptId:'',attempt:null,files:new Map()};
-  flat.filter(file=>file&&!file.receiptId).forEach(file=>{const key=DirectSubmissionHistory.fileKey(file.url);if(key&&!claimed.has(key))add(unassigned,file);});
+  flat.filter(file=>file&&!file.receiptId).forEach(file=>{
+    const key=DirectSubmissionHistory.fileKey(file.url);
+    // Only explicit row provenance can supersede an unassigned indexed PDF.
+    // Old cached files without provenance and different document roles remain.
+    if(key&&!claimed.has(key)&&!groups.some(group=>superseded(file,group.canonical)))add(unassigned,file);
+  });
   if(!flat.length&&state.submissionUrl&&!claimed.has(DirectSubmissionHistory.fileKey(state.submissionUrl)))add(unassigned,{url:state.submissionUrl});
   if(unassigned.files.size)groups.push(unassigned);
   return groups.filter(group=>group.files.size).map(group=>({receiptId:group.receiptId,attempt:group.attempt,files:displayedFiles(group)})).filter(group=>group.files.length);
