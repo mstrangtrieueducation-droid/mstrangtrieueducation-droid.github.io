@@ -12,32 +12,54 @@
   const valid=/^[A-Za-z0-9_-]{22}$/.test(token||'');
   const pending=new Map();
   let generation=0;
+  // IELTS_PARENT_TRANSPORT_RECOVERY_V2: fresh redirect URLs and one bounded retry.
+  let lastNonce=0;
   async function request(action,force=false){
     if(!valid)throw Object.assign(new Error('Liên kết chưa hợp lệ. Vui lòng dùng link cô đã gửi.'),{code:'INVALID_LINK'});
     const key=action+'|'+Boolean(force),started=performance.now(),epoch=generation;
     if(pending.has(key))return pending.get(key);
-    const url=new URL(endpoint);
-    Object.entries({api:'parent1',class:className,action,force:force?'1':'0',token}).forEach(([k,v])=>url.searchParams.set(k,v));
-    const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),90000);
-    const promise=fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',signal:controller.signal}).then(async response=>{
-      if(!response.ok)throw Object.assign(new Error('Chưa thể kết nối. Vui lòng thử lại.'),{code:'SOURCE_UNAVAILABLE'});
-      const value=await response.json();
-      if(epoch!==generation)throw Object.assign(new Error('Phiên mở hồ sơ đã kết thúc.'),{code:'INVALID_LINK'});
-      if(!value||value.ok!==true){
-        const code=value&&value.error||'SOURCE_UNAVAILABLE';
-        if(code==='INVALID_LINK'){generation++;if(typeof ieltsParentLock_==='function')ieltsParentLock_('Liên kết này không còn hợp lệ. Vui lòng liên hệ cô để nhận link của con.');}
-        throw Object.assign(new Error(code==='INVALID_LINK'?'Liên kết này không còn hợp lệ.':'Chưa thể tải dữ liệu. Vui lòng thử lại.'),{code});
+    const ended=()=>Object.assign(new Error('Phiên mở hồ sơ đã kết thúc.'),{code:'INVALID_LINK'});
+    const promise=(async()=>{
+      for(let attempt=0;attempt<2;attempt++){
+        if(epoch!==generation)throw ended();
+        const url=new URL(endpoint);
+        lastNonce=Math.max(Date.now(),lastNonce+1);
+        Object.entries({api:'parent1',class:className,action,force:force?'1':'0',token,_:String(lastNonce)}).forEach(([k,v])=>url.searchParams.set(k,v));
+        const controller=new AbortController();
+        const timer=setTimeout(()=>controller.abort(),['check','bootstrap'].includes(action)?28000:90000);
+        document.documentElement.dataset['parent'+action+'Attempts']=String(attempt+1);
+        try{
+          const response=await fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal});
+          if(!response.ok)throw Object.assign(new Error('Chưa thể kết nối. Vui lòng thử lại.'),{code:'SOURCE_UNAVAILABLE',retryable:[404,408,429].includes(response.status)||response.status>=500});
+          let value;
+          try{value=await response.json();}catch(error){throw Object.assign(new Error('Phản hồi dữ liệu chưa hoàn tất.'),{code:'SOURCE_UNAVAILABLE',retryable:true});}
+          if(epoch!==generation)throw ended();
+          if(!value||value.ok!==true){
+            const code=value&&value.error||'SOURCE_UNAVAILABLE';
+            if(code==='INVALID_LINK'){
+              generation++;
+              if(typeof ieltsParentLock_==='function')ieltsParentLock_('Liên kết này không còn hợp lệ. Vui lòng liên hệ cô để nhận link của con.');
+            }
+            throw Object.assign(new Error(code==='INVALID_LINK'?'Liên kết này không còn hợp lệ.':'Chưa thể tải dữ liệu. Vui lòng thử lại.'),{code,retryable:code==='SOURCE_UNAVAILABLE'});
+          }
+          if(value.className!==className||value.action!==action||!value.data){
+            generation++;
+            if(typeof ieltsParentLock_==='function')ieltsParentLock_('Dữ liệu chưa khớp với liên kết. Vui lòng mở lại link của con.');
+            throw ended();
+          }
+          document.documentElement.dataset['parent'+action+'Ms']=String(Math.round(performance.now()-started));
+          return value.data;
+        }catch(error){
+          if(epoch!==generation)throw ended();
+          const retryable=error.retryable===true||error.name==='AbortError'||error.name==='TypeError';
+          if(attempt!==0||!retryable)throw error;
+        }finally{clearTimeout(timer);}
+        await new Promise(resolve=>setTimeout(resolve,300));
       }
-      if(value.className!==className||value.action!==action||!value.data){
-        generation++;
-        if(typeof ieltsParentLock_==='function')ieltsParentLock_('Dữ liệu chưa khớp với liên kết. Vui lòng mở lại link của con.');
-        throw Object.assign(new Error('Dữ liệu chưa khớp với liên kết.'),{code:'INVALID_LINK'});
-      }
-      document.documentElement.dataset['parent'+action+'Ms']=String(Math.round(performance.now()-started));
-      return value.data;
-    }).finally(()=>{clearTimeout(timer);pending.delete(key)});
+    })().finally(()=>pending.delete(key));
     pending.set(key,promise);return promise;
   }
+
   return {request,token,valid,className,invalidate(){generation++}};
 })();
 // Compatibility surface for existing IELTS renderers. Identity never comes from a name parameter.
