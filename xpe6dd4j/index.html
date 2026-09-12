@@ -3914,24 +3914,45 @@ function parentHasCachedView_(){
   try{return ['dashboard','profile'].every(kind=>{const r=JSON.parse(localStorage.getItem(parentCacheKey_(kind))||'null');const age=Date.now()-Number(r&&r.savedAt);return r&&r.data&&age>=0&&age<86400000;});}catch(_){return false;}
 }
 
+// IELTS_PARENT_PROGRESSIVE_OPEN_V2
+function parentPendingPanel_(title){
+  return '<section class="card" aria-busy="true" style="padding:32px;min-height:160px"><h2>'+esc(title)+'</h2><p>Đang cập nhật dữ liệu. Các phần đã tải vẫn có thể xem bình thường.</p><button class="secondary" type="button" onclick="parentLoad_(parentState.requestId)">Tải lại phần còn thiếu</button></section>';
+}
 function parentRender_(){
-  if(!parentPayloadValid_('dashboard',parentState.dashboard)||!parentPayloadValid_('profile',parentState.profile))return false;
+  if(!parentState.authorized||parentState.locked)return false;
+  const dashboardReady=parentPayloadValid_('dashboard',parentState.dashboard),profileReady=parentPayloadValid_('profile',parentState.profile);
   const wasOpen=!document.getElementById('portal-shell').hidden;
   if(wasOpen&&parentState.renderedDashboard===parentState.dashboard&&parentState.renderedProfile===parentState.profile)return true;
   const scrollLeft=window.scrollX||0,scrollTop=window.scrollY||0;
-  const projected=parentReceiptOwner_.reapply({dashboard:JSON.parse(JSON.stringify(parentState.dashboard)),student:JSON.parse(JSON.stringify(parentState.profile.student))});
-  const data=projected.dashboard;
-  data.studentDirectory=parentState.directory;
+  const entry=parentState.directory.all[0];
+  const dashboard=dashboardReady?JSON.parse(JSON.stringify(parentState.dashboard)):{className:ieltsParentAccess.className,assignments:[],lessonEvents:[],shadowingAssignments:[]};
+  const student=profileReady?JSON.parse(JSON.stringify(parentState.profile.student)):{name:parentState.name,speakingGroup:entry.groupId,speakingGroupLabel:entry.groupLabel,skills:Object.fromEntries(Object.keys(SKILL_META).map(key=>[key,{records:[]}]))};
+  const projected=dashboardReady&&profileReady?parentReceiptOwner_.reapply({dashboard,student}):{dashboard,student};
+  const data=projected.dashboard;data.studentDirectory=parentState.directory;
+  if(!data.logoUrl){const logo=document.querySelector('.parent-opening__logo');if(logo)data.logoUrl=logo.getAttribute('src')||'';}
   state.student=projected.student;
   boot(data);
+  // Incomplete data is never shown as zero scores, missing work or no lessons.
+  // Hide its temporary renderer output synchronously, before the browser paints.
+  if(!dashboardReady)document.getElementById('panel-schedule').innerHTML=parentPendingPanel_('Lịch học');
+  if(!dashboardReady||!profileReady)['speaking','writing','reading','listening','shadowing'].forEach(key=>{const panel=document.getElementById('panel-'+key);if(panel)panel.innerHTML=parentPendingPanel_(skillLabel(key));});
+  if(!profileReady)document.getElementById('panel-overview').innerHTML=parentPendingPanel_('Kết quả cá nhân');
+  if(!dashboardReady){const banner=document.getElementById('update-banner');if(banner)banner.hidden=true;}
+  if(!dashboardReady||!profileReady)setSync('loading','Đang cập nhật phần dữ liệu còn lại…');
   if(wasOpen)window.scrollTo({left:scrollLeft,top:scrollTop,behavior:'auto'});
   parentState.renderedDashboard=parentState.dashboard;parentState.renderedProfile=parentState.profile;
   document.getElementById('parent-opening').hidden=true;
   document.getElementById('student-gate').hidden=true;
   document.getElementById('change-student-button').hidden=true;
   document.getElementById('roster-button').hidden=true;
-  document.documentElement.dataset.parentProfileReady='true';
+  document.documentElement.dataset.parentProfileReady=String(profileReady);
+  document.documentElement.dataset.parentDashboardReady=String(dashboardReady);
   if(!document.documentElement.dataset.parentFirstVisibleMs)document.documentElement.dataset.parentFirstVisibleMs=String(Math.round(performance.now()));
+  if((dashboardReady||profileReady)&&!document.documentElement.dataset.parentFirstAcademicMs)document.documentElement.dataset.parentFirstAcademicMs=String(Math.round(performance.now()));
+  if(dashboardReady&&profileReady){
+    if(!document.documentElement.dataset.parentAllReadyMs)document.documentElement.dataset.parentAllReadyMs=String(Math.round(performance.now()));
+    if(parentState.receiptPaintId!==parentState.requestId){parentState.receiptPaintId=parentState.requestId;queueMicrotask(()=>{if(parentState.authorized&&!parentState.locked)parentReceiptOwner_.refresh();});}
+  }
   return true;
 }
 function parentAccept_(kind,data,id){
@@ -3963,11 +3984,11 @@ async function parentLoad_(id,prefetch){
     const failed=results.find(x=>x.status==='rejected');
     parentOpening_(failed?failed.reason.message:'Dữ liệu của con đang được chuẩn bị.',parentState.name);
     document.getElementById('parent-retry').hidden=false;
-  }else{setSync('ok','Đã kiểm tra dữ liệu của con');parentReceiptOwner_.refresh();}
+  }else{const incomplete=!parentPayloadValid_('dashboard',parentState.dashboard)||!parentPayloadValid_('profile',parentState.profile);setSync(results.some(x=>x.status==='rejected')||incomplete?'error':'ok',incomplete?'Một phần dữ liệu chưa tải được. Em có thể bấm tải lại.':results.some(x=>x.status==='rejected')?'Đang hiển thị dữ liệu gần nhất.':'Đã kiểm tra dữ liệu của con');if(!incomplete)parentReceiptOwner_.refresh();}
 }
 async function startIeltsParentPortal_(){
   if(parentState.checking)return;
-  if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile){await parentQuietResume_();return;}
+  if(parentState.authorized&&!parentState.locked){await parentQuietResume_();if(!parentState.locked&&(!parentPayloadValid_('dashboard',parentState.dashboard)||!parentPayloadValid_('profile',parentState.profile)))await parentLoad_(parentState.requestId);return;}
   parentState.checking=true;parentState.locked=false;parentState.authorized=false;
   const id=++parentState.requestId;
   state.student=null;document.getElementById('portal-shell').hidden=true;
@@ -3985,13 +4006,13 @@ async function startIeltsParentPortal_(){
     parentState.authorized=true;parentState.name=data.name;parentState.revision=data.rosterRevision;parentState.directory=data.studentDirectory;
     parentOpening_('Đang tải lịch học và kết quả của con…',data.name);
     parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
-    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';
+    document.documentElement.dataset.parentCacheHit=String(parentPayloadValid_('dashboard',parentState.dashboard)&&parentPayloadValid_('profile',parentState.profile));parentRender_();
     if(!bundle)bundle=await ieltsParentAccess.request('bootstrap');
     if(id!==parentState.requestId)return;
     if(bundle.name!==parentState.name||bundle.rosterRevision!==parentState.revision){const error=new Error('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');error.code='INVALID_LINK';throw error;}
     await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});
   }catch(error){if(id===parentState.requestId){
-    if(error.code==='INVALID_LINK'||!parentState.dashboard||!parentState.profile)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
+    if(error.code==='INVALID_LINK'||!parentState.authorized)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
     else setSync('error','Chưa cập nhật được dữ liệu mới.');
   }}
   finally{parentState.checking=false}
@@ -4268,7 +4289,7 @@ const ieltsWritingReviews_ = (() => {
   }
   function prose(value) { return String(value || '').split(/\n\s*\n/).map(p => '<p>' + inline(p).replace(/\n/g, '<br>') + '</p>').join(''); }
   function who() {
-    return ieltsWritingAssignments_.all().length && parentState.authorized && !parentState.locked && parentState.name
+    return parentPayloadValid_('profile',parentState.profile) && parentPayloadValid_('dashboard',parentState.dashboard) && ieltsWritingAssignments_.all().length && parentState.authorized && !parentState.locked && parentState.name
       ? [ieltsParentAccess.className, parentState.revision, parentState.name].join('|') : '';
   }
   function close() {
