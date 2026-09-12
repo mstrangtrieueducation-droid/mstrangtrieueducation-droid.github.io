@@ -18,6 +18,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: node tests/ielts-submission/contract.test.cjs --root . --kind main --manifest tests/ielts-submission/contract.json
       - run: node tests/ielts-submission/client.test.cjs
+      - run: node tests/ielts-submission/auto-submit-ui.test.cjs
       - run: node tests/ielts-submission/cross-tab.test.cjs
       - run: DENY_LOCAL=1 node tests/ielts-submission/cross-tab.test.cjs
       - run: node tests/ielts-submission/runtime.test.cjs --only fullTest --full-runtime ielts-full-test/assets/full-durable.fc6ac12f64ec.js

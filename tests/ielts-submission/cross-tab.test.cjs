@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const sourcePath=path.resolve(__dirname,'../../ielts-nghe/submission-client.1608db39982c.js'),client=fs.readFileSync(sourcePath,'utf8');
+const sourcePath=path.resolve(__dirname,'../../ielts-nghe/submission-client.2cd92cc4d691.js'),client=fs.readFileSync(sourcePath,'utf8');
 const payload={source:'ielts-listening-submit',version:1,action:'submitListening',submissionId:'cross-tab-receipt-123456789',student:{name:'QA Test',className:'IELTS 53'},week:'Tuần 01',scores:[12,4,13,5]};
 const denyLocal=process.env.DENY_LOCAL==='1';
 async function waitConfirmed(page,id){const until=Date.now()+5000;while(Date.now()<until){const r=await page.evaluate(id=>IELTSSubmission.lookup(id),id);if(r?.status==='confirmed')return r;await page.waitForTimeout(25);}throw Error('Timed out waiting for confirmed record');}
