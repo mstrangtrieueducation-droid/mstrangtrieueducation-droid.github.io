@@ -3571,77 +3571,6 @@ function resolve(item){
 var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssignmentResolver=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
-/* SHARED_SUBMISSION_ARTIFACTS_V1: display choices never change receipt evidence. */
-/* SHARED_CANONICAL_PDF_ALIAS_V2 */
-(function(root){
-  'use strict';
-  const list=x=>Array.isArray(x)?x:[];
-  const text=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
-  function key(link){
-    const raw=String(link&&link.url||'');
-    try{
-      const u=new URL(raw);if(u.protocol!=='https:'||u.username||u.password)return '';
-      if(['youtu.be','youtube.com','www.youtube.com','m.youtube.com'].includes(u.hostname)){
-        const id=u.hostname==='youtu.be'?u.pathname.slice(1).split('/')[0]:u.searchParams.get('v')||((u.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/)||[])[1]);
-        if(id)return 'youtube:'+id;
-      }
-      return root.DirectSubmissionHistory.fileKey(raw)||u.href;
-    }catch(_){return '';}
-  }
-  function kind(link){
-    const label=text(link.label),mime=text(link.mimeType),name=text(link.fileName||link.name||link.url);
-    if(link.generated===true||/pdf.*(?:da ghep|tu dong)|merged.?pdf/.test(label))return 'merged';
-    if(mime==='application/pdf'||/\.pdf(?:$|[?#])/.test(name))return 'pdf';
-    if(mime.startsWith('video/')||/video|youtube|youtu\.be/.test(label+' '+link.url))return 'video';
-    if(mime.startsWith('audio/')||/ghi am|audio/.test(label))return 'audio';
-    if(mime.startsWith('image/')||/anh|scan|file|so tu vung|vo chep/.test(label))return 'raw';
-    if(/pdf/.test(label))return 'pdf';
-    return 'other';
-  }
-  function canonical(links){
-    const found=new Map();
-    list(links).forEach(link=>{const k=key(link);if(!k)return;const old=found.get(k);
-      if(!old)found.set(k,Object.assign({},link));
-      else {
-        // Aliases share one file. Keep a canonical PDF hint even when the
-        // raw upload comes first and its optional MIME lookup is unavailable.
-        const rank=x=>({pdf:6,merged:5,video:4,audio:3,raw:2,other:0}[kind(x)]||0);
-        const meaningful=x=>!/^$|^mo bai da nop$/.test(text(x.label));
-        const preferred=rank(link)>rank(old)?link:rank(link)<rank(old)?old:meaningful(old)?old:link;
-        const merged=Object.assign({},old,link,{label:preferred.label});
-        if(kind(preferred)==='pdf')merged.generated=false;
-        found.set(k,merged);
-      }
-    });return [...found.values()];
-  }
-  function select(receipts){
-    const lanes=new Map();
-    list(receipts).forEach(r=>{
-      if(!r||r.contentStatus==='empty')return;
-      const links=canonical(list(r.links).concat(r.viewUrl?[{url:r.viewUrl,label:'Mở bài đã nộp'}]:[]));
-      const typed=links.map(link=>({link,kind:kind(link)}));
-      const groups=new Map();
-      typed.forEach(x=>{
-        if(x.kind==='raw'||x.kind==='other')return;
-        const type=['pdf','merged'].includes(x.kind)?'document':x.kind;
-        const role=String(x.link.documentRole||x.link.role||'');
-        const lane=[r.family||'',r.code||'',r.part||'',type,role].join('|');
-        if(!groups.has(lane))groups.set(lane,[]);groups.get(lane).push(x);
-      });
-      groups.forEach((xs,lane)=>{
-        // Prefer a real uploaded PDF in this submission, otherwise its merge.
-        const native=xs.some(x=>x.kind==='pdf'),selected=native?xs.filter(x=>x.kind==='pdf'):xs;
-        const stamp=root.DirectSubmissionHistory.timestamp(r),at=stamp?stamp.start:0,old=lanes.get(lane);
-        const value=selected.map(x=>Object.assign({},x.link,{label:['merged','pdf'].includes(x.kind)?'PDF bài đã nộp':x.link.label}));
-        if(!old||at>old.at||at===old.at&&native&&!old.native)lanes.set(lane,{at,native,links:value});
-        else if(at===old.at&&native===old.native)old.links=canonical(old.links.concat(value));
-      });
-    });return canonical([...lanes.values()].flatMap(x=>x.links));
-  }
-  const api={key,kind,canonical,select};root.DirectSubmissionArtifacts=api;
-  if(typeof module==='object'&&module.exports)module.exports=api;
-})(typeof globalThis==='object'?globalThis:this);
-
 /* DIRECT_GRADING_SHEET_PROJECTORS_V1: receipts do not replace teacher marks. */
 (function(root){
   'use strict';
@@ -3661,8 +3590,12 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
     if(ticket&&target&&coverage)guard.authorize(ticket,target,{schema:1,complete:true,freshRead:true,verifiedAt:Number(coverage.verifiedAt)},{complete:true,stale:false});
   }
   function receiptLinks(receipts){
-    var links=[];receipts.forEach(function(r){links=links.concat(list(r.links),r.viewUrl?[{label:'Mở bài đã nộp',url:r.viewUrl}]:[]);});
-    return root.DirectSubmissionArtifacts.canonical(links);
+    var found=new Map();
+    receipts.forEach(function(r){
+      list(r.links).concat(r.viewUrl?[{label:'Mở bài đã nộp',url:r.viewUrl}]:[]).forEach(function(link){
+        try{var u=new URL(link.url);if(u.protocol==='https:'&&!u.username&&!u.password)found.set(u.href,{label:String(link.label||'Mở bài đã nộp'),url:u.href});}catch(_){}
+      });
+    });return Array.from(found.values());
   }
   function timeOf(r){return Number.isFinite(r.submittedAt)?r.submittedAt:Number(r.submittedAtMs||Date.parse(r.submittedAt)||0);}
   function displayAt(value){if(!Number.isFinite(value))return String(value||'');return new Intl.DateTimeFormat('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date(value));}
@@ -3733,7 +3666,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
       item.contentMissing=parts.some(function(p){return p.receipts.length>0&&p.content.length===0;});
       if(skill==='shadowing'){
         authorize(guard,ticket,item,coverage);
-        if(found.length)item.directSubmission={receipts:found,contentEvidence:parts.flatMap(function(p){return p.content;}),links:root.DirectSubmissionArtifacts.select(found.concat(parts.flatMap(function(p){return p.content;}))),complete:complete};
+        if(found.length)item.directSubmission={receipts:found,contentEvidence:parts.flatMap(function(p){return p.content;}),links:receiptLinks(found.concat(parts.flatMap(function(p){return p.content;}))),complete:complete};
         return;
       }
 
@@ -3750,7 +3683,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
       }
       if(!found.length)return;
       var ordered=sorted(found),last=ordered[ordered.length-1],first=ordered[0];
-      item.directSubmission={receipts:ordered,contentEvidence:parts.flatMap(function(p){return p.content;}),links:root.DirectSubmissionArtifacts.select(ordered.concat(parts.flatMap(function(p){return p.content;}))),complete:complete,parts:parts.map(function(p){return {code:p.map.code,part:p.part,received:p.receipts.length>0};})};
+      item.directSubmission={receipts:ordered,contentEvidence:parts.flatMap(function(p){return p.content;}),links:receiptLinks(ordered.concat(parts.flatMap(function(p){return p.content;}))),complete:complete,parts:parts.map(function(p){return {code:p.map.code,part:p.part,received:p.receipts.length>0};})};
       Object.assign(record,{submitted:complete,submissionState:complete?'submitted':'partial',submittedAt:displayAt(first.submittedAt),lastSubmittedAt:displayAt(last.submittedAt),directSubmission:item.directSubmission});
       var incomingAttempts=attempts(ordered.filter(function(r){return r.receiptType!=='grading-summary';}));
       record.submissionAttempts=root.DirectSubmissionHistory.merge(list(record.submissionAttempts),incomingAttempts,{scope:function(a){
@@ -3817,7 +3750,7 @@ const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGu
 function parentSubmissionKnown_(item,record){if(item&&item.directReceiptSource||record&&record.directReceiptSource){return Boolean(item&&item.directSubmission||record&&record.directSubmission||parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending||parentSubmissionGuard_.can(record)&&record.directDeadline&&record.directDeadline.pending);}return Boolean(record&&(record.submitted===true||record.submittedAt||record.statusType==='done')||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}
 function parentSubmissionLabel_(item,record){if(item&&item.contentMissing||record&&record.contentMissing)return 'Đã nhận lượt gửi nhưng bài trống';const deadline=item&&item.directDeadline||record&&record.directDeadline;return deadline?deadline.label:record&&record.homeworkStatus||'';}
 function parentSubmissionProblem_(item,record){return item&&item.contentMissing||record&&record.contentMissing?'<div class="direct-empty-submission" style="border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px"><strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có nội dung bài làm, video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p></div>':'';}
-function parentSubmissionLinks_(item,record){const value=item&&item.directSubmission||record&&record.directSubmission;return (!parentSubmissionKnown_(item,record)?'<p class="direct-source-status">'+(['idle','loading'].includes(parentReceiptOwner_.readState)?'Đang đọc nguồn bài nộp':'Chưa đọc được nguồn bài nộp')+'</p>':'')+parentSubmissionProblem_(item,record)+(value&&value.links&&value.links.length?'<div class="direct-submission-links" style="display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin-top:12px;line-height:1.5">'+value.links.map(link=>'<a style="display:inline-flex;align-items:center;max-width:100%;white-space:normal;overflow-wrap:anywhere;box-sizing:border-box" class="button small secondary" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>':'');}
+function parentSubmissionLinks_(item,record){const value=item&&item.directSubmission||record&&record.directSubmission;return (!parentSubmissionKnown_(item,record)?'<p class="direct-source-status">'+(['idle','loading'].includes(parentReceiptOwner_.readState)?'Đang đọc nguồn bài nộp':'Chưa đọc được nguồn bài nộp')+'</p>':'')+parentSubmissionProblem_(item,record)+(value&&value.links&&value.links.length?'<div class="direct-submission-links">'+value.links.map(link=>'<a class="button small secondary" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>':'');}
 function parentDirectAttempts_(item,record){const direct=item&&item.directSubmission||record&&record.directSubmission;if(!direct)return '';return '<section class="direct-submission-results"><strong>'+esc(parentSubmissionLabel_(item,record))+'</strong>'+direct.receipts.filter(r=>r.receiptType!=='grading-summary').map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+(r.part?' · Sections '+esc(r.part):'')+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(r.contentStatus==='empty'?' · <b>Lượt gửi trống, chưa có nội dung/video/tệp.</b>':'')+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <b>'+esc(r.score)+'/'+esc(r.maximum)+'</b>':'')+'</p>').join('')+parentSubmissionLinks_(item,record)+'</section>';}
 function parentSubmissionSummary_(skill){const records=(skill&&skill.records||[]).filter(r=>r.directDeadline&&(r.directDeadline.pending||r.directDeadline.eligible&&r.directDeadline.complete)&&parentSubmissionGuard_.can(r));if(!records.length)return '';return '<small>Đã ghi nhận '+records.filter(r=>r.directSubmission&&r.directSubmission.complete).length+' · Cần nộp '+records.filter(r=>r.directDeadline.pending).length+' · Quá hạn '+records.filter(r=>r.directDeadline.missing).length+' · Muộn '+records.filter(r=>r.directDeadline.late).length+'</small>';}
 async function parentQuietResume_(){
@@ -3880,12 +3813,10 @@ function parentCacheRead_(kind){
 }
 function parentCacheWrite_(kind,data){
   if(!parentPayloadValid_(kind,data))return;
-  try{localStorage.setItem(parentCacheKey_(kind),JSON.stringify({savedAt:Date.now(),data:data}));}catch(error){}
+  const stamp=parentSourceTime_(data),age=Date.now()-stamp;
+  if(!Number.isFinite(age)||age<0||age>=86400000)return;
+  try{localStorage.setItem(parentCacheKey_(kind),JSON.stringify({savedAt:stamp,data:data}));}catch(error){}
 }
-function parentHasCachedView_(){
-  try{return ['dashboard','profile'].every(kind=>{const r=JSON.parse(localStorage.getItem(parentCacheKey_(kind))||'null');const age=Date.now()-Number(r&&r.savedAt);return r&&r.data&&age>=0&&age<86400000;});}catch(_){return false;}
-}
-
 function parentRender_(){
   if(!parentPayloadValid_('dashboard',parentState.dashboard)||!parentPayloadValid_('profile',parentState.profile))return false;
   const wasOpen=!document.getElementById('portal-shell').hidden;
@@ -3946,29 +3877,18 @@ async function startIeltsParentPortal_(){
   document.getElementById('student-gate').hidden=true;document.getElementById('app-loading').hidden=true;
   document.getElementById('parent-retry').hidden=true;
   parentOpening_('Đang mở hồ sơ của con…','');
-  // IELTS_PARENT_SHARED_BOOTSTRAP_V1: cached visits check live identity first;
-  // new visits obtain identity, schedule and selected profile in one response.
   try{
-    const cached=parentHasCachedView_();
-    let bundle=cached?null:await ieltsParentAccess.request('bootstrap');
-    const data=bundle||await ieltsParentAccess.request('check');
+    const data=await ieltsParentAccess.request('check');
     if(id!==parentState.requestId)return;
     if(!data.name||!data.rosterRevision||!data.studentDirectory||data.studentDirectory.all.length!==1||data.studentDirectory.all[0].name!==data.name)throw new Error('Liên kết chưa xác định được học viên.');
     parentState.authorized=true;parentState.name=data.name;parentState.revision=data.rosterRevision;parentState.directory=data.studentDirectory;
     parentOpening_('Đang tải lịch học và kết quả của con…',data.name);
+    parentReceiptOwner_.refresh();
     parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
-    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';
-    if(!bundle)bundle=await ieltsParentAccess.request('bootstrap');
-    if(id!==parentState.requestId)return;
-    if(bundle.name!==parentState.name||bundle.rosterRevision!==parentState.revision){const error=new Error('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');error.code='INVALID_LINK';throw error;}
-    await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});
-  }catch(error){if(id===parentState.requestId){
-    if(error.code==='INVALID_LINK'||!parentState.dashboard||!parentState.profile)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
-    else setSync('error','Chưa cập nhật được dữ liệu mới.');
-  }}
+    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';await parentLoad_(id);
+  }catch(error){if(id===parentState.requestId)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');}
   finally{parentState.checking=false}
 }
-
 // Parent mode never restores the general classroom's saved selection.
 restoreIelts48Student_=function(){};
 saveIelts48Student_=function(){};
@@ -4133,7 +4053,7 @@ function ielts48OpenPendingHomeworkV32_(){
 </script>
 <script>
 /* IELTS_WRITING_ASSIGNMENTS_MANIFEST_V1 */
-window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","lessonAliases":[],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view","lessonAliases":[]},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view","lessonAliases":[]}]}]};
+window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","lessonAliases":[],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view","lessonAliases":[]},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view","lessonAliases":[]}]},{"assignmentCode":"IELTS-WRITING-W10","enabledFromWeek":10,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/3fbd7746cb99cdb6654795d109d739f0/","lessonAliases":[],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Population aged 65 and above","promptText":"The table below shows information and predictions regarding the percentages of the population aged 65 and above in three countries.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w10-de1.png","sourceUrl":"https://drive.google.com/file/d/1Q3uQm1tdCEKBf20h5bK5eJ2wLFbwk0I6/view","lessonAliases":[]}]}]};
 /* IELTS_WRITING_ASSIGNMENT_HELPERS_V1: shared, public assignment metadata only. */
 const ieltsWritingAssignments_ = (() => {
   'use strict';
