@@ -14,6 +14,7 @@
   const pending=new Map();
   let generation=0;
   // IELTS_PARENT_TRANSPORT_RECOVERY_V2: fresh redirect URLs and one bounded retry.
+  // IELTS_PARENT_OPEN_RECOVERY_V3: cache-only opening reads fail over promptly.
   let lastNonce=0;
   async function request(action,force=false){
     if(!valid)throw Object.assign(new Error('Liên kết chưa hợp lệ. Vui lòng dùng link cô đã gửi.'),{code:'INVALID_LINK'});
@@ -21,13 +22,14 @@
     if(pending.has(key))return pending.get(key);
     const ended=()=>Object.assign(new Error('Phiên mở hồ sơ đã kết thúc.'),{code:'INVALID_LINK'});
     const promise=(async()=>{
-      for(let attempt=0;attempt<2;attempt++){
+      const opening=['check','bootstrap'].includes(action),attemptLimit=opening?3:2;
+      for(let attempt=0;attempt<attemptLimit;attempt++){
         if(epoch!==generation)throw ended();
         const url=new URL(endpoint);
         lastNonce=Math.max(Date.now(),lastNonce+1);
         Object.entries({api:'parent1',class:className,action,force:force?'1':'0',token,_:String(lastNonce)}).forEach(([k,v])=>url.searchParams.set(k,v));
         const controller=new AbortController();
-        const timer=setTimeout(()=>controller.abort(),['check','bootstrap'].includes(action)?28000:90000);
+        const timer=setTimeout(()=>controller.abort(),opening?8000:90000);
         document.documentElement.dataset['parent'+action+'Attempts']=String(attempt+1);
         try{
           const response=await fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal});
@@ -49,13 +51,18 @@
             throw ended();
           }
           document.documentElement.dataset['parent'+action+'Ms']=String(Math.round(performance.now()-started));
+          if(!document.documentElement.dataset['parent'+action+'FirstMs']){
+            document.documentElement.dataset['parent'+action+'FirstMs']=String(Math.round(performance.now()-started));
+            document.documentElement.dataset['parent'+action+'FirstAttempts']=String(attempt+1);
+          }
           return value.data;
         }catch(error){
+          document.documentElement.dataset['parent'+action+'Failure']=error.name==='AbortError'?'timeout':error.code||error.name||'error';
           if(epoch!==generation)throw ended();
           const retryable=error.retryable===true||error.name==='AbortError'||error.name==='TypeError';
-          if(attempt!==0||!retryable)throw error;
+          if(attempt>=attemptLimit-1||!retryable)throw error;
         }finally{clearTimeout(timer);}
-        await new Promise(resolve=>setTimeout(resolve,300));
+        await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));
       }
     })().finally(()=>pending.delete(key));
     pending.set(key,promise);return promise;
