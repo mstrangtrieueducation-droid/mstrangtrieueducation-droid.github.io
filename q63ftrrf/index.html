@@ -3170,7 +3170,7 @@ function ielts48OpenPendingHomeworkV32_(){
 </script>
 <script>
 /* IELTS_WRITING_ASSIGNMENTS_MANIFEST_V1 */
-window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","lessonAliases":[],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view","lessonAliases":[]},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view","lessonAliases":[]}]},{"assignmentCode":"IELTS-WRITING-W10","enabledFromWeek":10,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/3fbd7746cb99cdb6654795d109d739f0/","lessonAliases":[],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Population aged 65 and above","promptText":"The table below shows information and predictions regarding the percentages of the population aged 65 and above in three countries.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w10-de1.png","sourceUrl":"https://drive.google.com/file/d/1Q3uQm1tdCEKBf20h5bK5eJ2wLFbwk0I6/view","lessonAliases":[]}]}]};
+window.IELTS_WRITING_ASSIGNMENTS={"schemaVersion":1,"assignments":[{"assignmentCode":"IELTS-WRITING-W09","enabledFromWeek":9,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/20698a99cfb9eedc42902ba85b113111/","lessonAliases":[],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Female members of parliament","promptText":"The line graph below shows the percentages of female members of parliament in five European countries from 2000 to 2012.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de1.png","sourceUrl":"https://drive.google.com/file/d/1iOsck3sFeNMxY7cy8giJI1wADUCAA1-K/view","lessonAliases":[]},{"taskNumber":2,"title":"Reasons for choosing a university","promptText":"The pie charts below show the main reasons why students chose a particular university in the UK in 1997 and 2007.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w09-de2.png","sourceUrl":"https://drive.google.com/file/d/16RgEDAfr5Y-lhp71t9miHyIef7dYUgHw/view","lessonAliases":[]}]},{"assignmentCode":"IELTS-WRITING-W10","enabledFromWeek":10,"classNames":["IELTS 48"],"lessonUrl":"https://mstrangtrieueducation-droid.github.io/vocabulary-reading-web/ielts-writing/3fbd7746cb99cdb6654795d109d739f0/","lessonAliases":[],"sessionNumbers":[10],"notebook":true,"reviewDriven":false,"tasks":[{"taskNumber":1,"title":"Population aged 65 and above","promptText":"The table below shows information and predictions regarding the percentages of the population aged 65 and above in three countries.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant. Write at least 150 words.","imageUrl":"https://mstrangtrieueducation-droid.github.io/assets/ielts-writing/w10-de1.png","sourceUrl":"https://drive.google.com/file/d/1Q3uQm1tdCEKBf20h5bK5eJ2wLFbwk0I6/view","lessonAliases":[]}]}]};
 /* IELTS_WRITING_ASSIGNMENT_HELPERS_V1: shared, public assignment metadata only. */
 const ieltsWritingAssignments_ = (() => {
   'use strict';
@@ -3218,7 +3218,7 @@ const ieltsWritingAssignments_ = (() => {
       if (!assignmentCode || !Number.isFinite(enabledFromWeek) || week < Math.max(notebook ? 5 : 9, enabledFromWeek)) return;
       if (notebook && !groups.has(assignmentCode)) {
         groups.set(assignmentCode, {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:true,
-          lessonUrls:[entry.lessonUrl,...array(entry.lessonAliases)].map(lessonKey).filter(Boolean), reviewDriven:entry.reviewDriven===true, tasks:[]});
+          lessonUrls:[entry.lessonUrl,...array(entry.lessonAliases)].map(lessonKey).filter(Boolean), sessionNumbers:array(entry.sessionNumbers).map(Number).filter(Number.isFinite), reviewDriven:entry.reviewDriven===true, tasks:[]});
       }
       if (notebook) groups.get(assignmentCode).notebook = true;
       const tasks = Array.isArray(entry.tasks) ? entry.tasks : [entry];
@@ -3228,7 +3228,7 @@ const ieltsWritingAssignments_ = (() => {
         if (!Number.isInteger(taskNumber) || taskNumber < 1 || taskNumber > 50) return;
         let group = groups.get(assignmentCode);
         if (!group) {
-          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:false, reviewDriven:entry.reviewDriven===true, lessonUrls:[], tasks:[]};
+          group = {assignmentCode, weekCode:'W' + String(week).padStart(2, '0'), notebook:false, reviewDriven:entry.reviewDriven===true, lessonUrls:[], sessionNumbers:array(entry.sessionNumbers).map(Number).filter(Number.isFinite), tasks:[]};
           groups.set(assignmentCode, group);
         }
         [entry.lessonUrl, ...array(entry.lessonAliases), task.lessonUrl, ...array(task.lessonAliases)].map(lessonKey).filter(Boolean).forEach(url => {
@@ -3256,7 +3256,10 @@ const ieltsWritingAssignments_ = (() => {
     if (codes.length) return codes.length === 1 ? all().find(entry => entry.assignmentCode === codes[0]) || null : null;
     const keys = urls.map(lessonKey).filter(Boolean);
     const matches = all().filter(entry => entry.lessonUrls.some(url => keys.includes(url)));
-    return matches.length === 1 ? matches[0] : null;
+    if (matches.length === 1) return matches[0];
+    const sessionNumber = Number(item.sessionNumber);
+    const sessionMatches = Number.isFinite(sessionNumber) ? all().filter(entry => entry.sessionNumbers.includes(sessionNumber)) : [];
+    return sessionMatches.length === 1 ? sessionMatches[0] : null;
   }
   return {code, all, forItem, safeUrl};
 })();
