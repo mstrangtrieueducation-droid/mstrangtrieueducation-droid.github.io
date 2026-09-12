@@ -3255,20 +3255,37 @@ renderSelfStudyResultsForStudentV1_=function(target,items,student){return fighte
 window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==='revoked'){submissionOwner_.clear();fighterSubmissionProjected_=null;}else if(event.detail.status!=='authorized')fighterSubmissionReset_();});
 
 /* FIGHTER_SUBMITTED_FILE_DEDUPE_V1: one file button per source occurrence. */
+/* FIGHTER_CANONICAL_PDF_DISPLAY_V2 */
 function fighterSubmissionFileGroups_(state,fallbackType){
   const list=value=>Array.isArray(value)?value:[],specific=type=>type==='pdf'||type==='video';
-  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set();
+  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set(),canonicalPdfs=new Set(),knownFiles=new Map();
   const history=DirectSubmissionHistory.merge([],list(state.submissionAttempts));
   function typed(file){
     const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return null;
     const hint=types.get(key),type=file.type||fallbackType||(state.kind==='shadowing'?'video':'file');
-    return {key,file:Object.assign({},file,{type:!specific(type)&&hint?hint:type})};
+    return {key,file:Object.assign({},knownFiles.get(key)||{},file,{type:!specific(type)&&hint?hint:type})};
   }
-  flat.forEach(file=>{const key=DirectSubmissionHistory.fileKey(file&&file.url);if(key&&specific(file.type)&&!types.has(key))types.set(key,file.type);});
+  flat.forEach(file=>{const key=DirectSubmissionHistory.fileKey(file&&file.url);if(key&&specific(file.type)&&!types.has(key))types.set(key,file.type);if(key&&file.type==='pdf')canonicalPdfs.add(key);if(key&&(!knownFiles.has(key)||specific(file.type)))knownFiles.set(key,file);});
+  const role=file=>String(file.documentRole||file.role||'');
+  function displayedFiles(group){
+    const files=Array.from(group.files.values());
+    // Only a PDF typed by the existing grading-file reader is sufficient to
+    // hide raw attachment evidence within this same receipt and document role.
+    const pdfRoles=new Set(files.filter(file=>file.type==='pdf'&&canonicalPdfs.has(DirectSubmissionHistory.fileKey(file.url))).map(role));
+    if(!group.receiptId||!pdfRoles.size)return files;
+    return files.filter(file=>{
+      if(!pdfRoles.has(role(file)))return true;
+      const mime=String(file.mimeType||'').toLowerCase(),type=String(file.type||'').toLowerCase();
+      const label=String(file.label||'').toLowerCase();
+      if(type==='pdf'||type==='video'||type==='audio'||/^video\/|^audio\//.test(mime)||/video|audio|ghi âm|ghi am|youtube|youtu\.be/.test(label+' '+file.url))return true;
+      return !(type==='image'||mime.startsWith('image/')||!type||type==='file');
+    });
+  }
   function add(group,file){
     const item=typed(file);if(!item)return;
     const old=group.files.get(item.key);
-    if(!old||!specific(old.type)&&specific(item.file.type))group.files.set(item.key,item.file);
+    if(!old)group.files.set(item.key,item.file);
+    else group.files.set(item.key,Object.assign({},old,item.file,{type:specific(old.type)&&!specific(item.file.type)?old.type:item.file.type}));
   }
   history.forEach((attempt,index)=>{
     const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map()};groups.push(group);
@@ -3290,7 +3307,7 @@ function fighterSubmissionFileGroups_(state,fallbackType){
   flat.filter(file=>file&&!file.receiptId).forEach(file=>{const key=DirectSubmissionHistory.fileKey(file.url);if(key&&!claimed.has(key))add(unassigned,file);});
   if(!flat.length&&state.submissionUrl&&!claimed.has(DirectSubmissionHistory.fileKey(state.submissionUrl)))add(unassigned,{url:state.submissionUrl});
   if(unassigned.files.size)groups.push(unassigned);
-  return groups.filter(group=>group.files.size).map(group=>({receiptId:group.receiptId,attempt:group.attempt,files:Array.from(group.files.values())}));
+  return groups.filter(group=>group.files.size).map(group=>({receiptId:group.receiptId,attempt:group.attempt,files:displayedFiles(group)})).filter(group=>group.files.length);
 }
 const fighterSubmittedFileActionsBeforeDedupe_=submittedFileActions_;
 submittedFileActions_=function(state,fallbackType){

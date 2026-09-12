@@ -3598,6 +3598,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
 })(typeof globalThis==='object'?globalThis:this);
 
 /* SHARED_SUBMISSION_ARTIFACTS_V1: display choices never change receipt evidence. */
+/* SHARED_CANONICAL_PDF_ALIAS_V2 */
 (function(root){
   'use strict';
   const list=x=>Array.isArray(x)?x:[];
@@ -3627,7 +3628,16 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
     const found=new Map();
     list(links).forEach(link=>{const k=key(link);if(!k)return;const old=found.get(k);
       if(!old)found.set(k,Object.assign({},link));
-      else {const meaningful=x=>!/^$|^mo bai da nop$/.test(text(x.label));found.set(k,Object.assign({},old,link,{label:meaningful(old)?old.label:link.label}));}
+      else {
+        // Aliases share one file. Keep a canonical PDF hint even when the
+        // raw upload comes first and its optional MIME lookup is unavailable.
+        const rank=x=>({pdf:6,merged:5,video:4,audio:3,raw:2,other:0}[kind(x)]||0);
+        const meaningful=x=>!/^$|^mo bai da nop$/.test(text(x.label));
+        const preferred=rank(link)>rank(old)?link:rank(link)<rank(old)?old:meaningful(old)?old:link;
+        const merged=Object.assign({},old,link,{label:preferred.label});
+        if(kind(preferred)==='pdf')merged.generated=false;
+        found.set(k,merged);
+      }
     });return [...found.values()];
   }
   function select(receipts){
@@ -3648,7 +3658,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
         // Prefer a real uploaded PDF in this submission, otherwise its merge.
         const native=xs.some(x=>x.kind==='pdf'),selected=native?xs.filter(x=>x.kind==='pdf'):xs;
         const stamp=root.DirectSubmissionHistory.timestamp(r),at=stamp?stamp.start:0,old=lanes.get(lane);
-        const value=selected.map(x=>Object.assign({},x.link,{label:x.kind==='merged'?'PDF bài đã nộp (đã ghép)':x.kind==='pdf'?'PDF bài đã nộp':x.link.label}));
+        const value=selected.map(x=>Object.assign({},x.link,{label:['merged','pdf'].includes(x.kind)?'PDF bài đã nộp':x.link.label}));
         if(!old||at>old.at||at===old.at&&native&&!old.native)lanes.set(lane,{at,native,links:value});
         else if(at===old.at&&native===old.native)old.links=canonical(old.links.concat(value));
       });
