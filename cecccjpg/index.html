@@ -1973,6 +1973,8 @@ function submissionOriginalFighterStatus_(state, missingCount) {
 }
 function f9PortalStatusMetaV2_(state,missingCount){
   var meta=submissionOriginalFighterStatus_(state,missingCount);
+  // A checked historical source with no receipt is neutral; the September missing-work policy is unchanged.
+  if(state&&state.submissionSourceRead&&!meta.completed&&!submissionCan_(state))return Object.assign({},meta,{cls:'neutral',completed:false,neutral:true,text:'Chưa ghi nhận bài nộp',missingBeforeVerification:false});
   // FIGHTER_MANUAL_NEUTRAL_STATUS_V1: a read neutral teacher cell is not a network failure or proof of missing work.
   if(state&&state.submissionManualRead&&!state.submissionManualAuthority&&!meta.completed)return Object.assign({},meta,{cls:'neutral',completed:false,neutral:true,text:state.status||'Chưa có đánh giá',missingBeforeVerification:false});
   if(state&&state.contentMissing)return Object.assign({},meta,{completed:false,cls:'missing',text:'Đã nhận lượt gửi nhưng bài trống'});
@@ -3128,7 +3130,10 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
     function grant(guard,ticket,target,coverage,fresh){const p=proof(coverage);if(ticket&&p)guard.authorize(ticket,target,p,{complete:true,stale:!fresh});}
     function expectedCodes(assignment,task){
       const facts=m.submissionTaskFactsV7_(task),program=m.assignmentProgramKeyV7_(assignment.program).toUpperCase();
+      // FIGHTER_CURRENT_SOURCE_READ_V2: canonical academic session; no tracker fallback.
+      const academicSession=program==='AP'&&/^DVHT-S[1-9][0-9]*$/i.test(String(assignment.sourceCode||''))?Number(String(assignment.sourceCode).split('-S')[1]):0;
       return [task.sourceCode,task.code,assignment.sourceCode,assignment.code,
+        academicSession&&academicSession===Number(assignment.sessionNumber)?'BUOI '+academicSession:'',
         facts.unit&&program?program+'-U'+facts.unit+(facts.subunit!==null?'_'+facts.subunit:''):'',
         facts.session?'BUOI '+facts.session:'',facts.test?'TEST '+facts.test:'',facts.practiceTest?'PT-'+String(facts.practiceTest).padStart(2,'0'):''].filter(Boolean);
     }
@@ -3246,6 +3251,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
           }
           let coverage=taskCoverage(payload,assignment,task,index);
           if(coverage){const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};if(!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known)coverage=null;}
+          state.submissionSourceRead=Boolean(ticket&&guard.isCurrent(ticket)&&guard.isVerifiedProof(proof(coverage)));
           const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,content||found,{verified:Boolean(proof(coverage)),complete:state.completed===true,completedAt:components.completedAt||undefined});
           if(found.length&&(!components.known||components.complete||!deadline.eligible)){
             state.isLate=Boolean(deadline.late);state.isOverdue=Boolean(deadline.missing);
