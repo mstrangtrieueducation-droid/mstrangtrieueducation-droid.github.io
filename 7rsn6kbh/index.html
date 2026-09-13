@@ -93,7 +93,11 @@
   function capture(bundle,className){
     if(!bundle||!bundle.classSource&&!bundle.preparedHistory&&!bundle.preparedSubmissions)return null;
     const receipt=bundle.preparedSubmissions;
-    if(!meta(bundle)||bundle.className!==className||!bundle.preparedHistory||bundle.preparedHistory.schema!==1||!Number.isInteger(bundle.preparedHistory.pageCount)||bundle.preparedHistory.pageCount<0||!receipt||!meta(receipt)||receipt.className!==className||receipt.schema!==1||!Array.isArray(receipt.receipts)||!Array.isArray(receipt.coverage)||!receipt.preparedProjection||receipt.preparedProjection.schema!==1||receipt.classSource.generation!==bundle.classSource.generation)throw Error('INVALID_PREPARED_OPENING');
+    // The established IELTS bootstrap keeps its class on dashboard; its
+    // authenticated response envelope was checked by the transport. Do not invent or
+    // overwrite a top-level class, and never fall back from an explicit mismatch.
+    const bundleClassName=bundle.className===undefined&&bundle.dashboard?bundle.dashboard.className:bundle.className;
+    if(!meta(bundle)||bundleClassName!==className||!bundle.preparedHistory||bundle.preparedHistory.schema!==1||!Number.isInteger(bundle.preparedHistory.pageCount)||bundle.preparedHistory.pageCount<0||!receipt||!meta(receipt)||receipt.className!==className||receipt.schema!==1||!Array.isArray(receipt.receipts)||!Array.isArray(receipt.coverage)||!receipt.preparedProjection||receipt.preparedProjection.schema!==1||receipt.classSource.generation!==bundle.classSource.generation)throw Error('INVALID_PREPARED_OPENING');
     const writing=bundle.preparedWriting;
     if(writing&&(!meta(writing)||writing.classSource.generation!==bundle.classSource.generation||writing.className!==className||!Array.isArray(writing.reviews)||writing.studentName!==bundle.profile.student.name||writing.parentName!==bundle.name||writing.parentRosterRevision!==bundle.rosterRevision))throw Error('INVALID_PREPARED_WRITING');
     return {generation:bundle.classSource.generation,submissions:clone(receipt),selfStudy:Array.isArray(bundle.preparedSelfStudy)?clone(bundle.preparedSelfStudy):null,writing:writing?clone(writing):null};
