@@ -2569,25 +2569,30 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
 (function(root){
   'use strict';
   function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0;
+    var generation=0,identity='',job=null,ticket=null,current=null,parked=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0;
     function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
     function visible(){return !options.isVisible||options.isVisible()===true;}
-    function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
+    function isCurrent(run){var active=who();return run===generation&&Boolean(identity)&&(active===identity||needsFresh&&!active);}
     function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset)retryCount=0;}
     function transientAuthority(payload){
       var a=payload&&payload.assignmentAuthority;
       return Boolean(payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
     }
-    function suspend(){needsFresh=true;current=null;options.guard.suspend();}
-    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function suspend(){if(current)parked=current;needsFresh=true;current=null;ticket=null;options.guard.suspend();}
+    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    // SUBMISSION_INVALIDATE_POSITIVES_V1: explicit refresh invalidates absence, not same-pupil confirmed receipts.
+    function invalidate(){
+      if(!identity||who()!==identity){clear();return;}
+      cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();
+    }
     function refresh(retry){
-      // Only the same internally scheduled job may continue while hidden.
+      // The authenticated opening read continues while hidden; painting remains visibility-gated.
       var resuming=Boolean(retry&&retry.run===generation&&retry.identity===identity&&isCurrent(retry.run));
-      var active=who();if(!active||!visible()&&!resuming)return Promise.resolve(false);
+      var active=who();if(!active)return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
       cancelRetry(!resuming);
-      var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;needsFresh=!visible();readState='loading';
+      var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
       if(visible()&&options.render)options.render();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
@@ -2600,10 +2605,10 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
         payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
         retryNeeded=transientAuthority(payload)&&retryCount<2;
         if(!retryNeeded)cancelRetry(true);
-        readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        readState='ready';if(needsFresh||!visible()){parked=payload;current=null;}else{current=payload;parked=null;}retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
         if(visible()&&options.render)options.render();return true;
       }).catch(function(){
-        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;parked=null;if(visible()&&options.render)options.render();}
         return false;
       }).finally(function(){if(job===task){
         job=null;
@@ -2618,10 +2623,15 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
       job=task;return task;
     }
     function reapply(target){
-      if(!target||!identity||who()!==identity||!visible())return target;
+      // SUBMISSION_PARKED_SNAPSHOT_V1: restore the same opening proof only after the same identity is authorized again.
+      var active=who();
+      if(identity&&active&&active!==identity){clear();return target;}
+      if(!target||!identity||active!==identity||!visible())return target;
+      if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
+      // Rebinding keeps the source's original verifiedAt; it performs no request and does not renew source freshness.
       return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
-    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get readState(){return who()===identity&&identity?readState:'idle';}};
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
   root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
@@ -3270,13 +3280,14 @@ const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getI
 });
 // PARENT_SINGLE_SUBMISSION_SCAN_V1: one read per open; explicit refresh starts another.
 function parentSingleSubmissionScan_(owner,getIdentity){
-  const refresh=owner.refresh,clear=owner.clear;let requestedFor='';
+  const refresh=owner.refresh,clear=owner.clear,invalidate=owner.invalidate;let requestedFor='';
   owner.refresh=function(force=false){
     const identity=String(getIdentity()||'');
     if(!identity||(!force&&requestedFor===identity))return Promise.resolve(false);
     requestedFor=identity;return refresh();
   };
   owner.clear=function(){requestedFor='';return clear();};
+  owner.invalidate=function(){requestedFor='';return invalidate();};
 }
 parentSingleSubmissionScan_(submissionOwner_,()=>{const b=fighterApi.parent.binding;return b?b.className+'|'+b.studentName:'';});
 function fighterSubmissionReset_(){submissionOwner_.suspend();fighterClearPendingHomeworkV15_();}
@@ -3451,6 +3462,8 @@ function fighterParentApply_(){
   const savedScroll=fighterParentPainted_?{x:window.scrollX,y:window.scrollY}:null;
   const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterSubmissionProjected_;
   if(profile.student.name!==binding.studentName)return false;
+  // PARENT_HIDDEN_PACKAGE_V1: keep the completed request; defer only its DOM paint.
+  if(document.hidden)return true;
   studentDirectory_=binding.directory.students;studentDirectoryReady_=true;studentDirectoryLoading_=false;
   // render the complete current class payload before the existing profile
   // pipeline decorates lessons, Reading, self study, scores and reminders.
@@ -3501,10 +3514,10 @@ function fighterParentLoad_(force=false,quiet=false){
     if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;
     if(!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments)||!Array.isArray(fullDashboard.scoreDefinitions)||!fullDashboard.classSummary||!Array.isArray(fullDashboard.classSummary.leaderboard)||!Array.isArray(profile.student.assignments)||!Array.isArray(profile.student.scoreDetails))throw new Error('Dữ liệu đang được cập nhật.');
     fighterParentPackage_={publicData,fullDashboard,profile};
-    if(publicData.cacheStale)fighterParentRefreshPublic_();
+    // FIGHTER_PARENT_VALID_OPENING_V1: a valid snapshot belongs to this opening.
     if(!fighterApi.parent.authorized)return false;
     fighterParentApply_();
-    if(!force&&(publicData.cacheStale||fullDashboard.cacheStale||profile.cacheStale))setTimeout(()=>fighterParentLoad_(true,true),0);
+    // Explicit refresh obtains a newer academic package.
     return true;
   }).catch(()=>{
     if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;
@@ -3516,20 +3529,22 @@ function fighterParentLoad_(force=false,quiet=false){
   return fighterParentLoading_;
 }
 function fighterParentRecheck_(options={}){
+  // PARENT_EXPLICIT_REFRESH_INVALIDATE_V1: invalidate before checking or loading another package.
+  if(options.refresh)submissionOwner_.invalidate();
   if(options.refresh)fighterApi.parent.resetReads();
   if(options.refresh){document.documentElement.dataset.parentRefreshStartedMs=String(Math.round(performance.now()));delete document.documentElement.dataset.parentLastOpenMs;}
   return fighterApi.parent.check(options).then(ok=>{
     if(!ok)return false;
     fighterParentIdentity_();
-    if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh(Boolean(options.refresh));
+    const afterLoad=job=>Promise.resolve(job).then(ready=>{if(ready&&(!options.background||options.foreground||options.refresh))submissionOwner_.refresh(Boolean(options.refresh));return ready;});
     // A current bootstrap owns the next paint. Revalidation must not restore
     // the previous package while that load is pending or consume its prefetch.
     // Foreground checks retain their gate; background checks keep ready UI.
-    if(fighterParentLoading_)return fighterParentLoading_;
+    if(fighterParentLoading_)return afterLoad(fighterParentLoading_);
     if(options.background&&fighterParentPainted_&&$('#student-gateway').hidden)return true;
-    if(options.refresh)return fighterParentLoad_(true,false);
-    if(fighterParentPackage_)return fighterParentApply_();
-    return fighterParentLoad_(false,false);
+    if(options.refresh)return afterLoad(fighterParentLoad_(true,false));
+    if(fighterParentPackage_)return afterLoad(fighterParentApply_());
+    return afterLoad(fighterParentLoad_(false,false));
   });
 }
 // Keep the existing functions intact above. Guards also cover late callbacks.

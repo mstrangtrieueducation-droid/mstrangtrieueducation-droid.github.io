@@ -3290,10 +3290,10 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
 (function(root){
   'use strict';
   function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0,sourceRetryCount=0;
+    var generation=0,identity='',job=null,ticket=null,current=null,parked=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0,sourceRetryCount=0;
     function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
     function visible(){return !options.isVisible||options.isVisible()===true;}
-    function isCurrent(run){return run===generation&&who()===identity&&Boolean(identity);}
+    function isCurrent(run){var active=who();return run===generation&&Boolean(identity)&&(active===identity||needsFresh&&!active);}
     function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset){retryCount=0;sourceRetryCount=0;}}
     function transientAuthority(payload){
       var a=payload&&payload.assignmentAuthority;
@@ -3302,16 +3302,21 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
     function transientSource(payload){
       return Boolean(options.retryTransientSources===true&&payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&identity.indexOf(payload.className+'|')===0&&Array.isArray(payload.coverage)&&payload.coverage.some(function(source){return source&&source.complete===false&&source.freshRead===false&&(source.sourceFailure==='SOURCE_BUSY'||source.sourceFailure==='SOURCE_VERSION_CHANGED');}));
     }
-    function suspend(){needsFresh=true;current=null;options.guard.suspend();}
-    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    function suspend(){if(current)parked=current;needsFresh=true;current=null;ticket=null;options.guard.suspend();}
+    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    // SUBMISSION_INVALIDATE_POSITIVES_V1: explicit refresh invalidates absence, not same-pupil confirmed receipts.
+    function invalidate(){
+      if(!identity||who()!==identity){clear();return;}
+      cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();
+    }
     function refresh(retry){
-      // Only the same internally scheduled job may continue while hidden.
+      // The authenticated opening read continues while hidden; painting remains visibility-gated.
       var resuming=Boolean(retry&&retry.run===generation&&retry.identity===identity&&isCurrent(retry.run));
-      var active=who();if(!active||!visible()&&!resuming)return Promise.resolve(false);
+      var active=who();if(!active)return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
       cancelRetry(!resuming);
-      var run=++generation,retryNeeded=false,retryKind='';ticket=options.guard.begin('receipts');current=null;needsFresh=!visible();readState='loading';
+      var run=++generation,retryNeeded=false,retryKind='';ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
       if(visible()&&options.render)options.render();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
@@ -3325,10 +3330,10 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
         retryKind=transientAuthority(payload)&&retryCount<2?'authority':transientSource(payload)&&sourceRetryCount<3?'source':'';
         retryNeeded=Boolean(retryKind);
         if(!retryNeeded)cancelRetry(true);
-        readState='ready';current=needsFresh?null:payload;retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        readState='ready';if(needsFresh||!visible()){parked=payload;current=null;}else{current=payload;parked=null;}retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
         if(visible()&&options.render)options.render();return true;
       }).catch(function(){
-        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;if(visible()&&options.render)options.render();}
+        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;parked=null;if(visible()&&options.render)options.render();}
         return false;
       }).finally(function(){if(job===task){
         job=null;
@@ -3344,10 +3349,15 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
       job=task;return task;
     }
     function reapply(target){
-      if(!target||!identity||who()!==identity||!visible())return target;
+      // SUBMISSION_PARKED_SNAPSHOT_V1: restore the same opening proof only after the same identity is authorized again.
+      var active=who();
+      if(identity&&active&&active!==identity){clear();return target;}
+      if(!target||!identity||active!==identity||!visible())return target;
+      if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
+      // Rebinding keeps the source's original verifiedAt; it performs no request and does not renew source freshness.
       return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
-    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
   root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
@@ -3873,13 +3883,14 @@ const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGu
 });
 // PARENT_SINGLE_SUBMISSION_SCAN_V1: one read per open; explicit refresh starts another.
 function parentSingleSubmissionScan_(owner,getIdentity){
-  const refresh=owner.refresh,clear=owner.clear;let requestedFor='';
+  const refresh=owner.refresh,clear=owner.clear,invalidate=owner.invalidate;let requestedFor='';
   owner.refresh=function(force=false){
     const identity=String(getIdentity()||'');
     if(!identity||(!force&&requestedFor===identity))return Promise.resolve(false);
     requestedFor=identity;return refresh();
   };
   owner.clear=function(){requestedFor='';return clear();};
+  owner.invalidate=function(){requestedFor='';return invalidate();};
 }
 parentSingleSubmissionScan_(parentReceiptOwner_,parentReceiptIdentity_);
 function parentSubmissionKnown_(item,record){if(item&&item.directReceiptSource||record&&record.directReceiptSource){return Boolean(item&&item.directSubmission||record&&record.directSubmission||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}return Boolean(record&&(record.submitted===true||record.submittedAt||record.statusType==='done')||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}
@@ -3888,11 +3899,16 @@ function parentSubmissionProblem_(item,record){return item&&item.contentMissing|
 function parentSubmissionLinks_(item,record){const value=item&&item.directSubmission||record&&record.directSubmission;return (!parentSubmissionKnown_(item,record)?'<p class="direct-source-status">'+(['idle','loading'].includes(parentReceiptOwner_.readState)?'Đang đọc nguồn bài nộp':'Chưa đọc được nguồn bài nộp')+'</p>':'')+parentSubmissionProblem_(item,record)+(value&&value.links&&value.links.length?'<div class="direct-submission-links" style="display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin-top:12px;line-height:1.5">'+value.links.map(link=>'<a style="display:inline-flex;align-items:center;max-width:100%;white-space:normal;overflow-wrap:anywhere;box-sizing:border-box" class="button small secondary" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>':'');}
 function parentDirectAttempts_(item,record){const direct=item&&item.directSubmission||record&&record.directSubmission;if(!direct)return '';return '<section class="direct-submission-results"><strong>'+esc(parentSubmissionLabel_(item,record))+'</strong>'+direct.receipts.filter(r=>r.receiptType!=='grading-summary').map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+(r.part?' · Sections '+esc(r.part):'')+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(r.contentStatus==='empty'?' · <b>Lượt gửi trống, chưa có nội dung/video/tệp.</b>':'')+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <b>'+esc(r.score)+'/'+esc(r.maximum)+'</b>':'')+'</p>').join('')+parentSubmissionLinks_(item,record)+'</section>';}
 function parentSubmissionSummary_(skill){const records=(skill&&skill.records||[]).filter(r=>r.directDeadline&&(r.directDeadline.pending||r.directDeadline.eligible&&r.directDeadline.complete)&&parentSubmissionGuard_.can(r));if(!records.length)return '';return '<small>Đã ghi nhận '+records.filter(r=>r.directSubmission&&r.directSubmission.complete).length+' · Cần nộp '+records.filter(r=>r.directDeadline.pending).length+' · Quá hạn '+records.filter(r=>r.directDeadline.missing).length+' · Muộn '+records.filter(r=>r.directDeadline.late).length+'</small>';}
-async function parentQuietResume_(){
- if(parentState.checking)return;parentState.checking=true;const id=parentState.requestId;
+async function parentQuietResume_(refresh=false){
+ if(parentState.checking)return;
+ // PARENT_EXPLICIT_REFRESH_INVALIDATE_V1: invalidate before checking or loading another package.
+ if(refresh)parentReceiptOwner_.invalidate();
+ parentState.checking=true;const id=parentState.requestId;
  try{const data=await ieltsParentAccess.request('check');if(id!==parentState.requestId||parentState.locked)return;
   if(data.name!==parentState.name||data.rosterRevision!==parentState.revision){ieltsParentLock_('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');return;}
-  parentReceiptOwner_.refresh(true);
+  // IELTS_PARENT_REUSE_OPENING_PACKAGE_V1: keep the current visit after live identity verification.
+  if(!refresh){parentState.renderedProfile=null;parentRender_();return;}
+  await parentLoad_(id,{dashboard:ieltsParentAccess.request('refreshDashboard'),profile:ieltsParentAccess.request('refreshProfile')});
  }catch(error){if(id===parentState.requestId&&error.code==='INVALID_LINK')ieltsParentLock_('Liên kết này không còn hợp lệ.');}
  finally{parentState.checking=false;}
 }
@@ -3956,6 +3972,9 @@ function parentHasCachedView_(){
 
 function parentRender_(){
   if(!parentPayloadValid_('dashboard',parentState.dashboard)||!parentPayloadValid_('profile',parentState.profile))return false;
+
+  // PARENT_HIDDEN_PACKAGE_V1: the valid package can finish; receipt loading continues without a hidden paint.
+  if(document.hidden)return true;
   const wasOpen=!document.getElementById('portal-shell').hidden;
   if(wasOpen&&parentState.renderedDashboard===parentState.dashboard&&parentState.renderedProfile===parentState.profile)return true;
   const scrollLeft=window.scrollX||0,scrollTop=window.scrollY||0;
@@ -3979,11 +3998,12 @@ function parentAccept_(kind,data,id){
   parentState[kind]=data;parentCacheWrite_(kind,data);parentRender_();return true;
 }
 async function parentLoad_(id,prefetch){
+  // IELTS_PARENT_VALID_OPENING_V1: only an incomplete opening needs academic recovery.
   const loadDashboard=async()=>{
     let data=await (prefetch&&prefetch.dashboard||ieltsParentAccess.request('dashboard'));
     if(id!==parentState.requestId)return;
     parentAccept_('dashboard',data,id);
-    if(data.coldShell||data.needsBackgroundRefresh){
+    if(data.coldShell||data.needsBackgroundRefresh&&!parentPayloadValid_('dashboard',data)){
       data=await ieltsParentAccess.request('refreshDashboard');
       if(!parentAccept_('dashboard',data,id)&&id===parentState.requestId)throw new Error('Lịch học đang được cập nhật. Vui lòng mở lại sau ít phút.');
     }
@@ -3991,7 +4011,7 @@ async function parentLoad_(id,prefetch){
   const loadProfile=async()=>{
     let data=await (prefetch&&prefetch.profile||ieltsParentAccess.request('profile'));
     if(id!==parentState.requestId)return;
-    if(data.cacheWarming||!data.found||data.studentDataStale){
+    if(data.cacheWarming||!data.found||data.studentDataStale&&!parentPayloadValid_('profile',data)){
       parentAccept_('profile',data,id);
       data=await ieltsParentAccess.request('refreshProfile');
     }
@@ -4044,7 +4064,7 @@ readIelts50SavedStudent_=function(){return ''};
 changeIelts50Student_=function(){};
 openRoster=function(){};
 loadPublic=function(){startIeltsParentPortal_()};
-document.getElementById('parent-retry').addEventListener('click',startIeltsParentPortal_);
+document.getElementById('parent-retry').addEventListener('click',()=>{if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile)return parentQuietResume_(true);return startIeltsParentPortal_();});
 window.addEventListener('hashchange',()=>location.reload());
 function parentResumeSavedView_(){if(!document.hidden&&parentState.authorized&&!parentState.locked){parentState.renderedProfile=null;parentRender_();}}
 document.addEventListener('visibilitychange',parentResumeSavedView_);
