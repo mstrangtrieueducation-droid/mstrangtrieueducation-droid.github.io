@@ -165,7 +165,7 @@ const kidsApi = (() => {
       if (status === 'revoked' || epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const alias = validateScope(data, 'check');
       // The same renderer validator checks every collection and generation.
-      // Partial academic data takes the ordinary check/load fallback.
+      // A valid partial package keeps its token-scoped opening handoff.
       if (options.validateInitialBootstrap(data, alias) !== true) {
         throw error('Cần kiểm tra hồ sơ trước.', 'INITIAL_BOOTSTRAP_FALLBACK');
       }
@@ -5240,7 +5240,7 @@ function writtenTestDisplayTitle_(item) {
       if(!applied)throw new Error('Hồ sơ chưa hiển thị trọn vẹn.');
       parentBootstrapPainted_=true;setLoading(loading);
       document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));
-      if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần bài nộp đang được đồng bộ…';
+      if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần thông tin chưa tải được. Bấm Tải lại để cập nhật.';
       else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Dữ liệu đã tải · Bấm Tải lại để cập nhật.';
       else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
       if(savedScroll)window.scrollTo(savedScroll);
@@ -5311,10 +5311,9 @@ function writtenTestDisplayTitle_(item) {
         if(force||recovered){if(!job.recovery||parentForceRecovery_===job.recovery)parentForceRecovery_=null;}
         if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,!job.recovery||Boolean(recovered));
         if(job.recovery){if(!recovered&&!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
-        else if(!force&&(stale||parentPackageWarning_)){
-          next={force:true,quiet:true,attempt:0,delay:0};
-
-        }
+        // KIDS_OPENING_HANDOFF_V2: the valid opening package is the snapshot
+        // for this visit. Partial/stale data does not launch another bootstrap;
+        // the one submission owner completes independently. Refresh is explicit.
         return true;
       }).catch(error=>{
         if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
@@ -5393,7 +5392,7 @@ function writtenTestDisplayTitle_(item) {
       const checkOptions = options.initialBootstrap ? Object.assign({}, options, {
         validateInitialBootstrap(value, alias) {
           parentValidatePackage_(value, alias);
-          return !parentPackagePartial_(value) && Number.isFinite(Number(value.profile.snapshotBuiltAt)) &&
+          return Number.isFinite(Number(value.profile.snapshotBuiltAt)) &&
             Number(value.profile.snapshotBuiltAt) > 0;
         }
       }) : options;
