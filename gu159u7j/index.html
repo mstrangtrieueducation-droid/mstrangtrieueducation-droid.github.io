@@ -99,9 +99,9 @@ const kidsApi = (() => {
     url.searchParams.set('action', action);
     if(action==='submissions')url.searchParams.set('authorityScope','reminders');
     url.searchParams.set('token', token);
-    url.searchParams.set('force', force ? '1' : '0');
+    if(extra.feedback!=='1'&&extra.feedback!=='wait')url.searchParams.set('force', force ? '1' : '0');
     if (initialBootstrap && action === 'bootstrap' && !force) url.searchParams.set('opening', '1');
-    Object.keys(extra).forEach(key=>{if(!['generation','historyPage'].includes(key))throw error('Yêu cầu không hợp lệ.','INVALID_SCOPE');url.searchParams.set(key,String(extra[key]));});
+    Object.keys(extra).forEach(key=>{if(!['generation','historyPage','feedback'].includes(key))throw error('Yêu cầu không hợp lệ.','INVALID_SCOPE');url.searchParams.set(key,String(extra[key]));});
     url.searchParams.set('_', String(Date.now()));
     const controller = new AbortController();
     if (action === 'check') checkController = controller;
@@ -251,14 +251,14 @@ const kidsApi = (() => {
         }
         return requestAction('submissions',false,receiptEpoch);
       },
-      bootstrap(force = false) {
+      bootstrap(force = false, feedbackOnly = false) {
         if (status !== 'authorized') return Promise.reject(error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING'));
         const handoff = initialBootstrapPackage;
         initialBootstrapPackage = null;
-        if (!force && handoff && handoff.epoch === checkEpoch && handoff.alias === keyOf(boundAlias)) {
+        if (!force && !feedbackOnly && handoff && handoff.epoch === checkEpoch && handoff.alias === keyOf(boundAlias)) {
           return Promise.resolve(handoff.value);
         }
-        return requestAction('bootstrap', Boolean(force));
+        return requestAction('bootstrap', Boolean(force), undefined, false, feedbackOnly ? {feedback:feedbackOnly==='wait'?'wait':'1'} : {});
       },
       check,
       suspend() {
@@ -1440,6 +1440,15 @@ html.vn-national-day-2026-root body .assignment.session {
   .vn-national-day-banner { scroll-behavior: auto; }
 }
 /* VN_NATIONAL_DAY_THEME_2026_END */
+
+    /* KIDS_SUBMISSION_HISTORY_LAYOUT_V1: each attempt keeps its date readable.
+       A missing-file explanation occupies its own line, never a date column. */
+    .submission-attempt { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 6px; font-size: 12px; line-height: 1.5; }
+    .submission-attempt > strong { flex: 0 0 auto; white-space: nowrap; font-size: inherit; }
+    .submission-attempt__detail { flex: 1 1 140px; min-width: 0; }
+    .submission-attempt time { overflow-wrap: normal; word-break: normal; }
+    .submission-attempt > .submission-content-note { display: block; flex: 0 0 100%; min-width: 0; font-size: inherit; line-height: 1.55; overflow-wrap: break-word; }
+    .submission-attempt > a { flex: 0 0 auto; margin-left: auto; }
   </style>
 <style id="kids7-parent-link-style">
 /* Larger parent opening panels with a clear, server-verified learner name. */
@@ -3256,7 +3265,8 @@ html.vn-national-day-2026-root body .assignment.session {
             ? arr(pick(item, ['submissionAttempts'], []))
             : arr(pick(trackedItem, ['submissionAttempts'], []));
           const submitted = Boolean(item.submitted || trackedItem.submitted || submittedAt || submissionAttempts.length);
-          const reviewed = Boolean(item.reviewed || trackedItem.reviewed || teacherComment);
+          // KIDS_MANUAL_COMMENT_VISIBILITY_V1: teacher text alone never means a receipt arrived.
+          const reviewed = Boolean(submitted && (item.reviewed || trackedItem.reviewed || teacherComment));
           return submissionGuard_.transfer(submissionCan_(item)?item:trackedItem, Object.assign({}, trackedItem, item, {
             submitted: submitted,
             reviewed: reviewed,
@@ -5298,7 +5308,17 @@ function writtenTestDisplayTitle_(item) {
     let parentBootstrapNextForce_ = false;
     let parentBootstrapPainted_ = false;
     let parentPackageWarning_ = false;
+    let parentOpeningAcademicSeen_ = false; // One opening decision per page visit.
+    let parentOpeningReceiptJob_ = null;
     let parentForceRecovery_ = null;
+    function parentTeacherRecoveryReady_(value,prior) {
+      const marker=value&&value.feedbackRecovery,stamp=Number(marker&&marker.sourceModelBuiltAt);
+      return Boolean(marker&&marker.schema===1&&marker.trackerComplete===true&&
+        Number.isFinite(stamp)&&stamp>0&&stamp===Number(value.sourceModelBuiltAt)&&
+        stamp===Number(value.profile.sourceModelBuiltAt)&&stamp===Number(value.dashboard.snapshotBuiltAt)&&
+        (!prior||stamp>=Number(prior.profile.sourceModelBuiltAt))&&
+        ['assignments','selfPractice','tests','retakeResults','lessons'].every(key=>Array.isArray(value.profile[key])));
+    }
     function parentPackagePartial_(value) {
       return Boolean(value.partial || responseHasErrors(value.profile));
     }
@@ -5359,6 +5379,7 @@ function writtenTestDisplayTitle_(item) {
       parentPackage_ = null;
       parentBootstrapPainted_ = false;
       parentPackageWarning_ = false;
+      parentOpeningAcademicSeen_ = false; parentOpeningReceiptJob_ = null;
       parentDirectoryHintVersion_ = 0;
       clearFirstPaintDeadline_();
       [app.directoryLoad, app.dashboardLoad, app.profileLoad].forEach(state => {
@@ -5419,18 +5440,19 @@ function writtenTestDisplayTitle_(item) {
     function parentScheduleBootstrap_(intent, delay) {
       parentClearBootstrapRetry_();
       parentBootstrapIntent_=intent;
-      const generation=parentBootstrapGeneration_;
+      const generation=parentBootstrapGeneration_,teacherAlias=intent&&intent.teacherRefresh?matchKey(kidsApi.parent.alias):null;
       parentBootstrapRetry_=window.setTimeout(()=>{
         parentBootstrapRetry_=null;
-        if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return;
+        if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked||
+            teacherAlias!==null&&teacherAlias!==matchKey(kidsApi.parent.alias))return;
         if(!kidsApi.parent.authorized)return; // Keep intent for fresh resume.
         const next=parentBootstrapIntent_;parentBootstrapIntent_=null;
-        if(next)parentLoadBootstrap_(next.force,next.quiet,next.attempt,next.reconcile);
+        if(next)parentLoadBootstrap_(next.force,next.quiet,next.attempt,next.reconcile,next.teacherRefresh==='wait'?'wait':next.teacherRefresh===true);
       },delay);
     }
-    function parentLoadBootstrap_(force=false,quiet=false,attempt=0,reconcile=null) {
+    function parentLoadBootstrap_(force=false,quiet=false,attempt=0,reconcile=null,teacherRefresh=false) {
       if(kidsApi.parent.revoked)return Promise.resolve(false);
-      if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt,reconcile};return Promise.resolve(false);}
+      if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt,reconcile,teacherRefresh};return Promise.resolve(false);}
       const recovery=parentForceRecovery_;
       if(recovery&&(recovery.alias!==matchKey(kidsApi.parent.alias)||force))return Promise.resolve(false);
       if(parentBootstrapJob_){
@@ -5452,7 +5474,7 @@ function writtenTestDisplayTitle_(item) {
         }
       }else if(reconcile)return Promise.resolve(false);
       parentClearBootstrapRetry_();parentBootstrapIntent_=null;
-      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,recovery,foregroundRecovery:Boolean(reconcile&&reconcile.foreground),promise:null};
+      const generation=++parentBootstrapGeneration_,job={force,quiet,attempt,recovery,teacherRefresh,foregroundRecovery:Boolean(reconcile&&reconcile.foreground),promise:null};
       parentBootstrapJob_=job;
       app.dashboardLoad.inFlight=true;app.profileLoad.inFlight=true;app.profileLoad.busy=true;
       app.profileLoad.request+=1;app.dashboardLoad.request+=1;
@@ -5460,10 +5482,12 @@ function writtenTestDisplayTitle_(item) {
       document.documentElement.dataset.parentLoadStartedMs=String(Math.round(performance.now()));
       if(!quiet||!parentBootstrapPainted_)parentAccessGate_('Đang tải lịch học, bài tập và kết quả của con…');
       let next=null;
-      job.promise=kidsApi.parent.bootstrap(force).then(value=>{
+      job.promise=kidsApi.parent.bootstrap(force,teacherRefresh).then(value=>{
         if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
         parentValidatePackage_(value);
         const stale=parentPackageStale_(value);
+        const teacherReady=teacherRefresh&&parentTeacherRecoveryReady_(value,parentPackage_);
+        if(teacherRefresh&&!teacherReady){const error=new Error('Nhận xét mới chưa sẵn sàng.');error.code='TEACHER_DATA_UNAVAILABLE';throw error;}
         if(force&&stale){const error=new Error('Bản cập nhật mới chưa sẵn sàng.');error.code='DATA_STALE';throw error;}
         const retained=parentPackage_&&!parentPackagePartial_(parentPackage_)&&parentPackage_;
         const missingCollections=retained&&['assignments','selfPractice','tests','retakeResults','lessons'].some(key=>
@@ -5474,19 +5498,39 @@ function writtenTestDisplayTitle_(item) {
         // Preserve a complete visible pair when a temporary submission outage
         // or older response arrives. First partial profiles still show the
         // available teacher data, with a warning and the same bounded owner.
-        if(!retained||!parentPackageWarning_)parentPackage_=value;
+        // A verified current tracker model can advance teacher fields even when
+        // the cached legacy receipt index is unavailable/older. The one direct
+        // owner reapplies its own evidence; this marker grants no absence proof.
+        if(teacherReady||!retained||!parentPackageWarning_)parentPackage_=value;
         app.dashboardLoad.inFlight=false;app.profileLoad.inFlight=false;app.profileLoad.busy=false;
         const recovered=job.recovery&&parentRecoveryReady_(value,job.recovery);
         if(job.recovery&&job.recovery.normalBackground&&!recovered&&!parentPackagePartial_(value)&&!parentPackageWarning_)job.recovery.normalStaleReads+=1;
         if(force||recovered){if(!job.recovery||parentForceRecovery_===job.recovery)parentForceRecovery_=null;}
         if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,!job.recovery||Boolean(recovered));
         if(job.recovery){if(!recovered&&!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
-        // KIDS_OPENING_HANDOFF_V2: the valid opening package is the snapshot
-        // for this visit. Partial/stale data does not launch another bootstrap;
-        // the one submission owner completes independently. Refresh is explicit.
+        // KIDS_OPENING_TEACHER_RECOVERY_V1: paint the cached opening first.
+        // Its one normal academic follow-up can replace old tracker comments;
+        // the independent submission owner keeps its original request/proof.
+        // A fresh opening, a failed follow-up, or a later repaint cannot loop.
+        if(!force&&!job.recovery&&!teacherRefresh&&!parentOpeningAcademicSeen_){
+          parentOpeningAcademicSeen_=true;
+          if(stale)next={force:false,quiet:true,attempt:0,delay:0,teacherRefresh:true};
+        }
         return true;
       }).catch(error=>{
         if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked)return false;
+        if(teacherRefresh){
+          // This extra lane never retries, forces, or clears receipt authority.
+          // Keep the opening package even if the tab is hidden or the backend
+          // still returns a stale/partial profile; explicit refresh remains available.
+          // KIDS_TEACHER_MODEL_WAIT_V1: only an observed shared model owner
+          // earns up to three cache-only checks. Never force or restart sources.
+          next=error&&error.code==='TEACHER_MODEL_BUSY'&&attempt<3
+            ?{force:false,quiet:true,attempt:attempt+1,delay:12000,teacherRefresh:'wait'}:null;
+          parentPackageWarning_=true;
+          if(kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false);
+          return false;
+        }
         const waiting=error&&error.code==='PROFILE_LOADING',limit=waiting?6:2;
         const transientSource=Boolean(error&&error.diagnostics&&error.diagnostics.schema===1&&
           ['QUOTA_OR_RATE_LIMIT','NETWORK_OR_SERVICE'].includes(error.diagnostics.category));
@@ -5512,14 +5556,25 @@ function writtenTestDisplayTitle_(item) {
         parentBootstrapJob_=null;app.dashboardLoad.inFlight=false;app.profileLoad.inFlight=false;app.profileLoad.busy=false;
         setLoading(false);
         if(parentBootstrapNextForce_){parentBootstrapNextForce_=false;next={force:true,quiet:false,attempt:0,delay:0};}
-        if(next)parentScheduleBootstrap_(next,next.delay);
+        if(next&&next.teacherRefresh){
+          const follow=next,alias=matchKey(kidsApi.parent.alias);
+          // Wait for the existing receipt request; never start another one.
+          Promise.resolve(parentOpeningReceiptJob_).catch(()=>false).then(()=>{
+            if(generation!==parentBootstrapGeneration_||kidsApi.parent.revoked||
+                alias!==matchKey(kidsApi.parent.alias)||!parentPackage_)return;
+            parentScheduleBootstrap_(follow,follow.delay);
+          });
+        }else if(next)parentScheduleBootstrap_(next,next.delay);
       });
       return job.promise;
     }
     function parentContinue_(options={}) {
       if(!kidsApi.parent.authorized)return Promise.resolve(false);
       parentConsumeDirectoryHint_();parentRenderIdentity_();
-      if(!options.refresh&&(!options.background||options.foreground))submissionOwner_.refresh(false);
+      if(!options.refresh&&(!options.background||options.foreground)){
+        const receiptJob=submissionOwner_.refresh(false);
+        if(!parentOpeningReceiptJob_)parentOpeningReceiptJob_=Promise.resolve(receiptJob);
+      }
       if(options.refresh){
         parentForceRecovery_=null;
         parentClearBootstrapRetry_();parentBootstrapIntent_=null;
@@ -5532,6 +5587,10 @@ function writtenTestDisplayTitle_(item) {
       if(options.background&&!options.foreground){
         if(parentPackage_&&$('#dashboardShell').hidden)parentApplyPackage_(true,false,true);
         const pending=parentBootstrapIntent_;
+        if(!parentBootstrapJob_&&!parentBootstrapRetry_&&pending&&pending.teacherRefresh){
+          parentBootstrapIntent_=null;
+          return parentLoadBootstrap_(false,true,pending.attempt||0,null,pending.teacherRefresh==='wait'?'wait':true);
+        }
         if(!parentBootstrapJob_&&!parentBootstrapRetry_&&pending&&pending.reconcile&&
             pending.reconcile.recovery===parentForceRecovery_){
           parentBootstrapIntent_=null;
@@ -5544,7 +5603,7 @@ function writtenTestDisplayTitle_(item) {
         return parentBootstrapJob_.promise;
       }
       if(parentPackage_)parentApplyPackage_(true);
-      if(parentBootstrapIntent_&&!parentBootstrapRetry_){const next=parentBootstrapIntent_;parentBootstrapIntent_=null;return parentLoadBootstrap_(next.force,next.quiet,next.attempt,next.reconcile);}
+      if(parentBootstrapIntent_&&!parentBootstrapRetry_){const next=parentBootstrapIntent_;parentBootstrapIntent_=null;return parentLoadBootstrap_(next.force,next.quiet,next.attempt,next.reconcile,next.teacherRefresh==='wait'?'wait':next.teacherRefresh===true);}
       if(parentBootstrapRetry_)return Promise.resolve(Boolean(parentPackage_));
       if(parentForceRecovery_){
         const next=parentRecoveryNext_(parentForceRecovery_);
