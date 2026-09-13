@@ -4,6 +4,72 @@
 <!-- IELTS_PARENT_LOGO_ASSET_V1 sha256=bad88a1a352b804443ca15c9ce7618315c1c5284c193e687713fb28f7789ddb9 -->
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex,nofollow">
+<script>
+// IELTS_LINK_TRACE_V1: local diagnostics only; never chooses a student or navigates.
+const ieltsLinkTrace=(()=>{
+  const version='52-link-trace-1',key='ielts-link-trace-v1:/t2n2eyyu/';
+  const route=location.origin+location.pathname,boot=Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
+  const events=new Set(['open','hash','navigate','entry','show','restore','hide','authorized','support']);
+  let memory=[],storageAvailable=true;
+  // Non-authoritative diagnostic fingerprint. No bearer URL or student data is stored.
+  function fingerprint(href){
+    if(!href)return 'none';
+    try{
+      const u=new URL(href,route);if(u.origin+u.pathname!==route)return 'other';
+      const q=new URLSearchParams(u.hash.slice(1)),values=q.getAll('p');let count=0;q.forEach(()=>count++);
+      if(values.length!==1||count!==1||!/^[A-Za-z0-9_-]{22}$/.test(values[0]))return 'invalid';
+      let hash=2166136261;for(const c of values[0])hash=Math.imul(hash^c.charCodeAt(0),16777619);
+      return 'f'+(hash>>>0).toString(16).padStart(8,'0');
+    }catch(_){return 'invalid';}
+  }
+  const label=v=>typeof v==='string'&&/^(?:f[0-9a-f]{8}|none|other|invalid)$/.test(v);
+  function clean(rows){
+    const now=Date.now();
+    return (Array.isArray(rows)?rows:[]).filter(r=>r&&Number.isFinite(r.t)&&r.t<=now&&now-r.t<3600000&&typeof r.d==='string'&&/^[a-z0-9-]{1,40}$/.test(r.d)&&events.has(r.e)&&label(r.a)&&label(r.b))
+      .slice(-36).map(r=>({t:r.t,d:r.d,e:r.e,a:r.a,b:r.b}));
+  }
+  function read(){if(!storageAvailable)return clean(memory);try{const raw=sessionStorage.getItem(key);return raw?clean(JSON.parse(raw)):clean(memory);}catch(_){storageAvailable=false;return clean(memory);}}
+  function record(event,from,to){
+    try{
+      if(!events.has(event))return;
+      memory=read();memory.push({t:Date.now(),d:boot,e:event,a:fingerprint(from||''),b:fingerprint(to===undefined?location.href:to)});memory=memory.slice(-36);
+      if(storageAvailable)try{sessionStorage.setItem(key,JSON.stringify(memory));}catch(_){storageAvailable=false;}
+    }catch(_){}
+  }
+  function report(){return JSON.stringify({version,records:read()},null,2);}
+  record('open');
+  // Capture before the existing hash-change handler can reload the document.
+  window.addEventListener('hashchange',e=>record('hash',e.oldURL,e.newURL),true);
+  window.addEventListener('pageshow',e=>record(e.persisted?'restore':'show'),true);
+  window.addEventListener('pagehide',()=>record('hide'),true);
+  try{if(window.navigation){window.navigation.addEventListener('navigate',e=>record('navigate',location.href,e.destination.url));window.navigation.addEventListener('currententrychange',()=>record('entry'));}}catch(_){}
+  document.addEventListener('DOMContentLoaded',()=>{
+    try{
+      const style=document.createElement('style');style.textContent=`
+      #ielts-link-help{position:fixed;right:14px;bottom:14px;z-index:10002;padding:9px 13px;border:1px solid #d7e1eb;border-radius:20px;background:#fff;color:#153554;box-shadow:0 3px 14px #09264a14;font:600 12px Arial,sans-serif;cursor:pointer}
+      #ielts-link-dialog{position:fixed;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);margin:0;z-index:10003;width:min(520px,calc(100% - 32px));max-height:85vh;box-sizing:border-box;padding:24px;border:1px solid #d7e1eb;border-radius:20px;color:#153554;background:#fff;font:15px/1.5 Arial,sans-serif;overflow:auto}#ielts-link-dialog:not([open]){display:none}#ielts-link-dialog[open]{display:block}
+      #ielts-link-dialog::backdrop{background:#09264a80}#ielts-link-dialog h2{margin:0 0 10px;font-size:22px}#ielts-link-dialog p{margin:10px 0}
+      #ielts-link-dialog textarea{display:block;box-sizing:border-box;width:100%;height:180px;margin:14px 0;padding:10px;border:1px solid #d7e1eb;border-radius:8px;color:#30465b;background:#f5f8fa;font:12px/1.4 monospace}
+      #ielts-link-dialog button{min-height:42px;margin:4px 8px 0 0;padding:9px 16px;border:1px solid #c8d6e3;border-radius:9px;font:600 14px Arial,sans-serif;cursor:pointer}#ielts-link-copy{color:white;background:#153554}#ielts-link-close{color:#153554;background:white}
+      `;document.head.appendChild(style);
+      const button=document.createElement('button');button.id='ielts-link-help';button.type='button';button.textContent='Hỗ trợ liên kết';
+      const dialog=document.createElement('dialog');dialog.id='ielts-link-dialog';dialog.setAttribute('aria-labelledby','ielts-link-title');
+      dialog.innerHTML='<h2 id="ielts-link-title">Kiểm tra liên kết</h2><p>Nếu trang hiển thị sai học viên, hãy sao chép thông tin bên dưới và gửi cô để kiểm tra.</p><p>Thông tin này chỉ gồm mã kiểm tra và các lần mở trang, không gồm link riêng hay bài làm.</p><textarea readonly aria-label="Thông tin kiểm tra liên kết"></textarea><p id="ielts-link-copy-status" aria-live="polite"></p><button id="ielts-link-copy" type="button">Sao chép thông tin</button><button id="ielts-link-close" type="button">Đóng</button>';
+      document.body.appendChild(button);document.body.appendChild(dialog);
+      const area=dialog.querySelector('textarea'),status=dialog.querySelector('#ielts-link-copy-status');
+      button.addEventListener('click',()=>{record('support');area.value=report();status.textContent='';try{if(typeof dialog.showModal==='function'){dialog.showModal();return;}}catch(_){}dialog.setAttribute('open','');});
+      dialog.querySelector('#ielts-link-close').addEventListener('click',()=>{try{if(typeof dialog.close==='function')dialog.close();}catch(_){}dialog.removeAttribute('open');});
+      dialog.querySelector('#ielts-link-copy').addEventListener('click',async()=>{
+        area.value=report();
+        try{await navigator.clipboard.writeText(area.value);status.textContent='Đã sao chép. Em gửi thông tin này cho cô nhé.';}
+        catch(_){area.focus();area.select();status.textContent='Thông tin đã được chọn. Em bấm Sao chép hoặc Ctrl+C rồi gửi cô nhé.';}
+      });
+    }catch(_){}
+  });
+  return {record,report};
+})();
+
+</script>
 <script>const ieltsParentAccess = (() => {
   const endpoint='https://script.google.com/macros/s/AKfycbzLrVD3dmB401mp9guCgFCsPQRLwW4L-lpLNr2QN1KyrcGHGHewUgLSn5pniq_6Numl/exec',className='IELTS 52';
 // IELTS_PARENT_TRANSPORT_SESSION_V2
@@ -4104,6 +4170,7 @@ async function startIeltsParentPortal_(){
     const data=await Promise.any([checked,bootstrap]);
     if(id!==parentState.requestId||parentState.locked)return;
     parentState.authorized=true;parentState.name=data.name;parentState.revision=data.rosterRevision;parentState.directory=data.studentDirectory;
+    if(typeof ieltsLinkTrace!=='undefined')ieltsLinkTrace.record('authorized',location.origin+'/t2n2eyyu/#p='+ieltsParentAccess.token,location.href);
     parentOpening_('Đang tải lịch học và kết quả của con…',data.name);
     parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
     document.documentElement.dataset.parentCacheHit=String(parentPayloadValid_('dashboard',parentState.dashboard)&&parentPayloadValid_('profile',parentState.profile));
