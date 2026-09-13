@@ -2880,6 +2880,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function paperGradeFor(session) {
+      if((app.child||{}).preparedPaperGradeSchema===1&&session&&Object.prototype.hasOwnProperty.call(session,'preparedPaperGrade'))return session.preparedPaperGrade;
       const rows = arr((app.child || {}).lessons).slice().sort((a, b) =>
         dateValueSerial(pick(a, ['date', 'lessonDate'], '')) - dateValueSerial(pick(b, ['date', 'lessonDate'], '')) ||
         Number(pick(a, ['sessionNumber', 'lessonNumber'], 0)) - Number(pick(b, ['sessionNumber', 'lessonNumber'], 0))
@@ -3165,12 +3166,13 @@ html.vn-national-day-2026-root body .assignment.session {
     function renderLessons() {
       const rows = sessions();
       rows.sort((a, b) => dateValueSerial(pick(b,['lessonDate','date'],'')) - dateValueSerial(pick(a,['lessonDate','date'],'')) || Number(b.sessionNumber || 0) - Number(a.sessionNumber || 0));
-      const visibleRows = rows.slice(0, 10);
+      const preparedRows=(app.child||{}).preparedPaperGradeSchema===1;
+      const visibleRows = preparedRows ? rows.slice() : rows.slice(0, 10);
       const lessonReminders = arr(pick(app.child || {}, ['privateReminders', 'reminders', 'alerts'], []))
         .filter(reminder => typeof reminder !== 'string' && text(pick(reminder, ['targetTab'], 'lessons')) === 'lessons');
       const pendingAssignmentIds = new Set(lessonReminders.map(reminder => text(pick(reminder, ['assignmentId', 'id'], ''))).filter(Boolean));
       const pendingLessonKeys = new Set(lessonReminders.map(reminder => text(pick(reminder, ['lessonKey'], ''))).filter(Boolean));
-      rows.slice(10).forEach(row => {
+      rows.slice(preparedRows ? rows.length : 10).forEach(row => {
         const assignment = childAssignmentFor(row) || {};
         const assignmentId = text(pick(assignment, ['id'], ''));
         const lessonKey = text(pick(assignment, ['lessonKey'], pick(row, ['lessonKey'], '')));
@@ -3214,6 +3216,7 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     function practiceRows() {
+      if((app.child||{}).preparedPracticeSchema===1&&Array.isArray((app.child||{}).preparedPracticeRows))return app.child.preparedPracticeRows;
       const data = app.data || {};
       const profile = app.child || {};
       const scheduled = arr(profile.assignments)
@@ -4972,10 +4975,11 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     const cutoff=now-days*86400000,profile=value.profile||{},dashboard=value.dashboard||{};
     function old(row){const at=assignedAt(row)||time(row&&row.date)||time(row&&row.lessonDate);return at>0&&at<cutoff&&!(time(row&&row.dueAt||row&&row.dueDate,true)>=cutoff);}
     function feedback(row){if(!row||typeof row!=='object')return false;
-      // The current Kids system has no server read-receipt for teacher notes.
-      // Retain every such note initially instead of guessing it has been read.
-      if(['teacherComment','comment','teacherFeedback','reviewComment'].some(k=>typeof row[k]==='string'&&row[k].trim()))return true;
-      return list(row.tasks).some(t=>feedback(t&&t.feedback))||feedback(row.feedback)||feedback(row.retake);
+      // Preserve actual new flags and explicitly dated/unread feedback. Old text
+      // remains intact in history and does not by itself pin completed work.
+      if(['isNew','isNewScore','preparedFeedbackUnread'].some(k=>row[k]===true))return true;
+      if(['preparedFeedbackUpdatedAt','feedbackUpdatedAt','teacherCommentUpdatedAt'].some(k=>{const at=time(row[k]);return at>0&&at>=cutoff;}))return true;
+      return list(row.tasks).some(t=>feedback(t)||feedback(t&&t.feedback))||feedback(row.feedback)||feedback(row.retake);
     }
     function completed(row){const tasks=list(row&&row.tasks).filter(t=>t&&t.requiresSubmission!==false);
       return !row.isAssessmentLesson&&!row.contentMissing&&tasks.length>0&&tasks.every(t=>{
@@ -4983,7 +4987,13 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
         return f&&f.submitted===true&&f.contentMissing!==true&&p&&p.schema===1&&p.complete===true&&p.freshRead===true&&Number.isFinite(p.verifiedAt)&&p.verifiedAt>0;
       });
     }
-    const assignments=list(profile.assignments),archiveAssignments=new Set(assignments.filter(row=>old(row)&&!feedback(row)&&completed(row)));
+    const assignments=list(profile.assignments),attentionIds=new Set(),attentionLessons=new Set();
+    [assignments,list(dashboard.assignments),list(dashboard.schedule),list(profile.lessons),list(profile.selfPractice),list(profile.preparedPracticeRows)].forEach(rows=>rows.forEach(row=>{
+      if(!feedback(row))return;
+      [row.id,row.scheduleAssignmentId].filter(Boolean).forEach(id=>attentionIds.add(id));
+      if(row.lessonKey)attentionLessons.add(row.lessonKey);
+    }));
+    const archiveAssignments=new Set(assignments.filter(row=>old(row)&&!feedback(row)&&!attentionIds.has(row.id)&&!attentionLessons.has(row.lessonKey)&&completed(row)));
     const byId=new Map(),byLesson=new Map();
     assignments.forEach(row=>{if(row.id){const rows=byId.get(row.id)||[];rows.push(row);byId.set(row.id,rows);}if(row.lessonKey){const rows=byLesson.get(row.lessonKey)||[];rows.push(row);byLesson.set(row.lessonKey,rows);}});
     function relatedComplete(row){const ids=[row&&row.id,row&&row.scheduleAssignmentId].filter(Boolean);let linked=[];
@@ -4999,13 +5009,37 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     split('dashboard.schedule',dashboard,'schedule',row=>old(row)&&relatedComplete(row)&&!feedback(row));
     split('profile.lessons',profile,'lessons',row=>old(row)&&relatedComplete(row)&&!feedback(row));
     split('profile.selfPractice',profile,'selfPractice',row=>old(row)&&relatedComplete(row)&&!feedback(row));
+    split('profile.preparedPracticeRows',profile,'preparedPracticeRows',row=>old(row)&&relatedComplete(row)&&!feedback(row));
     // Tests and standalone retakes can have independent pending retake rules;
     // keep their full original views until the legacy projector marks a linked
     // required assignment complete. No score alone classifies a retake.
-    const pageSize=options.pageSize||40;
+    const pageSize=options.pageSize||10;
     if(!Number.isInteger(pageSize)||pageSize<1||pageSize>100)throw Error('INVALID_HISTORY_PAGE_SIZE');
-    const pages={};for(let i=0;i<entries.length;i+=pageSize){const page=i/pageSize;pages[page]={schema:1,page,entries:entries.slice(i,i+pageSize)};}
-    value.preparedHistory={schema:1,cutoff,days,pageCount:Object.keys(pages).length,totalEntries:entries.length,positions,lengths};
+    // Keep an occurrence's assignment, schedule, tracker and rendered practice
+    // rows together. These are the exact same ID/lesson-key associations used
+    // by relatedComplete above, not a new title/date matching rule.
+    const parents=entries.map((_,i)=>i),seenKeys=new Map();
+    function find(i){while(parents[i]!==i){parents[i]=parents[parents[i]];i=parents[i];}return i;}
+    entries.forEach((entry,i)=>{const row=entry.value,keys=[];
+      [row.id,row.scheduleAssignmentId].filter(Boolean).forEach(id=>keys.push('id:'+id));
+      if(row.lessonKey)keys.push('lesson:'+row.lessonKey);
+      keys.forEach(key=>{if(seenKeys.has(key))parents[find(i)]=find(seenKeys.get(key));else seenKeys.set(key,i);});
+    });
+    const groupsByRoot=new Map();entries.forEach((entry,i)=>{const key=find(i),group=groupsByRoot.get(key)||[];group.push(entry);groupsByRoot.set(key,group);});
+    let groups=Array.from(groupsByRoot.values());
+    const displayPaths=new Set(['dashboard.schedule','profile.lessons','profile.preparedPracticeRows']);
+    const visible=groups.filter(group=>group.some(entry=>displayPaths.has(entry.path))),hidden=groups.filter(group=>!group.some(entry=>displayPaths.has(entry.path)));
+    if(visible.length){hidden.forEach(group=>group.forEach(entry=>visible[0].push(entry)));groups=visible;}
+    else{
+      // If the original view has no card for these records, retain them instead
+      // of offering a history button whose response adds nothing visible.
+      entries.forEach(entry=>{const bits=entry.path.split('.'),holder=value[bits[0]],indexes=positions[entry.path],at=indexes.findIndex(i=>i>entry.index),index=at<0?indexes.length:at;indexes.splice(index,0,entry.index);holder[bits[1]].splice(index,0,entry.value);});
+      groups=[];entries.length=0;
+    }
+    function groupTime(group){return group.reduce((latest,e)=>Math.max(latest,assignedAt(e.value)||time(e.value.date)||time(e.value.lessonDate)||0),0);}
+    groups.sort((a,b)=>groupTime(b)-groupTime(a));
+    const pages={};for(let i=0;i<groups.length;i+=pageSize){const page=i/pageSize,selected=groups.slice(i,i+pageSize);pages[page]={schema:1,page,groupCount:selected.length,entries:[].concat(...selected)};}
+    value.preparedHistory={schema:1,cutoff,days,pageCount:Object.keys(pages).length,totalEntries:entries.length,totalGroups:groups.length,positions,lengths};
     return {initial:value,pages};
   }
   function merge(value,page){
