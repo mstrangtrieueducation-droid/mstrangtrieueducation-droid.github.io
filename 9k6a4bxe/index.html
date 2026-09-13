@@ -11043,10 +11043,10 @@ const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGu
 });
 
 
-function parentSubmissionKnown_(item,record){if(item&&item.directReceiptSource||record&&record.directReceiptSource){return Boolean(item&&item.directSubmission||record&&record.directSubmission||parentSubmissionGuard_.can(item)&&item.directDeadline&&item.directDeadline.pending||parentSubmissionGuard_.can(record)&&record.directDeadline&&record.directDeadline.pending);}return Boolean(record&&(record.submitted===true||record.submittedAt||record.statusType==='done')||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}
+function parentSubmissionKnown_(item,record){if(item&&item.directReceiptSource||record&&record.directReceiptSource){return Boolean(item&&item.directSubmission||record&&record.directSubmission||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}return Boolean(record&&(record.submitted===true||record.submittedAt||record.statusType==='done')||parentSubmissionGuard_.can(item)||parentSubmissionGuard_.can(record));}
 
 
-function parentSubmissionLabel_(item,record){if(item&&item.contentMissing||record&&record.contentMissing)return 'Đã nhận lượt gửi nhưng bài trống';const deadline=item&&item.directDeadline||record&&record.directDeadline;return deadline?deadline.label:record&&record.homeworkStatus||'';}
+function parentSubmissionLabel_(item,record){if(item&&item.contentMissing||record&&record.contentMissing)return 'Đã nhận lượt gửi nhưng bài trống';const deadline=item&&item.directDeadline||record&&record.directDeadline;return deadline?(deadline.label||(parentSubmissionKnown_(item,record)?'Chưa ghi nhận lượt nộp':'')):record&&record.homeworkStatus||'';}
 
 
 function parentSubmissionProblem_(item,record){return item&&item.contentMissing||record&&record.contentMissing?'<div class="direct-empty-submission" style="border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px"><strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có nội dung bài làm, video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p></div>':'';}
