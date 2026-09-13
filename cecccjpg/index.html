@@ -3545,10 +3545,10 @@ function fighterParentLoad_(force=false,quiet=false){
   // The backend constructs the class model once and derives the exact profile
   // from it. Separate dashboard/profile requests rebuild that same model on
   // cold or forced loads, delaying the entire opening behind redundant work.
-  fighterParentLoading_=fighterApi.parent.request('bootstrap',force).then(({publicData,fullDashboard,profile})=>{
+  fighterParentLoading_=fighterApi.parent.request('bootstrap',force).then(({className,publicData,fullDashboard,profile,manualTrackerRead})=>{
     if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;
     if(!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments)||!Array.isArray(fullDashboard.scoreDefinitions)||!fullDashboard.classSummary||!Array.isArray(fullDashboard.classSummary.leaderboard)||!Array.isArray(profile.student.assignments)||!Array.isArray(profile.student.scoreDetails))throw new Error('Dữ liệu đang được cập nhật.');
-    fighterParentPackage_={publicData,fullDashboard,profile};
+    fighterParentPackage_={className,publicData,fullDashboard,profile,manualTrackerRead};
     // FIGHTER_PARENT_VALID_OPENING_V1: a valid snapshot belongs to this opening.
     if(!fighterApi.parent.authorized)return false;
     fighterParentApply_();
