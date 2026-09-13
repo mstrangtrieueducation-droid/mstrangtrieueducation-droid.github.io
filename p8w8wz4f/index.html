@@ -46,7 +46,7 @@ const fighterApi = (() => {
     const receiptEpoch=action==='check'?checkEpoch:submissionEpoch;
     const requestKey=JSON.stringify([action,Boolean(force),(action==='submissions'||action==='check')?receiptEpoch:null]);
     if(pending.has(requestKey))return pending.get(requestKey);
-    const started=performance.now(),attempts=['check','bootstrap','submissions'].includes(action)?3:2;
+    const started=performance.now(),attempts=action==='submissions'?1:['check','bootstrap'].includes(action)?3:2;
     function current(){return status!=='revoked'&&(action==='check'?receiptEpoch===checkEpoch:status==='authorized')&&(action!=='submissions'||receiptEpoch===submissionEpoch);}
     const promise=(async()=>{
       for(let attempt=0;attempt<attempts;attempt++){
@@ -3402,7 +3402,7 @@ function fighterEmptySubmissionMarkup_(state){
   return '<div class="direct-empty-submission" style="'+(state.contentMissing?'border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px':'color:#64748b')+'">'+current+history+'</div>';
 }
 
-function fighterSubmissionReadLabel_(){const state=submissionOwner_.readState;return ['idle','loading'].includes(state)?'Đang kiểm tra bài nộp':state==='ready'?'Đang đối chiếu lịch và nguồn bài nộp':'Kết nối nguồn bài nộp đang chậm · Bấm tải lại';}
+function fighterSubmissionReadLabel_(){const state=submissionOwner_.readState;return ['idle','loading'].includes(state)?'Đang kiểm tra bài nộp':'Chưa kiểm tra được · Bấm Tải lại hồ sơ';}
 
 /* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;

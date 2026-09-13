@@ -21,7 +21,7 @@
     if(pending.has(key))return pending.get(key);
     const ended=()=>Object.assign(new Error('Phiên mở hồ sơ đã kết thúc.'),{code:'INVALID_LINK'});
     const promise=(async()=>{
-      const opening=['check','bootstrap'].includes(action),attemptLimit=opening?3:2;
+      const opening=['check','bootstrap'].includes(action),attemptLimit=action==='submissions'?1:opening?3:2;
       for(let attempt=0;attempt<attemptLimit;attempt++){
         if(epoch!==generation)throw ended();
         const url=new URL(endpoint);
