@@ -187,7 +187,7 @@ const kidsApi = (() => {
         studentAliases:JSON.parse(JSON.stringify(data.studentAliases)), parentMode:true
       } : null;
       directoryVersion += 1;
-      if (document.visibilityState === 'hidden') return false;
+      // A verified opening may finish while hidden; returning only repaints it.
       initialBootstrapPackage = handoff ? {epoch:epoch, alias:keyOf(boundAlias), value:handoff} : null;
       signal('authorized');
       return true;
@@ -4254,7 +4254,7 @@ function createStudentLearningPrefill(options) {
     function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset){retryCount=0;sourceRetryCount=0;}}
     function transientAuthority(payload){
       var a=payload&&payload.assignmentAuthority;
-      return Boolean(payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
+      return Boolean(options.retryAuthority!==false&&payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
     }
     function transientSource(payload){
       return Boolean(options.retryTransientSources===true&&payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&identity.indexOf(payload.className+'|')===0&&Array.isArray(payload.coverage)&&payload.coverage.some(function(source){return source&&source.complete===false&&source.freshRead===false&&(source.sourceFailure==='SOURCE_BUSY'||source.sourceFailure==='SOURCE_VERSION_CHANGED');}));
@@ -4901,7 +4901,7 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     /* KIDS_SUBMISSION_STATUS_V1: source-confirmed absence, unchanged academic actions. */
     const submissionGuard_ = createSubmissionStatusGuard({
       getIdentity: () => kidsApi.parent.authorized && !kidsApi.parent.revoked ? CLASS_NAME + '|' + kidsApi.parent.alias : '',
-      isVisible: () => !document.hidden
+      isVisible: () => kidsApi.parent.authorized && !kidsApi.parent.revoked
     });
     function submissionCan_(item) { return submissionGuard_.can(item); }
     function submissionMissingMeta_(item) {
@@ -4918,11 +4918,21 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
       return meta.label+(count>1?' · '+count+' lần':'')+(submittedAt?' · '+submittedAt:'');
     }
     function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
-    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,retryTransientSources:true,
+    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,retryTransientSources:false,retryAuthority:false,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
-      isVisible:()=>!document.hidden,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
+      isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
       render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
     });
+function parentSingleSubmissionScan_(owner,getIdentity){
+  const refresh=owner.refresh,clear=owner.clear;let requestedFor='';
+  owner.refresh=function(force=false){
+    const identity=String(getIdentity()||'');
+    if(!identity||(!force&&requestedFor===identity))return Promise.resolve(false);
+    requestedFor=identity;return refresh();
+  };
+  owner.clear=function(){requestedFor='';return clear();};
+}
+parentSingleSubmissionScan_(submissionOwner_,()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'');
     function submissionReset_() { submissionOwner_.suspend(); hidePendingWorkGate(); const banner=$('#pendingWorkBanner');if(banner)banner.hidden=true; }
     window.addEventListener('kids-parent-access',event=>{if(event.detail.status==='revoked')submissionOwner_.clear();else if(event.detail.status!=='authorized')submissionReset_();});
 
@@ -5192,7 +5202,7 @@ function writtenTestDisplayTitle_(item) {
       parentBootstrapPainted_=true;setLoading(loading);
       document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));
       if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần bài nộp đang được đồng bộ…';
-      else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Đang kiểm tra cập nhật…';
+      else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Dữ liệu đã tải · Bấm Tải lại để cập nhật.';
       else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
       if(savedScroll)window.scrollTo(savedScroll);
       return true;
@@ -5263,15 +5273,8 @@ function writtenTestDisplayTitle_(item) {
         if(kidsApi.parent.authorized&&!parentBootstrapNextForce_)parentApplyPackage_(quiet,!job.recovery||Boolean(recovered));
         if(job.recovery){if(!recovered&&!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);if(!recovered&&!next&&parentBootstrapPainted_)$('#metaLine').textContent='Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng';}
         else if(!force&&(stale||parentPackageWarning_)){
-          // KIDS_PARENT_NORMAL_BACKGROUND_RECOVERY_V1: a complete visible pair
-          // can reconcile through the ordinary source-age/generation checks.
-          // Keep partial-data repair and explicit refresh on their original lane.
-          if(stale&&!parentPackagePartial_(value)&&!parentPackageWarning_&&parentBootstrapPainted_){
-            const saved=parentPackage_;
-            parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),startedAt:Date.now(),nextIndex:0,calls:0,finalUsed:false,normalBackground:true,normalStaleReads:0,
-              before:saved?[Number(saved.dashboard.snapshotBuiltAt),Number(saved.profile.sourceModelBuiltAt),Number(saved.profile.snapshotBuiltAt)]:null};
-            next=parentRecoveryNext_(parentForceRecovery_);
-          }else next={force:true,quiet:true,attempt:0,delay:0};
+          next={force:true,quiet:true,attempt:0,delay:0};
+
         }
         return true;
       }).catch(error=>{
@@ -5284,10 +5287,10 @@ function writtenTestDisplayTitle_(item) {
         // An assembled profile can outlive the raw source required by the
         // server's identity guard. A normal retry would hit that same object;
         // one forced episode repairs its source without relaxing the guard.
-        if(force&&error&&(error.code==='PROFILE_LOADING'||(error.code==='BOOTSTRAP_FORCE_TIMEOUT'&&error.forcedBootstrapDeadline===true))){
-          const value=parentPackage_;
-          parentForceRecovery_={alias:matchKey(kidsApi.parent.alias),startedAt:Date.now(),nextIndex:0,calls:0,finalUsed:false,before:value?[Number(value.dashboard.snapshotBuiltAt),Number(value.profile.sourceModelBuiltAt),Number(value.profile.snapshotBuiltAt)]:null};
-          next=parentRecoveryNext_(parentForceRecovery_);
+        if(force){
+          // The server may still be completing this request. Keep the saved view;
+          // do not repeatedly force or poll it after the opening read.
+          parentForceRecovery_=null;next=null;
         }else if(job.recovery){if(!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);}
         else if(repair)next={force:true,quiet:parentBootstrapPainted_,attempt:0,delay:650};
         else if(attempt<limit)next={force,quiet,attempt:attempt+1,delay:waiting?[1500,3000,6000,12000,20000,30000][attempt]:[650,1600][attempt]};
@@ -5307,7 +5310,7 @@ function writtenTestDisplayTitle_(item) {
     function parentContinue_(options={}) {
       if(!kidsApi.parent.authorized)return Promise.resolve(false);
       parentConsumeDirectoryHint_();parentRenderIdentity_();
-      if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh();
+      if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh(Boolean(options.refresh));
       if(options.refresh){
         parentForceRecovery_=null;
         parentClearBootstrapRetry_();parentBootstrapIntent_=null;
@@ -5357,19 +5360,18 @@ function writtenTestDisplayTitle_(item) {
       }) : options;
       return kidsApi.parent.check(checkOptions).then(ok=>ok?parentContinue_(options):false);
     }
+    // KIDS_PARENT_SINGLE_SCAN_V1: retain the opening result until an explicit refresh.
+    function parentResumeSavedView_(){
+      if(!document.hidden&&kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false,true);
+    }
     function parentStart_() {
-      // KIDS_PARENT_INITIAL_PAGESHOW_V1 retained: initial show adds no check.
-      let pageHiddenSinceShow=false;
       window.addEventListener('kids-parent-access',event=>{
         if(event.detail.status!=='authorized')parentAccessGate_();
         else{parentConsumeDirectoryHint_();parentRenderIdentity_();}
       });
-      window.addEventListener('pageshow',event=>{const returning=event.persisted||pageHiddenSinceShow;pageHiddenSinceShow=false;if(returning)parentRecheck_({background:true,foreground:true});});
-      window.addEventListener('online',()=>parentRecheck_({background:true,foreground:true}));
-      window.addEventListener('pagehide',()=>{pageHiddenSinceShow=true;kidsApi.parent.suspend();submissionReset_();});
+      window.addEventListener('pageshow',event=>{if(event.persisted)parentResumeSavedView_();});
       window.addEventListener('hashchange',()=>{kidsApi.parent.suspend();window.location.reload();});
-      document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')parentRecheck_({background:true,foreground:true});else{kidsApi.parent.suspend();submissionReset_();}});
-      window.setInterval(()=>{if(document.visibilityState==='visible'&&!kidsApi.parent.revoked)parentRecheck_({background:true});},60000);
+      document.addEventListener('visibilitychange',parentResumeSavedView_);
       parentAccessGate_();parentRecheck_({initialBootstrap:true});
     }
     // Parent bootstrap owns data reads. The preserved class-page loaders must
