@@ -1489,19 +1489,20 @@ html.vn-national-day-2026-root body .assignment.session {
 
 </style>
 <style id="submission-status-style">.submission-unverified{display:none!important}</style>
-<style id="kids-written-test-layout">/* KIDS_WRITTEN_TEST_LAYOUT_V1: paper-result heading only. */
-.written-score-card .score-card__main{grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:18px;padding:19px 20px}
+<style id="kids-written-test-layout">/* KIDS_WRITTEN_TEST_LAYOUT_V2: consistent test-record course, caption, unit and score columns. */
+.written-score-card .score-card__main{grid-template-columns:minmax(0,1fr) 144px;align-items:start;gap:18px;padding:19px 20px;box-sizing:border-box;min-height:160px}
 .written-test__heading{min-width:0}
-.written-test__eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:7px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5;margin-bottom:6px}
-.written-test__eyebrow:empty{display:none}
+.written-test__eyebrow{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-height:28px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.5;margin-bottom:6px}
+.written-test__eyebrow .new-score-badge{margin-left:auto}
 .written-score-card .score-card__main h3{margin:0;color:var(--navy);font-size:18px;font-weight:750;line-height:1.35;letter-spacing:-.015em;overflow-wrap:anywhere}
+.written-test__subtitle{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .written-test__units{min-width:0;margin-top:9px}
 .written-test__unit{display:inline-block;box-sizing:border-box;max-width:100%;padding:4px 9px;border:1px solid #dbe6df;border-radius:7px;background:#eff5f1;color:var(--sage-deep);font-size:12px;font-weight:650;line-height:1.4;white-space:nowrap;overflow:auto;vertical-align:top}
 .written-score-card .score-card__date{display:block;margin-top:9px;font-size:12px;line-height:1.5}
-.written-score-card .score-badge{min-width:98px;box-sizing:border-box;padding:12px;text-align:center}
+.written-score-card .score-badge{width:144px;min-width:0;box-sizing:border-box;padding:12px;text-align:center}
 .written-score-card .score-badge strong{font-size:24px}
-.written-score-card .score-badge span{display:block;margin-top:4px;font-size:12px;line-height:1.45;white-space:nowrap}
-@media(max-width:480px){.written-score-card .score-card__main{grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px}.written-score-card .score-card__main h3{font-size:17px}.written-score-card .score-badge{min-width:80px;padding:10px 8px}.written-score-card .score-badge strong{font-size:22px}}
+.written-score-card .score-badge span{display:block;min-height:2.9em;margin-top:4px;font-size:12px;line-height:1.45;white-space:normal}
+@media(max-width:480px){.written-score-card .score-card__main{grid-template-columns:minmax(0,1fr) 104px;gap:12px;padding:16px}.written-score-card .score-card__main h3{font-size:17px}.written-score-card .score-badge{width:104px;padding:10px 8px}.written-score-card .score-badge strong{font-size:22px}}
 </style>
 </head>
 <body>
@@ -3808,23 +3809,27 @@ html.vn-national-day-2026-root body .assignment.session {
 
     function writtenTestHeading_(item,title){
   const original=text(title),compact=original.replace(/\s+/g,' ').trim();
-  const type=compact.match(/^(Kiểm tra giấy(?: định k[ìỳ])?|Bài kiểm tra giấy|Written test)(?=\s|[·:|–—-]|$)/i);
-  const eyebrow=type?/^bài/i.test(type[1])?'Bài kiểm tra giấy':/^written/i.test(type[1])?'Written test':/định/i.test(type[1])?'Kiểm tra giấy định kì':'Kiểm tra giấy':'';
-  let main=(type?compact.slice(type[0].length):compact).replace(/^[\s·:|–—-]+/,'').trim(),unit='';
+  const type=compact.match(/^(?:(?:Điểm\s+)?(?:Bài\s+)?Kiểm tra(?:\s+giấy)?(?:\s+định k[ìỳ])?|Written test)(?=\s|[·:|–—-]|$)/i);
+  const eyebrow=type&&/^written/i.test(type[0])?'Written test':type&&/định/i.test(type[0])?'Kiểm tra giấy định kì':type&&/giấy/i.test(type[0])?'Kiểm tra giấy':'Kiểm tra trên lớp';
+  let body=(type?compact.slice(type[0].length):compact).replace(/^[\s·:|–—-]+/,'').trim(),unit='';
   // Separate only an explicit, complete native Unit clause. Malformed or unknown
   // labels stay in the visible title; numbers are never inferred from test IDs.
-  const tail=main.match(/(?:^|[\s·:|])((?:Units?)\s*\d[\s\S]*)$/i);
+  const tail=body.match(/(?:^|[\s·:|])((?:Units?)\s*\d[\s\S]*)$/i);
   if(tail&&/^Units?\s*[1-9]\d*(?:\s*(?:\+|,|&|–|—|-)\s*[1-9]\d*)*$/i.test(tail[1])){
     unit=tail[1].replace(/^units?/i,'Unit').replace(/^Unit\s*/,'Unit ').replace(/\s*\+\s*/g,' + ').replace(/\s*,\s*/g,', ');
-    main=main.slice(0,tail.index).replace(/[\s·:|–—-]+$/,'').trim();
+    body=body.slice(0,tail.index).replace(/[\s·:|–—-]+$/,'').trim();
   }
-  main=main.replace(/^Sách\s+/i,'').trim();
-  if(!main)main=text(pick(item,['program'],''))||eyebrow||original;
-  return {eyebrow:main===eyebrow?'':eyebrow,main,unit};
+  body=body.replace(/^Sách\s+/i,'').trim();
+  // The course belongs to this test record. Never borrow the current class's
+  // book: older tests can belong to a different course or level.
+  const program=text(pick(item,['program'],'')).replace(/\s+/g,' ').trim();
+  const main=program||body||'Bài kiểm tra';
+  const subtitle=program&&body&&body.toLowerCase()!==program.toLowerCase()?body:'';
+  return {eyebrow,main,unit,subtitle};
 }
 function writtenTestHeadingHtml_(item,title,date){
   const heading=writtenTestHeading_(item,title);
-  return `<div class="written-test__heading"><div class="written-test__eyebrow">${heading.eyebrow?`<span>${escapeHtml(heading.eyebrow)}</span>`:''}${item.isNew?'<span class="new-score-badge">ĐIỂM MỚI</span>':''}</div><h3>${escapeHtml(heading.main)}</h3>${heading.unit?`<div class="written-test__units"><span class="written-test__unit">${escapeHtml(heading.unit)}</span></div>`:''}${date?`<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>`:''}</div>`;
+  return `<div class="written-test__heading"><div class="written-test__eyebrow"><span>${escapeHtml(heading.eyebrow)}</span>${item.isNew?'<span class="new-score-badge">ĐIỂM MỚI</span>':''}</div><h3>${escapeHtml(heading.main)}</h3>${heading.subtitle?`<span class="written-test__subtitle">${escapeHtml(heading.subtitle)}</span>`:''}${heading.unit?`<div class="written-test__units"><span class="written-test__unit">${escapeHtml(heading.unit)}</span></div>`:''}${date?`<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>`:''}</div>`;
 }
 function testCard(item) {
       if (text(pick(item, ['assessmentType'], '')).toLowerCase() === 'speaking-interview') return speakingInterviewCard(item);
