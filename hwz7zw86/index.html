@@ -1980,6 +1980,8 @@ function submissionOriginalFighterStatus_(state, missingCount) {
 }
 function f9PortalStatusMetaV2_(state,missingCount){
   var meta=submissionOriginalFighterStatus_(state,missingCount);
+  // FIGHTER_MANUAL_NEUTRAL_STATUS_V1: a read neutral teacher cell is not a network failure or proof of missing work.
+  if(state&&state.submissionManualRead&&!state.submissionManualAuthority&&!meta.completed)return Object.assign({},meta,{cls:'neutral',completed:false,neutral:true,text:state.status||'Chưa có đánh giá',missingBeforeVerification:false});
   if(state&&state.contentMissing)return Object.assign({},meta,{completed:false,cls:'missing',text:'Đã nhận lượt gửi nhưng bài trống'});
   if(state&&(state.submitted||state.submittedAt)&&!meta.completed)return Object.assign({},meta,{cls:'neutral',text:state.status||'Đã nộp bài'});
   if(!meta.completed&&!submissionCan_(state))return Object.assign({},meta,{cls:'neutral',text:fighterSubmissionReadLabel_(),missingBeforeVerification:meta.cls==='missing'});
@@ -3095,7 +3097,40 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
 (function(root){
   'use strict';
   function createFighterReceiptProjector(m){
-    const list=v=>Array.isArray(v)?v:[],manual=task=>m.submissionTaskFactsV7_(task).preparation;
+    // FIGHTER_SOURCE_SPECIFIC_AUTHORITY_V1: online receipts and manual tracker cells have separate authority.
+    const list=v=>Array.isArray(v)?v:[],normalizeSearchText_=m.normalizeSearchText_;
+    function practiceTaskRoleV17_(task) {
+  const title = normalizeSearchText_(task && task.title);
+  const text = normalizeSearchText_([task && task.title, task && task.instructions].join(' '));
+  const titleHasNotebook = /so luyen de/.test(title);
+  const textHasNotebook = /so luyen de/.test(text);
+  if (!titleHasNotebook && !textHasNotebook) return '';
+  const explicitRedoTitle = /lam lai|redo/.test(title);
+  const combinedTitle = titleHasNotebook && /so tu vung/.test(title);
+  const redoBody = /hoan thien|cau sai|dap an dung|giai thich|kinh nghiem|lam lai|chua practice test/.test(text);
+  if (explicitRedoTitle) return 'redo_notebook';
+  if (combinedTitle) return 'combined_notebooks';
+  if (titleHasNotebook) return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
+  if (/so tu vung/.test(text)) return 'combined_notebooks';
+  return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
+}
+    const manual=(task,assignment)=>{
+      if(m.submissionTaskFactsV7_(task).preparation)return true;
+      if(!assignment||m.assignmentProgramKeyV7_(assignment.program)!=='pt')return false;
+      const role=practiceTaskRoleV17_(task);
+      return role==='redo_notebook'||(role==='notebook_fallback_redo'&&!String(task&&task.url||'').trim());
+    };
+    function manualAuthority(value,student,assignment,index,state,guard){
+      const p=state&&state.manualSubmissionVerification;
+      return Boolean(state&&state.submissionAuthority==='manual-tracker'&&guard.isVerifiedProof(p)&&
+        p.className===value.className&&p.studentName===student.name&&p.assignmentId===assignment.id&&p.taskIndex===index);
+    }
+    function unmappedManualRead(value,student,state,guard){
+      const p=value.manualTrackerRead;
+      return Boolean(state&&!state.manualSubmissionVerification&&guard.isVerifiedProof(p)&&p.decisionKnown===false&&
+        p.className===value.className&&p.studentName===student.name&&
+        typeof p.sourceVersion==='string'&&p.sourceVersion.trim()&&typeof p.rosterRevision==='string'&&p.rosterRevision.trim());
+    }
     function proof(row){return row&&row.complete===true&&row.freshRead===true?{schema:1,complete:true,freshRead:true,verifiedAt:Number(row.verifiedAt)||0}:null;}
     function grant(guard,ticket,target,coverage,fresh){const p=proof(coverage);if(ticket&&p)guard.authorize(ticket,target,p,{complete:true,stale:!fresh});}
     function expectedCodes(assignment,task){
@@ -3174,20 +3209,20 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       if(!value||!value.profile||!value.profile.student)return value;
       payload=payload||{receipts:[],coverage:[]};
       const student=value.profile.student,assignments=list(value.publicData&&value.publicData.assignments),receipts=list(payload.receipts);
-      const fresh=!(value.publicData.cacheStale||value.fullDashboard.cacheStale||value.profile.cacheStale);
+      // Grade-cache age is not the freshness of the independently captured receipt source.
       function homeworkIndex(receipt,assignment){return m.submissionTaskIndexV7_(assignment,{assignmentId:receipt.code,sourceTab:receipt.sourceTab,sourceName:receipt.sourceName});}
       function peersFor(receipt){return assignments.filter(other=>receipt.family==='FIGHTER_RETAKE'?retakeMatches(receipt,other):homeworkIndex(receipt,other)>=0);}
       student.assignments=list(student.assignments);
       assignments.forEach(assignment=>{
         let record=student.assignments.find(r=>r.assignmentId===assignment.id);
-        const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index])&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
+        const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index],assignment)&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
         const redo=tasks.map((task,index)=>m.submissionTaskFactsV7_(task).redo?index:-1).filter(index=>index>=0);
         if(redo.length===1)receipts.filter(r=>retakeMatches(r,assignment)&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peersFor(r))).forEach(receipt=>matched.push({receipt,index:redo[0]}));
         // A published assignment and fresh source proof are sufficient to represent
         // unfinished online work, even before its Toan dien column has been created.
         // Manual preparation never creates a direct-source negative.
         const pendingProofs=tasks.map((task,index)=>{
-          if(!ticket||!guard.isCurrent(ticket)||!fresh||manual(task))return false;
+          if(!ticket||!guard.isCurrent(ticket)||manual(task,assignment))return false;
           const coverage=taskCoverage(payload,assignment,task,index);if(!guard.isVerifiedProof(proof(coverage)))return false;
           const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};
           return root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending;
@@ -3197,7 +3232,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         tasks.forEach((task,index)=>{
           let state=record.tasks[index];if(!state&&(pendingProofs[index]||matched.some(row=>row.index===index))){state={tracked:false,completed:false,missing:false,status:''};record.tasks[index]=state;}
           if(!state)return;
-          if(manual(task)){state.submissionManualAuthority=fresh;return;}
+          if(manual(task,assignment)){state.submissionManualRead=manualAuthority(value,student,assignment,index,state,guard)||unmappedManualRead(value,student,state,guard);state.submissionManualAuthority=Boolean(state.submissionManualRead&&state.manualSubmissionVerification&&state.manualSubmissionVerification.decisionKnown===true&&state.tracked===true&&(state.completed===true||state.missing===true));return;}
           const found=matched.filter(row=>row.index===index).map(row=>row.receipt).sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b));const content=received(state,found,assignment,found.length?peersFor(found[0]):[]);
           const components=componentCompletion(content||found);
           if(components.known){state.completed=state.completed||components.complete;state.missing=!state.completed;state.status=state.completed?'Đã nộp bài':'Đã nộp một phần';}
@@ -3226,17 +3261,17 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
           }
           if(state.contentMissing){state.completed=false;state.missing=true;state.status='Đã nhận lượt gửi nhưng bài trống';state.isLate=false;state.isOverdue=Boolean(deadline.missing);}
           if(deadline.pending){
-            grant(guard,ticket,state,coverage,fresh);
+            grant(guard,ticket,state,coverage,true);
             if(pendingProofs[index]&&guard.can(state)&&!state.completed&&!state.submitted&&!state.submittedAt){state.tracked=true;state.missing=true;state.isOverdue=Boolean(deadline.missing);state.status=deadline.missing?'Chưa hoàn thành':'Cần nộp';}
           }
         });
         const verifiedMissing=record.tasks.filter(state=>state&&state.missing===true&&!state.completed&&guard.can(state)).length;
         if(verifiedMissing){record.tracked=true;record.missingCount=Math.max(Number(record.missingCount)||0,verifiedMissing);}
-        const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>manual(task)?fresh:record.tasks[index]&&(record.tasks[index].completed===true||guard.can(record.tasks[index])));
+        const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>{const state=record.tasks[index];return manual(task,assignment)?Boolean(state&&state.submissionManualAuthority&&(state.tracked===true||state.completed===true)):Boolean(state&&(state.completed===true||guard.can(state)));});
         if(all){
           record.missingCount=record.tasks.filter(state=>state&&state.missing===true&&!state.completed).length;
           record.status=record.missingCount?'Chưa hoàn thành':'Đã hoàn thành';
-          if(ticket)grant(guard,ticket,record,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},fresh);
+          if(ticket)grant(guard,ticket,record,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
         }
       });
       value.directSelfStudyItems=[];
@@ -3245,10 +3280,10 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         const family=/^SHADOW-/.test(code)?'FIGHTER_SHADOWING':/^FL/.test(code)?'FIGHTER_LISTENING':/^RI[345]-/.test(code)?'FIGHTER_READING':'';
         const peers=list(value.publicData.selfStudyAssignments).filter(a=>m.canonicalSelfStudyResultCodeV1_(a.sourceCode||a.code||'')===code&&String(a.scheduleClassName||'')===String(assignment.scheduleClassName||''));
         const found=receipts.filter(r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers));
-        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,!value.publicData.cacheStale);
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
         if(!found.length)return;assignment.receiptReceived=true;assignment.contentMissing=found.every(r=>r.contentStatus==='empty');assignment.submissionReceived=!assignment.contentMissing;
         const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
-        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,!value.publicData.cacheStale);
+        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,true);
         found.forEach(r=>{
           const item={receiptId:r.id,contentStatus:r.contentStatus,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,canonicalPdf:r.canonicalPdf,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
           if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
@@ -3262,8 +3297,8 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       });
       const records=student.assignments;
       const selfStudy=list(value.publicData.selfStudyAssignments);
-      if(ticket&&fresh&&records.length&&records.every(record=>guard.can(record))&&selfStudy.every(assignment=>assignment.submissionReceived||guard.can(assignment))){
-        grant(guard,ticket,value.profile,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},fresh);
+      if(ticket&&records.length&&records.every(record=>guard.can(record))&&selfStudy.every(assignment=>assignment.submissionReceived||guard.can(assignment))){
+        grant(guard,ticket,value.profile,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
       }
       return value;
     };
