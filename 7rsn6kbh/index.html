@@ -13,6 +13,126 @@
 <meta name="robots" content="noindex,nofollow">
 
 
+<script>
+/* Partition only old, positively completed task occurrences after the unchanged
+ * full-history projector has run. Every unknown or incomplete row stays initial. */
+(function(root){
+  'use strict';
+  const list=x=>Array.isArray(x)?x:[],clone=x=>JSON.parse(JSON.stringify(x));
+  const safePath=path=>/^(?:publicData|fullDashboard|profile|dashboard|preparedSelfStudy|directSelfStudyItems)(?:\.(?:student|assignments|selfStudyAssignments|shadowingAssignments|schedule|skills|speaking|writing|reading|listening|shadowing|records))*$/.test(path)||/^fullDashboard\.students\.\d{1,3}\.assignments$/.test(path);
+  function holder(value,path){if(!safePath(path))throw Error('INVALID_HISTORY_PATH');const bits=path.split('.');let node=value;for(const key of bits.slice(0,-1)){node=node&&node[key];if(!node||typeof node!=='object')throw Error('INVALID_HISTORY_PATH');}return {node,key:bits[bits.length-1]};}
+  function partition(full,options){
+    const value=clone(full),now=options.now,days=options.days===undefined?56:options.days;
+    if(!Number.isFinite(now)||!Number.isInteger(days)||days<1||days>366||typeof options.time!=='function'||typeof options.assignedAt!=='function')throw Error('INVALID_HISTORY_WINDOW');
+    const cutoff=now-days*86400000,entries=[],positions={},lengths={};
+    function old(row){const at=options.assignedAt(row)||options.time(row&&row.date)||options.time(row&&row.lessonDate);return at>0&&at<cutoff&&!(options.time(row&&row.dueAt||row&&row.dueDate,true)>=cutoff);}
+    function important(row){if(!row||typeof row!=='object')return false;
+      // Actual legacy news flags, or explicit prepared-feedback protocol flags.
+      // An old/undated teacher comment alone stays with the archived task.
+      if(row.isNew===true||row.isNewScore===true||row.preparedFeedbackUnread===true)return true;
+      if(['feedbackUpdatedAt','teacherCommentUpdatedAt','preparedFeedbackUpdatedAt'].some(key=>options.time(row[key])>=cutoff))return true;
+      return Object.keys(row).some(key=>row[key]&&typeof row[key]==='object'&&important(row[key]));
+    }
+    function split(path,predicate){const place=holder(value,path);if(!Array.isArray(place.node[place.key]))return;const all=place.node[place.key];lengths[path]=all.length;positions[path]=[];place.node[place.key]=[];
+      all.forEach((row,index)=>{if(predicate(row))entries.push({path,index,value:row});else {positions[path].push(index);place.node[place.key].push(row);}});
+    }
+    if(options.program==='fighter'){
+      const records=list(value.profile&&value.profile.student&&value.profile.student.assignments),byId=new Map();records.forEach(row=>{const id=row&&row.assignmentId;if(!id)return;const items=byId.get(id)||[];items.push(row);byId.set(id,items);});
+      const definitions=list(value.publicData&&value.publicData.assignments),archive=new Set(),definitionCounts=new Map();definitions.forEach(row=>{if(row&&row.id)definitionCounts.set(row.id,(definitionCounts.get(row.id)||0)+1);});
+      definitions.forEach(row=>{const found=byId.get(row.id)||[],record=found[0],tasks=list(row.tasks),states=list(record&&record.tasks);
+        if(definitionCounts.get(row.id)===1&&old(row)&&!important(row)&&found.length===1&&!important(record)&&!record.contentMissing&&tasks.length>0&&tasks.length===states.length&&states.every(s=>s&&s.completed===true&&!s.contentMissing)&&!(Number(record.missingCount)>0))archive.add(row.id);
+      });
+      const doneDefinition=row=>row&&archive.has(row.id)&&old(row)&&!important(row);
+      ['publicData.assignments','fullDashboard.assignments','profile.assignments'].forEach(path=>split(path,doneDefinition));
+      split('profile.student.assignments',row=>row&&archive.has(row.assignmentId));
+      list(value.fullDashboard&&value.fullDashboard.students).forEach((student,index)=>{if(student&&student.name===value.profile.student.name&&Array.isArray(student.assignments))split('fullDashboard.students.'+index+'.assignments',row=>row&&archive.has(row.assignmentId));});
+      // Self-study status is already projected on this exact occurrence. Keep
+      // neutral uploads awaiting processing and every legacy-only result visible.
+      const studyDefinitions=list(value.publicData.selfStudyAssignments),studyCounts=new Map(),studyArchive=new Set();studyDefinitions.forEach(row=>{const code=options.selfCode(row.sourceCode||row.code);if(code)studyCounts.set(code,(studyCounts.get(code)||0)+1);});
+      studyDefinitions.forEach(row=>{const code=options.selfCode(row.sourceCode||row.code);if(code&&studyCounts.get(code)===1&&old(row)&&!important(row)&&!list(value.preparedSelfStudy).some(item=>options.selfCode(item.code||item.assignmentCode)===code&&important(item))&&row.submissionReceived===true&&!row.contentMissing&&list(value.directSelfStudyItems).some(item=>item.completed===true&&!item.contentMissing&&options.selfCode(item.code)===code))studyArchive.add(code);});
+      split('publicData.selfStudyAssignments',row=>studyArchive.has(options.selfCode(row.sourceCode||row.code)));
+      ['preparedSelfStudy','directSelfStudyItems'].forEach(path=>split(path,row=>row&&studyArchive.has(options.selfCode(row.code||row.assignmentCode))&&!important(row)));
+    }else if(options.program==='ielts'){
+      const dashboard=value.dashboard,all=list(dashboard.assignments).concat(list(dashboard.shadowingAssignments)),counts=new Map();const archived=new Set();all.forEach(row=>{if(row&&row.id)counts.set(row.id,(counts.get(row.id)||0)+1);});
+      const linkedRecords=Object.values(value.profile.student.skills||{}).flatMap(skill=>list(skill&&skill.records));
+      all.forEach(row=>{if(counts.get(row.id)===1&&old(row)&&!important(row)&&row.directSubmission&&row.directSubmission.complete===true&&!row.contentMissing&&row.directDeadline&&!row.directDeadline.pending&&linkedRecords.filter(record=>record&&record.directAssignmentId===row.id).every(record=>!important(record)&&record.directSubmission&&record.directSubmission.complete===true&&!record.contentMissing))archived.add(row.id);});
+      split('dashboard.assignments',row=>archived.has(row.id));split('dashboard.shadowingAssignments',row=>archived.has(row.id));
+      const skills=value.profile.student.skills||{};Object.keys(skills).forEach(skill=>{if(!['speaking','writing','reading','listening','shadowing'].includes(skill))return;
+        split('profile.student.skills.'+skill+'.records',row=>row&&archived.has(row.directAssignmentId)&&!important(row)&&row.directSubmission&&row.directSubmission.complete===true&&!row.contentMissing);
+      });
+    }else throw Error('INVALID_PROGRAM');
+    const size=options.pageSize||40;if(!Number.isInteger(size)||size<1||size>100)throw Error('INVALID_HISTORY_PAGE_SIZE');
+    // A page is an atomic group of the same task's definitions and pupil
+    // records. Loading one page never renders half a card or loses its comment.
+    const groups=new Map();entries.forEach(entry=>{const row=entry.value||{},study=options.program==='fighter'&&(entry.path==='preparedSelfStudy'||entry.path==='directSelfStudyItems'||entry.path==='publicData.selfStudyAssignments');
+      const id=study?options.selfCode(row.sourceCode||row.code||row.assignmentCode):row.directAssignmentId||row.assignmentId||row.id;
+      const key=id?(study?'self-study:':'assignment:')+id:entry.path+':'+entry.index;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(entry);
+    });
+    const pages={};let current=[];function flush(){if(!current.length)return;const page=Object.keys(pages).length;pages[page]={schema:1,page,entries:current};current=[];}
+    groups.forEach(group=>{if(current.length&&current.length+group.length>size)flush();current.push(...group);});flush();
+    value.preparedHistory={schema:1,cutoff,days,pageCount:Object.keys(pages).length,totalEntries:entries.length,positions,lengths};
+    return {initial:value,pages};
+  }
+  function merge(value,page){
+    const meta=value&&value.preparedHistory;if(!meta||meta.schema!==1||!page||page.schema!==1||!Number.isInteger(page.page)||page.page<0||page.page>=meta.pageCount||!Array.isArray(page.entries))throw Error('INVALID_HISTORY_PAGE');
+    const loaded=list(meta.loadedPages);if(loaded.includes(page.page))return value;const prepared=[];
+    page.entries.forEach(entry=>{if(!entry||!Object.prototype.hasOwnProperty.call(meta.positions,entry.path)||!Number.isInteger(entry.index)||entry.index<0||entry.index>=meta.lengths[entry.path])throw Error('INVALID_HISTORY_ENTRY');
+      const place=holder(value,entry.path),indexes=meta.positions[entry.path];if(!Array.isArray(place.node[place.key])||indexes.length!==place.node[place.key].length||indexes.includes(entry.index)||prepared.some(x=>x.entry.path===entry.path&&x.entry.index===entry.index))throw Error('DUPLICATE_HISTORY_ENTRY');prepared.push({entry,place,indexes});
+    });
+    prepared.forEach(x=>{const at=x.indexes.findIndex(n=>n>x.entry.index),i=at<0?x.indexes.length:at;x.indexes.splice(i,0,x.entry.index);x.place.node[x.place.key].splice(i,0,x.entry.value);});meta.loadedPages=loaded.concat(page.page);return value;
+  }
+  const api={partition,merge};root.ClassSourcePreparedHistory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* CLASS_SOURCE_PREPARED_FRONTEND_V2: one authenticated immutable opening and
+ * explicit history pages; proof restoration never rematches trimmed arrays. */
+(function(root){
+  'use strict';
+  const clone=value=>JSON.parse(JSON.stringify(value));
+  function meta(value){const m=value&&value.classSource;return !!(m&&m.schema===1&&/^[a-z0-9]+_[a-f0-9]{12}$/.test(m.generation||'')&&Number.isFinite(m.capturedAt)&&m.capturedAt>0);}
+  function capture(bundle,className){
+    if(!bundle||!bundle.classSource&&!bundle.preparedHistory&&!bundle.preparedSubmissions)return null;
+    const receipt=bundle.preparedSubmissions;
+    if(!meta(bundle)||bundle.className!==className||!bundle.preparedHistory||bundle.preparedHistory.schema!==1||!Number.isInteger(bundle.preparedHistory.pageCount)||bundle.preparedHistory.pageCount<0||!receipt||!meta(receipt)||receipt.className!==className||receipt.schema!==1||!Array.isArray(receipt.receipts)||!Array.isArray(receipt.coverage)||!receipt.preparedProjection||receipt.preparedProjection.schema!==1||receipt.classSource.generation!==bundle.classSource.generation)throw Error('INVALID_PREPARED_OPENING');
+    const writing=bundle.preparedWriting;
+    if(writing&&(!meta(writing)||writing.classSource.generation!==bundle.classSource.generation||writing.className!==className||!Array.isArray(writing.reviews)||writing.studentName!==bundle.profile.student.name||writing.parentName!==bundle.name||writing.parentRosterRevision!==bundle.rosterRevision))throw Error('INVALID_PREPARED_WRITING');
+    return {generation:bundle.classSource.generation,submissions:clone(receipt),selfStudy:Array.isArray(bundle.preparedSelfStudy)?clone(bundle.preparedSelfStudy):null,writing:writing?clone(writing):null};
+  }
+  function project(target,payload,ticket,guard,className){
+    if(!payload||!payload.preparedProjection)return false;
+    const scope=target&&target.classSource?target:target&&target.dashboard;
+    if(!meta(scope)||scope.className!==className||!meta(payload)||payload.className!==className||payload.preparedProjection.schema!==1||scope.classSource.generation!==payload.classSource.generation||!ticket||!guard.isCurrent(ticket))return true;
+    const seen=new WeakSet();function visit(value){if(!value||typeof value!=='object'||seen.has(value))return;seen.add(value);
+      if(Object.prototype.hasOwnProperty.call(value,'preparedSubmissionVerification')&&guard.isVerifiedProof(value.preparedSubmissionVerification))guard.authorize(ticket,value,value.preparedSubmissionVerification);
+      Object.keys(value).forEach(key=>{if(key!=='preparedSubmissionVerification'&&key!=='preparedSubmissions')visit(value[key]);});
+    }visit(target);return true;
+  }
+  function historyControl(options){
+    let job=null,error='';
+    function render(){
+      const value=options.value(),host=options.host(),meta=value&&value.preparedHistory;
+      let node=document.getElementById(options.id);
+      if(!host||!meta||meta.schema!==1||!value.classSource){if(node)node.remove();return;}
+      const loaded=Array.isArray(meta.loadedPages)?meta.loadedPages:[],next=Array.from({length:meta.pageCount},(_,i)=>i).find(i=>!loaded.includes(i));
+      if(next===undefined){if(node)node.remove();return;}
+      if(!node){node=document.createElement('section');node.id=options.id;node.style.cssText='margin:24px 0;padding:20px;text-align:center;border:1px solid #dce5e8;border-radius:16px;background:#fff';host.appendChild(node);}
+      node.replaceChildren();const note=document.createElement('p');note.textContent=error||'Bài gần đây và tất cả bài còn thiếu đã hiển thị. Bài cũ đã hoàn thành được lưu đầy đủ.';note.style.cssText='margin:0 0 12px;color:#66758a';node.appendChild(note);
+      const button=document.createElement('button');button.type='button';button.className='button secondary';button.style.cssText='padding:12px 18px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;color:#09264a;font-weight:700';button.disabled=!!job;button.textContent=job?'Đang tải bài cũ…':error?'Thử tải lại bài cũ':'Xem thêm bài cũ đã hoàn thành';node.appendChild(button);
+      button.addEventListener('click',()=>{if(job)return;const current=options.value(),generation=current.classSource.generation;error='';
+        const pending=Promise.resolve().then(()=>options.request(next,generation)).then(page=>{if(options.value()!==current||!options.authorized())return;
+          if(!metaValidPage(page,generation,next,options.className()))throw Error('INVALID_HISTORY_SCOPE');
+          root.ClassSourcePreparedHistory.merge(current,page);options.apply();
+        }).catch(()=>{if(options.value()===current&&options.authorized())error='Chưa tải được bài cũ. Bấm để thử lại.';}).finally(()=>{if(job===pending){job=null;render();}});job=pending;render();
+      });
+    }
+    return {render};
+  }
+  function metaValidPage(page,generation,index,className){return meta(page)&&page.classSource.generation===generation&&page.className===className&&page.schema===1&&page.page===index&&Array.isArray(page.entries);}
+  root.ClassSourcePreparedFrontend={capture,project,historyControl,meta};
+  if(typeof module==='object'&&module.exports)module.exports=root.ClassSourcePreparedFrontend;
+})(typeof globalThis==='object'?globalThis:this);
+
+</script>
 <script>const ieltsParentAccess = (() => {
 
 
@@ -37,24 +157,29 @@
   const pending=new Map();
 
 
-  let generation=0;
+  let generation=0,preparedOpening=null;
 
 
   // IELTS_PARENT_TRANSPORT_RECOVERY_V2: fresh redirect URLs and one bounded retry.
   // IELTS_PARENT_OPEN_RECOVERY_V3: cache-only opening reads fail over promptly.
   let lastNonce=0;
-  async function request(action,force=false){
+  async function request(action,force=false,history){
     if(!valid)throw Object.assign(new Error('Liên kết chưa hợp lệ. Vui lòng dùng link cô đã gửi.'),{code:'INVALID_LINK'});
-    const key=action+'|'+Boolean(force),started=performance.now(),epoch=generation;
+    if(action==='writing'&&!preparedOpening){await Promise.resolve();const opening=Array.from(pending.entries()).find(entry=>entry[0].startsWith('bootstrap|'));if(opening)await opening[1];}
+    if(action==='writing'&&preparedOpening){if(!preparedOpening.writing)throw new Error('PREPARED_WRITING_UNAVAILABLE');return JSON.parse(JSON.stringify(preparedOpening.writing));}
+    if(action==='submissions'&&preparedOpening)return JSON.parse(JSON.stringify(preparedOpening.submissions));
+    const key=action+'|'+Boolean(force)+'|'+JSON.stringify(history||null),started=performance.now(),epoch=generation;
     if(pending.has(key))return pending.get(key);
     const ended=()=>Object.assign(new Error('Phiên mở hồ sơ đã kết thúc.'),{code:'INVALID_LINK'});
     const promise=(async()=>{
-      const opening=['check','bootstrap'].includes(action),attemptLimit=action==='submissions'?1:opening?3:2;
+      const opening=['check','bootstrap'].includes(action),attemptLimit=['submissions','history'].includes(action)?1:opening?3:2;
       for(let attempt=0;attempt<attemptLimit;attempt++){
         if(epoch!==generation)throw ended();
         const url=new URL(endpoint);
         lastNonce=Math.max(Date.now(),lastNonce+1);
         Object.entries({api:'parent1',class:className,action,force:force?'1':'0',token,_:String(lastNonce)}).forEach(([k,v])=>url.searchParams.set(k,v));
+        if(action==='history'){if(!history||!Number.isInteger(history.page)||history.page<0||!preparedOpening||history.generation!==preparedOpening.generation)throw ended();url.searchParams.set('page',String(history.page));url.searchParams.set('generation',history.generation);}
+        else if(preparedOpening&&!['check','bootstrap'].includes(action))url.searchParams.set('generation',preparedOpening.generation);
         const controller=new AbortController();
         const timer=setTimeout(()=>controller.abort(),opening?30000:90000);
         document.documentElement.dataset['parent'+action+'Attempts']=String(attempt+1);
@@ -82,6 +207,7 @@
             document.documentElement.dataset['parent'+action+'FirstMs']=String(Math.round(performance.now()-started));
             document.documentElement.dataset['parent'+action+'FirstAttempts']=String(attempt+1);
           }
+          if(action==='bootstrap')preparedOpening=ClassSourcePreparedFrontend.capture(value.data,className);
           return value.data;
         }catch(error){
           document.documentElement.dataset['parent'+action+'Failure']=error.name==='AbortError'?'timeout':error.code||error.name||'error';
@@ -95,7 +221,7 @@
     pending.set(key,promise);return promise;
   }
 
-  return {request,token,valid,className,invalidate(){generation++}};
+  return {request,token,valid,className,get preparedGeneration(){return preparedOpening?preparedOpening.generation:'';},invalidate(){generation++;preparedOpening=null}};
 
 
 })();
@@ -7646,7 +7772,7 @@ function ielts45RefreshOpenedStudentV11_(name,requestId,retryCount){
 
 
 
-function ielts45HabitFromSkills_(skills){
+function ielts45HabitFromSkills_(skills){if(parentState.preparedPackage&&parentReceiptOwner_.readState==='ready'&&state.student&&state.student.skills===skills&&state.student.preparedSubmissionHabit)return JSON.parse(JSON.stringify(state.student.preparedSubmissionHabit));
 
 
   const habit={evaluatedCount:0,submittedCount:0,completedOnTimeCount:0,submittedTimingUnknownCount:0,lateCount:0,partialCount:0,missingCount:0,issueCount:0,unrecordedCount:0,issueRate:null,label:'Chưa đủ dữ liệu để kết luận'};
@@ -11014,7 +11140,7 @@ const parentSubmissionGuard_=createSubmissionStatusGuard({getIdentity:parentRece
 const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
 
 
- request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>ielts45AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts45UniqueBestMatch_(records,record=>ielts45RecordMatchScore_(item,record))}),
+ request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>ClassSourcePreparedFrontend.project(target,payload,ticket,guard,ieltsParentAccess.className)?target:DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>ielts45AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts45UniqueBestMatch_(records,record=>ielts45RecordMatchScore_(item,record))}),
 
 
  render:()=>{if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile&&!document.hidden){parentState.renderedProfile=null;parentRender_();}}
@@ -11049,7 +11175,7 @@ function parentSubmissionLinks_(item,record){const value=item&&item.directSubmis
 function parentDirectAttempts_(item,record){const direct=item&&item.directSubmission||record&&record.directSubmission;if(!direct)return '';return '<section class="direct-submission-results"><strong>'+esc(parentSubmissionLabel_(item,record))+'</strong>'+direct.receipts.filter(r=>r.receiptType!=='grading-summary').map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+(r.part?' · Sections '+esc(r.part):'')+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(r.contentStatus==='empty'?' · <b>Lượt gửi trống, chưa có nội dung/video/tệp.</b>':'')+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <b>'+esc(r.score)+'/'+esc(r.maximum)+'</b>':'')+'</p>').join('')+parentSubmissionLinks_(item,record)+'</section>';}
 
 
-function parentSubmissionSummary_(skill){const records=(skill&&skill.records||[]).filter(r=>r.directDeadline&&(r.directDeadline.pending||r.directDeadline.eligible&&r.directDeadline.complete)&&parentSubmissionGuard_.can(r));if(!records.length)return '';return '<small>Đã ghi nhận '+records.filter(r=>r.directSubmission&&r.directSubmission.complete).length+' · Cần nộp '+records.filter(r=>r.directDeadline.pending).length+' · Quá hạn '+records.filter(r=>r.directDeadline.missing).length+' · Muộn '+records.filter(r=>r.directDeadline.late).length+'</small>';}
+function parentSubmissionSummary_(skill){if(parentState.preparedPackage&&parentReceiptOwner_.readState==='ready'&&skill&&typeof skill.preparedSubmissionSummaryHtml==='string')return skill.preparedSubmissionSummaryHtml;const records=(skill&&skill.records||[]).filter(r=>r.directDeadline&&(r.directDeadline.pending||r.directDeadline.eligible&&r.directDeadline.complete)&&parentSubmissionGuard_.can(r));if(!records.length)return '';return '<small>Đã ghi nhận '+records.filter(r=>r.directSubmission&&r.directSubmission.complete).length+' · Cần nộp '+records.filter(r=>r.directDeadline.pending).length+' · Quá hạn '+records.filter(r=>r.directDeadline.missing).length+' · Muộn '+records.filter(r=>r.directDeadline.late).length+'</small>';}
 
 
 async function parentQuietResume_(){
@@ -11064,7 +11190,7 @@ async function parentQuietResume_(){
   if(data.name!==parentState.name||data.rosterRevision!==parentState.revision){ieltsParentLock_('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');return;}
 
 
-  parentReceiptOwner_.refresh(true);
+  if(parentState.preparedPackage){const bundle=await ieltsParentAccess.request('bootstrap',true);if(id!==parentState.requestId||parentState.locked)return;if(bundle.name!==parentState.name||bundle.rosterRevision!==parentState.revision)throw Object.assign(new Error('Hồ sơ đã thay đổi.'),{code:'INVALID_LINK'});parentState.preparedPackage=bundle.classSource?bundle:null;parentReceiptOwner_.clear();await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});}else parentReceiptOwner_.refresh(true);
 
 
  }catch(error){if(id===parentState.requestId&&error.code==='INVALID_LINK')ieltsParentLock_('Liên kết này không còn hợp lệ.');}
@@ -11234,6 +11360,7 @@ function parentHasCachedView_(){
   try{return ['dashboard','profile'].every(kind=>{const r=JSON.parse(localStorage.getItem(parentCacheKey_(kind))||'null');const age=Date.now()-Number(r&&r.savedAt);return r&&r.data&&age>=0&&age<86400000;});}catch(_){return false;}
 }
 
+const ieltsPreparedHistory_=ClassSourcePreparedFrontend.historyControl({id:'ielts-prepared-history',value:()=>parentState.preparedPackage,host:()=>document.getElementById('portal-shell'),authorized:()=>parentState.authorized&&!parentState.locked,className:()=>ieltsParentAccess.className,request:(page,generation)=>ieltsParentAccess.request('history',false,{page,generation}),apply:()=>{parentState.renderedDashboard=null;parentState.renderedProfile=null;parentRender_();}});
 function parentRender_(){
 
 
@@ -11288,6 +11415,7 @@ function parentRender_(){
   if(!document.documentElement.dataset.parentFirstVisibleMs)document.documentElement.dataset.parentFirstVisibleMs=String(Math.round(performance.now()));
 
 
+  ieltsPreparedHistory_.render();
   return true;
 
 
@@ -11316,12 +11444,13 @@ async function parentLoad_(id,prefetch){
 
 
     if(id!==parentState.requestId)return;
+    if(data.classSource&&!parentState.preparedPackage)throw new Error('Chưa mở đủ hồ sơ. Bố mẹ bấm tải lại nhé.');
 
 
     parentAccept_('dashboard',data,id);
 
 
-    if(data.coldShell||data.needsBackgroundRefresh){
+    if(!data.classSource&&(data.coldShell||data.needsBackgroundRefresh)){
 
 
       data=await ieltsParentAccess.request('refreshDashboard');
@@ -11343,9 +11472,10 @@ async function parentLoad_(id,prefetch){
 
 
     if(id!==parentState.requestId)return;
+    if(data.classSource&&!parentState.preparedPackage)throw new Error('Chưa mở đủ hồ sơ. Bố mẹ bấm tải lại nhé.');
 
 
-    if(data.cacheWarming||!data.found||data.studentDataStale){
+    if(!data.classSource&&(data.cacheWarming||!data.found||data.studentDataStale)){
 
 
       parentAccept_('profile',data,id);
@@ -11411,6 +11541,7 @@ async function startIeltsParentPortal_(){
     if(!bundle)bundle=await ieltsParentAccess.request('bootstrap');
     if(id!==parentState.requestId)return;
     if(bundle.name!==parentState.name||bundle.rosterRevision!==parentState.revision){const error=new Error('Danh sách học viên đã thay đổi. Vui lòng mở lại hồ sơ.');error.code='INVALID_LINK';throw error;}
+    parentState.preparedPackage=bundle.classSource?bundle:null;
     await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});
   }catch(error){if(id===parentState.requestId){
     if(error.code==='INVALID_LINK'||!parentState.dashboard||!parentState.profile)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
