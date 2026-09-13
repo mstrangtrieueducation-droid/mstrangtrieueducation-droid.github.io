@@ -11,6 +11,20 @@
   let parameterCount=0;params.forEach(()=>{parameterCount+=1;});
   const token=params.getAll('p').length===1&&parameterCount===1?params.get('p'):'';
   const valid=/^[A-Za-z0-9_-]{22}$/.test(token||'');
+  // IELTS_PARENT_DOCUMENT_BINDING_V1: a restored document cannot own another URL.
+  const documentPath=location.pathname;
+  let documentFingerprint='';
+  function current(){
+    const active=new URLSearchParams(location.hash.replace(/^#/,''));
+    const views=new URLSearchParams(location.search||'').getAll('student');
+    let count=0;active.forEach(()=>count++);
+    return valid && location.pathname===documentPath && count===1 && active.getAll('p').length===1 && active.get('p')===token && (!views.length || views.length===1 && views[0]===documentFingerprint.slice(0,24) && documentFingerprint.length===64);
+  }
+  let hashPromise;
+  function tokenFingerprint(){
+    if(!hashPromise)hashPromise=crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)).then(bytes=>documentFingerprint=Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join(''));
+    return hashPromise;
+  }
   const pending=new Map();
   let generation=0;
   // IELTS_PARENT_TRANSPORT_RECOVERY_V2: fresh redirect URLs and one bounded retry.
@@ -18,13 +32,15 @@
   let lastNonce=0;
   async function request(action,force=false){
     if(!valid)throw Object.assign(new Error('Liên kết chưa hợp lệ. Vui lòng dùng link cô đã gửi.'),{code:'INVALID_LINK'});
+    await tokenFingerprint();
+    if(!current())throw Object.assign(new Error('Địa chỉ không khớp hồ sơ. Vui lòng mở lại đầy đủ link cô đã gửi.'),{code:'INVALID_LINK'});
     const key=action+'|'+Boolean(force),started=performance.now(),epoch=generation;
     if(pending.has(key))return pending.get(key);
     const ended=()=>Object.assign(new Error('Phiên mở hồ sơ đã kết thúc.'),{code:'INVALID_LINK'});
     const promise=(async()=>{
       const opening=['check','bootstrap'].includes(action),attemptLimit=action==='submissions'?1:opening?3:2;
       for(let attempt=0;attempt<attemptLimit;attempt++){
-        if(epoch!==generation)throw ended();
+        if(epoch!==generation||!current())throw ended();
         const url=new URL(endpoint);
         lastNonce=Math.max(Date.now(),lastNonce+1);
         Object.entries({api:'parent1',class:className,action,force:force?'1':'0',token,_:String(lastNonce)}).forEach(([k,v])=>url.searchParams.set(k,v));
@@ -36,7 +52,7 @@
           if(!response.ok)throw Object.assign(new Error('Chưa thể kết nối. Vui lòng thử lại.'),{code:'SOURCE_UNAVAILABLE',retryable:[404,408,429].includes(response.status)||response.status>=500});
           let value;
           try{value=await response.json();}catch(error){throw Object.assign(new Error('Phản hồi dữ liệu chưa hoàn tất.'),{code:'SOURCE_UNAVAILABLE',retryable:true});}
-          if(epoch!==generation)throw ended();
+          if(epoch!==generation||!current())throw ended();
           if(!value||value.ok!==true){
             const code=value&&value.error||'SOURCE_UNAVAILABLE';
             if(code==='INVALID_LINK'){
@@ -45,7 +61,10 @@
             }
             throw Object.assign(new Error(code==='INVALID_LINK'?'Liên kết này không còn hợp lệ.':'Chưa thể tải dữ liệu. Vui lòng thử lại.'),{code,retryable:code==='SOURCE_UNAVAILABLE'});
           }
-          if(value.className!==className||value.action!==action||!value.data){
+          const binding=value.requestBinding;
+          const fingerprint=await tokenFingerprint();
+          if(epoch!==generation||!current())throw ended();
+          if(!binding||binding.version!==1||binding.tokenHash!==fingerprint||binding.nonce!==url.searchParams.get('_')||value.className!==className||value.action!==action||!value.data){
             generation++;
             if(typeof ieltsParentLock_==='function')ieltsParentLock_('Dữ liệu chưa khớp với liên kết. Vui lòng mở lại link của con.');
             throw ended();
@@ -58,7 +77,7 @@
           return value.data;
         }catch(error){
           document.documentElement.dataset['parent'+action+'Failure']=error.name==='AbortError'?'timeout':error.code||error.name||'error';
-          if(epoch!==generation)throw ended();
+          if(epoch!==generation||!current())throw ended();
           const retryable=error.retryable===true||error.name==='AbortError'||error.name==='TypeError';
           if(attempt>=attemptLimit-1||!retryable){if(error.name==='AbortError')throw Object.assign(new Error('Kết nối đang chậm. Vui lòng bấm Thử lại.'),{code:'SOURCE_UNAVAILABLE'});throw error;}
         }finally{clearTimeout(timer);}
@@ -68,7 +87,7 @@
     pending.set(key,promise);return promise;
   }
 
-  return {request,token,valid,className,invalidate(){generation++}};
+  return {request,token,valid,className,current,invalidate(){generation++}};
 })();
 // Compatibility surface for existing IELTS renderers. Identity never comes from a name parameter.
 const ieltsApi=(()=>{
@@ -3866,7 +3885,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
 var parentState={authorized:false,locked:false,name:'',revision:'',directory:null,dashboard:null,profile:null,requestId:0,checking:false};
 
 // SHARED_PARENT_SESSION_V1: keep the view and pending work on ordinary tab changes.
-function parentReceiptIdentity_(){return parentState.authorized&&!parentState.locked?ieltsParentAccess.className+'|'+parentState.revision+'|'+parentState.name:'';}
+function parentReceiptIdentity_(){return ieltsParentAccess.current()&&parentState.authorized&&!parentState.locked?ieltsParentAccess.className+'|'+parentState.revision+'|'+parentState.name:'';}
 const parentSubmissionGuard_=createSubmissionStatusGuard({getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_())});
 const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
  request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>ielts52AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts52UniqueBestMatch_(records,record=>ielts52RecordMatchScore_(item,record))}),
@@ -3936,6 +3955,7 @@ function parentSourceTime_(data){
   return p?Date.UTC(+p[3],+p[2]-1,+p[1],+p[4]-7,+p[5],+(p[6]||0)):Date.parse(stamp);
 }
 function parentPayloadValid_(kind,data){
+  if(!ieltsParentAccess.current())return false;
   if(!parentState.authorized||parentState.locked||!data||data.parentName!==parentState.name||data.parentRosterRevision!==parentState.revision)return false;
   if(kind==='profile')return Boolean(data.found&&data.student&&data.student.name===parentState.name);
   return Boolean(data.className===ieltsParentAccess.className&&!data.coldShell&&Array.isArray(data.assignments)&&Array.isArray(data.lessonEvents));
@@ -3961,6 +3981,7 @@ function parentPendingPanel_(title){
   return '<section class="card" aria-busy="true" style="padding:32px;min-height:160px"><h2>'+esc(title)+'</h2><p>Đang cập nhật dữ liệu. Các phần đã tải vẫn có thể xem bình thường.</p><button class="secondary" type="button" onclick="parentLoad_(parentState.requestId)">Tải lại phần còn thiếu</button></section>';
 }
 function parentRender_(){
+  if(!ieltsParentAccess.current()){parentNavigate_();return false;}
   if(!parentState.authorized||parentState.locked)return false;
   const dashboardReady=parentPayloadValid_('dashboard',parentState.dashboard),profileReady=parentPayloadValid_('profile',parentState.profile);
   const wasOpen=!document.getElementById('portal-shell').hidden;
@@ -4094,10 +4115,18 @@ changeIelts52Student_=function(){};
 openRoster=function(){};
 loadPublic=function(){startIeltsParentPortal_()};
 document.getElementById('parent-retry').addEventListener('click',startIeltsParentPortal_);
-window.addEventListener('hashchange',()=>location.reload());
-function parentResumeSavedView_(){if(!document.hidden&&parentState.authorized&&!parentState.locked){parentState.renderedProfile=null;parentRender_();}}
+// IELTS_PARENT_RESTORE_BOUNDARY_V1: hide the old identity before navigation or restore.
+function parentSuspend_(){
+  ieltsParentAccess.invalidate();
+  ieltsParentLock_('Đang kiểm tra liên kết học viên…',false);
+}
+function parentNavigate_(){parentSuspend_();location.reload();}
+window.addEventListener('hashchange',parentNavigate_);
+window.addEventListener('popstate',()=>{if(!ieltsParentAccess.current())parentNavigate_();});
+window.addEventListener('pagehide',parentSuspend_);
+function parentResumeSavedView_(){if(!ieltsParentAccess.current()){parentNavigate_();return;}if(!document.hidden&&parentState.authorized&&!parentState.locked){parentState.renderedProfile=null;parentRender_();}}
 document.addEventListener('visibilitychange',parentResumeSavedView_);
-window.addEventListener('pageshow',event=>{if(event.persisted)parentResumeSavedView_();});
+window.addEventListener('pageshow',event=>{if(event.persisted||!ieltsParentAccess.current())parentNavigate_();});
 
 // Kids-style presentation only: reuse the authorized identity and existing gate.
 (function(){
