@@ -23,6 +23,7 @@ const kidsApi = (() => {
   // A single-use handoff, never a saved authorization decision.
   let initialBootstrapAttempted = false;
   let initialBootstrapPackage = null;
+  let preparedReceiptPackage = null;
   let verifiedDirectory = null;
   let directoryVersion = 0;
   const norm = value => String(value || '').trim().toUpperCase();
@@ -35,7 +36,7 @@ const kidsApi = (() => {
   }
   function revoke() {
     if (status === 'revoked') return;
-    status = 'revoked'; receiptEpoch += 1;
+    status = 'revoked'; receiptEpoch += 1; preparedReceiptPackage = null;
     initialBootstrapPackage = null;
     controllers.forEach(controller => controller.abort());
     pending.clear();
@@ -88,9 +89,9 @@ const kidsApi = (() => {
     }
     return boundAlias;
   }
-  function requestAction(action, force, epoch, initialBootstrap = false) {
+  function requestAction(action, force, epoch, initialBootstrap = false, extra = {}) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
-    const key = JSON.stringify([action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null]);
+    const key = JSON.stringify([action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null, extra]);
     if (pending.has(key)) return pending.get(key);
     const url = new URL(endpoint);
     url.searchParams.set('api', 'parent1');
@@ -100,6 +101,7 @@ const kidsApi = (() => {
     url.searchParams.set('token', token);
     url.searchParams.set('force', force ? '1' : '0');
     if (initialBootstrap && action === 'bootstrap' && !force) url.searchParams.set('opening', '1');
+    Object.keys(extra).forEach(key=>{if(!['generation','historyPage'].includes(key))throw error('Yêu cầu không hợp lệ.','INVALID_SCOPE');url.searchParams.set(key,String(extra[key]));});
     url.searchParams.set('_', String(Date.now()));
     const controller = new AbortController();
     if (action === 'check') checkController = controller;
@@ -122,9 +124,18 @@ const kidsApi = (() => {
         throw error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED');
       }
       if (!envelope || envelope.ok !== true || !Object.prototype.hasOwnProperty.call(envelope, 'data')) {
-        throw error('Dữ liệu chưa sẵn sàng. Vui lòng thử lại.', envelopeCode || 'DATA_UNAVAILABLE', envelope && envelope.diagnostics);
+        const failure=error('Dữ liệu chưa sẵn sàng. Vui lòng thử lại.', envelopeCode || 'DATA_UNAVAILABLE', envelope && envelope.diagnostics);failure.preparedSourceUnavailable=Boolean(envelope&&envelope.preparedSourceUnavailable===true);throw failure;
       }
       validateScope(data, action, initialBootstrap ? validateScope(data, 'check') : undefined);
+      if(action==='history'&&(!data.preparedSource||data.preparedSource.generation!==extra.generation||data.page!==Number(extra.historyPage)||keyOf(data.englishName)!==keyOf(boundAlias)))throw error('Lịch sử chưa khớp.','INVALID_SCOPE');
+      if(action==='bootstrap'){
+        preparedReceiptPackage=null;
+        if(data.preparedHistory){
+          const source=data.preparedSource,receipts=data.preparedSubmissions;
+          if(!source||source.schema!==1||!receipts||!receipts.preparedSource||receipts.preparedSource.generation!==source.generation||!receipts.preparedProjection||receipts.preparedProjection.schema!==1)throw error('Dữ liệu đã chuẩn bị chưa khớp.','INVALID_SCOPE');
+          preparedReceiptPackage={alias:keyOf(data.profile.englishName),generation:source.generation,value:JSON.parse(JSON.stringify(receipts))};
+        }
+      }
       document.documentElement.dataset[action + 'Ms'] = String(Math.round(performance.now() - started));
       document.documentElement.dataset[action + 'ReadyMs'] = String(Math.round(performance.now()));
       return data;
@@ -174,7 +185,7 @@ const kidsApi = (() => {
     }).catch(err => {
       handoff = null;
       if (status === 'revoked' || epoch !== checkEpoch ||
-          err && (err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
+          err && (err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
       // One fallback to the ordinary access check. Existing loaders retain
       // their normal retry/partial-data/force-recovery rules after this check.
       return requestAction('check', true, epoch);
@@ -228,8 +239,16 @@ const kidsApi = (() => {
       get status() { return status; },
       get directoryHint() { return status === 'authorized' && verifiedDirectory ? JSON.parse(JSON.stringify(verifiedDirectory)) : null; },
       get directoryVersion() { return directoryVersion; },
+      get prepared() { return Boolean(status==='authorized'&&preparedReceiptPackage&&preparedReceiptPackage.alias===keyOf(boundAlias)); },
+      history(page,generation) {
+        if(status!=='authorized'||!preparedReceiptPackage||preparedReceiptPackage.alias!==keyOf(boundAlias)||preparedReceiptPackage.generation!==generation||!Number.isInteger(page)||page<0)return Promise.reject(error('Lịch sử chưa khớp.','INVALID_SCOPE'));
+        return requestAction('history',false,checkEpoch,false,{generation,historyPage:page});
+      },
       submissions() {
         if(status!=='authorized')return Promise.reject(error('Đang kiểm tra hồ sơ.','AUTH_PENDING'));
+        if(preparedReceiptPackage&&preparedReceiptPackage.alias===keyOf(boundAlias)){
+          validateScope(preparedReceiptPackage.value,'submissions');return Promise.resolve(JSON.parse(JSON.stringify(preparedReceiptPackage.value)));
+        }
         return requestAction('submissions',false,receiptEpoch);
       },
       bootstrap(force = false) {
@@ -1599,6 +1618,7 @@ html.vn-national-day-2026-root body .assignment.session {
       <section class="panel" id="practicePanel" data-panel="practice" role="tabpanel"></section>
       <section class="panel" id="profilePanel" data-panel="profile" role="tabpanel"></section>
       <section class="panel" id="competitionPanel" data-panel="competition" role="tabpanel"></section>
+      <div id="preparedHistoryControl" class="card" hidden style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-top:20px"></div>
     </main>
 
     <footer class="footer">Ms. Trang Trieu Education · Unlock your capacity</footer>
@@ -4939,6 +4959,108 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
+/* KIDS_PREPARED_HISTORY_V1. Partition positive completions; never infer absence. */
+(function(root){
+  'use strict';
+  const list=x=>Array.isArray(x)?x:[],clone=x=>JSON.parse(JSON.stringify(x));
+  function partition(full,options){
+    options=options||{};
+    const value=clone(full),days=options.days===undefined?56:options.days,now=options.now;
+    if(!Number.isFinite(now)||!Number.isInteger(days)||days<1||days>366)throw Error('INVALID_HISTORY_WINDOW');
+    const time=options.time,assignedAt=options.assignedAt;
+    if(typeof time!=='function'||typeof assignedAt!=='function')throw Error('ORIGINAL_DATE_POLICY_REQUIRED');
+    const cutoff=now-days*86400000,profile=value.profile||{},dashboard=value.dashboard||{};
+    function old(row){const at=assignedAt(row)||time(row&&row.date)||time(row&&row.lessonDate);return at>0&&at<cutoff&&!(time(row&&row.dueAt||row&&row.dueDate,true)>=cutoff);}
+    function feedback(row){if(!row||typeof row!=='object')return false;
+      // The current Kids system has no server read-receipt for teacher notes.
+      // Retain every such note initially instead of guessing it has been read.
+      if(['teacherComment','comment','teacherFeedback','reviewComment'].some(k=>typeof row[k]==='string'&&row[k].trim()))return true;
+      return list(row.tasks).some(t=>feedback(t&&t.feedback))||feedback(row.feedback)||feedback(row.retake);
+    }
+    function completed(row){const tasks=list(row&&row.tasks).filter(t=>t&&t.requiresSubmission!==false);
+      return !row.isAssessmentLesson&&!row.contentMissing&&tasks.length>0&&tasks.every(t=>{
+        const f=t.feedback,p=f&&f.preparedSubmissionVerification;
+        return f&&f.submitted===true&&f.contentMissing!==true&&p&&p.schema===1&&p.complete===true&&p.freshRead===true&&Number.isFinite(p.verifiedAt)&&p.verifiedAt>0;
+      });
+    }
+    const assignments=list(profile.assignments),archiveAssignments=new Set(assignments.filter(row=>old(row)&&!feedback(row)&&completed(row)));
+    const byId=new Map(),byLesson=new Map();
+    assignments.forEach(row=>{if(row.id){const rows=byId.get(row.id)||[];rows.push(row);byId.set(row.id,rows);}if(row.lessonKey){const rows=byLesson.get(row.lessonKey)||[];rows.push(row);byLesson.set(row.lessonKey,rows);}});
+    function relatedComplete(row){const ids=[row&&row.id,row&&row.scheduleAssignmentId].filter(Boolean);let linked=[];
+      ids.forEach(id=>linked=linked.concat(byId.get(id)||[]));if(row&&row.lessonKey)linked=linked.concat(byLesson.get(row.lessonKey)||[]);
+      return linked.length>0&&linked.every(a=>archiveAssignments.has(a));
+    }
+    const entries=[],positions={},lengths={};
+    function split(path,holder,key,predicate){if(!Array.isArray(holder[key]))return;const all=holder[key];lengths[path]=all.length;positions[path]=[];holder[key]=[];
+      all.forEach((row,index)=>{if(predicate(row)){entries.push({path,index,value:row});}else{positions[path].push(index);holder[key].push(row);}});
+    }
+    split('profile.assignments',profile,'assignments',row=>archiveAssignments.has(row));
+    split('dashboard.assignments',dashboard,'assignments',row=>old(row)&&relatedComplete(row)&&!feedback(row));
+    split('dashboard.schedule',dashboard,'schedule',row=>old(row)&&relatedComplete(row)&&!feedback(row));
+    split('profile.lessons',profile,'lessons',row=>old(row)&&relatedComplete(row)&&!feedback(row));
+    split('profile.selfPractice',profile,'selfPractice',row=>old(row)&&relatedComplete(row)&&!feedback(row));
+    // Tests and standalone retakes can have independent pending retake rules;
+    // keep their full original views until the legacy projector marks a linked
+    // required assignment complete. No score alone classifies a retake.
+    const pageSize=options.pageSize||40;
+    if(!Number.isInteger(pageSize)||pageSize<1||pageSize>100)throw Error('INVALID_HISTORY_PAGE_SIZE');
+    const pages={};for(let i=0;i<entries.length;i+=pageSize){const page=i/pageSize;pages[page]={schema:1,page,entries:entries.slice(i,i+pageSize)};}
+    value.preparedHistory={schema:1,cutoff,days,pageCount:Object.keys(pages).length,totalEntries:entries.length,positions,lengths};
+    return {initial:value,pages};
+  }
+  function merge(value,page){
+    if(!value||!value.preparedHistory||value.preparedHistory.schema!==1||!page||page.schema!==1||!Number.isInteger(page.page))throw Error('INVALID_HISTORY_PAGE');
+    const meta=value.preparedHistory;if(page.page<0||page.page>=meta.pageCount||!Array.isArray(page.entries))throw Error('INVALID_HISTORY_PAGE');
+    const loaded=list(meta.loadedPages);if(loaded.includes(page.page))return value;
+    const prepared=[];
+    page.entries.forEach(entry=>{
+      if(!entry||!Object.prototype.hasOwnProperty.call(meta.positions,entry.path)||!Number.isInteger(entry.index)||entry.index<0||entry.index>=meta.lengths[entry.path])throw Error('INVALID_HISTORY_ENTRY');
+      const bits=entry.path.split('.'),holder=value[bits[0]],key=bits[1],indexes=meta.positions[entry.path];
+      if(bits.length!==2||!holder||!Array.isArray(holder[key])||indexes.length!==holder[key].length||indexes.includes(entry.index)||prepared.some(x=>x.entry.path===entry.path&&x.entry.index===entry.index))throw Error('DUPLICATE_HISTORY_ENTRY');
+      prepared.push({entry,holder,key,indexes});
+    });
+    prepared.forEach(x=>{const at=x.indexes.findIndex(n=>n>x.entry.index),i=at<0?x.indexes.length:at;x.indexes.splice(i,0,x.entry.index);x.holder[x.key].splice(i,0,x.entry.value);});
+    meta.loadedPages=loaded.concat(page.page);return value;
+  }
+  const api={partition,merge};root.KidsPreparedHistory=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
+/* KIDS_PREPARED_FRONTEND_V1. Prepared opening is one immutable pupil snapshot. */
+function parentProjectPrepared_(value,payload,ticket,guard) {
+  if(!payload||!payload.preparedProjection)return projectKidsReceipts_(value,payload,ticket,guard);
+  const generation=value&&value.preparedSource&&value.preparedSource.generation;
+  if(payload.preparedProjection.schema!==1||!generation||!payload.preparedSource||payload.preparedSource.generation!==generation||payload.className!==value.className||!ticket||!guard.isCurrent(ticket))return value;
+  const seen=new WeakSet();
+  function visit(node){if(!node||typeof node!=='object'||seen.has(node))return;seen.add(node);
+    const proof=node.preparedSubmissionVerification;
+    if(proof&&proof.schema===1&&proof.complete===true&&proof.freshRead===true&&Number.isFinite(proof.verifiedAt)&&proof.verifiedAt>0)guard.authorize(ticket,node,proof,{complete:true});
+    Object.keys(node).forEach(key=>{if(key!=='preparedSubmissionVerification'&&key!=='preparedSubmissions')visit(node[key]);});
+  }
+  visit(value);return value;
+}
+let parentPreparedHistoryJob_=null;
+let parentPreparedHistoryError_='';
+function parentRenderPreparedHistory_() {
+  const node=document.getElementById('preparedHistoryControl');if(!node)return;
+  const meta=parentPackage_&&parentPackage_.preparedHistory,scope=parentPackage_&&parentPackage_.preparedSource;
+  if(!meta||meta.schema!==1||!scope||!meta.pageCount){node.hidden=true;return;}
+  const loaded=Array.isArray(meta.loadedPages)?meta.loadedPages:[],next=Array.from({length:meta.pageCount},(_,i)=>i).find(i=>!loaded.includes(i));
+  node.hidden=false;node.replaceChildren();
+  const note=document.createElement('span');note.textContent=parentPreparedHistoryError_||(next===undefined?'Đã hiển thị toàn bộ bài cũ đã hoàn thành.':'Bài gần đây và bài còn thiếu đã hiển thị ở trên.');node.append(note);
+  if(next===undefined)return;
+  const button=document.createElement('button');button.type='button';button.className='btn secondary';button.disabled=Boolean(parentPreparedHistoryJob_);
+  button.textContent=parentPreparedHistoryJob_?'Đang mở bài cũ…':'Xem thêm bài cũ đã hoàn thành';
+  button.onclick=()=>parentLoadPreparedHistory_(next,scope.generation);node.append(button);
+}
+function parentLoadPreparedHistory_(page,generation) {
+  if(parentPreparedHistoryJob_||!kidsApi.parent.authorized||!parentPackage_||!parentPackage_.preparedSource||parentPackage_.preparedSource.generation!==generation)return Promise.resolve(false);
+  const original=parentPackage_,job={page,generation};parentPreparedHistoryError_='';parentPreparedHistoryJob_=job;parentRenderPreparedHistory_();
+  return kidsApi.parent.history(page,generation).then(value=>{
+    if(!kidsApi.parent.authorized||kidsApi.parent.revoked||parentPackage_!==original||!value||!value.preparedSource||value.preparedSource.generation!==generation||value.page!==page)throw Error('Hồ sơ đã thay đổi. Bố mẹ bấm Tải lại để mở bản mới.');
+    KidsPreparedHistory.merge(parentPackage_,value);parentApplyPackage_(true,false,true);return true;
+  }).catch(error=>{parentPreparedHistoryError_='Chưa mở được bài cũ. Bố mẹ bấm xem thêm để thử lại.';return false;}).finally(()=>{if(parentPreparedHistoryJob_===job)parentPreparedHistoryJob_=null;parentRenderPreparedHistory_();});
+}
+
     /* KIDS_SUBMISSION_STATUS_V1: source-confirmed absence, unchanged academic actions. */
     const submissionGuard_ = createSubmissionStatusGuard({
       getIdentity: () => kidsApi.parent.authorized && !kidsApi.parent.revoked ? CLASS_NAME + '|' + kidsApi.parent.alias : '',
@@ -4959,7 +5081,7 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
     const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,retryTransientSources:false,retryAuthority:false,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
-      isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>kidsApi.parent.submissions(),project:projectKidsReceipts_,
+      isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>kidsApi.parent.submissions(),project:parentProjectPrepared_,
       render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
     });
 function parentSingleSubmissionScan_(owner,getIdentity){
@@ -5243,6 +5365,7 @@ function writtenTestDisplayTitle_(item) {
       if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần thông tin chưa tải được. Bấm Tải lại để cập nhật.';
       else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Dữ liệu đã tải · Bấm Tải lại để cập nhật.';
       else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
+      parentRenderPreparedHistory_();
       if(savedScroll)window.scrollTo(savedScroll);
       return true;
     }
@@ -5330,6 +5453,7 @@ function writtenTestDisplayTitle_(item) {
           // do not repeatedly force or poll it after the opening read.
           parentForceRecovery_=null;next=null;
         }else if(job.recovery){if(!job.foregroundRecovery)next=parentRecoveryNext_(job.recovery);}
+        else if(error&&error.preparedSourceUnavailable)next=null;
         else if(repair)next={force:true,quiet:parentBootstrapPainted_,attempt:0,delay:650};
         else if(attempt<limit)next={force,quiet,attempt:attempt+1,delay:waiting?[1500,3000,6000,12000,20000,30000][attempt]:[650,1600][attempt]};
         if(!quiet||!parentBootstrapPainted_||$('#dashboardShell').hidden){
@@ -5347,6 +5471,10 @@ function writtenTestDisplayTitle_(item) {
     }
     function parentContinue_(options={}) {
       if(!kidsApi.parent.authorized)return Promise.resolve(false);
+      if(options.refresh&&kidsApi.parent.prepared){
+        parentForceRecovery_=null;parentClearBootstrapRetry_();parentBootstrapIntent_=null;
+        return parentLoadBootstrap_(true,false,0).then(ok=>{if(!ok)return false;submissionOwner_.clear();return submissionOwner_.refresh(true);});
+      }
       parentConsumeDirectoryHint_();parentRenderIdentity_();
       if(!options.background||options.foreground||options.refresh)submissionOwner_.refresh(Boolean(options.refresh));
       if(options.refresh){
