@@ -629,6 +629,26 @@ body.ielts46-fighter9-style .deadline{display:flex;justify-content:space-between
     .ielts-latest-result-badge{margin-bottom:5px}
     @media(max-width:720px){.ielts-result-release-banner{grid-template-columns:auto 1fr;padding:16px}.ielts-result-release-banner button{grid-column:1/-1;width:100%}.ielts-result-release-banner strong{font-size:18px}}
   </style>
+
+  <style id="ielts-assessment-release-overlay-v27">
+    .ielts-assessment-release-overlay[hidden]{display:none!important}
+    body.ielts-result-release-open{overflow:hidden}
+    .ielts-assessment-release-overlay{position:fixed;inset:0;z-index:9500;display:grid;place-items:center;padding:clamp(18px,4vw,44px);background:rgba(5,25,50,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:ielts-release-backdrop-in .2s ease-out}
+    .ielts-assessment-release-pop{position:relative;width:min(720px,100%);padding:clamp(30px,5vw,54px);border:1px solid #f0c367;border-radius:30px;background:radial-gradient(circle at 100% 0,rgba(44,135,234,.15),transparent 34%),linear-gradient(145deg,#fff9e7,#fff 62%);box-shadow:0 34px 100px rgba(3,22,46,.38);text-align:center;overflow:hidden;animation:ielts-release-pop-in .28s cubic-bezier(.2,.8,.2,1)}
+    .ielts-assessment-release-pop__close{position:absolute;top:16px;right:18px;width:42px;height:42px;border:0;border-radius:50%;background:rgba(8,42,82,.08);color:#24415f;font-size:28px;line-height:1;cursor:pointer}
+    .ielts-assessment-release-pop__icon{display:grid;place-items:center;width:76px;height:76px;margin:0 auto 20px;border-radius:50%;background:#16834c;color:#fff;font-size:39px;font-weight:900;box-shadow:0 14px 32px rgba(22,131,76,.26)}
+    .ielts-assessment-release-pop>span{display:block;color:#b83a1f;font-size:13px;font-weight:900;letter-spacing:.1em}
+    .ielts-assessment-release-pop h2{margin:10px 0 8px;color:#082a52;font-size:clamp(29px,4vw,44px);line-height:1.2;letter-spacing:-.02em}
+    .ielts-assessment-release-pop p{margin:0;color:#61728a;font-size:17px;line-height:1.6}
+    .ielts-assessment-release-pop__actions{display:flex;justify-content:center;gap:12px;margin-top:30px}
+    .ielts-assessment-release-pop__actions button{min-height:54px;padding:13px 22px;border-radius:999px;font:inherit;font-weight:900;cursor:pointer}
+    .ielts-assessment-release-pop__later{border:1px solid #ccd8e4;background:#fff;color:#24415f}
+    .ielts-assessment-release-pop__view{border:0;background:#0a66d8;color:#fff;box-shadow:0 12px 28px rgba(10,102,216,.25)}
+    @keyframes ielts-release-backdrop-in{from{opacity:0}to{opacity:1}}
+    @keyframes ielts-release-pop-in{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+    @media(max-width:600px){.ielts-assessment-release-overlay{padding:16px}.ielts-assessment-release-pop{padding:34px 20px 24px;border-radius:24px}.ielts-assessment-release-pop__icon{width:64px;height:64px;font-size:32px}.ielts-assessment-release-pop__actions{flex-direction:column-reverse}.ielts-assessment-release-pop__actions button{width:100%}}
+    @media(prefers-reduced-motion:reduce){.ielts-assessment-release-overlay,.ielts-assessment-release-pop{animation:none}}
+  </style>
 </head>
 <body><section id="parent-opening" class="parent-opening" aria-labelledby="parent-opening-title"><div class="parent-opening__card"><img class="parent-opening__logo" src="https://mstrangtrieueducation-droid.github.io/assets/ielts-parent-logo-bad88a1a352b.jpg" alt="Logo Ms. Trang Trieu Education" width="104" height="104"><p class="parent-opening__eyebrow">Ms. Trang Trieu Education</p><h1 id="parent-opening-title">IELTS 46</h1><p class="parent-opening__intro">Lịch học, bài tập và kết quả học tập của con.</p><div id="parent-opening-identity" class="parent-opening__identity" data-state="pending" aria-live="polite" aria-atomic="true" aria-busy="true"><p class="parent-opening__identity-label">Đang mở hồ sơ của</p><div class="parent-opening__name-slot"><strong id="parent-opening-name" class="is-waiting">Đang xác nhận học viên…</strong><span id="parent-opening-skeleton" aria-hidden="true"></span></div></div><p id="parent-opening-status" role="status">Đang mở hồ sơ của con…</p><button id="parent-retry" type="button" hidden>Thử lại</button></div></section>
   <div id="app-loading"><div class="app-loading-inner"><div class="app-loading-spinner"></div><div>Đang tải thông tin học tập…</div></div></div>
@@ -899,6 +919,7 @@ function renderSchedule(){
   const assessmentHtml=assessmentPanel(reminders);
   const timeline=scheduleEntries.map(entry=>ielts46ScheduleEntryHtmlV26_(entry,reminders)).join('');
   host.innerHTML=`<header class="section-head"><p class="eyebrow">THỜI GIAN & ĐỊA ĐIỂM</p><h2>Lịch học</h2><p>Xem đúng ngày, giờ và nhóm Speaking của con.</p><div class="schedule-intro"><span>Speaking · Lịch riêng của học viên</span><span>Writing · Học cả lớp</span></div></header>${ielts46AssessmentReleaseBannerHtmlV25_()}${assessmentHtml}${officialHtml}${nextHtml}${scheduleEntries.length?`<div class="schedule-timeline">${timeline}</div>`:empty('Chưa có buổi học trong lịch hiện tại','Lịch học mới sẽ được thông báo tại đây.')}`;
+  ielts46ShowAssessmentReleaseOverlayV27_();
 }
 
 function assessmentPanel(reminders){
@@ -2417,6 +2438,37 @@ function ielts46SpeakingReminderForStudentV23_(item){
   const key=ielts46OfficialAssessmentKeyV23_(item);
   if(key.indexOf('speaking|')!==0||!state.student)return true;
   return ielts46SpeakingAssignmentForStudent_(item);
+}
+
+// IELTS_ASSESSMENT_RELEASE_OVERLAY_V27
+let ielts46DismissedAssessmentReleaseV27_='';
+
+function ielts46HideAssessmentReleaseOverlayV27_(releaseKey){
+  ielts46DismissedAssessmentReleaseV27_=String(releaseKey||'');
+  const overlay=document.getElementById('ielts-assessment-release-overlay');
+  if(overlay)overlay.hidden=true;
+  document.body.classList.remove('ielts-result-release-open');
+}
+
+function ielts46ShowAssessmentReleaseOverlayV27_(){
+  const item=ielts46RecentAssessmentReleaseV25_();
+  let overlay=document.getElementById('ielts-assessment-release-overlay');
+  if(!item){if(overlay)overlay.hidden=true;return}
+  const key=ielts46OfficialAssessmentKeyV23_(item),releaseKey=key+'|'+String(item.publishedAt||'');
+  if(ielts46DismissedAssessmentReleaseV27_===releaseKey)return;
+  const parts=key.split('|'),family=parts[0],attempt=Number(parts[1]);
+  const title=family==='speaking'?'Kiểm tra Nói lần '+attempt:'Kiểm tra Nghe · Đọc · Viết lần '+attempt;
+  const released=new Date(item.publishedAt).toLocaleDateString('vi-VN',{timeZone:'Asia/Bangkok'});
+  if(!overlay){overlay=document.createElement('div');overlay.id='ielts-assessment-release-overlay';overlay.className='ielts-assessment-release-overlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-labelledby','ielts-assessment-release-overlay-title');document.body.appendChild(overlay)}
+  overlay.innerHTML=`<section class="ielts-assessment-release-pop"><button type="button" class="ielts-assessment-release-pop__close" aria-label="Để sau">×</button><div class="ielts-assessment-release-pop__icon" aria-hidden="true">✓</div><span>ĐÃ CÓ KẾT QUẢ KIỂM TRA MỚI</span><h2 id="ielts-assessment-release-overlay-title">${esc(title)}</h2><p>Kết quả của con đã được cập nhật ngày ${esc(released)}.</p><div class="ielts-assessment-release-pop__actions"><button type="button" class="ielts-assessment-release-pop__later">Để sau</button><button type="button" class="ielts-assessment-release-pop__view">Xem kết quả ngay</button></div></section>`;
+  overlay.hidden=false;
+  document.body.classList.add('ielts-result-release-open');
+  const hide=()=>ielts46HideAssessmentReleaseOverlayV27_(releaseKey);
+  overlay.querySelector('.ielts-assessment-release-pop__close').addEventListener('click',hide);
+  overlay.querySelector('.ielts-assessment-release-pop__later').addEventListener('click',hide);
+  const view=overlay.querySelector('.ielts-assessment-release-pop__view');
+  view.addEventListener('click',()=>{hide();ielts46OpenAssessmentResultV23_(family,attempt)});
+  requestAnimationFrame(()=>view.focus({preventScroll:true}));
 }
 
 // IELTS_ASSESSMENT_LATEST_UI_V25
@@ -4281,7 +4333,7 @@ function ielts46RenderPendingHomeworkV32_(){
   ui.gate.querySelector('h2').textContent=title;
   ui.gate.querySelector('.ielts-pending-work-gate__detail').textContent=detail;
   ui.gate.dataset.signature=signature;
-  if(ieltsPendingNoticeSeenV32_===signature||document.body.classList.contains('is-zalo-compact-embed')){ielts46HidePendingGateV32_();return;}
+  if(ieltsPendingNoticeSeenV32_===signature||ielts46RecentAssessmentReleaseV25_()||document.body.classList.contains('is-zalo-compact-embed')){ielts46HidePendingGateV32_();return;}
   ui.gate.hidden=false;
   ielts46SetPendingLockV32_(true);
   setTimeout(function(){var button=ui.gate.querySelector('button');if(button)button.focus();},30);
