@@ -684,7 +684,21 @@ body.ielts52-fighter9-style .deadline{display:flex;justify-content:space-between
     .ielts-shadowing-steps{padding-left:26px;line-height:1.8;margin:22px 0}.ielts-shadowing-steps li{padding-left:8px;margin:12px 0}.ielts-shadowing-steps li::marker{font-weight:800;color:var(--blue,#1262bd)}
     .ielts-shadowing-deadline{display:flex;justify-content:space-between;gap:16px;padding:16px 20px;border:1px solid #f0d29b;border-radius:14px;background:#fff6e7;color:#81500e}
     @media(max-width:680px){.ielts-shadowing-body{padding:20px 16px}.ielts-shadowing-task{align-items:flex-start;flex-direction:column}.ielts-shadowing-deadline{flex-wrap:wrap}.ielts-shadowing-card h2{overflow-wrap:anywhere}}
-  </style></head>
+  </style>
+  <style id="ielts-assessment-latest-ui-v25">
+    .ielts-result-release-banner{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;margin:0 0 22px;padding:18px 20px;border:1px solid #f3c66b;border-radius:22px;background:linear-gradient(135deg,#fff8dc 0%,#fff 58%,#eef7ff 100%);box-shadow:0 18px 44px rgba(8,42,82,.14);position:relative;overflow:hidden}
+    .ielts-result-release-banner:after{content:"";position:absolute;width:150px;height:150px;border-radius:50%;right:-72px;top:-88px;background:rgba(24,111,224,.08);pointer-events:none}
+    .ielts-result-release-banner__icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#16834c;color:#fff;font-weight:900;font-size:24px;box-shadow:0 8px 20px rgba(22,131,76,.24)}
+    .ielts-result-release-banner span,.ielts-latest-result-badge{display:block;color:#b83a1f;font-size:12px;font-weight:900;letter-spacing:.08em}
+    .ielts-result-release-banner strong{display:block;margin-top:3px;color:#082a52;font-size:20px;line-height:1.25}
+    .ielts-result-release-banner p{margin:4px 0 0;color:#61728a}
+    .ielts-result-release-banner button{position:relative;z-index:1;border:0;border-radius:999px;padding:13px 18px;background:#0a66d8;color:#fff;font:inherit;font-weight:900;cursor:pointer;box-shadow:0 9px 20px rgba(10,102,216,.2)}
+    .assessment-alert:first-child{border-color:#efbd55;box-shadow:0 14px 34px rgba(8,42,82,.12)}
+    .ielts-assessment-attempt.is-latest-assessment{border-color:#efbd55;box-shadow:0 14px 34px rgba(8,42,82,.11)}
+    .ielts-latest-result-badge{margin-bottom:5px}
+    @media(max-width:720px){.ielts-result-release-banner{grid-template-columns:auto 1fr;padding:16px}.ielts-result-release-banner button{grid-column:1/-1;width:100%}.ielts-result-release-banner strong{font-size:18px}}
+  </style>
+</head>
 <body><section id="parent-opening" class="parent-opening" aria-labelledby="parent-opening-title"><div class="parent-opening__card"><img class="parent-opening__logo" src="https://mstrangtrieueducation-droid.github.io/assets/ielts-parent-logo-bad88a1a352b.jpg" alt="Logo Ms. Trang Trieu Education" width="104" height="104"><p class="parent-opening__eyebrow">Ms. Trang Trieu Education</p><h1 id="parent-opening-title">IELTS 52</h1><p class="parent-opening__intro">Lịch học, bài tập và kết quả học tập của con.</p><div id="parent-opening-identity" class="parent-opening__identity" data-state="pending" aria-live="polite" aria-atomic="true" aria-busy="true"><p class="parent-opening__identity-label">Đang mở hồ sơ của</p><div class="parent-opening__name-slot"><strong id="parent-opening-name" class="is-waiting">Đang xác nhận học viên…</strong><span id="parent-opening-skeleton" aria-hidden="true"></span></div></div><p id="parent-opening-status" role="status">Đang mở hồ sơ của con…</p><button id="parent-retry" type="button" hidden>Thử lại</button></div></section>
   <div id="app-loading"><div class="app-loading-inner"><div class="app-loading-spinner"></div><div>Đang tải thông tin học tập…</div></div></div>
   <aside id="ielts-mobile-embed-rescue" class="zalo-mobile-rescue" hidden aria-labelledby="zalo-mobile-rescue-title">
@@ -959,13 +973,13 @@ function renderSchedule(){
   const officialHtml=ielts52OfficialScheduleHtmlV26_(events);
   const assessmentHtml=assessmentPanel(reminders);
   const timeline=scheduleEntries.map(entry=>ielts52ScheduleEntryHtmlV26_(entry,reminders)).join('');
-  host.innerHTML=`<header class="section-head"><p class="eyebrow">THỜI GIAN & ĐỊA ĐIỂM</p><h2>Lịch học</h2><p>Xem đúng ngày, giờ và nhóm Speaking của con.</p><div class="schedule-intro"><span>Speaking · Lịch riêng của học viên</span><span>Writing · Học cả lớp</span></div></header>${officialHtml}${nextHtml}${assessmentHtml}${scheduleEntries.length?`<div class="schedule-timeline">${timeline}</div>`:empty('Chưa có buổi học trong lịch hiện tại','Lịch học mới sẽ được thông báo tại đây.')}`;
+  host.innerHTML=`<header class="section-head"><p class="eyebrow">THỜI GIAN & ĐỊA ĐIỂM</p><h2>Lịch học</h2><p>Xem đúng ngày, giờ và nhóm Speaking của con.</p><div class="schedule-intro"><span>Speaking · Lịch riêng của học viên</span><span>Writing · Học cả lớp</span></div></header>${ielts52AssessmentReleaseBannerHtmlV25_()}${assessmentHtml}${officialHtml}${nextHtml}${scheduleEntries.length?`<div class="schedule-timeline">${timeline}</div>`:empty('Chưa có buổi học trong lịch hiện tại','Lịch học mới sẽ được thông báo tại đây.')}`;
 }
 
 function assessmentPanel(reminders){
   const items=ielts52AssessmentStatusItemsV23_(reminders);
   if(!items.length)return '';
-  return `<section class="assessment-board" aria-label="Tình trạng các bài kiểm tra">${items.map(item=>{
+  return `<section class="assessment-board" aria-label="Tình trạng các bài kiểm tra">${items.map((item,itemIndex)=>{
     const key=ielts52OfficialAssessmentKeyV23_(item);
     const parts=key.split('|');
     const family=parts[0];
@@ -980,7 +994,7 @@ function assessmentPanel(reminders){
       :(family==='speaking'?'Điểm, nhận xét và video của con sẽ được cập nhật khi cô chấm xong.':'Điểm và nhận xét của con sẽ được cập nhật khi cô chấm xong.');
     const action=ready?`<button type="button" class="assessment-result-action" data-open-assessment-result="${esc(key)}" data-assessment-family="${esc(family)}" data-assessment-attempt="${esc(attempt)}">Xem kết quả của con</button>`:'';
     const information=ielts52NoticeHtmlV24_(item.information);
-    return `<article class="assessment-alert" data-assessment-family="${esc(family)}" data-assessment-attempt="${esc(attempt)}"><span class="assessment-alert__badge">BÀI KIỂM TRA</span>${group?`<span class="assessment-alert__group">${esc(group)}</span>`:''}<h3>${esc(detail||'Thông báo kiểm tra')}</h3><p><strong>Kỹ năng:</strong> ${esc(skills||item.program||'Đang cập nhật')}</p>${group?`<p><strong>Nhóm kiểm tra:</strong> ${esc(group)}</p>`:''}${item.date?`<p><strong>Ngày kiểm tra:</strong> ${esc(fullDate(item.date))}</p>`:''}<p><strong>Nội dung kiểm tra:</strong> ${esc(detail||item.program||'Cô sẽ cập nhật nội dung cụ thể.')}</p>${information?`<aside class="assessment-alert__information ielts-notice" aria-label="Thông tin cần lưu ý"><strong class="ielts-notice-title">Thông tin cần lưu ý</strong>${information}</aside>`:''}<div class="assessment-result-status ${ready?'is-ready':'is-waiting'}"><div><span>${ready?'Đã có kết quả':'Đang chờ kết quả'}</span><p>${esc(statusCopy)}</p></div>${action}</div></article>`;
+    return `<article class="assessment-alert" data-assessment-family="${esc(family)}" data-assessment-attempt="${esc(attempt)}"><span class="assessment-alert__badge">${itemIndex===0?'KIỂM TRA MỚI NHẤT':'BÀI KIỂM TRA'}</span>${group?`<span class="assessment-alert__group">${esc(group)}</span>`:''}<h3>${esc(detail||'Thông báo kiểm tra')}</h3><p><strong>Kỹ năng:</strong> ${esc(skills||item.program||'Đang cập nhật')}</p>${group?`<p><strong>Nhóm kiểm tra:</strong> ${esc(group)}</p>`:''}${item.date?`<p><strong>Ngày kiểm tra:</strong> ${esc(fullDate(item.date))}</p>`:''}<p><strong>Nội dung kiểm tra:</strong> ${esc(detail||item.program||'Cô sẽ cập nhật nội dung cụ thể.')}</p>${information?`<aside class="assessment-alert__information ielts-notice" aria-label="Thông tin cần lưu ý"><strong class="ielts-notice-title">Thông tin cần lưu ý</strong>${information}</aside>`:''}<div class="assessment-result-status ${ready?'is-ready':'is-waiting'}"><div><span>${ready?'Đã có kết quả':'Đang chờ kết quả'}</span><p>${esc(statusCopy)}</p></div>${action}</div></article>`;
   }).join('')}</section>`;
 }
 
@@ -1273,9 +1287,9 @@ function renderOverview(){
     const assessmentHtml=assessmentSeries.length?assessmentSeries.map(ielts52AssessmentSeriesHtmlV18_).join(''):`<article class="card complete-note"><strong>Chưa có kết quả kiểm tra</strong><span>Kết quả và nhận xét sẽ hiện khi nguồn chính thức có ghi nhận.</span></article>`;
     const readingHtml=ielts52SelfStudySkillSectionHtmlV19_('reading',readingSelfStudy);
     const listeningHtml=ielts52SelfStudySkillSectionHtmlV19_('listening',listeningSelfStudy);
-    body=profile+stats+`<section class="ielts-personal-results"><header class="fighter-section-head"><span>ĐIỂM KIỂM TRA</span><h3>Các bài kiểm tra</h3></header><div class="ielts-result-list">${assessmentHtml}</div></section>${readingHtml}${listeningHtml}`;
+    body=profile+`<section class="ielts-personal-results"><header class="fighter-section-head"><span>ĐIỂM KIỂM TRA</span><h3>Kiểm tra mới nhất</h3></header><div class="ielts-result-list">${assessmentHtml}</div></section>`+stats+readingHtml+listeningHtml;
   }
-  host.innerHTML=`<header class="section-head"><p class="eyebrow">IELTS RESULTS</p><h2>Kết quả cá nhân</h2><p>Chỉ hiển thị điểm kiểm tra và điểm tự luyện Reading, Listening từ nguồn theo dõi chính thức.</p></header>${body}`;
+  host.innerHTML=`<header class="section-head"><p class="eyebrow">IELTS RESULTS</p><h2>Kết quả cá nhân</h2><p>Chỉ hiển thị điểm kiểm tra và điểm tự luyện Reading, Listening từ nguồn theo dõi chính thức.</p></header>${ielts52AssessmentReleaseBannerHtmlV25_()}${body}`;
 }
 
     function showError(error){$('#app-loading').hidden=true;setSync('error','Không thể tải dữ liệu');const message=error&&error.message?error.message:'Không thể tải dữ liệu.';$('#error-host').innerHTML=`<div class="error-box"><strong>${esc(message)}</strong><button class="secondary" onclick="loadPublic(true)">Thử lại</button></div>`}
@@ -2491,6 +2505,34 @@ function ielts52SpeakingReminderForStudentV23_(item){
   return ielts52SpeakingAssignmentForStudent_(item);
 }
 
+// IELTS_ASSESSMENT_LATEST_UI_V25
+function ielts52AssessmentDateStampV25_(item){
+  const dates=[];
+  if(item&&Array.isArray(item.dates))dates.push(...item.dates);
+  if(item&&item.date)dates.push(item.date);
+  return dates.reduce((latest,value)=>Math.max(latest,ielts52DateSerialAny_(value)||dateSerial(value)||0),0);
+}
+
+function ielts52RecentAssessmentReleaseV25_(){
+  const now=Date.now(),windowMs=7*24*60*60*1000;
+  return (((state.student&&state.student.assessmentResults)||[]).filter(item=>{
+    const key=ielts52OfficialAssessmentKeyV23_(item);
+    const released=Date.parse(item&&item.publishedAt||'');
+    const hasScore=Array.isArray(item&&item.components)&&item.components.some(component=>ielts52HasScoreV12_(component));
+    const age=now-released;
+    return key&&hasScore&&Number.isFinite(released)&&age>=0&&age<windowMs;
+  }).sort((left,right)=>Date.parse(right.publishedAt)-Date.parse(left.publishedAt)||ielts52AssessmentDateStampV25_(right)-ielts52AssessmentDateStampV25_(left))[0]||null);
+}
+
+function ielts52AssessmentReleaseBannerHtmlV25_(){
+  const item=ielts52RecentAssessmentReleaseV25_();
+  if(!item)return '';
+  const key=ielts52OfficialAssessmentKeyV23_(item),parts=key.split('|'),family=parts[0],attempt=Number(parts[1]);
+  const title=family==='speaking'?'Kiểm tra Nói lần '+attempt:'Kiểm tra Nghe · Đọc · Viết lần '+attempt;
+  const released=new Date(item.publishedAt).toLocaleDateString('vi-VN',{timeZone:'Asia/Bangkok'});
+  return `<aside class="ielts-result-release-banner" role="status"><div class="ielts-result-release-banner__icon" aria-hidden="true">✓</div><div><span>ĐÃ CÓ KẾT QUẢ KIỂM TRA MỚI</span><strong>${esc(title)}</strong><p>Kết quả được cập nhật ngày ${esc(released)}.</p></div><button type="button" data-open-assessment-result="${esc(key)}" data-assessment-family="${esc(family)}" data-assessment-attempt="${esc(attempt)}">Xem kết quả ngay</button></aside>`;
+}
+
 function ielts52AssessmentStatusItemsV23_(reminders,results){
   const sourceResults=Array.isArray(results)?results:((state.student&&state.student.assessmentResults)||[]);
   const map={};
@@ -2520,12 +2562,12 @@ function ielts52AssessmentStatusItemsV23_(reminders,results){
     item.result=item.result||ielts52AssessmentResultForReminderV23_(item,sourceResults);
     item.resultAvailable=Boolean(item.result&&ielts52AssessmentHasResultV23_(item.result));
     return item;
-  }).sort((left,right)=>{
-    const leftDate=ielts52DateSerialAny_(left.date),rightDate=ielts52DateSerialAny_(right.date);
-    if(leftDate!==rightDate)return leftDate-rightDate;
-    const leftFamily=left.key.indexOf('lrw|')===0?0:1,rightFamily=right.key.indexOf('lrw|')===0?0:1;
-    if(leftFamily!==rightFamily)return leftFamily-rightFamily;
-    return Number(left.attempt||left.key.split('|')[1])-Number(right.attempt||right.key.split('|')[1]);
+    }).sort((left,right)=>{
+    const leftDate=ielts52AssessmentDateStampV25_(left),rightDate=ielts52AssessmentDateStampV25_(right);
+    if(leftDate!==rightDate)return rightDate-leftDate;
+    const leftAttempt=Number(left.attempt||left.key.split('|')[1]),rightAttempt=Number(right.attempt||right.key.split('|')[1]);
+    if(leftAttempt!==rightAttempt)return rightAttempt-leftAttempt;
+    return String(left.key).localeCompare(String(right.key));
   }).slice(0,8);
 }
 
@@ -2756,7 +2798,7 @@ function ielts52AssessmentSeriesV18_(assessments){
     const key=family+'|'+(attempt===null?'record|'+fallbackIdentity:'attempt|'+attempt);
     if(!groups[key])groups[key]={
       id:key,family:family,series:family,attempt:attempt,title:source.title||'',code:source.code||'',date:source.date||'',videoUrl:'',
-      dates:[],components:[],teacherComments:[],notices:[],sourceIndex:sourceIndex
+      dates:[],components:[],teacherComments:[],notices:[],publishedAt:String(source.publishedAt||''),sourceIndex:sourceIndex
     };
     const target=groups[key];
     const sourceDates=[];
@@ -2764,7 +2806,8 @@ function ielts52AssessmentSeriesV18_(assessments){
     if(source.date)sourceDates.push(source.date);
     sourceDates.filter(Boolean).forEach(value=>{if(!target.dates.includes(value))target.dates.push(value)});
     if(!target.date&&source.date)target.date=source.date;
-    if(!target.title&&source.title)target.title=source.title;
+        if(!target.title&&source.title)target.title=source.title;
+    if(source.publishedAt&&(!target.publishedAt||Date.parse(source.publishedAt)>Date.parse(target.publishedAt)))target.publishedAt=String(source.publishedAt);
     if(!target.videoUrl&&ielts52SafeVideoUrlV23_(source.videoUrl))target.videoUrl=ielts52SafeVideoUrlV23_(source.videoUrl);
     const sourceNotices=[];
     if(Array.isArray(source.notices))sourceNotices.push(...source.notices);
@@ -2787,15 +2830,21 @@ function ielts52AssessmentSeriesV18_(assessments){
       if(!target.teacherComments.some(item=>[item.skill||'',item.label||'',String(item.text||'').trim()].join('|')===signature))target.teacherComments.push(comment);
     });
   });
-  return definitions.map(definition=>{
+    const seriesList=definitions.map(definition=>{
     const attempts=Object.keys(groups).map(key=>groups[key]).filter(item=>item.family===definition.key).sort((left,right)=>{
+      const leftDate=ielts52AssessmentDateStampV25_(left),rightDate=ielts52AssessmentDateStampV25_(right);
+      if(leftDate!==rightDate)return rightDate-leftDate;
       const leftHas=Number.isFinite(left.attempt),rightHas=Number.isFinite(right.attempt);
-      if(leftHas&&rightHas&&left.attempt!==right.attempt)return left.attempt-right.attempt;
+      if(leftHas&&rightHas&&left.attempt!==right.attempt)return right.attempt-left.attempt;
       if(leftHas!==rightHas)return leftHas?-1:1;
-      return left.sourceIndex-right.sourceIndex;
+      return right.sourceIndex-left.sourceIndex;
     });
     return {...definition,attempts:attempts};
-  }).filter(series=>series.attempts.length);
+  }).filter(series=>series.attempts.length).sort((left,right)=>{
+    return ielts52AssessmentDateStampV25_(right.attempts[0])-ielts52AssessmentDateStampV25_(left.attempts[0]);
+  });
+  if(seriesList.length&&seriesList[0].attempts.length)seriesList[0].attempts[0].isLatestAssessment=true;
+  return seriesList;
 }
 
 function ielts52AssessmentComponentLabelV20_(component){
@@ -2838,7 +2887,7 @@ function ielts52AssessmentAttemptHtmlV18_(item,family){
   const video=videoUrl?`<a class="ielts-speaking-video-cta" href="${esc(videoUrl)}" target="_blank" rel="noopener"><span aria-hidden="true">▶</span><span><small>VIDEO BÀI KIỂM TRA NÓI</small><strong>Xem video của con</strong></span><b aria-hidden="true">→</b></a>`:'';
   const title=isSingleShot?'Kết quả bài kiểm tra':Number.isFinite(normalizedAttempt)?'Kết quả lần '+normalizedAttempt:'Kết quả bài kiểm tra';
   const attemptAttribute=Number.isFinite(normalizedAttempt)?` data-attempt="${esc(normalizedAttempt)}"`:'';
-  return `<article class="ielts-assessment-attempt${isSingleShot?' is-single-shot':''}"${attemptAttribute}>${marker?`<div class="ielts-attempt-marker">${marker}</div>`:''}<div class="ielts-attempt-content"><header><div><h4>${esc(title)}</h4>${dates.length?`<p>${dates.map(esc).join(' · ')}</p>`:''}</div></header>${scoreBody}${noticeBody}${feedback}${video}</div></article>`;
+  return `<article class="ielts-assessment-attempt${isSingleShot?' is-single-shot':''}${item.isLatestAssessment?' is-latest-assessment':''}"${attemptAttribute}>${marker?`<div class="ielts-attempt-marker">${marker}</div>`:''}<div class="ielts-attempt-content"><header><div>${item.isLatestAssessment?'<span class="ielts-latest-result-badge">KIỂM TRA MỚI NHẤT</span>':''}<h4>${esc(title)}</h4>${dates.length?`<p>${dates.map(esc).join(' · ')}</p>`:''}</div></header>${scoreBody}${noticeBody}${feedback}${video}</div></article>`;
 }
 
 function ielts52AssessmentSeriesHtmlV18_(series){
