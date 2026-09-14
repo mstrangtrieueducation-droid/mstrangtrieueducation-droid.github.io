@@ -4033,6 +4033,8 @@ async function parentLoad_(id,prefetch){
   }else{setSync('ok','Đã kiểm tra dữ liệu của con');parentReceiptOwner_.refresh();}
 }
 async function startIeltsParentPortal_(){
+  // IELTS_PARENT_ONE_REQUEST_OPEN_V41: one live authorization fence returns identity, schedule
+  // and the selected profile together. Academic recovery runs only if needed.
   if(parentState.checking)return;
   if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile){await parentQuietResume_();return;}
   parentState.checking=true;parentState.locked=false;parentState.authorized=false;
@@ -4042,15 +4044,19 @@ async function startIeltsParentPortal_(){
   document.getElementById('parent-retry').hidden=true;
   parentOpening_('Đang mở hồ sơ của con…','');
   try{
-    const data=await ieltsParentAccess.request('check');
+    const bundle=await ieltsParentAccess.request('bootstrap');
     if(id!==parentState.requestId)return;
-    if(!data.name||!data.rosterRevision||!data.studentDirectory||data.studentDirectory.all.length!==1||data.studentDirectory.all[0].name!==data.name)throw new Error('Liên kết chưa xác định được học viên.');
-    parentState.authorized=true;parentState.name=data.name;parentState.revision=data.rosterRevision;parentState.directory=data.studentDirectory;
-    parentOpening_('Đang tải lịch học và kết quả của con…',data.name);
-    parentReceiptOwner_.refresh();
+    if(!bundle||!bundle.name||!bundle.rosterRevision||!bundle.studentDirectory||!Array.isArray(bundle.studentDirectory.all)||bundle.studentDirectory.all.length!==1||bundle.studentDirectory.all[0].name!==bundle.name)throw new Error('Liên kết chưa xác định được học viên.');
+    parentState.authorized=true;parentState.name=bundle.name;parentState.revision=bundle.rosterRevision;parentState.directory=bundle.studentDirectory;
+    parentOpening_('Đang tải lịch học và kết quả của con…',bundle.name);
+    parentState.preparedPackage=bundle.classSource?bundle:null;
     parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
-    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';await parentLoad_(id);
-  }catch(error){if(id===parentState.requestId)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');}
+    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';
+    await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});
+  }catch(error){if(id===parentState.requestId){
+    if(error.code==='INVALID_LINK'||!parentState.dashboard||!parentState.profile)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
+    else setSync('error','Chưa cập nhật được dữ liệu mới.');
+  }}
   finally{parentState.checking=false}
 }
 // Parent mode never restores the general classroom's saved selection.
