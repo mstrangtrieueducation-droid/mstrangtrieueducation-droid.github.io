@@ -2857,46 +2857,60 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
 })(typeof globalThis==='object'?globalThis:this);
 
 const fighterReceiptMatching_=(()=>{
-function assignmentProgramKeyV7_(value) {
-  const program = normalizeSearchText_(value || '');
-  if (/vocabulary foundation 1|tu vung nen tang 1/.test(program)) return 'vf1';
-  if (/vocabulary foundation 2|tu vung nen tang 2/.test(program)) return 'vf2';
-  if (/grammar foundation|ngu phap nen tang/.test(program)) return 'gf';
-  if (/reading(?: intensive)? 1|doc (?:hieu |chuyen sau )*1/.test(program)) return 'ri1';
-  if (/reading(?: intensive)? 2|doc (?:hieu |chuyen sau )*2/.test(program)) return 'ri2';
-  if (/doan van hoc thuat|academic paragraph/.test(program)) return 'ap';
-  if (/luyen de|practice(?: test)?/.test(program)) return 'pt';
-  return '';
+function assignmentProgramKeyV7_(value) {
+  const program = normalizeSearchText_(value || '');
+  if (/vocabulary foundation 1|tu vung nen tang 1/.test(program)) return 'vf1';
+  if (/vocabulary foundation 2|tu vung nen tang 2/.test(program)) return 'vf2';
+  if (/grammar foundation|ngu phap nen tang/.test(program)) return 'gf';
+  if (/reading(?: intensive)? 1|doc (?:hieu |chuyen sau )*1/.test(program)) return 'ri1';
+  if (/reading(?: intensive)? 2|doc (?:hieu |chuyen sau )*2/.test(program)) return 'ri2';
+  if (/doan van hoc thuat|academic paragraph/.test(program)) return 'ap';
+  if (/luyen de|practice(?: test)?/.test(program)) return 'pt';
+  return '';
 }
 
-function canonicalSelfStudyResultCodeV1_(value) {
+function canonicalSelfStudyResultCodeV1_(value) {
   const reading = fighterReadingCodeV27_(value);
   if (reading) return reading;
-  const raw = clean_(value).toUpperCase();
-  let match = raw.match(/\bFL\s*(\d+)\s*-?\s*P\s*0*(\d+)\b/);
-  if (match) return 'FL' + Number(match[1]) + '-P' + String(Number(match[2])).padStart(2, '0');
-  match = raw.match(/\bSHADOW(?:ING)?\s*-?\s*L\s*0*(\d+)\s*-\s*0*(\d+)\b/);
-  return match ? 'SHADOW-L' + Number(match[1]) + '-' + String(Number(match[2])).padStart(3, '0') : '';
+  const raw = clean_(value).toUpperCase();
+  let match = raw.match(/\bFL\s*(\d+)\s*-?\s*P\s*0*(\d+)\b/);
+  if (match) return 'FL' + Number(match[1]) + '-P' + String(Number(match[2])).padStart(2, '0');
+  match = raw.match(/\bSHADOW(?:ING)?\s*-?\s*L\s*0*(\d+)\s*-\s*0*(\d+)\b/);
+  return match ? 'SHADOW-L' + Number(match[1]) + '-' + String(Number(match[2])).padStart(3, '0') : '';
 }
 
-function canonicalSubmissionCodeV2_(value) {
-  const raw = clean_(value);
-  const normalized = normalizeSearchText_(raw);
-  if (normalized === 'tu vung unit 10') return 'VF2-U10';
-  const practiceCode = normalized.match(/^(?:luyen de[ .:_-]*)?(?:practice\s*test|pt)[ .:_-]*0*(\d+)$/);
-  if (practiceCode) return 'PT-' + String(Number(practiceCode[1])).padStart(2, '0');
-  const unitCode = normalized.match(/^(vf1|vf2|gf[12]?|ri1|ri2|ap|dvht)-u0*(\d+)(?:[_ .]0*(\d+))?(?:-[a-z0-9]+)*$/);
-  if (unitCode) {
-    let program = unitCode[1].toUpperCase();
-    if (/^GF[12]?$/.test(program)) program = 'GF';
-    if (program === 'DVHT') program = 'AP';
-    return program + '-U' + Number(unitCode[2]) + (unitCode[3] ? '_' + Number(unitCode[3]) : '');
-  }
-  const sessionCode = normalized.match(/^(?:buoi|tiet)\s*0*(\d+)$/);
-  if (sessionCode) return 'BUOI ' + Number(sessionCode[1]);
-  const testCode = normalized.match(/^test\s*0*(\d+)$/);
-  if (testCode) return 'TEST ' + Number(testCode[1]);
-  return raw;
+function canonicalSubmissionCodeV2_(value) {
+  const raw = clean_(value);
+  const normalized = normalizeSearchText_(raw);
+  if (normalized === 'tu vung unit 10') return 'VF2-U10';
+  const practiceCode = normalized.match(/^(?:luyen de[ .:_-]*)?(?:practice\s*test|pt)[ .:_-]*0*(\d+)$/);
+  if (practiceCode) return 'PT-' + String(Number(practiceCode[1])).padStart(2, '0');
+  // Google Forms use human-facing quiz titles while assignments use compact
+  // codes. Keep both representations on one canonical key so a fresh Form
+  // receipt can override a stale tracker status deterministically.
+  const namedUnitCode = normalized.match(/^(vocabulary foundation [12]|vocab foundation [12]|grammar foundation|reading(?: intensive)? [12]|academic paragraph|doan van hoc thuat)[\s:._\-–—·]*(?:test\s+)?unit\s*0*(\d+)(?:[._,]\s*0*(\d+))?$/);
+
+  if (namedUnitCode) {
+
+    const namedProgram = assignmentProgramKeyV7_(namedUnitCode[1]);
+
+    if (namedProgram) return namedProgram.toUpperCase() + '-U' + Number(namedUnitCode[2]) +
+      (namedUnitCode[3] ? '_' + Number(namedUnitCode[3]) : '');
+
+  }
+
+  const unitCode = normalized.match(/^(vf1|vf2|gf[12]?|ri1|ri2|ap|dvht)-u0*(\d+)(?:[_ .]0*(\d+))?(?:-[a-z0-9]+)*$/);
+  if (unitCode) {
+    let program = unitCode[1].toUpperCase();
+    if (/^GF[12]?$/.test(program)) program = 'GF';
+    if (program === 'DVHT') program = 'AP';
+    return program + '-U' + Number(unitCode[2]) + (unitCode[3] ? '_' + Number(unitCode[3]) : '');
+  }
+  const sessionCode = normalized.match(/^(?:buoi|tiet)\s*0*(\d+)$/);
+  if (sessionCode) return 'BUOI ' + Number(sessionCode[1]);
+  const testCode = normalized.match(/^test\s*0*(\d+)$/);
+  if (testCode) return 'TEST ' + Number(testCode[1]);
+  return raw;
 }
 
 // FIGHTER_SUBMISSION_TASK_ROUTING_V6
@@ -3094,7 +3108,7 @@ function unitNumber_(value) {
 }
 
 return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
-/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence, manual preparation preserved. */
+/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence and source-specific authority. */
 /* FIGHTER_CANONICAL_PDF_PROOF_FORWARD_V1 */
 (function(root){
   'use strict';
@@ -3117,8 +3131,13 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
   return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
 }
     const manual=(task,assignment)=>{
-      if(m.submissionTaskFactsV7_(task).preparation)return true;
-      if(!assignment||m.assignmentProgramKeyV7_(assignment.program)!=='pt')return false;
+      const program=m.assignmentProgramKeyV7_(assignment&&assignment.program);
+      const text=normalizeSearchText_([task&&task.title,task&&task.instructions].join(' '));
+      // The teacher-maintained sources are a closed list: Vocabulary 1/2
+      // "Tra cứu trước", plus Practice Test redo work written in Sổ luyện đề.
+      // Every other task is sourced from its official Form.
+      if((program==='vf1'||program==='vf2')&&/tra cuu truoc/.test(text))return true;
+      if(!assignment||program!=='pt')return false;
       const role=practiceTaskRoleV17_(task);
       return role==='redo_notebook'||(role==='notebook_fallback_redo'&&!String(task&&task.url||'').trim());
     };

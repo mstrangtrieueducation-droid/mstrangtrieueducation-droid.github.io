@@ -3014,6 +3014,20 @@ function canonicalSubmissionCodeV2_(value) {
   if (normalized === 'tu vung unit 10') return 'VF2-U10';
   const practiceCode = normalized.match(/^(?:luyen de[ .:_-]*)?(?:practice\s*test|pt)[ .:_-]*0*(\d+)$/);
   if (practiceCode) return 'PT-' + String(Number(practiceCode[1])).padStart(2, '0');
+  // Google Forms use human-facing quiz titles while assignments use compact
+  // codes. Keep both representations on one canonical key so a fresh Form
+  // receipt can override a stale tracker status deterministically.
+  const namedUnitCode = normalized.match(/^(vocabulary foundation [12]|vocab foundation [12]|grammar foundation|reading(?: intensive)? [12]|academic paragraph|doan van hoc thuat)[\s:._\-–—·]*(?:test\s+)?unit\s*0*(\d+)(?:[._,]\s*0*(\d+))?$/);
+
+  if (namedUnitCode) {
+
+    const namedProgram = assignmentProgramKeyV7_(namedUnitCode[1]);
+
+    if (namedProgram) return namedProgram.toUpperCase() + '-U' + Number(namedUnitCode[2]) +
+      (namedUnitCode[3] ? '_' + Number(namedUnitCode[3]) : '');
+
+  }
+
   const unitCode = normalized.match(/^(vf1|vf2|gf[12]?|ri1|ri2|ap|dvht)-u0*(\d+)(?:[_ .]0*(\d+))?(?:-[a-z0-9]+)*$/);
   if (unitCode) {
     let program = unitCode[1].toUpperCase();
@@ -3223,7 +3237,7 @@ function unitNumber_(value) {
 }
 
 return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
-/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence, manual preparation preserved. */
+/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence and source-specific authority. */
 /* FIGHTER_CANONICAL_PDF_PROOF_FORWARD_V1 */
 (function(root){
   'use strict';
@@ -3246,8 +3260,13 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
   return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
 }
     const manual=(task,assignment)=>{
-      if(m.submissionTaskFactsV7_(task).preparation)return true;
-      if(!assignment||m.assignmentProgramKeyV7_(assignment.program)!=='pt')return false;
+      const program=m.assignmentProgramKeyV7_(assignment&&assignment.program);
+      const text=normalizeSearchText_([task&&task.title,task&&task.instructions].join(' '));
+      // The teacher-maintained sources are a closed list: Vocabulary 1/2
+      // "Tra cứu trước", plus Practice Test redo work written in Sổ luyện đề.
+      // Every other task is sourced from its official Form.
+      if((program==='vf1'||program==='vf2')&&/tra cuu truoc/.test(text))return true;
+      if(!assignment||program!=='pt')return false;
       const role=practiceTaskRoleV17_(task);
       return role==='redo_notebook'||(role==='notebook_fallback_redo'&&!String(task&&task.url||'').trim());
     };
