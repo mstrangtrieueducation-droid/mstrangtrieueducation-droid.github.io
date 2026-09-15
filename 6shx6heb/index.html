@@ -64,11 +64,12 @@ const taParent = (() => {
       if(signal.aborted)throw error('REQUEST_SUPERSEDED');
       const currentController=new AbortController(),cancel=()=>currentController.abort();
       signal.addEventListener('abort',cancel,{once:true});
-      const timer=setTimeout(()=>currentController.abort(),action==='check'?30000:90000);
+      const timer=setTimeout(()=>currentController.abort(),action==='check'||action==='portal'&&!new URL(url).searchParams.has('force')?30000:90000);
       let failure;
       try{
         const response=await fetch(url,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:currentController.signal});
-        if(!response.ok){const e=error('DATA_UNAVAILABLE');e.retryable=response.status===408||response.status===429||response.status>=500&&response.status<600;throw e}
+        document.documentElement.dataset.parentLastHttpStatus=String(response.status);
+        if(!response.ok){const e=error('DATA_UNAVAILABLE');e.retryable=response.status===404||response.status===408||response.status===429||response.status>=500&&response.status<600;throw e}
         let body;
         try{body=await response.json()}catch(_){const e=error('DATA_UNAVAILABLE');e.retryable=true;throw e}
         if(body&&body.ok===false&&(body.code||body.error&&body.error.code)==='DATA_UNAVAILABLE'){
