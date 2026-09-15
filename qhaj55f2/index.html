@@ -117,7 +117,7 @@ const taParent = (() => {
         const pupil=data&&data.student;
         if(!pupil||typeof pupil.name!=='string'||!pupil.name.trim()||pupil.englishName!=null&&typeof pupil.englishName!=='string')throw error('IDENTITY_MISMATCH');
         const authorized={name:pupil.name,englishName:pupil.englishName||''};
-        if(binding&&!same(binding,authorized)||who&&!same(who,authorized)||!matches(data,authorized)||!(sourceTime(data)>0)||sourceTime(data)>Date.now())throw error('IDENTITY_MISMATCH');
+        if(binding&&!same(binding,authorized)||who&&!same(who,authorized)||!matches(data,authorized)||!(sourceTime(data)>0))throw error('IDENTITY_MISMATCH');
         identity=authorized;binding={...authorized};
         await save(data,current,authorized);if(current!==epoch||terminal)throw error('REQUEST_SUPERSEDED');
       }
@@ -963,7 +963,7 @@ function taReceiptDetails_(task,status){const direct=task&&task.directSubmission
       parentBusy=true;const generation=++parentGeneration;
       parentCancelWaits();
       if(!activeStudent||!dashboard){taParent.suspend();parentLock('Đang mở hồ sơ học tập của con…');}
-      if(options.force)taReceiptOwner_.clear();
+      if(options.force){taReceiptOwner_.clear();taParent.invalidate(false);}
       try{
         let payload,retries=0;
         while(parentCurrent(generation)){
