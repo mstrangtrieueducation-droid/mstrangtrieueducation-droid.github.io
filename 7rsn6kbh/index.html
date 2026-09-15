@@ -11612,30 +11612,51 @@ async function parentLoad_(id,prefetch){
 }
 
 
+function parentCachedOpeningV43_(){
+  // IELTS_PARENT_INSTANT_CACHE_V43: the cache key contains the exact bearer token. A cached package
+  // is shown immediately, then replaced or revoked by the live bootstrap.
+  try{
+    const read=kind=>JSON.parse(localStorage.getItem(parentCacheKey_(kind))||'null');
+    const dashboardRecord=read('dashboard'),profileRecord=read('profile'),now=Date.now(),maxAge=604800000;
+    if(!dashboardRecord||!profileRecord||!Number.isFinite(Number(dashboardRecord.savedAt))||!Number.isFinite(Number(profileRecord.savedAt))||
+      now-Number(dashboardRecord.savedAt)<0||now-Number(dashboardRecord.savedAt)>maxAge||
+      now-Number(profileRecord.savedAt)<0||now-Number(profileRecord.savedAt)>maxAge)return null;
+    const dashboard=dashboardRecord.data,profile=profileRecord.data;
+    const name=String(dashboard&&dashboard.parentName||''),revision=String(dashboard&&dashboard.parentRosterRevision||'');
+    if(!name||!revision||!dashboard||dashboard.className!==ieltsParentAccess.className||!profile||profile.parentName!==name||
+      profile.parentRosterRevision!==revision||!profile.found||!profile.student||profile.student.name!==name)return null;
+    const directory=dashboard.studentDirectory;
+    if(!directory||!Array.isArray(directory.all)||directory.all.length!==1||directory.all[0].name!==name)return null;
+    return{name,revision,directory,dashboard,profile};
+  }catch(_error){return null}
+}
 async function startIeltsParentPortal_(){
-  // IELTS_PARENT_ONE_REQUEST_OPEN_V41: one live authorization fence returns identity, schedule
-  // and the selected profile together. Academic recovery runs only if needed.
   if(parentState.checking)return;
   if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile){await parentQuietResume_();return;}
-  parentState.checking=true;parentState.locked=false;parentState.authorized=false;
-  const id=++parentState.requestId;
-  state.student=null;document.getElementById('portal-shell').hidden=true;
-  document.getElementById('student-gate').hidden=true;document.getElementById('app-loading').hidden=true;
-  document.getElementById('parent-retry').hidden=true;
-  parentOpening_('Đang mở hồ sơ của con…','');
+  parentState.checking=true;parentState.locked=false;const id=++parentState.requestId;
+  state.student=null;document.getElementById('student-gate').hidden=true;document.getElementById('app-loading').hidden=true;document.getElementById('parent-retry').hidden=true;
+  const cached=parentCachedOpeningV43_();
+  if(cached){
+    parentState.authorized=true;parentState.name=cached.name;parentState.revision=cached.revision;parentState.directory=cached.directory;
+    parentState.dashboard=cached.dashboard;parentState.profile=cached.profile;
+    document.documentElement.dataset.parentInstantCache='true';
+    parentRender_();setSync('loading','Đang kiểm tra dữ liệu mới…');
+  }else{
+    parentState.authorized=false;parentState.dashboard=null;parentState.profile=null;
+    document.getElementById('portal-shell').hidden=true;parentOpening_('Đang mở hồ sơ của con…','');
+  }
   try{
     const bundle=await ieltsParentAccess.request('bootstrap');
     if(id!==parentState.requestId)return;
     if(!bundle||!bundle.name||!bundle.rosterRevision||!bundle.studentDirectory||!Array.isArray(bundle.studentDirectory.all)||bundle.studentDirectory.all.length!==1||bundle.studentDirectory.all[0].name!==bundle.name)throw new Error('Liên kết chưa xác định được học viên.');
     parentState.authorized=true;parentState.name=bundle.name;parentState.revision=bundle.rosterRevision;parentState.directory=bundle.studentDirectory;
-    parentOpening_('Đang tải lịch học và kết quả của con…',bundle.name);
+    if(!cached)parentOpening_('Đang tải lịch học và kết quả của con…',bundle.name);
     parentState.preparedPackage=bundle.classSource?bundle:null;
-    parentState.dashboard=parentCacheRead_('dashboard');parentState.profile=parentCacheRead_('profile');
-    document.documentElement.dataset.parentCacheHit=parentRender_()?'true':'false';
     await parentLoad_(id,{dashboard:Promise.resolve(bundle.dashboard),profile:Promise.resolve(bundle.profile)});
   }catch(error){if(id===parentState.requestId){
-    if(error.code==='INVALID_LINK'||!parentState.dashboard||!parentState.profile)ieltsParentLock_(error.message||'Chưa thể kiểm tra liên kết. Vui lòng thử lại.');
-    else setSync('error','Chưa cập nhật được dữ liệu mới.');
+    if(error.code==='INVALID_LINK')ieltsParentLock_('Liên kết này không còn hợp lệ. Vui lòng liên hệ cô để nhận link của con.');
+    else if(cached)setSync('error','Đang hiển thị dữ liệu gần nhất; hệ thống sẽ kiểm tra lại.');
+    else{parentState.authorized=false;parentState.locked=false;parentOpening_('Kết nối đang chậm. Vui lòng thử lại.', 'Hồ sơ chưa tải xong');document.getElementById('parent-retry').hidden=false;}
   }}
   finally{parentState.checking=false}
 }
