@@ -5193,8 +5193,16 @@ function submissionEvidenceFiles_(item, fallbackUrl) {
     else if(rank(candidate)>rank(previous)||!previous.label&&candidate.label)files.set(key,Object.assign({},previous,candidate,{url:previous.url}));
   });
   const values=Array.from(files.values());
-  const specific=values.filter(file=>!generic(file)),documents=specific.filter(file=>['pdf','merged'].includes(kind(file))),native=documents.some(file=>kind(file)==='pdf');
-  const selected=(documents.length?(native?documents.filter(file=>kind(file)==='pdf'):documents).concat(specific.filter(file=>['video','audio'].includes(kind(file)))):specific);
+  const specific=values.filter(file=>!generic(file)),documents=specific.filter(file=>['pdf','merged'].includes(kind(file)));
+  const role=file=>text(file.documentRole||file.role);
+  const documentGroups=new Map();
+  documents.forEach(file=>{const lane=role(file);if(!documentGroups.has(lane))documentGroups.set(lane,[]);documentGroups.get(lane).push(file);});
+  const selectedDocuments=[];
+  documentGroups.forEach(group=>{const native=group.some(file=>kind(file)==='pdf');selectedDocuments.push(...(native?group.filter(file=>kind(file)==='pdf'):group));});
+  const documentRoles=new Set(selectedDocuments.map(role).filter(Boolean));
+  const completedMergeCoversRaw=documents.some(file=>kind(file)==='merged'&&file.coversRawImages!==false);
+  const rawCovered=file=>completedMergeCoversRaw||(role(file)?documentRoles.has(role(file)):selectedDocuments.length>0&&documentRoles.size===0);
+  const selected=(documents.length?selectedDocuments.concat(specific.filter(file=>['video','audio'].includes(kind(file))),specific.filter(file=>kind(file)==='raw'&&!rawCovered(file))):specific);
   const visible=selected.length?selected:values.slice(0,1);
   const labelFor=(file,index)=>file.label||({pdf:'Xem PDF bài đã nộp',merged:'Xem PDF bài đã nộp',video:'Xem video bài đã nộp',audio:'Nghe audio bài đã nộp',raw:'Xem ảnh bài đã nộp'}[kind(file)]||(visible.length>1?'Xem tệp '+(index+1)+'/'+visible.length:'Xem bài đã nộp'));
   return visible.map((file,index)=>({...file,label:labelFor(file,index)}));
