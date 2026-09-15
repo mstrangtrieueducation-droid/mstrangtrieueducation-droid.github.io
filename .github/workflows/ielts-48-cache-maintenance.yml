@@ -1,0 +1,31 @@
+name: IELTS 48 independent cache maintenance
+
+on:
+  schedule:
+    - cron: '4,14,24,34,44,54 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ielts-48-cache-maintenance
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Refresh IELTS 48 durable snapshots when due
+        env:
+          WARM_URL: "https://script.google.com/macros/s/AKfycbxX87trZP1qwFIlsB5YUVnOls8GcUaNtqweoKnAS4tqmkKv7dhQvQFAdYl2kLnbCGD9RA/exec?api=1&class=IELTS%2048&action=warm&force=0"
+        run: |
+          response="$(curl --fail --silent --show-error --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 300 "$WARM_URL")"
+          RESPONSE="$response" python - <<'PY'
+          import json, os
+          value = json.loads(os.environ["RESPONSE"])
+          if value.get("ok") is not True or value.get("className") != "IELTS 48" or value.get("action") != "warm" or not isinstance(value.get("data"), dict):
+              raise SystemExit("IELTS 48 maintenance response was not valid")
+          PY
+

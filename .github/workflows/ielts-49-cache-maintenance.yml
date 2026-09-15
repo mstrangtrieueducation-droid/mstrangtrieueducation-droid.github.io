@@ -1,0 +1,31 @@
+name: IELTS 49 independent cache maintenance
+
+on:
+  schedule:
+    - cron: '5,15,25,35,45,55 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ielts-49-cache-maintenance
+  cancel-in-progress: false
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Refresh IELTS 49 durable snapshots when due
+        env:
+          WARM_URL: "https://script.google.com/macros/s/AKfycbx_2GRELHwqHA_KBVns7c9euOQGXH9A-1hsDMZ3TwxDqLWiLNBhqDMlK9NQKDHVDmo-_w/exec?api=1&class=IELTS%2049&action=warm&force=0"
+        run: |
+          response="$(curl --fail --silent --show-error --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 300 "$WARM_URL")"
+          RESPONSE="$response" python - <<'PY'
+          import json, os
+          value = json.loads(os.environ["RESPONSE"])
+          if value.get("ok") is not True or value.get("className") != "IELTS 49" or value.get("action") != "warm" or not isinstance(value.get("data"), dict):
+              raise SystemExit("IELTS 49 maintenance response was not valid")
+          PY
+
