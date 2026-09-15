@@ -23,6 +23,8 @@ const kidsApi = (() => {
   // A single-use handoff, never a saved authorization decision.
   let initialBootstrapAttempted = false;
   let initialBootstrapPackage = null;
+  // KIDS_OPENING_FALLBACK_INTENT_V1
+  let openingPackageDelivered = false;
   let preparedReceiptPackage = null;
   let verifiedDirectory = null;
   let directoryVersion = 0;
@@ -91,7 +93,8 @@ const kidsApi = (() => {
   }
   function requestAction(action, force, epoch, initialBootstrap = false, extra = {}) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
-    const key = JSON.stringify([action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null, extra]);
+    const openingRead = action === 'bootstrap' && !force && !extra.feedback && !openingPackageDelivered;
+    const key = JSON.stringify([openingRead, action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null, extra]);
     if (pending.has(key)) return pending.get(key);
     const url = new URL(endpoint);
     url.searchParams.set('api', 'parent1');
@@ -100,7 +103,7 @@ const kidsApi = (() => {
     if(action==='submissions')url.searchParams.set('authorityScope','reminders');
     url.searchParams.set('token', token);
     if(extra.feedback!=='1'&&extra.feedback!=='wait')url.searchParams.set('force', force ? '1' : '0');
-    if (initialBootstrap && action === 'bootstrap' && !force) url.searchParams.set('opening', '1');
+    if ((initialBootstrap || openingRead) && action === 'bootstrap' && !force) url.searchParams.set('opening', '1');
     Object.keys(extra).forEach(key=>{if(!['generation','historyPage','feedback'].includes(key))throw error('Yêu cầu không hợp lệ.','INVALID_SCOPE');url.searchParams.set(key,String(extra[key]));});
     url.searchParams.set('_', String(Date.now()));
     const controller = new AbortController();
@@ -256,9 +259,13 @@ const kidsApi = (() => {
         const handoff = initialBootstrapPackage;
         initialBootstrapPackage = null;
         if (!force && !feedbackOnly && handoff && handoff.epoch === checkEpoch && handoff.alias === keyOf(boundAlias)) {
+          openingPackageDelivered = true;
           return Promise.resolve(handoff.value);
         }
-        return requestAction('bootstrap', Boolean(force), undefined, false, feedbackOnly ? {feedback:feedbackOnly==='wait'?'wait':'1'} : {});
+        return requestAction('bootstrap', Boolean(force), undefined, false, feedbackOnly ? {feedback:feedbackOnly==='wait'?'wait':'1'} : {}).then(value => {
+          if (!feedbackOnly) openingPackageDelivered = true;
+          return value;
+        });
       },
       check,
       suspend() {
