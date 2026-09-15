@@ -10842,7 +10842,8 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
 
 
 /* SHARED_SUBMISSION_ARTIFACTS_V1: display choices never change receipt evidence. */
-/* SHARED_CANONICAL_PDF_ALIAS_V2 */
+/* SHARED_SUBMISSION_DISPLAY_POLICY_V2: one fallback for old generic payloads. */
+/* SHARED_CANONICAL_PDF_ALIAS_V3 */
 (function(root){
   'use strict';
   const list=x=>Array.isArray(x)?x:[];
@@ -10868,6 +10869,10 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
     if(/pdf/.test(label))return 'pdf';
     return 'other';
   }
+  function generic(link){
+    const label=text(link&&link.label).replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim(),type=text(link&&(link.type||link.kind)).replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+    return /^(?:|file|document|link|upload|attachment|unknown|tep|tai lieu|tep dinh kem|mo bai|xem bai|mo bai da nop|xem bai da nop)$/.test(label)&&/^(?:|file|document|link|upload|attachment|unknown|tep|tai lieu)$/.test(type)&&!link.mimeType&&!link.fileName&&!link.name;
+  }
   function canonical(links){
     const found=new Map();
     list(links).forEach(link=>{const k=key(link);if(!k)return;const old=found.get(k);
@@ -10906,7 +10911,18 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
         if(!old||at>old.at||at===old.at&&native&&!old.native)lanes.set(lane,{at,native,links:value});
         else if(at===old.at&&native===old.native)old.links=canonical(old.links.concat(value));
       });
-    });return canonical([...lanes.values()].flatMap(x=>x.links));
+    });
+    const selected=canonical([...lanes.values()].flatMap(x=>x.links));
+    if(selected.length)return selected;
+    // Old payloads sometimes expose only untyped, generic links. Preserve one
+    // safe way to open the newest non-empty receipt without rendering every
+    // raw upload. The receipt history itself stays untouched.
+    const fallback=list(receipts).filter(r=>r&&r.contentStatus!=='empty').map((r,index)=>({
+      index,
+      at:(root.DirectSubmissionHistory.timestamp(r)||{start:0}).start,
+      links:canonical(list(r.links).concat(r.viewUrl?[{url:r.viewUrl,label:'Mở bài đã nộp'}]:[])).filter(generic)
+    })).filter(r=>r.links.length).sort((a,b)=>b.at-a.at||b.index-a.index)[0];
+    return fallback?[Object.assign({},fallback.links[0],{label:fallback.links[0].label||'Mở bài đã nộp'})]:[];
   }
   const api={key,kind,canonical,select};root.DirectSubmissionArtifacts=api;
   if(typeof module==='object'&&module.exports)module.exports=api;
@@ -11063,7 +11079,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
         var coverage=window.known?coverageFor(payload,family,key):null;authorize(guard,ticket,task,coverage);
         task.directDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(ticket&&coverage)});
         if(!found.length)return;
-        var direct={receipts:sorted(found),links:receiptLinks(found)};task.directSubmission=direct;
+        var direct={receipts:sorted(found),links:root.DirectSubmissionArtifacts.select(found)};task.directSubmission=direct;
         if(!record){record={id:assignment.id,session:assignment.session,lessonDate:assignment.lessonDate,topic:assignment.topic,tasks:[]};student.assignments.push(record);}
         var status=list(record.tasks).find(function(r){return r.type==='redo'&&r.title===task.title;});
         if(!status){status={type:'redo',title:task.title};record.tasks=list(record.tasks);record.tasks.push(status);}

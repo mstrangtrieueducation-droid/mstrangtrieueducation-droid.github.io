@@ -3374,11 +3374,30 @@ window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==
 /* FIGHTER_SUBMITTED_FILE_DEDUPE_V1: one file button per source occurrence. */
 /* FIGHTER_CANONICAL_PDF_DISPLAY_V2 */
 /* FIGHTER_CANONICAL_RECEIPT_PDF_V3 */
+/* FIGHTER_RECEIPT_ARTIFACT_SELECTION_V4 */
 function fighterSubmissionFileGroups_(state,fallbackType){
-  const list=value=>Array.isArray(value)?value:[],specific=type=>type==='pdf'||type==='video';
-  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set(),canonicalPdfs=new Set(),knownFiles=new Map();
+  const list=value=>Array.isArray(value)?value:[];
+  const plain=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
+  const generic=type=>!type||['file','document','link','upload','attachment','unknown'].includes(type);
+  const specific=type=>!generic(type);
+  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set(),knownFiles=new Map();
   const history=DirectSubmissionHistory.merge([],list(state.submissionAttempts));
   const role=file=>String(file.documentRole||file.role||'');
+  function fileType(file){
+    file=file||{};
+    const declared=plain(file.type),mime=plain(file.mimeType),label=plain([file.label,file.fileName,file.name].filter(Boolean).join(' ')),raw=plain(file.url);
+    if(declared==='pdf'||mime==='application/pdf'||file.generated===true||/\bpdf\b|pdf da ghep|merged.?pdf/.test(label)||/\.pdf(?:$|[?#])/.test(raw))return 'pdf';
+    if(declared==='video'||mime.startsWith('video/')||/\bvideo\b/.test(label)||/youtube|youtu\.be/.test(raw))return 'video';
+    if(declared==='audio'||mime.startsWith('audio/')||/\baudio\b|ghi am/.test(label))return 'audio';
+    if(declared==='image'||mime.startsWith('image/')||/\banh\b|\bscan\b/.test(label))return 'image';
+    return declared||'file';
+  }
+  function mergeFile(before,after){
+    before=before||{};after=after||{};
+    const result=Object.assign({},before,after),left=fileType(before),right=fileType(after);
+    result.type=specific(right)?right:specific(left)?left:(right||left||'file');
+    return result;
+  }
   function canonicalProof(attempt){
     const value=attempt&&attempt.canonicalPdf;
     if(!value||value.proof!=='producer-original'||!attempt.receiptId||attempt.contentStatus==='empty')return null;
@@ -3387,7 +3406,7 @@ function fighterSubmissionFileGroups_(state,fallbackType){
     if(!time||!Number.isFinite(value.submittedAtMs)||time!==value.submittedAtMs)return null;
     const key=DirectSubmissionHistory.fileKey(value.url);
     if(!key||!key.startsWith('drive:'))return null;
-    const evidence=list(attempt.evidenceUrls).concat(list(attempt.links).map(file=>file.url));
+    const evidence=list(attempt.evidenceUrls).concat(list(attempt.links).map(file=>file.url),list(attempt.submissionFiles).map(file=>file.url));
     if(!evidence.some(url=>DirectSubmissionHistory.fileKey(url)===key))return null;
     return {key,value,file:Object.assign({},value,{type:'pdf',label:'PDF bài đã nộp',documentRole:role(value)})};
   }
@@ -3401,34 +3420,44 @@ function fighterSubmissionFileGroups_(state,fallbackType){
   }
   function typed(file){
     const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return null;
-    const hint=types.get(key),type=file.type||fallbackType||(state.kind==='shadowing'?'video':'file');
-    return {key,file:Object.assign({},knownFiles.get(key)||{},file,{type:!specific(type)&&hint?hint:type})};
+    const hint=types.get(key),merged=mergeFile(knownFiles.get(key),file),type=fileType(merged);
+    merged.type=!specific(type)&&hint?hint:type;
+    return {key,file:merged};
   }
-  flat.forEach(file=>{const key=DirectSubmissionHistory.fileKey(file&&file.url);if(key&&specific(file.type)&&!types.has(key))types.set(key,file.type);if(key&&file.type==='pdf')canonicalPdfs.add(key);if(key&&(!knownFiles.has(key)||specific(file.type)))knownFiles.set(key,file);});
+  flat.forEach(file=>{
+    const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return;
+    const type=fileType(file);if(specific(type)&&!types.has(key))types.set(key,type);
+    knownFiles.set(key,mergeFile(knownFiles.get(key),file));
+  });
   function displayedFiles(group){
     const files=Array.from(group.files.values()).filter(file=>!superseded(file,group.canonical));
-    // Only a PDF typed by the existing grading-file reader is sufficient to
-    // hide raw attachment evidence within this same receipt and document role.
-    const pdfRoles=new Set(files.filter(file=>file.type==='pdf'&&canonicalPdfs.has(DirectSubmissionHistory.fileKey(file.url))).map(role));
-    if(!group.receiptId||!pdfRoles.size)return files;
+    const pdfRoles=new Set(files.filter(file=>fileType(file)==='pdf').map(role));
+    const completedMergeCoversRaw=files.some(file=>fileType(file)==='pdf'&&file.generated===true&&file.coversRawImages===true);
+    const pdfCovers=file=>completedMergeCoversRaw||pdfRoles.has(role(file))||(!role(file)&&pdfRoles.size===1);
+    const fallback=plain(fallbackType||(state.kind==='shadowing'?'video':''));
+    let genericFallback=false;
     return files.filter(file=>{
-      if(!pdfRoles.has(role(file)))return true;
-      const mime=String(file.mimeType||'').toLowerCase(),type=String(file.type||'').toLowerCase();
-      const label=String(file.label||'').toLowerCase();
-      if(type==='pdf'||type==='video'||type==='audio'||/^video\/|^audio\//.test(mime)||/video|audio|ghi âm|ghi am|youtube|youtu\.be/.test(label+' '+file.url))return true;
-      return !(type==='image'||mime.startsWith('image/')||!type||type==='file');
+      const type=fileType(file);
+      if(type==='pdf'||type==='video'||type==='audio')return true;
+      if(type==='image')return !pdfCovers(file);
+      if(specific(type))return true;
+      // Older receipt payloads exposed every raw Drive URL without a type or
+      // document role. They cannot be classified safely in the browser. Keep
+      // one usable fallback for that receipt instead of rendering every URL.
+      if(pdfCovers(file)||genericFallback)return false;
+      genericFallback=true;if(specific(fallback))file.type=fallback;return true;
     });
   }
   function add(group,file){
     const item=typed(file);if(!item)return;
     const old=group.files.get(item.key);
     if(!old)group.files.set(item.key,item.file);
-    else group.files.set(item.key,Object.assign({},old,item.file,{type:specific(old.type)&&!specific(item.file.type)?old.type:item.file.type}));
+    else group.files.set(item.key,mergeFile(old,item.file));
   }
   history.forEach((attempt,index)=>{
     const canonical=canonicalProof(attempt);
     const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map(),canonical};groups.push(group);
-    if(canonical){types.set(canonical.key,'pdf');canonicalPdfs.add(canonical.key);}
+    if(canonical)types.set(canonical.key,'pdf');
     function receiptFile(file){
       const known=knownFiles.get(DirectSubmissionHistory.fileKey(file.url));
       return canonical&&!role(file)&&!role(known||{})?Object.assign({},file,{documentRole:role(canonical.value)}):file;

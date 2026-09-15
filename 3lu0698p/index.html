@@ -5145,6 +5145,7 @@ function parentLoadPreparedHistory_(page,generation) {
       isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>kidsApi.parent.submissions(),project:parentProjectPrepared_,
       render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
     });
+// PARENT_SINGLE_SUBMISSION_SCAN_V1: one receipt read for one opened pupil.
 function parentSingleSubmissionScan_(owner,getIdentity){
   const refresh=owner.refresh,clear=owner.clear,invalidate=owner.invalidate;let requestedFor='';
   owner.refresh=function(force=false){
@@ -5159,25 +5160,44 @@ parentSingleSubmissionScan_(submissionOwner_,()=>kidsApi.parent.authorized&&!kid
     function submissionReset_() { submissionOwner_.suspend(); hidePendingWorkGate(); const banner=$('#pendingWorkBanner');if(banner)banner.hidden=true; }
     window.addEventListener('kids-parent-access',event=>{if(event.detail.status==='revoked')submissionOwner_.clear();else if(event.detail.status!=='authorized')submissionReset_();});
 
-/* KIDS_EVIDENCE_RESOURCES_V1: deduplicate files inside one actual occurrence only. */
+/* KIDS_EVIDENCE_RESOURCES_V2: keep receipts; compact only their displayed files. */
 function submissionEvidenceFiles_(item, fallbackUrl) {
   item=item||{};
   const rows=arr(item.links).concat(arr(item.submissionFiles),arr(item.evidenceUrls),[item.viewUrl,item.reviewUrl,item.fileUrl,item.submissionUrl]),files=new Map();
   if(fallbackUrl&&item.contentStatus!=='empty')rows.push(fallbackUrl);
-  const generic=label=>/^(?:file|document|link|upload|attachment|xem bài|xem bài đã nộp|tệp)$/i.test(text(label));
+  const plain=value=>text(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+  const genericLabel=value=>/^(?:|file|document|link|upload|attachment|unknown|tep|tai lieu|tep dinh kem|mo bai|xem bai|mo bai da nop|xem bai da nop|xem tep(?: \d+\/\d+)?)$/.test(plain(value));
+  const genericType=value=>/^(?:|file|document|link|upload|attachment|unknown|tep|tai lieu)$/.test(plain(value));
+  const kind=file=>{
+    const label=plain(file.label),type=plain(file.type||file.kind),mime=plain(file.mimeType),name=plain(file.fileName||file.name||file.url);
+    if(file.generated===true||/pdf.*(?:da ghep|tu dong)|merged ?pdf/.test(label)||type==='merged')return 'merged';
+    if(type==='pdf'||mime==='application/pdf'||/\.pdf(?:$|[?#])/.test(name)||/\bpdf\b/.test(label))return 'pdf';
+    if(type==='video'||mime.startsWith('video/')||/\bvideo\b|youtube|youtu\.be/.test(label+' '+file.url))return 'video';
+    if(type==='audio'||mime.startsWith('audio/')||/ghi am|\baudio\b/.test(label))return 'audio';
+    if(type==='mindmap')return 'raw';
+    if(mime.startsWith('image/')||/\.(?:jpe?g|png|gif|webp|heic)(?:$|[?#])/.test(name)||/\banh\b|scan|so tu vung|vo chep/.test(label))return 'raw';
+    return 'other';
+  };
+  const generic=file=>genericLabel(file.label)&&genericType(file.type||file.kind)&&!file.mimeType&&!file.fileName&&!file.name;
+  const rank=file=>({pdf:6,merged:5,video:4,audio:3,raw:2,other:0}[kind(file)]||0)+(generic(file)?0:1);
   rows.forEach(value=>{
     const source=typeof value==='string'?{url:value}:value||{},url=safeUrl(source.url);
     let key=DirectSubmissionHistory.fileKey(url);
     if(!key){try{const parsed=new URL(url);if(parsed.protocol==='http:'&&!parsed.username&&!parsed.password)key=parsed.href;}catch(_){} }
     if(!key)return;
     const type=text(source.type||source.kind).toLowerCase(),caption=text(source.label||source.caption||source.title);
-    const specific=caption&&!generic(caption)?caption:type==='video'?'Xem video':type==='pdf'?'Xem PDF':type==='mindmap'?'Xem sơ đồ tư duy':'';
+    const specific=caption&&!genericLabel(caption)?caption:type==='video'?'Xem video':type==='pdf'?'Xem PDF':type==='audio'?'Nghe audio':type==='mindmap'?'Xem sơ đồ tư duy':'';
+    const candidate=Object.assign({},source,{url,label:specific,type});
     const previous=files.get(key);
-    if(!previous)files.set(key,{url,label:specific,type});
-    else if(!previous.label&&specific)files.set(key,{url:previous.url,label:specific,type});
+    if(!previous)files.set(key,candidate);
+    else if(rank(candidate)>rank(previous)||!previous.label&&candidate.label)files.set(key,Object.assign({},previous,candidate,{url:previous.url}));
   });
   const values=Array.from(files.values());
-  return values.map((file,index)=>({...file,label:file.label||(values.length>1?'Xem tệp '+(index+1)+'/'+values.length:'Xem bài')}));
+  const specific=values.filter(file=>!generic(file)),documents=specific.filter(file=>['pdf','merged'].includes(kind(file))),native=documents.some(file=>kind(file)==='pdf');
+  const selected=(documents.length?(native?documents.filter(file=>kind(file)==='pdf'):documents).concat(specific.filter(file=>['video','audio'].includes(kind(file)))):specific);
+  const visible=selected.length?selected:values.slice(0,1);
+  const labelFor=(file,index)=>file.label||({pdf:'Xem PDF bài đã nộp',merged:'Xem PDF bài đã nộp',video:'Xem video bài đã nộp',audio:'Nghe audio bài đã nộp',raw:'Xem ảnh bài đã nộp'}[kind(file)]||(visible.length>1?'Xem tệp '+(index+1)+'/'+visible.length:'Xem bài đã nộp'));
+  return visible.map((file,index)=>({...file,label:labelFor(file,index)}));
 }
 function submissionEvidenceActionsHtml_(item, fallbackUrl) {
   return submissionEvidenceFiles_(item,fallbackUrl).map(file=>`<a href="${escapeHtml(file.url)}" target="_blank" rel="noopener">${escapeHtml(file.label)}</a>`).join(' ');
