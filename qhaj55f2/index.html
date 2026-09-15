@@ -102,6 +102,8 @@ const taParent = (() => {
     const current=epoch,checkEpoch=authorizationEpoch,who=identity&&{...identity},url=new URL(endpoint),controller=new AbortController();controllers.set(action,controller);
     Object.entries({api:'parent1',class:className,action,token}).forEach(([k,v])=>url.searchParams.set(k,v));
     if(action==='portal'&&force)url.searchParams.set('force','1');
+    // Match the common KIDS reader: each logical read has a fresh delivery URL.
+    url.searchParams.set('_',String(Date.now()));
     const timer=setTimeout(()=>controller.abort(),100000),started=performance.now();
     const promise=networkJson(url.href,action,controller.signal).then(async body=>{
       if(current!==epoch||action==='check'&&checkEpoch!==authorizationEpoch)throw error('REQUEST_SUPERSEDED');
