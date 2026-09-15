@@ -875,7 +875,7 @@ const taReceiptRoutes_={
   "v76ca46c0c4cd4a6": "TA-RETAKE-9"
 };
 const taReceiptOwner_=createSubmissionReceiptOwner({guard:taSubmissionGuard_,getIdentity:taReceiptIdentity_,isVisible:()=>!document.hidden,
- request:()=>taParent.request('submissions').catch(error=>{if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','IDENTITY_MISMATCH'].includes(error&&error.code))parentFailed(error);throw error;}),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectTaSubmissions(target,payload,ticket,guard,taReceiptRoutes_),
+ request:()=>taParent.request('submissions').catch(error=>{if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code))parentFailed(error);throw error;}),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectTaSubmissions(target,payload,ticket,guard,taReceiptRoutes_),
  render:()=>{if(activeStudent&&dashboard&&taParent.identity&&!document.hidden){const target=taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))});activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo(x,y);}}
 });
 function taReceiptView_(task,status){const direct=task&&task.directSubmission||status&&status.directSubmission,deadline=task&&task.directDeadline||status&&status.directDeadline;return direct?Object.assign({},status||{},{state:'done',status:deadline?deadline.label:'Đã nộp',tracked:true,completed:true,directSubmission:direct}):deadline?Object.assign({},status||{},{state:deadline.missing?'missing':deadline.pending?'pending':'unknown',status:deadline.label,tracked:true,completed:false,directDeadline:deadline}):status;}
@@ -910,9 +910,9 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
     function parentWait(delay,generation){return new Promise(resolve=>{const timer=setTimeout(()=>{parentWaits.delete(timer);resolve(parentCurrent(generation))},delay);parentWaits.set(timer,resolve)})}
     function parentStatus(message){$('#app-status').textContent=message;$('#app-status').hidden=!message}
     function parentFailed(error){
-      const revoked=taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','IDENTITY_MISMATCH'].includes(error&&error.code);
+      const revoked=taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code);
       taReceiptOwner_.clear();parentCancelWaits();taParent.invalidate(revoked);parentBusy=false;
-      const message=!taParent.validToken?'Vui lòng mở liên kết riêng cô gửi cho gia đình.':revoked?'Liên kết hồ sơ không còn hoạt động. Vui lòng liên hệ cô.':'Chưa thể kết nối hồ sơ. Vui lòng thử lại.';
+      const message=!taParent.validToken?'Vui lòng mở liên kết riêng cô gửi cho gia đình.':revoked?'Liên kết hồ sơ không còn hoạt động. Vui lòng liên hệ cô.':error&&error.code==='IDENTITY_MISMATCH'?'Chưa xác minh được đúng hồ sơ. Vui lòng thử lại.':'Chưa thể kết nối hồ sơ. Vui lòng thử lại.';
       parentLock(message,false);$('#parent-name').textContent=revoked?'Hồ sơ không còn hoạt động':'Chưa thể mở hồ sơ';$('#gateway-recovery').hidden=revoked||!taParent.validToken;
     }
     async function parentKeepAfterRefreshFailure(error,generation){
