@@ -92,9 +92,12 @@ const taParent = (() => {
   function request(action,force=false){
     if(!validToken||terminal)return Promise.reject(error('INVALID_TOKEN'));
     if(!['check','portal','submissions'].includes(action))return Promise.reject(error('INVALID_REQUEST'));
-    if(action!=='check'&&!identity)return Promise.reject(error('AUTH_PENDING'));
+    if(action!=='check'&&!identity&&!(action==='portal'&&pending.has('check')))return Promise.reject(error('AUTH_PENDING'));
     // Normal and forced callers share one healthy portal request across visibility changes.
     if(pending.has(action))return pending.get(action);
+    // TA_PARALLEL_BACKGROUND_OPEN_V1: the portal endpoint also authorizes its bearer live.
+    // Overlap transport, but accept/cache/paint no profile before the separate check succeeds.
+    const openingCheck=action==='portal'?pending.get('check'):null;
     const current=epoch,checkEpoch=authorizationEpoch,who=identity&&{...identity},url=new URL(endpoint),controller=new AbortController();controllers.set(action,controller);
     Object.entries({api:'parent1',class:className,action,token}).forEach(([k,v])=>url.searchParams.set(k,v));
     if(action==='portal'&&force)url.searchParams.set('force','1');
@@ -110,8 +113,10 @@ const taParent = (() => {
       }else if(action==='submissions'){
         if(!data||data.schema!==1||data.className!==className||!Array.isArray(data.receipts)||!Array.isArray(data.coverage))throw error('IDENTITY_MISMATCH');
       }else{
-        if(!matches(data,who))throw error('IDENTITY_MISMATCH');
-        await save(data,current,who);if(current!==epoch||terminal)throw error('REQUEST_SUPERSEDED');
+        const authorized=openingCheck?await openingCheck:who;
+        if(current!==epoch||checkEpoch!==authorizationEpoch||terminal)throw error('REQUEST_SUPERSEDED');
+        if(!same(authorized,identity)||!matches(data,authorized))throw error('IDENTITY_MISMATCH');
+        await save(data,current,authorized);if(current!==epoch||terminal)throw error('REQUEST_SUPERSEDED');
       }
       document.documentElement.dataset[action+'Ms']=String(Math.round(performance.now()-started));
       return data;
@@ -866,7 +871,7 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
 
 // SHARED_PARENT_SESSION_V1: visibility changes do not dispose the pupil session.
 function taReceiptIdentity_(){const who=taParent.identity;return who&&!taParent.terminal?EXPECTED_CLASS+'|'+who.name+'|'+String(who.englishName||''):'';}
-const taSubmissionGuard_=createSubmissionStatusGuard({getIdentity:taReceiptIdentity_,isVisible:()=>!document.hidden});
+const taSubmissionGuard_=createSubmissionStatusGuard({getIdentity:taReceiptIdentity_,isVisible:()=>true});
 const taReceiptRoutes_={
   "b7e93f2c4a6d8f10": "TA-RETAKE-666",
   "v0b763436d30b4ec": "TA-RETAKE-1",
@@ -879,9 +884,9 @@ const taReceiptRoutes_={
   "vf0f6c927207845f": "TA-RETAKE-8",
   "v76ca46c0c4cd4a6": "TA-RETAKE-9"
 };
-const taReceiptOwner_=createSubmissionReceiptOwner({guard:taSubmissionGuard_,getIdentity:taReceiptIdentity_,isVisible:()=>!document.hidden,
+const taReceiptOwner_=createSubmissionReceiptOwner({guard:taSubmissionGuard_,getIdentity:taReceiptIdentity_,isVisible:()=>true,
  request:()=>taParent.request('submissions').catch(error=>{if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code))parentFailed(error);throw error;}),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectTaSubmissions(target,payload,ticket,guard,taReceiptRoutes_),
- render:()=>{if(activeStudent&&dashboard&&taParent.identity&&!document.hidden){const target=taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))});activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo(x,y);}}
+ render:()=>{if(activeStudent&&dashboard&&taParent.identity){const target=taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))});activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo(x,y);}}
 });
 function taReceiptView_(task,status){const direct=task&&task.directSubmission||status&&status.directSubmission,deadline=task&&task.directDeadline||status&&status.directDeadline;return direct?Object.assign({},status||{},{state:'done',status:deadline?deadline.label:'Đã nộp',tracked:true,completed:true,directSubmission:direct}):deadline?Object.assign({},status||{},{state:deadline.missing?'missing':deadline.pending?'pending':'unknown',status:deadline.label,tracked:true,completed:false,directDeadline:deadline}):status;}
 function taReceiptKnown_(task,status){return task&&task.type!=='redo'||Boolean(task&&task.directSubmission||status&&status.directSubmission)||Boolean(taSubmissionGuard_.can(task)&&task.directDeadline&&task.directDeadline.pending);}
@@ -927,11 +932,12 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
       if(activeStudent&&dashboard){parentStatus('Chưa cập nhật được dữ liệu mới · Đang hiển thị dữ liệu gần nhất.');return}
       parentFailed(error);
     }
-    async function parentUpdate(generation,force=false){
+    async function parentUpdate(generation,force=false,prefetch=null){
       let retries=0;
       while(parentCurrent(generation)){
         try{
-          const payload=await taParent.request('portal',force);if(!parentCurrent(generation))return;
+          const job=prefetch||taParent.request('portal',force);prefetch=null;
+          const payload=await job;if(!parentCurrent(generation))return;
           const retained=await taParent.cached();if(!parentCurrent(generation))return;
           const newest=retained&&taParent.sourceTime(retained)>taParent.sourceTime(payload)?retained:payload;
           parentPaint(newest);
@@ -949,22 +955,22 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
       }
     }
     async function openParentPortal(options={}){
-      if(parentBusy||document.hidden)return;
+      if(parentBusy)return;
       if(activeStudent&&dashboard&&taParent.identity&&!options.force){await taQuietResume_();return;}
       parentBusy=true;const generation=++parentGeneration;
       parentCancelWaits();if(!activeStudent||!dashboard){taParent.suspend();parentLock('Đang kiểm tra liên kết riêng của gia đình…');}
       try{
-        const who=await taParent.request('check');if(!parentCurrent(generation))return;
+        const check=taParent.request('check');
+        const prefetch=taParent.request('portal',Boolean(options.force));prefetch.catch(()=>{});
+        const who=await check;if(!parentCurrent(generation))return;
         $('#parent-skeleton').hidden=true;$('#parent-name').hidden=false;$('#parent-name').textContent=who.name+(who.englishName?' · '+who.englishName:'');
         document.documentElement.dataset.parentIdentityReadyMs=String(Math.round(performance.now()));
         $('#gateway-message').textContent='Đã xác nhận liên kết · Đang tải lịch học, bài tập và kết quả của con…';
         const cache=await taParent.cached();if(!parentCurrent(generation))return;
         if(cache)parentPaint(cache);
-        parentBusy=false;
-        if(cache&&taParent.fresh(cache)&&!options.force&&!taParent.portalPending){parentStatus('');document.documentElement.dataset.parentResume='fresh-cache';return}
         if(cache)parentStatus('Đang hiển thị dữ liệu gần nhất · Đang kiểm tra cập nhật mới…');
         document.documentElement.dataset.parentResume=taParent.portalPending?'reuse-request':cache?'refresh-cache':'cold';
-        await parentUpdate(generation,Boolean(options.force||cache&&cache.dashboard.cacheStale));
+        await parentUpdate(generation,Boolean(options.force),prefetch);
       }catch(error){if(parentCurrent(generation))parentFailed(error)}
       finally{if(generation===parentGeneration)parentBusy=false}
     }
@@ -973,7 +979,7 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
       const generation=parentGeneration;
       try{await taParent.request('check')}catch(error){if(!parentCurrent(generation))return;if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','IDENTITY_MISMATCH'].includes(error.code)){parentGeneration++;parentFailed(error)}}
     }
-    function parentSuspend(){taReceiptOwner_.suspend();}
+    function parentSuspend(){/* Keep the same pupil's authorized work running in another tab. */}
     function parentDispose(){taReceiptOwner_.clear();parentGeneration++;parentBusy=false;parentCancelWaits();taParent.invalidate(true);parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
 
 
