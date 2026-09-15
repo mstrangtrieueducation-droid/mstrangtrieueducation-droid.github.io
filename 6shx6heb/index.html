@@ -69,7 +69,12 @@ const taParent = (() => {
       try{
         const response=await fetch(url,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:currentController.signal});
         if(!response.ok){const e=error('DATA_UNAVAILABLE');e.retryable=response.status===408||response.status===429||response.status>=500&&response.status<600;throw e}
-        try{return await response.json()}catch(_){const e=error('DATA_UNAVAILABLE');e.retryable=true;throw e}
+        let body;
+        try{body=await response.json()}catch(_){const e=error('DATA_UNAVAILABLE');e.retryable=true;throw e}
+        if(body&&body.ok===false&&(body.code||body.error&&body.error.code)==='DATA_UNAVAILABLE'){
+          const e=error('DATA_UNAVAILABLE');e.retryable=true;throw e;
+        }
+        return body;
       }catch(e){failure=e}
       finally{clearTimeout(timer);signal.removeEventListener('abort',cancel)}
       if(signal.aborted)throw error('REQUEST_SUPERSEDED');
