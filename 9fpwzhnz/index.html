@@ -122,6 +122,21 @@ const kidsApi = (() => {
     }
     return boundAlias;
   }
+  // KIDS_READ_DELIVERY_V1: one read-only POST; cached opening gets at most one GET fallback.
+  // Both attempts share the existing deadline and the same validation below.
+  function readDelivery(url, options, opening) {
+    const postOptions = Object.assign({}, options, {method:'POST', body:url.searchParams.toString(), headers:{'Content-Type':'application/x-www-form-urlencoded'}});
+    return fetch(url.origin + url.pathname, postOptions).then(response => {
+      if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
+      return response;
+    }).catch(firstError => {
+      if (!opening || options.signal.aborted || status === 'revoked') throw firstError;
+      return fetch(url.href, options).then(response => {
+        if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
+        return response;
+      }).catch(secondError => { secondError.openingDeliveryExhausted = true; throw secondError; });
+    });
+  }
   function requestAction(action, force, epoch, initialBootstrap = false, extra = {}) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
     const openingRead = action === 'bootstrap' && !force && !extra.feedback && !openingPackageDelivered;
@@ -144,9 +159,9 @@ const kidsApi = (() => {
     const started = performance.now();
     let deadlineExpired = false;
     const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
-    const promise = fetch(url.href, {
+    const promise = readDelivery(url, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
-    }).then(async response => {
+    }, initialBootstrap || openingRead).then(async response => {
       if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
       let envelope = await response.json();
       if (envelope && envelope.encoding === 'gzip1') {
@@ -226,7 +241,7 @@ const kidsApi = (() => {
     }).catch(err => {
       handoff = null;
       if (status === 'revoked' || epoch !== checkEpoch ||
-          err && (err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
+          err && (err.openingDeliveryExhausted===true || err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
       // One fallback to the ordinary access check. Existing loaders retain
       // their normal retry/partial-data/force-recovery rules after this check.
       return requestAction('check', true, epoch);
