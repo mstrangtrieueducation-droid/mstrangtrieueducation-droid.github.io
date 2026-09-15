@@ -92,12 +92,12 @@ const taParent = (() => {
   function request(action,force=false){
     if(!validToken||terminal)return Promise.reject(error('INVALID_TOKEN'));
     if(!['check','portal','submissions'].includes(action))return Promise.reject(error('INVALID_REQUEST'));
-    if(action!=='check'&&!identity&&!(action==='portal'&&pending.has('check')))return Promise.reject(error('AUTH_PENDING'));
+    if(action==='submissions'&&!identity)return Promise.reject(error('AUTH_PENDING'));
     // Normal and forced callers share one healthy portal request across visibility changes.
     if(pending.has(action))return pending.get(action);
-    // TA_PARALLEL_BACKGROUND_OPEN_V1: the portal endpoint also authorizes its bearer live.
-    // Overlap transport, but accept/cache/paint no profile before the separate check succeeds.
-    const openingCheck=action==='portal'?pending.get('check'):null;
+    // TA_KIDS_ATOMIC_OPEN_V1: like KIDS bootstrap, portal verifies the bearer
+    // against live membership before and after reading this pupil's package.
+    // That one successful response supplies both identity and profile; no cached permission.
     const current=epoch,checkEpoch=authorizationEpoch,who=identity&&{...identity},url=new URL(endpoint),controller=new AbortController();controllers.set(action,controller);
     Object.entries({api:'parent1',class:className,action,token}).forEach(([k,v])=>url.searchParams.set(k,v));
     if(action==='portal'&&force)url.searchParams.set('force','1');
@@ -113,9 +113,12 @@ const taParent = (() => {
       }else if(action==='submissions'){
         if(!data||data.schema!==1||data.className!==className||!Array.isArray(data.receipts)||!Array.isArray(data.coverage))throw error('IDENTITY_MISMATCH');
       }else{
-        const authorized=openingCheck?await openingCheck:who;
         if(current!==epoch||checkEpoch!==authorizationEpoch||terminal)throw error('REQUEST_SUPERSEDED');
-        if(!same(authorized,identity)||!matches(data,authorized))throw error('IDENTITY_MISMATCH');
+        const pupil=data&&data.student;
+        if(!pupil||typeof pupil.name!=='string'||!pupil.name.trim()||pupil.englishName!=null&&typeof pupil.englishName!=='string')throw error('IDENTITY_MISMATCH');
+        const authorized={name:pupil.name,englishName:pupil.englishName||''};
+        if(binding&&!same(binding,authorized)||who&&!same(who,authorized)||!matches(data,authorized)||!(sourceTime(data)>0)||sourceTime(data)>Date.now())throw error('IDENTITY_MISMATCH');
+        identity=authorized;binding={...authorized};
         await save(data,current,authorized);if(current!==epoch||terminal)throw error('REQUEST_SUPERSEDED');
       }
       document.documentElement.dataset[action+'Ms']=String(Math.round(performance.now()-started));
@@ -891,8 +894,9 @@ const taReceiptOwner_=createSubmissionReceiptOwner({guard:taSubmissionGuard_,get
 function taReceiptView_(task,status){const direct=task&&task.directSubmission||status&&status.directSubmission,deadline=task&&task.directDeadline||status&&status.directDeadline;return direct?Object.assign({},status||{},{state:'done',status:deadline?deadline.label:'Đã nộp',tracked:true,completed:true,directSubmission:direct}):deadline?Object.assign({},status||{},{state:deadline.missing?'missing':deadline.pending?'pending':'unknown',status:deadline.label,tracked:true,completed:false,directDeadline:deadline}):status;}
 function taReceiptKnown_(task,status){return task&&task.type!=='redo'||Boolean(task&&task.directSubmission||status&&status.directSubmission)||Boolean(taSubmissionGuard_.can(task)&&task.directDeadline&&task.directDeadline.pending);}
 function taReceiptDetails_(task,status){const direct=task&&task.directSubmission||status&&status.directSubmission;if(!direct)return '';return '<div class="direct-submission-details">'+direct.receipts.map((r,i)=>'<p>Lần '+esc(r.attempt||i+1)+' · '+esc(DirectGradingSheetProjectors.displayAt(r.submittedAt))+(Number.isFinite(r.score)&&Number.isFinite(r.maximum)&&r.maximum>0&&r.scoreSource?' · <strong>'+esc(r.score)+'/'+esc(r.maximum)+'</strong>':'')+'</p>').join('')+direct.links.map(link=>'<a class="action" href="'+esc(link.url)+'" target="_blank" rel="noopener noreferrer">'+esc(link.label)+'</a>').join(' ')+'</div>';}
-async function taQuietResume_(){const generation=parentGeneration;try{await taParent.request('check');if(generation!==parentGeneration||taParent.terminal)return;taReceiptOwner_.refresh();}catch(error){if(generation===parentGeneration&&['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','IDENTITY_MISMATCH'].includes(error.code))parentFailed(error);}}
 
+
+    let parentOpeningReceiptJob=null;
     const parentWaits=new Map();
     function setLogo(url){const logo=$('#logo'),source=safeUrl(url);if(!source){logo.hidden=true;logo.removeAttribute('src');return}logo.hidden=false;logo.onerror=()=>{logo.hidden=true};logo.src=source}
     function clearPortalContent(){clearTimeout(countdownTimer);countdownTimer=null;['#next-class','#schedule-notice','#schedule-grid','#assignment-list','#self-study-list','#student-profile','#leaderboard','#improvement'].forEach(selector=>{$(selector).innerHTML=''});$('#app-status').hidden=true;$('#app-status').textContent='';$('#selected-student').textContent=''}
@@ -912,7 +916,7 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
       directory={className:EXPECTED_CLASS,program:PROGRAM_LABEL,logoUrl:payload.dashboard.logoUrl};dashboard=projected.dashboard;activeStudent=projected.student;
       renderPortal();document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');
       $('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');
-      if(!parentOpened){parentOpened=true;activateTab($('#tab-schedule'));document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));taReceiptOwner_.refresh()}
+      if(!parentOpened){parentOpened=true;activateTab($('#tab-schedule'));document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));parentOpeningReceiptJob=taReceiptOwner_.refresh()}
       $('#portal-announcer').textContent='Đã mở hồ sơ của '+who.name+'.';
     }
     function parentCurrent(generation){return generation===parentGeneration}
@@ -932,54 +936,56 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
       if(activeStudent&&dashboard){parentStatus('Chưa cập nhật được dữ liệu mới · Đang hiển thị dữ liệu gần nhất.');return}
       parentFailed(error);
     }
-    async function parentUpdate(generation,force=false,prefetch=null){
-      let retries=0;
-      while(parentCurrent(generation)){
-        try{
-          const job=prefetch||taParent.request('portal',force);prefetch=null;
-          const payload=await job;if(!parentCurrent(generation))return;
-          const retained=await taParent.cached();if(!parentCurrent(generation))return;
-          const newest=retained&&taParent.sourceTime(retained)>taParent.sourceTime(payload)?retained:payload;
-          parentPaint(newest);
-          if(newest.dashboard.cacheStale!==true){parentStatus('');return}
-          parentStatus('Đang hiển thị dữ liệu gần nhất · Đang cập nhật lịch học, bài tập và kết quả…');
-          if(!force){force=true;continue}
-          if(retries>=5){await parentKeepAfterRefreshFailure(new Error('DATA_UPDATING'),generation);return}
-        }catch(error){
-          if(!parentCurrent(generation))return;
-          if(error&&error.code==='DATA_UPDATING'&&retries<5){force=true}
-          else{await parentKeepAfterRefreshFailure(error,generation);return}
-        }
-        const delay=[1000,2500,5000,10000,15000][retries++];
-        if(!await parentWait(delay,generation))return;
+    // TA_KIDS_SINGLE_VISIT_V1: keep the opening package and its one receipt job.
+    // A tab change only reveals this visit's result; it cannot create a request.
+    function parentResumeSavedView(){
+      if(!document.hidden&&activeStudent&&dashboard&&taParent.identity&&!taParent.terminal){
+        const x=window.scrollX,y=window.scrollY;
+        parentPaint({found:true,student:activeStudent,dashboard});window.scrollTo(x,y);
+        document.documentElement.dataset.parentResume='retained-visit';
       }
+    }
+    async function parentAcademicFollowup(generation){
+      // Like the KIDS teacher-update lane: finish the opening receipt read first,
+      // then one background academic update. No visibility check or forced loop.
+      await Promise.resolve(parentOpeningReceiptJob).catch(()=>false);
+      if(!parentCurrent(generation)||taParent.terminal||!activeStudent)return;
+      try{
+        const payload=await taParent.request('portal',true);
+        if(!parentCurrent(generation)||taParent.terminal)return;
+        parentPaint(payload);
+        parentStatus(payload.dashboard.cacheStale?'Đang hiển thị dữ liệu gần nhất · Bản cập nhật chưa sẵn sàng.':'');
+      }catch(error){if(parentCurrent(generation))await parentKeepAfterRefreshFailure(error,generation)}
     }
     async function openParentPortal(options={}){
       if(parentBusy)return;
-      if(activeStudent&&dashboard&&taParent.identity&&!options.force){await taQuietResume_();return;}
+      if(activeStudent&&dashboard&&taParent.identity&&!options.force){parentResumeSavedView();return;}
       parentBusy=true;const generation=++parentGeneration;
-      parentCancelWaits();if(!activeStudent||!dashboard){taParent.suspend();parentLock('Đang kiểm tra liên kết riêng của gia đình…');}
+      parentCancelWaits();
+      if(!activeStudent||!dashboard){taParent.suspend();parentLock('Đang mở hồ sơ học tập của con…');}
+      if(options.force)taReceiptOwner_.clear();
       try{
-        const check=taParent.request('check');
-        const prefetch=taParent.request('portal',Boolean(options.force));prefetch.catch(()=>{});
-        const who=await check;if(!parentCurrent(generation))return;
-        $('#parent-skeleton').hidden=true;$('#parent-name').hidden=false;$('#parent-name').textContent=who.name+(who.englishName?' · '+who.englishName:'');
+        let payload,retries=0;
+        while(parentCurrent(generation)){
+          try{payload=await taParent.request('portal',Boolean(options.force));break;}
+          catch(error){
+            if(!parentCurrent(generation))return;
+            if(options.force||error.code!=='DATA_UPDATING'||retries>=5)throw error;
+            // Missing cold package: wait for its existing server builder, never force a second one.
+            if(!await parentWait([1000,2500,5000,10000,15000][retries++],generation))return;
+          }
+        }
+        if(!parentCurrent(generation)||!payload)return;
         document.documentElement.dataset.parentIdentityReadyMs=String(Math.round(performance.now()));
-        $('#gateway-message').textContent='Đã xác nhận liên kết · Đang tải lịch học, bài tập và kết quả của con…';
-        const cache=await taParent.cached();if(!parentCurrent(generation))return;
-        if(cache)parentPaint(cache);
-        if(cache)parentStatus('Đang hiển thị dữ liệu gần nhất · Đang kiểm tra cập nhật mới…');
-        document.documentElement.dataset.parentResume=taParent.portalPending?'reuse-request':cache?'refresh-cache':'cold';
-        await parentUpdate(generation,Boolean(options.force),prefetch);
-      }catch(error){if(parentCurrent(generation))parentFailed(error)}
+        document.documentElement.dataset.parentResume='atomic-package';
+        parentPaint(payload);
+        if(options.force)parentOpeningReceiptJob=taReceiptOwner_.refresh();
+        parentStatus(payload.dashboard.cacheStale?'Đang hiển thị dữ liệu gần nhất · Đang cập nhật phía sau…':'');
+        if(payload.dashboard.cacheStale&&!options.force)parentAcademicFollowup(generation);
+      }catch(error){if(parentCurrent(generation))await parentKeepAfterRefreshFailure(error,generation)}
       finally{if(generation===parentGeneration)parentBusy=false}
     }
-    async function checkParentAccess(){
-      if(parentBusy||!activeStudent||document.hidden)return;
-      const generation=parentGeneration;
-      try{await taParent.request('check')}catch(error){if(!parentCurrent(generation))return;if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','IDENTITY_MISMATCH'].includes(error.code)){parentGeneration++;parentFailed(error)}}
-    }
-    function parentSuspend(){/* Keep the same pupil's authorized work running in another tab. */}
+
     function parentDispose(){taReceiptOwner_.clear();parentGeneration++;parentBusy=false;parentCancelWaits();taParent.invalidate(true);parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
 
 
@@ -1025,12 +1031,10 @@ async function taQuietResume_(){const generation=parentGeneration;try{await taPa
     $$('.tab').forEach(button=>{button.addEventListener('click',()=>activateTab(button));button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=$$('.tab'),index=tabs.indexOf(button);let target=index;if(event.key==='ArrowLeft')target=(index-1+tabs.length)%tabs.length;if(event.key==='ArrowRight')target=(index+1)%tabs.length;if(event.key==='Home')target=0;if(event.key==='End')target=tabs.length-1;activateTab(tabs[target],true)})});
     $('#gateway-recovery').addEventListener('click',openParentPortal);
     $('#refresh').addEventListener('click',()=>openParentPortal({force:true}));
-    document.addEventListener('visibilitychange',()=>{if(document.hidden)parentSuspend();else openParentPortal()});
-    window.addEventListener('pagehide',parentSuspend);
-    window.addEventListener('pageshow',event=>{if(event.persisted)openParentPortal()});
-    window.addEventListener('online',()=>{if(!parentBusy)openParentPortal({force:Boolean(activeStudent)})});
+    document.addEventListener('visibilitychange',parentResumeSavedView);
+    window.addEventListener('pageshow',event=>{if(event.persisted)parentResumeSavedView()});
+    window.addEventListener('online',()=>{if(activeStudent)parentResumeSavedView();else if(!parentBusy&&!taParent.terminal)openParentPortal()});
     window.addEventListener('hashchange',()=>{parentDispose();location.reload()});
-    setInterval(checkParentAccess,60000);
     openParentPortal();
   </script>
 </body>
