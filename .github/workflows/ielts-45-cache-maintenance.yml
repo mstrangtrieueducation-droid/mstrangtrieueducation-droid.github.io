@@ -15,17 +15,30 @@ concurrency:
 jobs:
   warm:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Refresh IELTS 45 durable snapshots when due
         env:
           WARM_URL: "https://script.google.com/macros/s/AKfycbyFyHtNZzNPH9xqk2XpsqUc6TjT2vI-QlpIbsWtW4c1pFQcet2LZGtecowj6jvCY8BTmw/exec?api=1&class=IELTS%2045&action=warm&force=0"
         run: |
-          response="$(curl --fail --silent --show-error --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 300 "$WARM_URL")"
-          RESPONSE="$response" python - <<'PY'
+          for attempt in 1 2 3; do
+            response="$(curl --fail --silent --show-error --location --retry 1 --retry-all-errors --connect-timeout 20 --max-time 120 "$WARM_URL")" || response=""
+            if RESPONSE="$response" python - <<'PY'
           import json, os
-          value = json.loads(os.environ["RESPONSE"])
-          if value.get("ok") is not True or value.get("className") != "IELTS 45" or value.get("action") != "warm" or not isinstance(value.get("data"), dict):
-              raise SystemExit("IELTS 45 maintenance response was not valid")
+          try:
+              value = json.loads(os.environ["RESPONSE"])
+          except Exception:
+              raise SystemExit(1)
+          data = value.get("data")
+          if value.get("ok") is not True or value.get("className") != "IELTS 45" or value.get("action") != "warm" or not isinstance(data, dict):
+              raise SystemExit(1)
+          if data.get("warming") is not False or data.get("maintenanceHealthy") is not True:
+              raise SystemExit(1)
           PY
-
+            then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 10)); fi
+          done
+          echo "IELTS 45 maintenance did not complete after retries" >&2
+          exit 1
