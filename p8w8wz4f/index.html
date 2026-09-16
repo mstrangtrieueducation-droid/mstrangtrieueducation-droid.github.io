@@ -3556,9 +3556,46 @@ function fighterParentClear_(){
   ['student-profile','assignment-list','self-study-list','leaderboard','improvement-highlights','schedule-periods','schedule-location','assessment-reminders','next-class','updated','news-banner'].forEach(id=>{const node=$('#'+id);if(node)node.innerHTML='';});
   $('#student-input').innerHTML='';
 }
+
+// FIGHTER_NEW_ENROLLMENT_HARD_CUTOFF_V29: use the live roster date and
+// sanitize the final projected package, including receipt-created records.
+function fighterApplyEnrollmentCutoffV29_(bundle,binding){
+  if(!bundle||!bundle.profile||!bundle.profile.student)return bundle;
+  function fighterEnrollmentDateV29_(value){
+    const text=String(value==null?'':value).trim();let match,year,month,day;
+    match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
+    if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);}
+    else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);if(year<100)year+=2000;}
+    const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);
+    return year>=2000&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0;
+  }
+  const list=value=>Array.isArray(value)?value:[];
+  const directory=binding&&binding.directory||{},rows=list(directory.students).concat(list(directory.all));
+  const live=rows.find(row=>row&&(row.name===binding.studentName||row.studentName===binding.studentName||row.alias===bundle.profile.student.alias))||rows[0]||{};
+  const student=bundle.profile.student,joinDate=live.joinDate||student.joinDate;
+  const joined=fighterEnrollmentDateV29_(joinDate);if(!joined)return bundle;student.joinDate=joinDate;
+  const itemDate=(item,selfStudy)=>{if(!item)return 0;const fields=selfStudy?['releaseDate','assignedDate','lessonDate','date','dateLabel','startDate']:['lessonDate','assignedDate','releaseDate','date','dateLabel','startDate'];for(const field of fields){const serial=fighterEnrollmentDateV29_(item[field]);if(serial)return serial;}return 0;};
+  const eligible=(item,selfStudy)=>{const serial=itemDate(item,selfStudy);return Boolean(serial&&serial>=joined);};
+  const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||'').trim();
+  const publicData=bundle.publicData||{},full=bundle.fullDashboard||{};
+  publicData.assignments=list(publicData.assignments).filter(item=>eligible(item,false));
+  publicData.selfStudyAssignments=list(publicData.selfStudyAssignments).filter(item=>eligible(item,true));
+  publicData.schedule=list(publicData.schedule).filter(item=>eligible(item,false));
+  full.assignments=list(full.assignments).filter(item=>eligible(item,false));
+  full.selfStudyAssignments=list(full.selfStudyAssignments).filter(item=>eligible(item,true));
+  full.schedule=list(full.schedule).filter(item=>eligible(item,false));
+  bundle.profile.assignments=list(bundle.profile.assignments).filter(item=>eligible(item,Boolean(item&&item.isSelfStudy)));
+  const definitions=list(publicData.assignments).concat(list(publicData.selfStudyAssignments)),allowed=new Map(definitions.map(item=>[id(item),item]).filter(row=>row[0]));
+  const recordEligible=record=>{const definition=allowed.get(id(record));if(definition)return true;const serial=itemDate(record,Boolean(record&&record.isSelfStudy));return Boolean(serial&&serial>=joined);};
+  student.assignments=list(student.assignments).filter(recordEligible);
+  ['preparedSelfStudy','directSelfStudyItems'].forEach(field=>{if(Array.isArray(student[field]))student[field]=student[field].filter(item=>eligible(item,true));if(Array.isArray(bundle.profile[field]))bundle.profile[field]=bundle.profile[field].filter(item=>eligible(item,true));});
+  if(Array.isArray(full.students))full.students.forEach(row=>{if(row&&(row.name===student.name||row.alias===student.alias))row.assignments=list(row.assignments).filter(recordEligible);});
+  return bundle;
+}
+
 function fighterParentApply_(){
   if(!fighterApi.parent.authorized||!fighterParentPackage_)return false;
-  fighterSubmissionProjected_=submissionOwner_.reapply(JSON.parse(JSON.stringify(fighterParentPackage_)));
+  fighterSubmissionProjected_=fighterApplyEnrollmentCutoffV29_(submissionOwner_.reapply(JSON.parse(JSON.stringify(fighterParentPackage_))),fighterApi.parent.binding);
   const savedScroll=fighterParentPainted_?{x:window.scrollX,y:window.scrollY}:null;
   const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterSubmissionProjected_;
   if(profile.student.name!==binding.studentName)return false;

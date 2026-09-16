@@ -5447,12 +5447,43 @@ function writtenTestDisplayTitle_(item) {
       return false;
     }
     function parentAutoOpen_() { /* Atomic bootstrap owns the sole selected child. */ }
-    function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = false) {
+    
+// KIDS_NEW_ENROLLMENT_HARD_CUTOFF_V3: the live join date has the last word
+// after cached packages and direct receipts have been merged.
+function kidsApplyEnrollmentCutoffV3_(value){
+  if(!value||!value.profile)return value;
+  const profile=value.profile,student=profile.student||profile;
+  function kidsEnrollmentDateV3_(value){
+    const text=String(value==null?'':value).trim();let match,year,month,day;
+    match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
+    if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);}
+    else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);if(year<100)year+=2000;}
+    const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);
+    return year>=2000&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0;
+  }
+  const joined=kidsEnrollmentDateV3_(profile.joinDate||student.joinDate);if(!joined)return value;
+  profile.joinDate=profile.joinDate||student.joinDate;if(profile.student)profile.student.joinDate=profile.joinDate;
+  const list=value=>Array.isArray(value)?value:[];
+  const itemDate=item=>{if(!item)return 0;const fields=['releaseDate','assignedDate','lessonDate','date','dateLabel','startDate'];for(const field of fields){const serial=kidsEnrollmentDateV3_(item[field]);if(serial)return serial;}return 0;};
+  const eligible=item=>{const serial=itemDate(item);return Boolean(serial&&serial>=joined);};
+  const key=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId||item.code||item.sourceCode||item.lessonKey)||'').trim().toUpperCase();
+  const filter=(owner,field)=>{if(owner&&Array.isArray(owner[field]))owner[field]=owner[field].filter(eligible);};
+  const dashboard=value.dashboard||{};
+  ['assignments','schedule','completedLessons'].forEach(field=>filter(dashboard,field));
+  ['assignments','selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile,field));
+  if(profile.student){['assignments','selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile.student,field));}
+  const eligibleKeys=new Set([].concat(list(dashboard.assignments),list(profile.assignments),list(profile.selfPractice),list(profile.preparedPracticeRows)).map(key).filter(Boolean));
+  const reminderEligible=item=>{const serial=itemDate(item);if(serial)return serial>=joined;const id=key(item);return Boolean(id&&eligibleKeys.has(id));};
+  ['reminders','privateReminders','alerts','missingAssignments'].forEach(field=>{if(Array.isArray(profile[field]))profile[field]=profile[field].filter(reminderEligible);if(profile.student&&Array.isArray(profile.student[field]))profile.student[field]=profile.student[field].filter(reminderEligible);});
+  return value;
+}
+
+function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = false) {
       if (!kidsApi.parent.authorized || !parentPackage_) return false;
       // PARENT_HIDDEN_PACKAGE_V1: keep the completed request; defer only its DOM paint.
       if(document.hidden){parentValidatePackage_(parentPackage_);return true;}
       const savedScroll=parentBootstrapPainted_?{left:window.scrollX,top:window.scrollY,behavior:'instant'}:null;
-      const value=submissionOwner_.reapply(JSON.parse(JSON.stringify(parentValidatePackage_(parentPackage_)))),alias=kidsApi.parent.alias;
+      const value=kidsApplyEnrollmentCutoffV3_(submissionOwner_.reapply(JSON.parse(JSON.stringify(parentValidatePackage_(parentPackage_))))),alias=kidsApi.parent.alias;
       parentConsumeDirectoryHint_();
       if (!app.directoryLoad.ready || !liveDirectoryContainsAlias_(alias)) return false;
       app.data=value.dashboard;

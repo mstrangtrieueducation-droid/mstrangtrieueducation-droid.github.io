@@ -1076,7 +1076,7 @@ const taReceiptRoutes_={
 };
 const taReceiptOwner_=createSubmissionReceiptOwner({guard:taSubmissionGuard_,getIdentity:taReceiptIdentity_,isVisible:()=>true,
  request:()=>taParent.request('submissions').catch(error=>{if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code))parentFailed(error);throw error;}),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectTaSubmissions(target,payload,ticket,guard,taReceiptRoutes_),
- render:()=>{if(activeStudent&&dashboard&&taParent.identity){const target=taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))});activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo(x,y);}}
+ render:()=>{if(activeStudent&&dashboard&&taParent.identity){const target=taApplyEnrollmentCutoffV3_(taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))}));activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo(x,y);}}
 });
 function taReceiptView_(task,status){const direct=task&&task.directSubmission||status&&status.directSubmission,deadline=task&&task.directDeadline||status&&status.directDeadline;return direct?Object.assign({},status||{},{state:'done',status:deadline?deadline.label:'Đã nộp',tracked:true,completed:true,directSubmission:direct}):deadline?Object.assign({},status||{},{state:deadline.missing?'missing':deadline.pending?'pending':'unknown',status:deadline.label,tracked:true,completed:false,directDeadline:deadline}):status;}
 function taReceiptKnown_(task,status){return task&&task.type!=='redo'||Boolean(task&&task.directSubmission||status&&status.directSubmission)||Boolean(taSubmissionGuard_.can(task)&&task.directDeadline&&task.directDeadline.pending);}
@@ -1097,10 +1097,34 @@ function taReceiptDetails_(task,status){const direct=task&&task.directSubmission
       $('#student-gateway').setAttribute('aria-busy',String(pending));$('.skip-link').setAttribute('href','#student-gateway');
       $('#portal-announcer').textContent='';document.title='TA7 | Hồ sơ học tập của con';
     }
-    function parentPaint(payload){
+    
+// TA_NEW_ENROLLMENT_HARD_CUTOFF_V3: sanitize the final package after direct
+// receipts are applied; score history remains untouched.
+function taApplyEnrollmentCutoffV3_(projected){
+  if(!projected||!projected.student||!projected.dashboard)return projected;
+  function taEnrollmentDateV3_(value){
+    const text=String(value==null?'':value).trim();let match,year,month,day;
+    match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
+    if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);}
+    else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);if(year<100)year+=2000;}
+    const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);
+    return year>=2000&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0;
+  }
+  const student=projected.student,joined=taEnrollmentDateV3_(student.joinDate);if(!joined)return projected;
+  const list=value=>Array.isArray(value)?value:[];
+  const itemDate=item=>{if(!item)return 0;const fields=['releaseDate','lessonDate','assignedDate','date','dateLabel','startDate'];for(const field of fields){const serial=taEnrollmentDateV3_(item[field]);if(serial)return serial;}return 0;};
+  const eligible=item=>{const serial=itemDate(item);return Boolean(serial&&serial>=joined);};
+  ['assignments','selfStudyAssignments','schedule'].forEach(field=>{if(Array.isArray(projected.dashboard[field]))projected.dashboard[field]=projected.dashboard[field].filter(eligible);});
+  const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||'').trim();
+  const allowed=new Set(list(projected.dashboard.assignments).concat(list(projected.dashboard.selfStudyAssignments)).map(id).filter(Boolean));
+  student.assignments=list(student.assignments).filter(item=>{const key=id(item);if(key&&allowed.has(key))return true;return eligible(item);});
+  return projected;
+}
+
+function parentPaint(payload){
       const who=taParent.identity;
       if(!who||!payload||!payload.found||payload.student.name!==who.name||String(payload.student.englishName||'')!==String(who.englishName||'')||payload.dashboard.className!==EXPECTED_CLASS||payload.dashboard.program!==PROGRAM_LABEL)throw new Error('IDENTITY_MISMATCH');
-      const projected=taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(payload.student)),dashboard:JSON.parse(JSON.stringify(payload.dashboard))});
+      const projected=taApplyEnrollmentCutoffV3_(taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(payload.student)),dashboard:JSON.parse(JSON.stringify(payload.dashboard))}));
       directory={className:EXPECTED_CLASS,program:PROGRAM_LABEL,logoUrl:payload.dashboard.logoUrl};dashboard=projected.dashboard;activeStudent=projected.student;
       renderPortal();document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');
       $('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');

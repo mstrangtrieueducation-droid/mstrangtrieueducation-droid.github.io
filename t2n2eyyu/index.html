@@ -12554,6 +12554,30 @@ function parentPendingPanel_(title){
 }
 
 
+
+// IELTS_NEW_ENROLLMENT_HARD_CUTOFF_V37: apply the live roster date after
+// receipt projection so older work cannot return from a cached class package.
+function ieltsApplyEnrollmentCutoffV37_(projected,directory){
+  if(!projected||!projected.student||!projected.dashboard)return projected;
+  function ieltsEnrollmentDateV37_(value){
+    const text=String(value==null?'':value).trim();let match,year,month,day;
+    match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
+    if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);}
+    else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);if(year<100)year+=2000;}
+    const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);
+    return year>=2000&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0;
+  }
+  const list=value=>Array.isArray(value)?value:[];
+  const rows=Array.isArray(directory)?directory:list(directory&&directory.all).concat(list(directory&&directory.students));
+  const live=rows.find(row=>row&&(row.name===projected.student.name||row.studentName===projected.student.name||row.alias===projected.student.alias))||rows[0]||{};
+  const joinDate=live.joinDate||projected.student.joinDate,joined=ieltsEnrollmentDateV37_(joinDate);if(!joined)return projected;projected.student.joinDate=joinDate;
+  const itemDate=item=>{if(!item)return 0;const fields=['releaseDate','lessonDate','assignedDate','date','dateLabel','startDate'];for(const field of fields){const serial=ieltsEnrollmentDateV37_(item[field]);if(serial)return serial;}return 0;};
+  const eligible=item=>{const serial=itemDate(item);return Boolean(serial&&serial>=joined);};
+  ['assignments','shadowingAssignments','selfStudyAssignments','schedule'].forEach(field=>{if(Array.isArray(projected.dashboard[field]))projected.dashboard[field]=projected.dashboard[field].filter(eligible);});
+  if(Array.isArray(projected.student.assignments))projected.student.assignments=projected.student.assignments.filter(eligible);
+  return projected;
+}
+
 function parentRender_(){
 
 
@@ -12593,7 +12617,7 @@ function parentRender_(){
   const student=profileReady?JSON.parse(JSON.stringify(parentState.profile.student)):{name:parentState.name,speakingGroup:entry.groupId,speakingGroupLabel:entry.groupLabel,skills:Object.fromEntries(Object.keys(SKILL_META).map(key=>[key,{records:[]}]))};
 
 
-  const projected=dashboardReady&&profileReady?parentReceiptOwner_.reapply({dashboard,student}):{dashboard,student};
+  const projected=ieltsApplyEnrollmentCutoffV37_(dashboardReady&&profileReady?parentReceiptOwner_.reapply({dashboard,student}):{dashboard,student},parentState.directory);
 
 
   const data=projected.dashboard;data.studentDirectory=parentState.directory;
