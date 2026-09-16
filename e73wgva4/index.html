@@ -82,7 +82,8 @@
         if(epoch!==generation)throw ended();
 
 
-        const url=new URL(endpoints[attempt % endpoints.length]);
+        const selectedReview=['writing_assessment','writing_assessment_source'].includes(action);
+        const url=new URL(selectedReview ? 'https://script.google.com/macros/s/AKfycbxX87trZP1qwFIlsB5YUVnOls8GcUaNtqweoKnAS4tqmkKv7dhQvQFAdYl2kLnbCGD9RA/exec' : endpoints[attempt % endpoints.length]);
 
 
         lastNonce=Math.max(Date.now(),lastNonce+1);
