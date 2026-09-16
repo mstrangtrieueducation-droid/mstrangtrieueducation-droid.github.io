@@ -649,7 +649,7 @@ body.f9-portal-locked .student-gateway__lookup .button{min-width:190px;min-heigh
       const joined=fighterEnrollmentSerialUiV18_(student&&student.joinDate);
       if(!joined)return true;
       const released=fighterEnrollmentSerialUiV18_(assignment&&(assignment.releaseDate||assignment.assignedDate||assignment.lessonDate));
-      return Boolean(released&&released>joined);
+      return Boolean(released&&released>=joined);
     }
 
   
@@ -3215,15 +3215,33 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       if(/^(?:VF[12]|GF|RI[12]|AP)-U\d+(?:_\d+)?$/.test(expected)||/^PT-\d+$/.test(expected))return expected===actual;
       return m.retakeCodeMatches_({category:receipt.category,code:receipt.code,assignmentKey:m.assignmentKey_(receipt.code),unit:m.unitNumber_(receipt.code)},request);
     }
+    // FIGHTER_NEW_ENROLLMENT_PROJECTION_V28: one eligibility rule for every
+    // personalized receipt, missing-work record and self-study result.
+    function enrollmentDateV28(value){
+      const text=String(value==null?'':value).trim();
+      let match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/),year,month,day;
+      if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);}
+      else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);}
+      const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);
+      return year>=2000&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0;
+    }
+    function enrollmentEligibleV28(student,assignment,selfStudy){
+      const joined=enrollmentDateV28(student&&student.joinDate);if(!joined)return true;
+      const candidates=selfStudy?[assignment&&assignment.releaseDate,assignment&&assignment.assignedDate,assignment&&assignment.lessonDate,assignment&&assignment.date]:[assignment&&assignment.lessonDate,assignment&&assignment.assignedDate,assignment&&assignment.date];
+      for(let index=0;index<candidates.length;index+=1){const assigned=enrollmentDateV28(candidates[index]);if(assigned)return assigned>=joined;}
+      return false;
+    }
     return function projectFighterSubmissions(value,payload,ticket,guard){
       if(!value||!value.profile||!value.profile.student)return value;
       payload=payload||{receipts:[],coverage:[]};
       const student=value.profile.student,assignments=list(value.publicData&&value.publicData.assignments),receipts=list(payload.receipts);
+      const eligibleAssignments=assignments.filter(assignment=>enrollmentEligibleV28(student,assignment,false));
+      const eligibleSelfStudyAssignments=list(value.publicData&&value.publicData.selfStudyAssignments).filter(assignment=>enrollmentEligibleV28(student,assignment,true));
       // Grade-cache age is not the freshness of the independently captured receipt source.
       function homeworkIndex(receipt,assignment){return m.submissionTaskIndexV7_(assignment,{assignmentId:receipt.code,sourceTab:receipt.sourceTab,sourceName:receipt.sourceName});}
       function peersFor(receipt){return assignments.filter(other=>receipt.family==='FIGHTER_RETAKE'?retakeMatches(receipt,other):homeworkIndex(receipt,other)>=0);}
-      student.assignments=list(student.assignments);
-      assignments.forEach(assignment=>{
+      student.assignments=list(student.assignments).filter(record=>{const definition=assignments.find(assignment=>assignment&&assignment.id===record.assignmentId);return !definition||enrollmentEligibleV28(student,definition,false);});
+      eligibleAssignments.forEach(assignment=>{
         let record=student.assignments.find(r=>r.assignmentId===assignment.id);
         const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index],assignment)&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
         const redo=tasks.map((task,index)=>m.submissionTaskFactsV7_(task).redo?index:-1).filter(index=>index>=0);
@@ -3286,7 +3304,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         }
       });
       value.directSelfStudyItems=[];
-      list(value.publicData.selfStudyAssignments).forEach(assignment=>{
+      eligibleSelfStudyAssignments.forEach(assignment=>{
         const code=m.canonicalSelfStudyResultCodeV1_(assignment.sourceCode||assignment.code||'');if(!code)return;
         const family=/^SHADOW-/.test(code)?'FIGHTER_SHADOWING':/^FL/.test(code)?'FIGHTER_LISTENING':/^RI[345]-/.test(code)?'FIGHTER_READING':'';
         const peers=list(value.publicData.selfStudyAssignments).filter(a=>m.canonicalSelfStudyResultCodeV1_(a.sourceCode||a.code||'')===code&&String(a.scheduleClassName||'')===String(assignment.scheduleClassName||''));
@@ -3307,7 +3325,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         });
       });
       const records=student.assignments;
-      const selfStudy=list(value.publicData.selfStudyAssignments);
+      const selfStudy=eligibleSelfStudyAssignments;
       if(ticket&&records.length&&records.every(record=>guard.can(record))&&selfStudy.every(assignment=>assignment.submissionReceived||guard.can(assignment))){
         grant(guard,ticket,value.profile,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
       }
