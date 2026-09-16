@@ -8,7 +8,7 @@
 /* KIDS7_PARENT_LINK_V1: all data reads are bound to one server-validated token. */
 const kidsApi = (() => {
   const endpoint = 'https://script.google.com/macros/s/AKfycbx5xZqNYSpOxd5Z51_2C6ndEBOzytu7jE0zPRa_I6dOl3a1lvcPZ-5H7OZ4eREAwki_/exec';
-  const expectedClass = 38;
+  const expectedClass = 39;
   const token = new URLSearchParams(window.location.hash.slice(1)).get('p') || '';
   const validToken = /^[A-Za-z0-9_-]{22}$/.test(token);
   const pending = new Map();
