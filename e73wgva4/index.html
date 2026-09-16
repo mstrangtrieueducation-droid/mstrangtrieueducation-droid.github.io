@@ -91,7 +91,7 @@
         const controller=new AbortController();
 
 
-        const timer=setTimeout(()=>controller.abort(),opening?10000:90000);
+        const timer=setTimeout(()=>controller.abort(),opening?25000:90000);
 
 
         document.documentElement.dataset['parent'+action+'Attempts']=String(attempt+1);
