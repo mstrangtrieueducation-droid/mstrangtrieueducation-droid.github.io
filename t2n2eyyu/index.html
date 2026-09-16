@@ -12573,7 +12573,8 @@ function ieltsApplyEnrollmentCutoffV37_(projected,directory){
   const joinDate=live.joinDate||projected.student.joinDate,joined=ieltsEnrollmentDateV37_(joinDate);if(!joined)return projected;projected.student.joinDate=joinDate;
   const itemDate=item=>{if(!item)return 0;const fields=['releaseDate','lessonDate','assignedDate','date','dateLabel','startDate'];for(const field of fields){const serial=ieltsEnrollmentDateV37_(item[field]);if(serial)return serial;}return 0;};
   const eligible=item=>{const serial=itemDate(item);return Boolean(serial&&serial>=joined);};
-  ['assignments','shadowingAssignments','selfStudyAssignments','schedule'].forEach(field=>{if(Array.isArray(projected.dashboard[field]))projected.dashboard[field]=projected.dashboard[field].filter(eligible);});
+  ['assignments','shadowingAssignments','selfStudyAssignments'].forEach(field=>{if(Array.isArray(projected.dashboard[field]))projected.dashboard[field]=projected.dashboard[field].filter(eligible);});
+  if(Array.isArray(projected.dashboard.schedule))projected.dashboard.schedule=projected.dashboard.schedule.filter(item=>{if(item&&item.weekday!=null&&item.startTime){const end=ieltsEnrollmentDateV37_(item.endDate);return !end||end>=joined;}return eligible(item);});
   const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId||item.code||item.sourceCode)||'').trim().toUpperCase();
   const allowed=new Set([].concat(list(projected.dashboard.assignments),list(projected.dashboard.shadowingAssignments),list(projected.dashboard.selfStudyAssignments)).map(id).filter(Boolean));
   if(Array.isArray(projected.student.assignments))projected.student.assignments=projected.student.assignments.filter(item=>{const key=id(item);return Boolean(key&&allowed.has(key))||eligible(item);});

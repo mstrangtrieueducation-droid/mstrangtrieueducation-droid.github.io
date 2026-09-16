@@ -1114,7 +1114,8 @@ function taApplyEnrollmentCutoffV3_(projected){
   const list=value=>Array.isArray(value)?value:[];
   const itemDate=item=>{if(!item)return 0;const fields=['releaseDate','lessonDate','assignedDate','date','dateLabel','startDate'];for(const field of fields){const serial=taEnrollmentDateV3_(item[field]);if(serial)return serial;}return 0;};
   const eligible=item=>{const serial=itemDate(item);return Boolean(serial&&serial>=joined);};
-  ['assignments','selfStudyAssignments','schedule'].forEach(field=>{if(Array.isArray(projected.dashboard[field]))projected.dashboard[field]=projected.dashboard[field].filter(eligible);});
+  ['assignments','selfStudyAssignments'].forEach(field=>{if(Array.isArray(projected.dashboard[field]))projected.dashboard[field]=projected.dashboard[field].filter(eligible);});
+  if(Array.isArray(projected.dashboard.schedule))projected.dashboard.schedule=projected.dashboard.schedule.filter(item=>{if(item&&item.weekday!=null&&item.startTime){const end=taEnrollmentDateV3_(item.endDate);return !end||end>=joined;}return eligible(item);});
   const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||'').trim();
   const allowed=new Set(list(projected.dashboard.assignments).concat(list(projected.dashboard.selfStudyAssignments)).map(id).filter(Boolean));
   student.assignments=list(student.assignments).filter(item=>{const key=id(item);if(key&&allowed.has(key))return true;return eligible(item);});

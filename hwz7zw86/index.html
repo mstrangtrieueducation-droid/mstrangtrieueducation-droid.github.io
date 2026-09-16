@@ -3590,14 +3590,15 @@ function fighterApplyEnrollmentCutoffV29_(bundle,binding){
   const joined=fighterEnrollmentDateV29_(joinDate);if(!joined)return bundle;student.joinDate=joinDate;
   const itemDate=(item,selfStudy)=>{if(!item)return 0;const fields=selfStudy?['releaseDate','assignedDate','lessonDate','date','dateLabel','startDate']:['lessonDate','assignedDate','releaseDate','date','dateLabel','startDate'];for(const field of fields){const serial=fighterEnrollmentDateV29_(item[field]);if(serial)return serial;}return 0;};
   const eligible=(item,selfStudy)=>{const serial=itemDate(item,selfStudy);return Boolean(serial&&serial>=joined);};
+  const scheduleEligible=item=>{if(item&&item.weekday!=null&&item.startTime){const end=fighterEnrollmentDateV29_(item.endDate);return !end||end>=joined;}return eligible(item,false);};
   const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||'').trim();
   const publicData=bundle.publicData||{},full=bundle.fullDashboard||{};
   publicData.assignments=list(publicData.assignments).filter(item=>eligible(item,false));
   publicData.selfStudyAssignments=list(publicData.selfStudyAssignments).filter(item=>eligible(item,true));
-  publicData.schedule=list(publicData.schedule).filter(item=>eligible(item,false));
+  publicData.schedule=list(publicData.schedule).filter(scheduleEligible);
   full.assignments=list(full.assignments).filter(item=>eligible(item,false));
   full.selfStudyAssignments=list(full.selfStudyAssignments).filter(item=>eligible(item,true));
-  full.schedule=list(full.schedule).filter(item=>eligible(item,false));
+  full.schedule=list(full.schedule).filter(scheduleEligible);
   bundle.profile.assignments=list(bundle.profile.assignments).filter(item=>eligible(item,Boolean(item&&item.isSelfStudy)));
   const definitions=list(publicData.assignments).concat(list(publicData.selfStudyAssignments)),allowed=new Map(definitions.map(item=>[id(item),item]).filter(row=>row[0]));
   const recordEligible=record=>{const definition=allowed.get(id(record));if(definition)return true;const serial=itemDate(record,Boolean(record&&record.isSelfStudy));return Boolean(serial&&serial>=joined);};
