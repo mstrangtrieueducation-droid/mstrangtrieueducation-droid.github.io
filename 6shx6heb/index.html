@@ -1018,10 +1018,23 @@ var api={resolve:resolve,routes:routes,urlRoutes:urlRoutes};root.IeltsDirectAssi
     }catch(_){}
     return '';
   }
+  function taEnrollmentSerialV2(value){
+    var text=String(value||'').trim(),match=text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(match)return Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
+    match=text.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/);
+    if(!match)return 0;var year=Number(match[3]);if(year<100)year+=2000;
+    return Date.UTC(year,Number(match[2])-1,Number(match[1]));
+  }
+  function taAssignmentEligibleForStudentV2(student,item){
+    // TA_NEW_ENROLLMENT_PROJECTION_V2: direct receipts cannot recreate older work.
+    var joined=taEnrollmentSerialV2(student&&student.joinDate);if(!joined)return true;
+    var serial=taEnrollmentSerialV2(item&&(item.lessonDate||item.assignedDate||item.date||item.releaseDate||item.dueDate));
+    return Boolean(serial&&serial>=joined);
+  }
   function projectTaSubmissions(target,payload,ticket,guard,routeCodes){
     if(!target||!target.dashboard||!target.student||!payload)return target;
-    var student=target.student;student.assignments=list(student.assignments);
-    var assignmentItems=list(target.dashboard.assignments).concat(list(target.dashboard.selfStudyAssignments));
+    var student=target.student;student.assignments=list(student.assignments).filter(function(item){return taAssignmentEligibleForStudentV2(student,item);});
+    var assignmentItems=list(target.dashboard.assignments).concat(list(target.dashboard.selfStudyAssignments)).filter(function(item){return taAssignmentEligibleForStudentV2(student,item);});
     assignmentItems.forEach(function(assignment){
       var record=student.assignments.find(function(r){return r.id&&r.id===assignment.id;});
       list(assignment.tasks).forEach(function(task){
