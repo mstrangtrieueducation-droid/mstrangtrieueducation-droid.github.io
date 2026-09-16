@@ -12449,10 +12449,7 @@ window.addEventListener('pageshow',event=>{if(event.persisted)parentResumeSavedV
 ielts48InitCompactEmbedV29_();
 
 
-startIeltsParentPortal_();
 
-
-setInterval(function(){ if (state.dashboard && state.active === 'schedule') renderSchedule(); }, 60000);
 
 
 // IELTS_PENDING_HOMEWORK_ALERT_UI_V32
@@ -14563,6 +14560,10 @@ const ieltsWritingReviews_ = (() => {
 
 })();
 
+
+startIeltsParentPortal_();
+
+setInterval(function(){ if (state.dashboard && state.active === 'schedule') renderSchedule(); }, 60000);
 
 /* IELTS_WRITING_FEEDBACK_END_V1 */
 
