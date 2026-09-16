@@ -5453,6 +5453,12 @@ function writtenTestDisplayTitle_(item) {
 function kidsApplyEnrollmentCutoffV3_(value){
   if(!value||!value.profile)return value;
   const profile=value.profile,student=profile.student||profile;
+  // KIDS_ENROLLMENT_LIVE_DIRECTORY_V4: only the authorized live directory overrides cached dates.
+  const liveHint=typeof kidsApi!=='undefined'&&kidsApi.parent&&kidsApi.parent.directoryHint;
+  const liveRows=liveHint&&Array.isArray(liveHint.studentAliases)?liveHint.studentAliases:[];
+  const liveRow=liveRows.length===1?liveRows[0]:null;
+  if(liveRow&&Object.prototype.hasOwnProperty.call(liveRow,'joinDate')){profile.joinDate=liveRow.joinDate||'';student.joinDate=profile.joinDate;}
+
   function kidsEnrollmentDateV3_(value){
     const text=String(value==null?'':value).trim();let match,year,month,day;
     match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
