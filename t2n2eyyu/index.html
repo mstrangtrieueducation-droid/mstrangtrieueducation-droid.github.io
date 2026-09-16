@@ -12779,59 +12779,11 @@ async function parentLoad_(id,prefetch){
 // independently. A slow/failed bootstrap does not hide an already verified part.
 
 
-function parentCachedOpeningV43_(){
-
-
-  // IELTS_PARENT_INSTANT_CACHE_V43: the cache key contains the exact bearer token. A cached package
-
-
-  // is shown immediately, then replaced or revoked by the live bootstrap.
-
-
-  try{
-
-
-    const read=kind=>JSON.parse(localStorage.getItem(parentCacheKey_(kind))||'null');
-
-
-    const dashboardRecord=read('dashboard'),profileRecord=read('profile'),now=Date.now(),maxAge=604800000;
-
-
-    if(!dashboardRecord||!profileRecord||!Number.isFinite(Number(dashboardRecord.savedAt))||!Number.isFinite(Number(profileRecord.savedAt))||
-
-
-      now-Number(dashboardRecord.savedAt)<0||now-Number(dashboardRecord.savedAt)>maxAge||
-
-
-      now-Number(profileRecord.savedAt)<0||now-Number(profileRecord.savedAt)>maxAge)return null;
-
-
-    const dashboard=dashboardRecord.data,profile=profileRecord.data;
-
-
-    const name=String(dashboard&&dashboard.parentName||''),revision=String(dashboard&&dashboard.parentRosterRevision||'');
-
-
-    if(!name||!revision||!dashboard||dashboard.className!==ieltsParentAccess.className||!profile||profile.parentName!==name||
-
-
-      profile.parentRosterRevision!==revision||!profile.found||!profile.student||profile.student.name!==name)return null;
-
-
-    const directory=dashboard.studentDirectory;
-
-
-    if(!directory||!Array.isArray(directory.all)||directory.all.length!==1||directory.all[0].name!==name)return null;
-
-
-    return{name,revision,directory,dashboard,profile};
-
-
-  }catch(_error){return null}
-
-
-}
-
+// IELTS_PARENT_LIVE_IDENTITY_FIRST_V51: local storage is never authorization.
+// Keep issued URLs and cache records; display a profile only after the bound
+// live bootstrap has established this opening's identity. A failed bootstrap
+// must show retry, never an unverified local profile.
+function parentCachedOpeningV43_(){return null;}
 
 async function startIeltsParentPortal_(){
 
