@@ -5483,6 +5483,7 @@ function kidsApplyEnrollmentCutoffV3_(value){
   if(profile.student){if(Array.isArray(profile.student.assignments))profile.student.assignments=profile.student.assignments.filter(linkedEligible);['selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile.student,field));}
   [].concat(list(profile.assignments),list(profile.selfPractice),list(profile.preparedPracticeRows)).map(key).filter(Boolean).forEach(id=>eligibleKeys.add(id));
   const reminderEligible=item=>{const serial=itemDate(item);if(serial)return serial>=joined;const id=key(item);return Boolean(id&&eligibleKeys.has(id));};
+  if(profile.paperHomeworkReminder&&!reminderEligible(profile.paperHomeworkReminder))profile.paperHomeworkReminder=null;
   ['reminders','privateReminders','alerts','missingAssignments'].forEach(field=>{if(Array.isArray(profile[field]))profile[field]=profile[field].filter(reminderEligible);if(profile.student&&Array.isArray(profile.student[field]))profile.student[field]=profile.student[field].filter(reminderEligible);});
   return value;
 }
