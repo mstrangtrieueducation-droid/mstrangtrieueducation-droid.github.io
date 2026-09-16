@@ -5470,9 +5470,12 @@ function kidsApplyEnrollmentCutoffV3_(value){
   const filter=(owner,field)=>{if(owner&&Array.isArray(owner[field]))owner[field]=owner[field].filter(eligible);};
   const dashboard=value.dashboard||{};
   ['assignments','schedule','completedLessons'].forEach(field=>filter(dashboard,field));
-  ['assignments','selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile,field));
-  if(profile.student){['assignments','selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile.student,field));}
-  const eligibleKeys=new Set([].concat(list(dashboard.assignments),list(profile.assignments),list(profile.selfPractice),list(profile.preparedPracticeRows)).map(key).filter(Boolean));
+  const eligibleKeys=new Set(list(dashboard.assignments).map(key).filter(Boolean));
+  const linkedEligible=item=>{const id=key(item);return Boolean(id&&eligibleKeys.has(id))||eligible(item);};
+  if(Array.isArray(profile.assignments))profile.assignments=profile.assignments.filter(linkedEligible);
+  ['selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile,field));
+  if(profile.student){if(Array.isArray(profile.student.assignments))profile.student.assignments=profile.student.assignments.filter(linkedEligible);['selfPractice','preparedPracticeRows','lessons'].forEach(field=>filter(profile.student,field));}
+  [].concat(list(profile.assignments),list(profile.selfPractice),list(profile.preparedPracticeRows)).map(key).filter(Boolean).forEach(id=>eligibleKeys.add(id));
   const reminderEligible=item=>{const serial=itemDate(item);if(serial)return serial>=joined;const id=key(item);return Boolean(id&&eligibleKeys.has(id));};
   ['reminders','privateReminders','alerts','missingAssignments'].forEach(field=>{if(Array.isArray(profile[field]))profile[field]=profile[field].filter(reminderEligible);if(profile.student&&Array.isArray(profile.student[field]))profile.student[field]=profile.student[field].filter(reminderEligible);});
   return value;
