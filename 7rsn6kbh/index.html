@@ -35315,7 +35315,13 @@ ielts45InitCompactEmbedV29_();
 
 
 
-startIeltsParentPortal_();
+/* IELTS_WRITING_STARTUP_V1 */
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',startIeltsParentPortal_,{once:true});
+}else{
+  startIeltsParentPortal_();
+}
+/* IELTS_WRITING_STARTUP_END_V1 */
 
 
 
