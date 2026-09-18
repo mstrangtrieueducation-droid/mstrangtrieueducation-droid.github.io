@@ -12737,7 +12737,13 @@ window.addEventListener('pageshow',event=>{if(event.persisted)parentResumeSavedV
 ielts46InitCompactEmbedV29_();
 
 
-startIeltsParentPortal_();
+/* IELTS_WRITING_STARTUP_V1 */
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',startIeltsParentPortal_,{once:true});
+}else{
+  startIeltsParentPortal_();
+}
+/* IELTS_WRITING_STARTUP_END_V1 */
 
 
 setInterval(function(){ if (state.dashboard && state.active === 'schedule') renderSchedule(); }, 60000);
