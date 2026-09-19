@@ -2866,7 +2866,7 @@ function canonicalSelfStudyResultCodeV1_(value) {
   const reading = fighterReadingCodeV27_(value);
   if (reading) return reading;
   const raw = clean_(value).toUpperCase();
-  let match = raw.match(/\bFL\s*(\d+)\s*-?\s*P\s*0*(\d+)\b/);
+  let match = raw.match(/\bFL\s*(\d+)\s*-?\s*[PR]\s*0*(\d+)\b/);
   if (match) return 'FL' + Number(match[1]) + '-P' + String(Number(match[2])).padStart(2, '0');
   match = raw.match(/\bSHADOW(?:ING)?\s*-?\s*L\s*0*(\d+)\s*-\s*0*(\d+)\b/);
   return match ? 'SHADOW-L' + Number(match[1]) + '-' + String(Number(match[2])).padStart(3, '0') : '';
@@ -3028,7 +3028,7 @@ function submissionTaskIndexV7_(assignment, item) {
   assignment.tasks.forEach(function(task, index) {
     const facts = submissionTaskFactsV7_(task);
     if (facts.redo) return;
-    if (profile.role === 'vocabulary' && !facts.vocabulary) return;
+    if (profile.role === 'vocabulary' && (!facts.vocabulary || facts.correction)) return;
     if (profile.role === 'preparation' && !(facts.preparation && facts.theoryCopy)) return;
     if (profile.role === 'correction' && !facts.correction) return;
     if (profile.role === 'writing' && !facts.writing) return;
@@ -3048,12 +3048,12 @@ function submissionTaskIndexV7_(assignment, item) {
 function assignmentKey_(value) {
   const text = String(value || '').toLowerCase().normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-  let match = text.match(/(?:unit|\bu)\s*0*(\d+)(?:\s*[.,]\s*0*(\d+))?/);
+  let match = text.match(/(?:unit|\bu)\s*0*(\d+)(?:\s*[.,_]\s*0*(\d+))?/);
   if (match) return 'U' + Number(match[1]) + (match[2] !== undefined ? '.' + Number(match[2]) : '');
   match = text.match(/practice\s*test\s*0*(\d+)/);
   if (match) return 'B' + Number(match[1]);
-  match = text.match(/test\s*0*(\d+)/);
-  if (match) return 'U' + Number(match[1]);
+  match = text.match(/test\s*0*(\d+)(?:\s*[.,_]\s*0*(\d+))?/);
+  if (match) return 'U' + Number(match[1]) + (match[2] !== undefined ? '.' + Number(match[2]) : '');
   match = text.match(/(?:buoi|de)\s*0*(\d+)/);
   if (match) return 'B' + Number(match[1]);
   return '';
@@ -3100,7 +3100,7 @@ function unitNumber_(value) {
   return match ? Number(match[1]) : null;
 }
 
-return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
+return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,practiceTestNumberFromAssignmentV8_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
 /* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence and source-specific authority. */
 /* FIGHTER_CANONICAL_PDF_PROOF_FORWARD_V1 */
 (function(root){
@@ -3132,7 +3132,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       if((program==='vf1'||program==='vf2')&&/tra cuu truoc/.test(text))return true;
       if(!assignment||program!=='pt')return false;
       const role=practiceTaskRoleV17_(task);
-      return role==='redo_notebook'||(role==='notebook_fallback_redo'&&!String(task&&task.url||'').trim());
+      return role==='redo_notebook'||role==='combined_notebooks'||role==='notebook_fallback_redo';
     };
     function manualAuthority(value,student,assignment,index,state,guard){
       const p=state&&state.manualSubmissionVerification;
@@ -3216,10 +3216,10 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       return {known:true,complete:first.every(Boolean),completedAt:first.every(Boolean)?Math.max(...first):0};
     }
     function retakeMatches(receipt,assignment){
-      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),request=m.parseRetakeRequest_(category,assignment.sourceCode||assignment.code||'');
+      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),practiceTest=category==='PRACTICE'&&typeof m.practiceTestNumberFromAssignmentV8_==='function'?m.practiceTestNumberFromAssignmentV8_(assignment):0,requestCode=practiceTest?'PT-'+String(practiceTest).padStart(2,'0'):(assignment.sourceCode||assignment.code||''),request=m.parseRetakeRequest_(category,requestCode);
       if(receipt.family!=='FIGHTER_RETAKE'||!category||receipt.category!==category||!request)return false;
-      const expected=m.canonicalSubmissionCodeV2_(assignment.sourceCode||assignment.code),actual=m.canonicalSubmissionCodeV2_(receipt.code);
-      if(/^(?:VF[12]|GF|RI[12]|AP)-U\d+(?:_\d+)?$/.test(expected)||/^PT-\d+$/.test(expected))return expected===actual;
+      const expected=m.canonicalSubmissionCodeV2_(requestCode),actual=m.canonicalSubmissionCodeV2_(receipt.code);
+      if((/^(?:VF[12]|GF|RI[12]|AP)-U\d+(?:_\d+)?$/.test(expected)||/^PT-\d+$/.test(expected))&&expected===actual)return true;
       return m.retakeCodeMatches_({category:receipt.category,code:receipt.code,assignmentKey:m.assignmentKey_(receipt.code),unit:m.unitNumber_(receipt.code)},request);
     }
     // FIGHTER_NEW_ENROLLMENT_PROJECTION_V28: one eligibility rule for every
