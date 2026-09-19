@@ -2573,9 +2573,20 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
     function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset)retryCount=0;}
     function authoritative(payload){
       var coverage=payload&&payload.coverage,authority=payload&&payload.assignmentAuthority;
-      var sourcesComplete=Boolean(payload&&payload.coverageComplete===true)||Boolean(Array.isArray(coverage)&&coverage.length&&coverage.every(function(source){return source&&source.complete===true;}));
-      var assignmentsComplete=!authority||authority.complete===true;
+      // Match the renderer's proof contract. A complete-but-stale response is
+      // not a finished verification, even when its summary says complete.
+      function verified(source){return Boolean(source&&source.complete===true&&source.freshRead===true&&Number.isFinite(Number(source.verifiedAt))&&Number(source.verifiedAt)>0);}
+      var sourcesComplete=Boolean(Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
+      var assignmentsComplete=!authority||authority.schema===1&&verified(authority);
       return Boolean(sourcesComplete&&assignmentsComplete);
+    }
+    function renderSafely(){
+      if(!visible()||!options.render)return;
+      try{options.render();}catch(error){
+        // Rendering must not prevent the request from starting or turn a
+        // successful source read into repeated network requests.
+        if(root.console&&root.console.error)root.console.error('SUBMISSION_VIEW_RENDER_FAILED');
+      }
     }
     function retryDelay(){
       var delays=[2000,5000,10000,20000,30000,45000,60000];
@@ -2601,7 +2612,7 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
       if(job){if(needsFresh)queued=true;return job;}
       cancelRetry(!resuming);
       var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
-      if(visible()&&options.render)options.render();
+      renderSafely();
       var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
         if(!isCurrent(run))return false;
         if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
@@ -2614,13 +2625,13 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
         readState=retryNeeded?'loading':'ready';
         if(needsFresh||!visible()){parked=payload;current=null;}else{current=payload;parked=null;}
         retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
-        if(visible()&&options.render)options.render();return true;
+        renderSafely();return true;
       }).catch(function(){
         if(isCurrent(run)){
           // A transport/quota error is not a result. Keep this verification
           // session pending and retry it instead of showing an unknown status.
           retryNeeded=true;readState='loading';options.guard.fail(ticket);current=null;parked=null;
-          if(visible()&&options.render)options.render();
+          renderSafely();
         }
         return false;
       }).finally(function(){if(job===task){
@@ -2638,6 +2649,10 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
       if(identity&&active&&active!==identity){clear();return target;}
       if(!target||!identity||active!==identity||!visible())return target;
       if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
+      // A visibility-driven guard reset must not discard a completed read.
+      // Rebind only this authenticated pupil's current response, never an old
+      // retained positive-only snapshot, and do not read the sources again.
+      if(current&&!options.guard.isCurrent(ticket))ticket=options.guard.begin('receipts');
       return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
     return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
@@ -3376,12 +3391,12 @@ const projectFighterReceipts_=createFighterReceiptProjector(fighterReceiptMatchi
 /* FIGHTER_SUBMISSION_STATUS_V1: verification never changes teacher evidence. */
 const submissionGuard_ = createSubmissionStatusGuard({
   getIdentity: () => {const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?String(b.className)+'|'+b.studentName:'';},
-  isVisible: () => !document.hidden
+  isVisible: () => Boolean(fighterApi.parent.authorized&&fighterApi.parent.binding)
 });
 let fighterSubmissionProjected_=null;
 function submissionCan_(item){return Boolean(item&&item.submissionManualAuthority&&fighterApi.parent.authorized)||submissionGuard_.can(item);}
 const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
-  isVisible:()=>!document.hidden,request:()=>fighterApi.parent.request('submissions',false),project:projectFighterReceipts_,
+  isVisible:()=>Boolean(fighterApi.parent.authorized&&fighterApi.parent.binding),request:()=>fighterApi.parent.request('submissions',false),project:projectFighterReceipts_,
   render:()=>{if(fighterParentPackage_&&fighterApi.parent.authorized&&!document.hidden)fighterParentApply_();}
 });
 function fighterSubmissionReset_(){submissionOwner_.suspend();fighterClearPendingHomeworkV15_();}
