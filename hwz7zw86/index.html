@@ -2576,76 +2576,88 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionStatusGuard:createSubmissionStatusGuard};
 })(typeof globalThis==='object'?globalThis:this);
 
-/* SUBMISSION_RECEIPT_OWNER_V1: one lightweight current-pupil read. */
-(function(root){
-  'use strict';
-  function createSubmissionReceiptOwner(options){
-    var generation=0,identity='',job=null,ticket=null,current=null,parked=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0;
-    function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
-    function visible(){return !options.isVisible||options.isVisible()===true;}
-    function isCurrent(run){var active=who();return run===generation&&Boolean(identity)&&(active===identity||needsFresh&&!active);}
-    function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset)retryCount=0;}
-    function transientAuthority(payload){
-      var a=payload&&payload.assignmentAuthority;
-      return Boolean(payload&&/^KIDS [1-9]\d{0,2}$/.test(payload.className)&&a&&a.schema===1&&a.className===payload.className&&a.complete===false&&a.freshRead===false&&a.diagnostics&&a.diagnostics.failureCode==='VERSION_CHANGED');
-    }
-    function suspend(){if(current)parked=current;needsFresh=true;current=null;ticket=null;options.guard.suspend();}
-    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
-    // SUBMISSION_INVALIDATE_POSITIVES_V1: explicit refresh invalidates absence, not same-pupil confirmed receipts.
-    function invalidate(){
-      if(!identity||who()!==identity){clear();return;}
-      cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();
-    }
-    function refresh(retry){
-      // The authenticated opening read continues while hidden; painting remains visibility-gated.
-      var resuming=Boolean(retry&&retry.run===generation&&retry.identity===identity&&isCurrent(retry.run));
-      var active=who();if(!active)return Promise.resolve(false);
-      if(active!==identity){clear();identity=active;}
-      if(job){if(needsFresh)queued=true;return job;}
-      cancelRetry(!resuming);
-      var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
-      if(visible()&&options.render)options.render();
-      var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
-        if(!isCurrent(run))return false;
-        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
-        // Receipt absence is not a withdrawal of an earlier confirmed receipt.
-        // Keep the server-positive union for this exact identity, even when a
-        // later source snapshot omits an attempt. No local submit event enters it.
-        var merged=new Map();
-        (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
-        payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
-        retryNeeded=transientAuthority(payload)&&retryCount<2;
-        if(!retryNeeded)cancelRetry(true);
-        readState='ready';if(needsFresh||!visible()){parked=payload;current=null;}else{current=payload;parked=null;}retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
-        if(visible()&&options.render)options.render();return true;
-      }).catch(function(){
-        if(isCurrent(run)){readState='error';options.guard.fail(ticket);current=null;parked=null;if(visible()&&options.render)options.render();}
-        return false;
-      }).finally(function(){if(job===task){
-        job=null;
-        if(queued&&visible()&&who()===identity){queued=false;refresh();}
-        else if(retryNeeded&&isCurrent(run)){
-          // Retain/render this response first. Retry only a concurrent Schedule
-          // edit, never a persistent family/source issue, and never overlap a read.
-          var intent={run:run,identity:identity};
-          retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job){retryCount++;refresh(intent);}},1500);
-        }
-      }});
-      job=task;return task;
-    }
-    function reapply(target){
-      // SUBMISSION_PARKED_SNAPSHOT_V1: restore the same opening proof only after the same identity is authorized again.
-      var active=who();
-      if(identity&&active&&active!==identity){clear();return target;}
-      if(!target||!identity||active!==identity||!visible())return target;
-      if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
-      // Rebinding keeps the source's original verifiedAt; it performs no request and does not renew source freshness.
-      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
-    }
-    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get readState(){return who()===identity&&identity?readState:'idle';}};
-  }
-  root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
-  if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
+/* SUBMISSION_RECEIPT_OWNER_V1: one reliable current-pupil verification session. */
+(function(root){
+  'use strict';
+  function createSubmissionReceiptOwner(options){
+    var generation=0,identity='',job=null,ticket=null,current=null,parked=null,retained=null,needsFresh=false,queued=false,readState='idle',retryTimer=null,retryCount=0;
+    function who(){try{return String(options.getIdentity()||'');}catch(_){return '';}}
+    function visible(){return !options.isVisible||options.isVisible()===true;}
+    function isCurrent(run){var active=who();return run===generation&&Boolean(identity)&&(active===identity||needsFresh&&!active);}
+    function cancelRetry(reset){if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}if(reset)retryCount=0;}
+    function authoritative(payload){
+      var coverage=payload&&payload.coverage,authority=payload&&payload.assignmentAuthority;
+      var sourcesComplete=Boolean(payload&&payload.coverageComplete===true)||Boolean(Array.isArray(coverage)&&coverage.length&&coverage.every(function(source){return source&&source.complete===true;}));
+      var assignmentsComplete=!authority||authority.complete===true;
+      return Boolean(sourcesComplete&&assignmentsComplete);
+    }
+    function retryDelay(){
+      var delays=[2000,5000,10000,20000,30000,45000,60000];
+      var base=delays[Math.min(retryCount,delays.length-1)],hash=0,value=identity;
+      for(var i=0;i<value.length;i++)hash=(hash*31+value.charCodeAt(i))>>>0;
+      return base+(hash%5000)+Math.floor(Math.random()*750);
+    }
+    function suspend(){if(current)parked=current;needsFresh=true;current=null;ticket=null;options.guard.suspend();}
+    function clear(){cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();identity='';retained=null;}
+    // Explicit refresh starts a new verification session but keeps confirmed
+    // positive receipts for the same pupil. Absence is never reused.
+    function invalidate(){
+      if(!identity||who()!==identity){clear();return;}
+      cancelRetry(true);readState='idle';generation++;job=null;ticket=null;current=null;parked=null;needsFresh=false;queued=false;options.guard.clear();
+    }
+    function refresh(retry){
+      // The session continues while the browser tab is hidden. A single job is
+      // allowed at a time; retries use increasing delays and stop immediately
+      // after every receipt source and assignment authority is complete.
+      var resuming=Boolean(retry&&retry.run===generation&&retry.identity===identity&&isCurrent(retry.run));
+      var active=who();if(!active)return Promise.resolve(false);
+      if(active!==identity){clear();identity=active;}
+      if(job){if(needsFresh)queued=true;return job;}
+      cancelRetry(!resuming);
+      var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
+      if(visible()&&options.render)options.render();
+      var task=Promise.resolve().then(function(){return options.request();}).then(function(payload){
+        if(!isCurrent(run))return false;
+        if(!payload||payload.schema!==1||!Array.isArray(payload.receipts)||!Array.isArray(payload.coverage)||payload.emptyReceipts!==undefined&&!Array.isArray(payload.emptyReceipts))throw new Error('INVALID_SUBMISSION_RECEIPTS');
+        // Keep every server-confirmed positive receipt throughout the session.
+        var merged=new Map();
+        (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
+        payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
+        retryNeeded=!authoritative(payload);
+        if(!retryNeeded)cancelRetry(true);
+        readState=retryNeeded?'loading':'ready';
+        if(needsFresh||!visible()){parked=payload;current=null;}else{current=payload;parked=null;}
+        retained=Object.assign({},payload,{receipts:Array.from(merged.values())});
+        if(visible()&&options.render)options.render();return true;
+      }).catch(function(){
+        if(isCurrent(run)){
+          // A transport/quota error is not a result. Keep this verification
+          // session pending and retry it instead of showing an unknown status.
+          retryNeeded=true;readState='loading';options.guard.fail(ticket);current=null;parked=null;
+          if(visible()&&options.render)options.render();
+        }
+        return false;
+      }).finally(function(){if(job===task){
+        job=null;
+        if(queued&&visible()&&who()===identity){queued=false;refresh();}
+        else if(retryNeeded&&isCurrent(run)){
+          var intent={run:run,identity:identity},delay=retryDelay();retryCount+=1;
+          retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job)refresh(intent);},delay);
+        }
+      }});
+      job=task;return task;
+    }
+    function reapply(target){
+      var active=who();
+      if(identity&&active&&active!==identity){clear();return target;}
+      if(!target||!identity||active!==identity||!visible())return target;
+      if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
+      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
+    }
+    return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
+  }
+  root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
+  if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
 })(typeof globalThis==='object'?globalThis:this);
 
 /* DIRECT_SUBMISSION_DEADLINE_POLICY_V1: dashboard deadlines, September 2026 onward. */
@@ -3108,107 +3120,110 @@ function unitNumber_(value) {
 }
 
 return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyResultCodeV1_,submissionTaskIndexV7_,submissionTaskFactsV7_,submissionSourceProfileV7_,normalizeSearchText_,practiceTestNumberFromAssignmentV8_,retakeCategory_,parseRetakeRequest_,assignmentKey_,unitNumber_,retakeCodeMatches_};})();
-/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence and source-specific authority. */
-/* FIGHTER_CANONICAL_PDF_PROOF_FORWARD_V1 */
-(function(root){
-  'use strict';
-  function createFighterReceiptProjector(m){
-    // FIGHTER_SOURCE_SPECIFIC_AUTHORITY_V1: online receipts and manual tracker cells have separate authority.
-    const list=v=>Array.isArray(v)?v:[],normalizeSearchText_=m.normalizeSearchText_;
-    function practiceTaskRoleV17_(task) {
-  const title = normalizeSearchText_(task && task.title);
-  const text = normalizeSearchText_([task && task.title, task && task.instructions].join(' '));
-  const titleHasNotebook = /so luyen de/.test(title);
-  const textHasNotebook = /so luyen de/.test(text);
-  if (!titleHasNotebook && !textHasNotebook) return '';
-  const explicitRedoTitle = /lam lai|redo/.test(title);
-  const combinedTitle = titleHasNotebook && /so tu vung/.test(title);
-  const redoBody = /hoan thien|cau sai|dap an dung|giai thich|kinh nghiem|lam lai|chua practice test/.test(text);
-  if (explicitRedoTitle) return 'redo_notebook';
-  if (combinedTitle) return 'combined_notebooks';
-  if (titleHasNotebook) return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
-  if (/so tu vung/.test(text)) return 'combined_notebooks';
-  return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
-}
-    const manual=(task,assignment)=>{
-      const program=m.assignmentProgramKeyV7_(assignment&&assignment.program);
-      const text=normalizeSearchText_([task&&task.title,task&&task.instructions].join(' '));
-      // The teacher-maintained sources are a closed list: Vocabulary 1/2
-      // "Tra cứu trước", plus Practice Test redo work written in Sổ luyện đề.
-      // Every other task is sourced from its official Form.
-      if((program==='vf1'||program==='vf2')&&/tra cuu truoc/.test(text))return true;
-      if(!assignment||program!=='pt')return false;
-      const role=practiceTaskRoleV17_(task);
+/* FIGHTER_DIRECT_RECEIPT_PROJECTOR_V1: original receipt evidence and source-specific authority. */
+/* FIGHTER_CANONICAL_PDF_PROOF_FORWARD_V1 */
+(function(root){
+  'use strict';
+  function createFighterReceiptProjector(m){
+    // FIGHTER_SOURCE_SPECIFIC_AUTHORITY_V1: online receipts and manual tracker cells have separate authority.
+    const list=v=>Array.isArray(v)?v:[],normalizeSearchText_=m.normalizeSearchText_;
+    function practiceTaskRoleV17_(task) {
+  const title = normalizeSearchText_(task && task.title);
+  const text = normalizeSearchText_([task && task.title, task && task.instructions].join(' '));
+  const titleHasNotebook = /so luyen de/.test(title);
+  const textHasNotebook = /so luyen de/.test(text);
+  if (!titleHasNotebook && !textHasNotebook) return '';
+  const explicitRedoTitle = /lam lai|redo/.test(title);
+  const combinedTitle = titleHasNotebook && /so tu vung/.test(title);
+  const redoBody = /hoan thien|cau sai|dap an dung|giai thich|kinh nghiem|lam lai|chua practice test/.test(text);
+  if (explicitRedoTitle) return 'redo_notebook';
+  if (combinedTitle) return 'combined_notebooks';
+  if (titleHasNotebook) return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
+  if (/so tu vung/.test(text)) return 'combined_notebooks';
+  return redoBody ? 'notebook_fallback_redo' : 'notebook_fallback';
+}
+    const manual=(task,assignment)=>{
+      const program=m.assignmentProgramKeyV7_(assignment&&assignment.program);
+      const text=normalizeSearchText_([task&&task.title,task&&task.instructions].join(' '));
+      // The teacher-maintained sources are a closed list: Vocabulary 1/2
+      // "Tra cứu trước", plus Practice Test redo work written in Sổ luyện đề.
+      // Every other task is sourced from its official Form.
+      if((program==='vf1'||program==='vf2')&&/tra cuu truoc/.test(text))return true;
+      if(!assignment||program!=='pt')return false;
+      const role=practiceTaskRoleV17_(task);
       return role==='redo_notebook'||role==='combined_notebooks'||role==='notebook_fallback_redo';
-    };
-    function manualAuthority(value,student,assignment,index,state,guard){
-      const p=state&&state.manualSubmissionVerification;
-      return Boolean(state&&state.submissionAuthority==='manual-tracker'&&guard.isVerifiedProof(p)&&
-        p.className===value.className&&p.studentName===student.name&&p.assignmentId===assignment.id&&p.taskIndex===index);
-    }
-    function unmappedManualRead(value,student,state,guard){
-      const p=value.manualTrackerRead;
-      return Boolean(state&&!state.manualSubmissionVerification&&guard.isVerifiedProof(p)&&p.decisionKnown===false&&
-        p.className===value.className&&p.studentName===student.name&&
-        typeof p.sourceVersion==='string'&&p.sourceVersion.trim()&&typeof p.rosterRevision==='string'&&p.rosterRevision.trim());
-    }
-    function proof(row){return row&&row.complete===true&&row.freshRead===true?{schema:1,complete:true,freshRead:true,verifiedAt:Number(row.verifiedAt)||0}:null;}
-    function grant(guard,ticket,target,coverage,fresh){const p=proof(coverage);if(ticket&&p)guard.authorize(ticket,target,p,{complete:true,stale:!fresh});}
-    function expectedCodes(assignment,task){
-      const facts=m.submissionTaskFactsV7_(task),program=m.assignmentProgramKeyV7_(assignment.program).toUpperCase();
-      // FIGHTER_CURRENT_SOURCE_READ_V2: canonical academic session; no tracker fallback.
-      const academicSession=program==='AP'&&/^DVHT-S[1-9][0-9]*$/i.test(String(assignment.sourceCode||''))?Number(String(assignment.sourceCode).split('-S')[1]):0;
-      return [task.sourceCode,task.code,assignment.sourceCode,assignment.code,
-        academicSession&&academicSession===Number(assignment.sessionNumber)?'BUOI '+academicSession:'',
-        facts.unit&&program?program+'-U'+facts.unit+(facts.subunit!==null?'_'+facts.subunit:''):'',
-        facts.session?'BUOI '+facts.session:'',facts.test?'TEST '+facts.test:'',facts.practiceTest?'PT-'+String(facts.practiceTest).padStart(2,'0'):''].filter(Boolean);
-    }
-    function taskCoverage(payload,assignment,task,index){
-      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),redo=m.submissionTaskFactsV7_(task).redo;
-      const candidates=list(payload.coverage).filter(c=>redo?c.family==='FIGHTER_RETAKE'&&c.category===category:
-        ['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(c.family)&&expectedCodes(assignment,task).some(code=>m.submissionTaskIndexV7_(assignment,{assignmentId:code,sourceTab:c.sourceTab,sourceName:c.sourceName})===index));
-      const candidate=candidates.find(c=>proof(c));if(!candidate)return null;
-      // A failed sibling tab in the same source family is not proof of absence.
-      const related=list(payload.coverage).filter(c=>c.family===candidate.family&&(!redo||c.category===category));
-      return related.length&&related.every(c=>proof(c))?{...candidate,verifiedAt:Math.min(...related.map(c=>Number(c.verifiedAt)||0))}:null;
-    }
-    function priorContent(target,found,assignment,peers){
-      if(!assignment||!found.length||!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known)return [];
-      const reference=found[0],rows=list(target.directReceiptContentEvidence).concat(list(target.submissionAttempts),[target]);
-      return rows.filter(row=>{
-        if(!row||row.contentStatus==='empty'||!root.DirectSubmissionAssignmentWindow.contains(row,assignment,peers))return false;
-        const key=row.code||row.sourceCode||row.assignmentCode;
-        if(key&&m.canonicalSubmissionCodeV2_(key)!==m.canonicalSubmissionCodeV2_(reference.code))return false;
-        if(row.family&&row.family!==reference.family)return false;
-        return list(row.submissionFiles).concat(list(row.links),list(row.evidenceUrls).map(url=>({url})),row.viewUrl?[{url:row.viewUrl}]:[],row.submissionUrl?[{url:row.submissionUrl}]:[]).some(file=>{
-          try{const u=new URL(file.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch(_){return false;}
-        });
-      }).map(row=>{
-        const files=list(row.submissionFiles).concat(list(row.links),list(row.evidenceUrls).map(url=>({url})),row.viewUrl?[{url:row.viewUrl}]:[],row.submissionUrl?[{url:row.submissionUrl}]:[]).filter(file=>{try{const u=new URL(file.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch(_){return false;}});
-        return {id:row.id||row.receiptId,code:reference.code,family:reference.family,sourceTab:reference.sourceTab,sourceName:reference.sourceName,submittedAt:row.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(row),evidenceUrls:files.map(file=>file.url),evidenceTypes:list(row.evidenceTypes).concat(files.map(file=>file.type==='pdf'?'document':file.type).filter(Boolean)),components:row.components,canonicalPdf:row.canonicalPdf};
-      });
-    }
-    function received(target,found,assignment,peers){
-      if(!found.length)return;
-      const prior=priorContent(target,found,assignment,peers||[]),content=found.filter(r=>r.contentStatus!=='empty').concat(prior);
-      const hasContent=content.length>0;
-      if(assignment&&prior.length){
-        const unique=new Map();content.forEach(row=>unique.set(JSON.stringify([row.id||row.receiptId||'',root.DirectSubmissionDeadlinePolicy.receiptTime(row),row.evidenceUrls||[],row.evidenceTypes||[]]),row));
-        target.directReceiptContentEvidence=Array.from(unique.values());
-      }
-      target.receiptReceived=true;target.contentMissing=!hasContent;target.submitted=hasContent;
-      target.submittedAt=target.submittedAt||found[0].submittedAt;
-      if(target.contentMissing){target.completed=false;target.missing=true;target.status='Đã nhận lượt gửi nhưng bài trống';}
-      else if(!target.completed)target.status='Đã nộp bài';
-      target.submissionAttempts=root.DirectSubmissionHistory.merge(target.submissionAttempts,found.map((r,i)=>({receiptId:r.id,contentStatus:r.contentStatus,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),attempt:i+1,sourceAttempt:r.attempt||i+1,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,links:r.links,family:r.family,part:r.part,canonicalPdf:r.canonicalPdf})));
-      // A receipt proves an upload; it does not silently complete a second
-      // required PDF/video/notebook component or replace a teacher comment.
-      const types=new Set(content.flatMap(r=>list(r.evidenceTypes)));
-      target.directReceiptEvidence={types:Array.from(types),ids:found.map(r=>r.id)};
-      const files=new Map(list(target.submissionFiles).map(file=>[file.url,file]));
-      found.forEach(r=>list(r.evidenceUrls).concat(r.viewUrl?[r.viewUrl]:[]).forEach(raw=>{
-        try{const url=new URL(raw);if(url.protocol==='https:'&&!url.username&&!url.password&&!files.has(url.href))files.set(url.href,{url:url.href,type:list(r.evidenceTypes).length===1&&r.evidenceTypes[0]==='video'?'video':'file'});}catch(_){}
-      }));target.submissionFiles=Array.from(files.values());
+    };
+    function manualAuthority(value,student,assignment,index,state,guard){
+      const p=state&&state.manualSubmissionVerification;
+      return Boolean(state&&state.submissionAuthority==='manual-tracker'&&guard.isVerifiedProof(p)&&
+        p.className===value.className&&p.studentName===student.name&&p.assignmentId===assignment.id&&p.taskIndex===index);
+    }
+    function unmappedManualRead(value,student,state,guard){
+      const p=value.manualTrackerRead;
+      return Boolean(state&&!state.manualSubmissionVerification&&guard.isVerifiedProof(p)&&p.decisionKnown===false&&
+        p.className===value.className&&p.studentName===student.name&&
+        typeof p.sourceVersion==='string'&&p.sourceVersion.trim()&&typeof p.rosterRevision==='string'&&p.rosterRevision.trim());
+    }
+    function proof(row){return row&&row.complete===true&&row.freshRead===true?{schema:1,complete:true,freshRead:true,verifiedAt:Number(row.verifiedAt)||0}:null;}
+    function grant(guard,ticket,target,coverage,fresh){const p=proof(coverage);if(ticket&&p)guard.authorize(ticket,target,p,{complete:true,stale:!fresh});}
+    function expectedCodes(assignment,task){
+      const facts=m.submissionTaskFactsV7_(task),program=m.assignmentProgramKeyV7_(assignment.program).toUpperCase();
+      // FIGHTER_CURRENT_SOURCE_READ_V2: canonical academic session; no tracker fallback.
+      const academicSession=program==='AP'&&/^DVHT-S[1-9][0-9]*$/i.test(String(assignment.sourceCode||''))?Number(String(assignment.sourceCode).split('-S')[1]):0;
+      return [task.sourceCode,task.code,assignment.sourceCode,assignment.code,
+        academicSession&&academicSession===Number(assignment.sessionNumber)?'BUOI '+academicSession:'',
+        facts.unit&&program?program+'-U'+facts.unit+(facts.subunit!==null?'_'+facts.subunit:''):'',
+        facts.session?'BUOI '+facts.session:'',facts.test?'TEST '+facts.test:'',facts.practiceTest?'PT-'+String(facts.practiceTest).padStart(2,'0'):''].filter(Boolean);
+    }
+    function taskCoverage(payload,assignment,task,index){
+      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),redo=m.submissionTaskFactsV7_(task).redo;
+      const candidates=list(payload.coverage).filter(c=>redo?c.family==='FIGHTER_RETAKE'&&c.category===category:
+        ['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(c.family)&&expectedCodes(assignment,task).some(code=>m.submissionTaskIndexV7_(assignment,{assignmentId:code,sourceTab:c.sourceTab,sourceName:c.sourceName})===index));
+      const candidate=candidates.find(c=>proof(c));if(!candidate)return null;
+      // A failed sibling tab in the same source family is not proof of absence.
+      const related=list(payload.coverage).filter(c=>c.family===candidate.family&&(!redo||c.category===category));
+      return related.length&&related.every(c=>proof(c))?{...candidate,verifiedAt:Math.min(...related.map(c=>Number(c.verifiedAt)||0))}:null;
+    }
+    function priorContent(target,found,assignment,peers){
+      if(!assignment||!found.length||!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known)return [];
+      const reference=found[0],rows=list(target.directReceiptContentEvidence).concat(list(target.submissionAttempts),[target]);
+      return rows.filter(row=>{
+        if(!row||row.contentStatus==='empty'||!root.DirectSubmissionAssignmentWindow.contains(row,assignment,peers))return false;
+        const key=row.code||row.sourceCode||row.assignmentCode;
+        if(key&&m.canonicalSubmissionCodeV2_(key)!==m.canonicalSubmissionCodeV2_(reference.code))return false;
+        if(row.family&&row.family!==reference.family)return false;
+        return list(row.submissionFiles).concat(list(row.links),list(row.evidenceUrls).map(url=>({url})),row.viewUrl?[{url:row.viewUrl}]:[],row.submissionUrl?[{url:row.submissionUrl}]:[]).some(file=>{
+          try{const u=new URL(file.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch(_){return false;}
+        });
+      }).map(row=>{
+        const files=list(row.submissionFiles).concat(list(row.links),list(row.evidenceUrls).map(url=>({url})),row.viewUrl?[{url:row.viewUrl}]:[],row.submissionUrl?[{url:row.submissionUrl}]:[]).filter(file=>{try{const u=new URL(file.url);return u.protocol==='https:'&&!u.username&&!u.password;}catch(_){return false;}});
+        return {id:row.id||row.receiptId,code:reference.code,family:reference.family,sourceTab:reference.sourceTab,sourceName:reference.sourceName,submittedAt:row.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(row),evidenceUrls:files.map(file=>file.url),evidenceTypes:list(row.evidenceTypes).concat(files.map(file=>file.type==='pdf'?'document':file.type).filter(Boolean)),components:row.components,canonicalPdf:row.canonicalPdf};
+      });
+    }
+    function received(target,found,assignment,peers){
+      if(!found.length)return;
+      const prior=priorContent(target,found,assignment,peers||[]),content=found.filter(r=>r.contentStatus!=='empty').concat(prior);
+      const hasContent=content.length>0;
+      if(assignment&&prior.length){
+        const unique=new Map();content.forEach(row=>unique.set(JSON.stringify([row.id||row.receiptId||'',root.DirectSubmissionDeadlinePolicy.receiptTime(row),row.evidenceUrls||[],row.evidenceTypes||[]]),row));
+        target.directReceiptContentEvidence=Array.from(unique.values());
+      }
+      target.receiptReceived=true;target.contentMissing=!hasContent;target.submitted=hasContent;
+      target.submittedAt=found[0].submittedAt;
+      if(target.contentMissing){target.completed=false;target.missing=true;target.status='Đã nhận lượt gửi nhưng bài trống';}
+      else if(!target.completed)target.status='Đã nộp bài';
+      const foundIds=new Set(found.map(r=>r.id).filter(Boolean));
+      const currentAttempts=list(target.submissionAttempts).filter(row=>foundIds.has(row&&row.receiptId));
+      target.submissionAttempts=root.DirectSubmissionHistory.merge(currentAttempts,found.map((r,i)=>({receiptId:r.id,contentStatus:r.contentStatus,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),attempt:i+1,sourceAttempt:r.attempt||i+1,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,links:r.links,family:r.family,part:r.part,canonicalPdf:r.canonicalPdf})));
+      // A receipt proves an upload; it does not silently complete a second
+      // required PDF/video/notebook component or replace a teacher comment.
+      const types=new Set(content.flatMap(r=>list(r.evidenceTypes)));
+      target.directReceiptEvidence={types:Array.from(types),ids:found.map(r=>r.id)};
+      const currentKeys=new Set(found.flatMap(r=>list(r.evidenceUrls).concat(list(r.links).map(file=>file&&file.url),r.viewUrl?[r.viewUrl]:[])).map(url=>root.DirectSubmissionHistory.fileKey(url)).filter(Boolean));
+      const files=new Map(list(target.submissionFiles).filter(file=>currentKeys.has(root.DirectSubmissionHistory.fileKey(file&&file.url))).map(file=>[file.url,file]));
+      found.forEach(r=>list(r.evidenceUrls).concat(r.viewUrl?[r.viewUrl]:[]).forEach(raw=>{
+        try{const url=new URL(raw);if(url.protocol==='https:'&&!url.username&&!url.password&&!files.has(url.href))files.set(url.href,{url:url.href,type:list(r.evidenceTypes).length===1&&r.evidenceTypes[0]==='video'?'video':'file'});}catch(_){}
+      }));target.submissionFiles=Array.from(files.values());
       return content;
     }
     function clearUnmatchedDirectEvidence(target){
@@ -3230,332 +3245,323 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       target.submitted=false;
       target.submittedAt='';
       target.contentMissing=false;
+      target.completed=false;
+      target.missing=true;
     }
-    function componentCompletion(found){
-      if(!found.length)return {known:false,complete:false};
-      if(found.every(r=>r.contentStatus==='empty'))return {known:true,complete:false,completedAt:0};
-      const notebooks=found.some(r=>r.family==='FIGHTER_PRACTICE_NOTEBOOKS');
-      const source=m.submissionSourceProfileV7_(found[0].sourceTab,found[0].sourceName);
-      const required=notebooks?['practiceNotebook','vocabularyNotebook']:source?source.types:[];
-      if(!required.length)return {known:false,complete:false};
-      const first=required.map(type=>found.filter(r=>notebooks?r.components&&r.components[type]===true:list(r.evidenceTypes).includes(type==='pdf'?'document':type)||list(r.evidenceTypes).includes(type))
-        .map(r=>root.DirectSubmissionDeadlinePolicy.receiptTime(r)).filter(Boolean).sort((a,b)=>a-b)[0]||0);
-      return {known:true,complete:first.every(Boolean),completedAt:first.every(Boolean)?Math.max(...first):0};
-    }
-    function retakeMatches(receipt,assignment){
-      const category=m.retakeCategory_(assignment.program||assignment.sourceCode),practiceTest=category==='PRACTICE'&&typeof m.practiceTestNumberFromAssignmentV8_==='function'?m.practiceTestNumberFromAssignmentV8_(assignment):0,requestCode=practiceTest?'PT-'+String(practiceTest).padStart(2,'0'):(assignment.sourceCode||assignment.code||''),request=m.parseRetakeRequest_(category,requestCode);
-      if(receipt.family!=='FIGHTER_RETAKE'||!category||receipt.category!==category||!request)return false;
+    function componentCompletion(found,task){
+      if(!found.length)return {known:false,complete:false};
+      if(found.every(r=>r.contentStatus==='empty'))return {known:true,complete:false,completedAt:0};
+      const notebooks=found.some(r=>r.family==='FIGHTER_PRACTICE_NOTEBOOKS');
+      const source=m.submissionSourceProfileV7_(found[0].sourceTab,found[0].sourceName);
+      const facts=m.submissionTaskFactsV7_(task||{});
+      const combinedReading=Boolean(source&&/^ri[12]$/.test(source.program)&&facts.vocabulary&&facts.correction);
+      const required=notebooks?['practiceNotebook','vocabularyNotebook']:combinedReading?['vocabularyNotebook','correctionNotebook']:source?source.types:[];
+      if(!required.length)return {known:false,complete:false};
+      const first=required.map(type=>found.filter(r=>notebooks||combinedReading?r.components&&r.components[type]===true:list(r.evidenceTypes).includes(type==='pdf'?'document':type)||list(r.evidenceTypes).includes(type))
+        .map(r=>root.DirectSubmissionDeadlinePolicy.receiptTime(r)).filter(Boolean).sort((a,b)=>a-b)[0]||0);
+      return {known:true,complete:first.every(Boolean),completedAt:first.every(Boolean)?Math.max(...first):0};
+    }
+    function retakeMatches(receipt,assignment){
+      const category=m.retakeCategory_(assignment.program||assignment.sourceCode);
+      const practiceTest=category==='PRACTICE'&&typeof m.practiceTestNumberFromAssignmentV8_==='function'?m.practiceTestNumberFromAssignmentV8_(assignment):0;
+      const requestCode=practiceTest?'PT-'+String(practiceTest).padStart(2,'0'):(assignment.sourceCode||assignment.code||'');
+      const request=m.parseRetakeRequest_(category,requestCode);
+      if(receipt.family!=='FIGHTER_RETAKE'||!category||receipt.category!==category||!request)return false;
       const expected=m.canonicalSubmissionCodeV2_(requestCode),actual=m.canonicalSubmissionCodeV2_(receipt.code);
       if((/^(?:VF[12]|GF|RI[12]|AP)-U\d+(?:_\d+)?$/.test(expected)||/^PT-\d+$/.test(expected))&&expected===actual)return true;
-      return m.retakeCodeMatches_({category:receipt.category,code:receipt.code,assignmentKey:m.assignmentKey_(receipt.code),unit:m.unitNumber_(receipt.code)},request);
-    }
-    // FIGHTER_NEW_ENROLLMENT_PROJECTION_V28: one eligibility rule for every
-    // personalized receipt, missing-work record and self-study result.
-    function enrollmentDateV28(value){
-      const text=String(value==null?'':value).trim();
-      let match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/),year,month,day;
-      if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3]);}
-      else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);}
-      const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);
-      return year>=2000&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0;
-    }
-    function enrollmentEligibleV28(student,assignment,selfStudy){
-      const joined=enrollmentDateV28(student&&student.joinDate);if(!joined)return true;
-      const candidates=selfStudy?[assignment&&assignment.releaseDate,assignment&&assignment.assignedDate,assignment&&assignment.lessonDate,assignment&&assignment.date]:[assignment&&assignment.lessonDate,assignment&&assignment.assignedDate,assignment&&assignment.date];
-      for(let index=0;index<candidates.length;index+=1){const assigned=enrollmentDateV28(candidates[index]);if(assigned)return assigned>=joined;}
-      return false;
-    }
-    return function projectFighterSubmissions(value,payload,ticket,guard){
-      if(!value||!value.profile||!value.profile.student)return value;
-      payload=payload||{receipts:[],coverage:[]};
-      const student=value.profile.student,assignments=list(value.publicData&&value.publicData.assignments),receipts=list(payload.receipts);
-      const eligibleAssignments=assignments.filter(assignment=>enrollmentEligibleV28(student,assignment,false));
-      const eligibleSelfStudyAssignments=list(value.publicData&&value.publicData.selfStudyAssignments).filter(assignment=>enrollmentEligibleV28(student,assignment,true));
-      // Grade-cache age is not the freshness of the independently captured receipt source.
-      function homeworkIndex(receipt,assignment){return m.submissionTaskIndexV7_(assignment,{assignmentId:receipt.code,sourceTab:receipt.sourceTab,sourceName:receipt.sourceName});}
-      function peersFor(receipt){return assignments.filter(other=>receipt.family==='FIGHTER_RETAKE'?retakeMatches(receipt,other):homeworkIndex(receipt,other)>=0);}
-      student.assignments=list(student.assignments).filter(record=>{const definition=assignments.find(assignment=>assignment&&assignment.id===record.assignmentId);return !definition||enrollmentEligibleV28(student,definition,false);});
-      eligibleAssignments.forEach(assignment=>{
-        let record=student.assignments.find(r=>r.assignmentId===assignment.id);
-        const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index],assignment)&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
-        const redo=tasks.map((task,index)=>m.submissionTaskFactsV7_(task).redo?index:-1).filter(index=>index>=0);
-        if(redo.length===1)receipts.filter(r=>retakeMatches(r,assignment)&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peersFor(r))).forEach(receipt=>matched.push({receipt,index:redo[0]}));
-        // A published assignment and fresh source proof are sufficient to represent
-        // unfinished online work, even before its Toan dien column has been created.
-        // Manual preparation never creates a direct-source negative.
-        const pendingProofs=tasks.map((task,index)=>{
-          if(!ticket||!guard.isCurrent(ticket)||manual(task,assignment))return false;
-          const coverage=taskCoverage(payload,assignment,task,index);if(!guard.isVerifiedProof(proof(coverage)))return false;
-          const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};
-          return root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending;
-        });
-        if(!record&&(matched.length||pendingProofs.some(Boolean))){record={assignmentId:assignment.id,tasks:tasks.map(()=>({tracked:false,completed:false,missing:false,status:''})),missingCount:0,tracked:pendingProofs.some(Boolean),status:''};student.assignments.push(record);}
-        if(!record)return;record.tasks=list(record.tasks);
-        tasks.forEach((task,index)=>{
-          let state=record.tasks[index];if(!state&&(pendingProofs[index]||matched.some(row=>row.index===index))){state={tracked:false,completed:false,missing:false,status:''};record.tasks[index]=state;}
-          if(!state)return;
-          if(manual(task,assignment)){state.submissionManualRead=manualAuthority(value,student,assignment,index,state,guard)||unmappedManualRead(value,student,state,guard);state.submissionManualAuthority=Boolean(state.submissionManualRead&&state.manualSubmissionVerification&&state.manualSubmissionVerification.decisionKnown===true&&state.tracked===true&&(state.completed===true||state.missing===true));return;}
+      // Some official retake Forms submit the human label (for example
+      // "Unit 5.1" or "Test 5.1") rather than the compact GF-U5_1 code.
+      // Fall through to the category-scoped assignment-key matcher.
+      return m.retakeCodeMatches_({category:receipt.category,code:receipt.code,assignmentKey:m.assignmentKey_(receipt.code),unit:m.unitNumber_(receipt.code)},request);
+    }
+    return function projectFighterSubmissions(value,payload,ticket,guard){
+      if(!value||!value.profile||!value.profile.student)return value;
+      payload=payload||{receipts:[],coverage:[]};
+      const student=value.profile.student,assignments=list(value.publicData&&value.publicData.assignments),receipts=list(payload.receipts);
+      // Grade-cache age is not the freshness of the independently captured receipt source.
+      function homeworkIndex(receipt,assignment){return m.submissionTaskIndexV7_(assignment,{assignmentId:receipt.code,sourceTab:receipt.sourceTab,sourceName:receipt.sourceName});}
+      function peersFor(receipt){return assignments.filter(other=>receipt.family==='FIGHTER_RETAKE'?retakeMatches(receipt,other):homeworkIndex(receipt,other)>=0);}
+      student.assignments=list(student.assignments);
+      assignments.forEach(assignment=>{
+        let record=student.assignments.find(r=>r.assignmentId===assignment.id);
+        const tasks=list(assignment.tasks),matched=receipts.filter(r=>['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(r.family)).map(r=>({receipt:r,index:homeworkIndex(r,assignment)})).filter(row=>row.index>=0&&!manual(tasks[row.index],assignment)&&root.DirectSubmissionAssignmentWindow.contains(row.receipt,assignment,peersFor(row.receipt)));
+        const redo=tasks.map((task,index)=>m.submissionTaskFactsV7_(task).redo?index:-1).filter(index=>index>=0);
+        if(redo.length===1)receipts.filter(r=>retakeMatches(r,assignment)&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peersFor(r))).forEach(receipt=>matched.push({receipt,index:redo[0]}));
+        // A published assignment and fresh source proof are sufficient to represent
+        // unfinished online work, even before its Toan dien column has been created.
+        // Manual preparation never creates a direct-source negative.
+        const pendingProofs=tasks.map((task,index)=>{
+          if(!ticket||!guard.isCurrent(ticket)||manual(task,assignment))return false;
+          const coverage=taskCoverage(payload,assignment,task,index);if(!guard.isVerifiedProof(proof(coverage)))return false;
+          const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};
+          return root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending;
+        });
+        if(!record&&(matched.length||pendingProofs.some(Boolean))){record={assignmentId:assignment.id,tasks:tasks.map(()=>({tracked:false,completed:false,missing:false,status:''})),missingCount:0,tracked:pendingProofs.some(Boolean),status:''};student.assignments.push(record);}
+        if(!record)return;record.tasks=list(record.tasks);
+        tasks.forEach((task,index)=>{
+          let state=record.tasks[index];if(!state&&(pendingProofs[index]||matched.some(row=>row.index===index))){state={tracked:false,completed:false,missing:false,status:''};record.tasks[index]=state;}
+          if(!state)return;
+          if(manual(task,assignment)){state.submissionManualRead=manualAuthority(value,student,assignment,index,state,guard)||unmappedManualRead(value,student,state,guard);state.submissionManualAuthority=Boolean(state.submissionManualRead&&state.manualSubmissionVerification&&state.manualSubmissionVerification.decisionKnown===true&&state.tracked===true&&(state.completed===true||state.missing===true));return;}
           const found=matched.filter(row=>row.index===index).map(row=>row.receipt).sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b));const content=received(state,found,assignment,found.length?peersFor(found[0]):[]);
           if(!found.length&&pendingProofs[index])clearUnmatchedDirectEvidence(state);
-          const components=componentCompletion(content||found);
-          if(components.known){state.completed=state.completed||components.complete;state.missing=!state.completed;state.status=state.completed?'Đã nộp bài':'Đã nộp một phần';}
-          const scored=found.filter(r=>r.scoreSource==='automatic-score-source'&&Number.isFinite(r.scoreOutOfTen));
-          const latest=scored.slice(-1)[0];
-          if(latest&&m.submissionTaskFactsV7_(task).redo){
-            state.score=latest.scoreOutOfTen;state.completed=true;state.status='Đã có điểm làm lại';state.missing=false;
-            student.retakes=list(student.retakes);
-            const expected=m.canonicalSubmissionCodeV2_(assignment.sourceCode||assignment.code);
-            const matching=student.retakes.filter(item=>m.canonicalSubmissionCodeV2_(item.sourceCode||String(item.key||'').replace(/-redo$/,''))===expected);
-            let summary=matching.length===1?matching[0]:null;
-            if(!matching.length){summary={key:'direct-'+expected,sourceCode:expected,program:assignment.program,label:task.title||expected,originalScore:null,difference:null,attempts:[]};student.retakes.push(summary);}
-            if(summary){
-              summary.retakeScore=latest.scoreOutOfTen;summary.done=true;summary.submittedAt=latest.submittedAt;
-              summary.difference=Number.isFinite(summary.originalScore)?Math.round((summary.retakeScore-summary.originalScore)*10)/10:null;
-              summary.attempts=root.DirectSubmissionHistory.merge(summary.attempts,scored.map(r=>({receiptId:r.id,contentStatus:r.contentStatus,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),score:r.scoreOutOfTen,rawScore:r.score,maximum:r.maximum,sourceAttempt:r.attempt,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,family:r.family,part:r.part})));
-            }
-          }
-          let coverage=taskCoverage(payload,assignment,task,index);
-          if(coverage){const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};if(!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known)coverage=null;}
-          state.submissionSourceRead=Boolean(ticket&&guard.isCurrent(ticket)&&guard.isVerifiedProof(proof(coverage)));
-          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,content||found,{verified:Boolean(proof(coverage)),complete:state.completed===true,completedAt:components.completedAt||undefined});
-          if(found.length&&(!components.known||components.complete||!deadline.eligible)){
-            state.isLate=Boolean(deadline.late);state.isOverdue=Boolean(deadline.missing);
-            if(deadline.late)state.status='Nộp muộn';
-            else if(/^(?:nop muon|lam muon)(?: |$)/.test(m.normalizeSearchText_(state.status)))state.status=components.known&&!components.complete?'Đã nộp một phần':'Đã nộp bài';
-          }
-          if(state.contentMissing){state.completed=false;state.missing=true;state.status='Đã nhận lượt gửi nhưng bài trống';state.isLate=false;state.isOverdue=Boolean(deadline.missing);}
-          if(deadline.pending){
-            grant(guard,ticket,state,coverage,true);
-            if(pendingProofs[index]&&guard.can(state)&&!state.completed&&!state.submitted&&!state.submittedAt){state.tracked=true;state.missing=true;state.isOverdue=Boolean(deadline.missing);state.status=deadline.missing?'Chưa hoàn thành':'Cần nộp';}
-          }
-        });
-        const verifiedMissing=record.tasks.filter(state=>state&&state.missing===true&&!state.completed&&guard.can(state)).length;
-        if(verifiedMissing){record.tracked=true;record.missingCount=Math.max(Number(record.missingCount)||0,verifiedMissing);}
-        const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>{const state=record.tasks[index];return manual(task,assignment)?Boolean(state&&state.submissionManualAuthority&&(state.tracked===true||state.completed===true)):Boolean(state&&(state.completed===true||guard.can(state)));});
-        if(all){
-          record.missingCount=record.tasks.filter(state=>state&&state.missing===true&&!state.completed).length;
-          record.status=record.missingCount?'Chưa hoàn thành':'Đã hoàn thành';
-          if(ticket)grant(guard,ticket,record,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
-        }
-      });
-      value.directSelfStudyItems=[];
-      eligibleSelfStudyAssignments.forEach(assignment=>{
-        const code=m.canonicalSelfStudyResultCodeV1_(assignment.sourceCode||assignment.code||'');if(!code)return;
-        const family=/^SHADOW-/.test(code)?'FIGHTER_SHADOWING':/^FL/.test(code)?'FIGHTER_LISTENING':/^RI[345]-/.test(code)?'FIGHTER_READING':'';
-        const peers=list(value.publicData.selfStudyAssignments).filter(a=>m.canonicalSelfStudyResultCodeV1_(a.sourceCode||a.code||'')===code&&String(a.scheduleClassName||'')===String(assignment.scheduleClassName||''));
-        const found=receipts.filter(r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers));
-        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
-        if(!found.length)return;assignment.receiptReceived=true;assignment.contentMissing=found.every(r=>r.contentStatus==='empty');assignment.submissionReceived=!assignment.contentMissing;
-        const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
-        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,true);
-        found.forEach(r=>{
-          const item={receiptId:r.id,contentStatus:r.contentStatus,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,canonicalPdf:r.canonicalPdf,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
-          if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
-            Object.assign(item,{total:r.score,score:r.score,maximum:r.maximum,maxScore:r.maximum,percent:r.percentage,completed:true,status:'Đã có kết quả'});
-            if(Number.isFinite(r.listening))item.listening=r.listening;if(Number.isFinite(r.paraphrase))item.paraphrase=r.paraphrase;
-          }
-          value.directSelfStudyItems.push(item);
-          received(item,[r]);
-          item.isLate=Boolean(receivedDeadline.late);item.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.late)item.status='Nộp muộn';
-        });
-      });
-      const records=student.assignments;
-      const selfStudy=eligibleSelfStudyAssignments;
-      if(ticket&&records.length&&records.every(record=>guard.can(record))&&selfStudy.every(assignment=>assignment.submissionReceived||guard.can(assignment))){
-        grant(guard,ticket,value.profile,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
-      }
-      return value;
-    };
-  }
-  root.createFighterReceiptProjector=createFighterReceiptProjector;
-  if(typeof module==='object'&&module.exports)module.exports={createFighterReceiptProjector};
+          const components=componentCompletion(content||found,task);
+          if(components.known){state.completed=components.complete;state.missing=!state.completed;state.status=state.completed?'Đã nộp bài':'Đã nộp một phần';}
+          const scored=found.filter(r=>r.scoreSource==='automatic-score-source'&&Number.isFinite(r.scoreOutOfTen));
+          const latest=scored.slice(-1)[0];
+          if(latest&&m.submissionTaskFactsV7_(task).redo){
+            state.score=latest.scoreOutOfTen;state.completed=true;state.status='Đã có điểm làm lại';state.missing=false;
+            student.retakes=list(student.retakes);
+            const expected=m.canonicalSubmissionCodeV2_(assignment.sourceCode||assignment.code);
+            const matching=student.retakes.filter(item=>m.canonicalSubmissionCodeV2_(item.sourceCode||String(item.key||'').replace(/-redo$/,''))===expected);
+            let summary=matching.length===1?matching[0]:null;
+            if(!matching.length){summary={key:'direct-'+expected,sourceCode:expected,program:assignment.program,label:task.title||expected,originalScore:null,difference:null,attempts:[]};student.retakes.push(summary);}
+            if(summary){
+              summary.retakeScore=latest.scoreOutOfTen;summary.done=true;summary.submittedAt=latest.submittedAt;
+              summary.difference=Number.isFinite(summary.originalScore)?Math.round((summary.retakeScore-summary.originalScore)*10)/10:null;
+              summary.attempts=root.DirectSubmissionHistory.merge(summary.attempts,scored.map(r=>({receiptId:r.id,contentStatus:r.contentStatus,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),score:r.scoreOutOfTen,rawScore:r.score,maximum:r.maximum,sourceAttempt:r.attempt,viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,family:r.family,part:r.part})));
+            }
+          }
+          let coverage=taskCoverage(payload,assignment,task,index);
+          if(coverage){const example={family:coverage.family,category:coverage.category,sourceTab:coverage.sourceTab,sourceName:coverage.sourceName,code:assignment.sourceCode||assignment.code||expectedCodes(assignment,task)[0]};if(!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peersFor(example)).known)coverage=null;}
+          state.submissionSourceRead=Boolean(ticket&&guard.isCurrent(ticket)&&guard.isVerifiedProof(proof(coverage)));
+          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,content||found,{verified:Boolean(proof(coverage)),complete:state.completed===true,completedAt:components.completedAt||undefined});
+          if(found.length&&(!components.known||components.complete||!deadline.eligible)){
+            state.isLate=Boolean(deadline.late);state.isOverdue=Boolean(deadline.missing);
+            if(deadline.late)state.status='Nộp muộn';
+            else if(/^(?:nop muon|lam muon)(?: |$)/.test(m.normalizeSearchText_(state.status)))state.status=components.known&&!components.complete?'Đã nộp một phần':'Đã nộp bài';
+          }
+          if(state.contentMissing){state.completed=false;state.missing=true;state.status='Đã nhận lượt gửi nhưng bài trống';state.isLate=false;state.isOverdue=Boolean(deadline.missing);}
+          if(deadline.pending){
+            grant(guard,ticket,state,coverage,true);
+            if(pendingProofs[index]&&guard.can(state)&&!state.completed&&!state.submitted&&!state.submittedAt){state.tracked=true;state.missing=true;state.isOverdue=Boolean(deadline.missing);state.status=deadline.missing?'Chưa hoàn thành':'Cần nộp';}
+          }
+        });
+        const verifiedMissing=record.tasks.filter(state=>state&&state.missing===true&&!state.completed&&guard.can(state)).length;
+        if(verifiedMissing){record.tracked=true;record.missingCount=Math.max(Number(record.missingCount)||0,verifiedMissing);}
+        const all=record.tasks.length===tasks.length&&tasks.every((task,index)=>{const state=record.tasks[index];return manual(task,assignment)?Boolean(state&&state.submissionManualAuthority&&(state.tracked===true||state.completed===true)):Boolean(state&&(state.completed===true||guard.can(state)));});
+        if(all){
+          record.missingCount=record.tasks.filter(state=>state&&state.missing===true&&!state.completed).length;
+          record.status=record.missingCount?'Chưa hoàn thành':'Đã hoàn thành';
+          if(ticket)grant(guard,ticket,record,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
+        }
+      });
+      value.directSelfStudyItems=[];
+      list(value.publicData.selfStudyAssignments).forEach(assignment=>{
+        const code=m.canonicalSelfStudyResultCodeV1_(assignment.sourceCode||assignment.code||'');if(!code)return;
+        const family=/^SHADOW-/.test(code)?'FIGHTER_SHADOWING':/^FL/.test(code)?'FIGHTER_LISTENING':/^RI[345]-/.test(code)?'FIGHTER_READING':'';
+        const peers=list(value.publicData.selfStudyAssignments).filter(a=>m.canonicalSelfStudyResultCodeV1_(a.sourceCode||a.code||'')===code&&String(a.scheduleClassName||'')===String(assignment.scheduleClassName||''));
+        const found=receipts.filter(r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers));
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
+        if(!found.length)return;assignment.receiptReceived=true;assignment.contentMissing=found.every(r=>r.contentStatus==='empty');assignment.submissionReceived=!assignment.contentMissing;
+        const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
+        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,true);
+        found.forEach(r=>{
+          const item={receiptId:r.id,contentStatus:r.contentStatus,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,canonicalPdf:r.canonicalPdf,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
+          if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
+            Object.assign(item,{total:r.score,score:r.score,maximum:r.maximum,maxScore:r.maximum,percent:r.percentage,completed:true,status:'Đã có kết quả'});
+            if(Number.isFinite(r.listening))item.listening=r.listening;if(Number.isFinite(r.paraphrase))item.paraphrase=r.paraphrase;
+          }
+          value.directSelfStudyItems.push(item);
+          received(item,[r]);
+          item.isLate=Boolean(receivedDeadline.late);item.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.late)item.status='Nộp muộn';
+        });
+      });
+      const records=student.assignments;
+      const selfStudy=list(value.publicData.selfStudyAssignments);
+      if(ticket&&records.length&&records.every(record=>guard.can(record))&&selfStudy.every(assignment=>assignment.submissionReceived||guard.can(assignment))){
+        grant(guard,ticket,value.profile,{complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},true);
+      }
+      return value;
+    };
+  }
+  root.createFighterReceiptProjector=createFighterReceiptProjector;
+  if(typeof module==='object'&&module.exports)module.exports={createFighterReceiptProjector};
 })(typeof globalThis==='object'?globalThis:this);
 
 const projectFighterReceipts_=createFighterReceiptProjector(fighterReceiptMatching_);
 
-/* FIGHTER_SUBMISSION_STATUS_V1: verification never changes teacher evidence. */
-const submissionGuard_ = createSubmissionStatusGuard({
-  getIdentity: () => {const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?String(b.className)+'|'+b.studentName:'';},
-  isVisible: () => fighterApi.parent.authorized
-});
-let fighterSubmissionProjected_=null;
-function submissionCan_(item){return Boolean(item&&item.submissionManualAuthority&&fighterApi.parent.authorized)||submissionGuard_.can(item);}
-const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
-  isVisible:()=>fighterApi.parent.authorized,request:()=>fighterApi.parent.request('submissions',false),project:projectFighterReceipts_,
-  render:()=>{if(fighterParentPackage_&&fighterApi.parent.authorized&&!document.hidden)fighterParentApply_();}
-});
-// PARENT_SINGLE_SUBMISSION_SCAN_V1: one read per open; explicit refresh starts another.
-function parentSingleSubmissionScan_(owner,getIdentity){
-  const refresh=owner.refresh,clear=owner.clear,invalidate=owner.invalidate;let requestedFor='';
-  owner.refresh=function(force=false){
-    const identity=String(getIdentity()||'');
-    if(!identity||(!force&&requestedFor===identity))return Promise.resolve(false);
-    requestedFor=identity;return refresh();
-  };
-  owner.clear=function(){requestedFor='';return clear();};
-  owner.invalidate=function(){requestedFor='';return invalidate();};
-}
-parentSingleSubmissionScan_(submissionOwner_,()=>{const b=fighterApi.parent.binding;return b?b.className+'|'+b.studentName:'';});
-function fighterSubmissionReset_(){submissionOwner_.suspend();fighterClearPendingHomeworkV15_();}
-function fighterSubmissionProfile_(){return fighterSubmissionProjected_&&fighterSubmissionProjected_.profile;}
-function fighterSubmissionAggregate_(){return submissionCan_(fighterSubmissionProfile_());}
-function fighterSubmissionRender_(){if(fighterApi.parent.authorized&&fighterParentPackage_)fighterParentApply_();}
-function fighterSubmissionMergeSelfStudy_(items){
-  return DirectSubmissionHistory.merge(items,fighterSubmissionProjected_&&fighterSubmissionProjected_.directSelfStudyItems||[],{numbered:false,scope:row=>{
-    const code=String(row.code||row.assignmentCode||'').trim().toUpperCase().replace(/[_\s]+/g,'-');
-    return code?code+'|'+String(row.part||''):'';
-  }});
-}
-const fighterSubmissionOriginalSelfStudy_=renderSelfStudyResultsForStudentV1_;
-renderSelfStudyResultsForStudentV1_=function(target,items,student){return fighterSubmissionOriginalSelfStudy_.call(this,target,fighterSubmissionMergeSelfStudy_(items),student);};
-window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==='revoked'){submissionOwner_.clear();fighterSubmissionProjected_=null;}else if(event.detail.status!=='authorized')fighterSubmissionReset_();});
-
-/* FIGHTER_SUBMITTED_FILE_DEDUPE_V1: one file button per source occurrence. */
-/* FIGHTER_CANONICAL_PDF_DISPLAY_V2 */
-/* FIGHTER_CANONICAL_RECEIPT_PDF_V3 */
-/* FIGHTER_RECEIPT_ARTIFACT_SELECTION_V4 */
-function fighterSubmissionFileGroups_(state,fallbackType){
-  const list=value=>Array.isArray(value)?value:[];
-  const plain=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
-  const generic=type=>!type||['file','document','link','upload','attachment','unknown'].includes(type);
-  const specific=type=>!generic(type);
-  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set(),knownFiles=new Map();
-  const history=DirectSubmissionHistory.merge([],list(state.submissionAttempts));
-  const role=file=>String(file.documentRole||file.role||'');
-  function fileType(file){
-    file=file||{};
-    const declared=plain(file.type),mime=plain(file.mimeType),label=plain([file.label,file.fileName,file.name].filter(Boolean).join(' ')),raw=plain(file.url);
-    if(declared==='pdf'||mime==='application/pdf'||file.generated===true||/\bpdf\b|pdf da ghep|merged.?pdf/.test(label)||/\.pdf(?:$|[?#])/.test(raw))return 'pdf';
-    if(declared==='video'||mime.startsWith('video/')||/\bvideo\b/.test(label)||/youtube|youtu\.be/.test(raw))return 'video';
-    if(declared==='audio'||mime.startsWith('audio/')||/\baudio\b|ghi am/.test(label))return 'audio';
-    if(declared==='image'||mime.startsWith('image/')||/\banh\b|\bscan\b/.test(label))return 'image';
-    return declared||'file';
-  }
-  function mergeFile(before,after){
-    before=before||{};after=after||{};
-    const result=Object.assign({},before,after),left=fileType(before),right=fileType(after);
-    result.type=specific(right)?right:specific(left)?left:(right||left||'file');
-    return result;
-  }
-  function canonicalProof(attempt){
-    const value=attempt&&attempt.canonicalPdf;
-    if(!value||value.proof!=='producer-original'||!attempt.receiptId||attempt.contentStatus==='empty')return null;
-    if(!value.sourceSpreadsheetId||!value.sourceTab||!Number.isInteger(value.sourceRow)||value.sourceRow<2)return null;
-    const time=DirectSubmissionDeadlinePolicy.receiptTime(attempt);
-    if(!time||!Number.isFinite(value.submittedAtMs)||time!==value.submittedAtMs)return null;
-    const key=DirectSubmissionHistory.fileKey(value.url);
-    if(!key||!key.startsWith('drive:'))return null;
-    const evidence=list(attempt.evidenceUrls).concat(list(attempt.links).map(file=>file.url),list(attempt.submissionFiles).map(file=>file.url));
-    if(!evidence.some(url=>DirectSubmissionHistory.fileKey(url)===key))return null;
-    return {key,value,file:Object.assign({},value,{type:'pdf',label:'PDF bài đã nộp',documentRole:role(value)})};
-  }
-  function sameSource(file,proof){
-    const value=proof.value;
-    return file.sourceSpreadsheetId===value.sourceSpreadsheetId&&file.sourceTab===value.sourceTab&&
-      Number.isInteger(file.sourceRow)&&file.sourceRow===value.sourceRow&&role(file)===role(value);
-  }
-  function superseded(file,proof){
-    return Boolean(proof&&file.type==='pdf'&&DirectSubmissionHistory.fileKey(file.url)!==proof.key&&sameSource(file,proof));
-  }
-  function typed(file){
-    const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return null;
-    const hint=types.get(key),merged=mergeFile(knownFiles.get(key),file),type=fileType(merged);
-    merged.type=!specific(type)&&hint?hint:type;
-    return {key,file:merged};
-  }
-  flat.forEach(file=>{
-    const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return;
-    const type=fileType(file);if(specific(type)&&!types.has(key))types.set(key,type);
-    knownFiles.set(key,mergeFile(knownFiles.get(key),file));
-  });
-  function displayedFiles(group){
-    const files=Array.from(group.files.values()).filter(file=>!superseded(file,group.canonical));
-    const pdfRoles=new Set(files.filter(file=>fileType(file)==='pdf').map(role));
-    const completedMergeCoversRaw=files.some(file=>fileType(file)==='pdf'&&file.generated===true&&file.coversRawImages===true);
-    const pdfCovers=file=>completedMergeCoversRaw||pdfRoles.has(role(file))||(!role(file)&&pdfRoles.size===1);
-    const fallback=plain(fallbackType||(state.kind==='shadowing'?'video':''));
-    let genericFallback=false;
-    return files.filter(file=>{
-      const type=fileType(file);
-      if(type==='pdf'||type==='video'||type==='audio')return true;
-      if(type==='image')return !pdfCovers(file);
-      if(specific(type))return true;
-      // Older receipt payloads exposed every raw Drive URL without a type or
-      // document role. They cannot be classified safely in the browser. Keep
-      // one usable fallback for that receipt instead of rendering every URL.
-      if(pdfCovers(file)||genericFallback)return false;
-      genericFallback=true;if(specific(fallback))file.type=fallback;return true;
-    });
-  }
-  function add(group,file){
-    const item=typed(file);if(!item)return;
-    const old=group.files.get(item.key);
-    if(!old)group.files.set(item.key,item.file);
-    else group.files.set(item.key,mergeFile(old,item.file));
-  }
-  history.forEach((attempt,index)=>{
-    const canonical=canonicalProof(attempt);
-    const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map(),canonical};groups.push(group);
-    if(canonical)types.set(canonical.key,'pdf');
-    function receiptFile(file){
-      const known=knownFiles.get(DirectSubmissionHistory.fileKey(file.url));
-      return canonical&&!role(file)&&!role(known||{})?Object.assign({},file,{documentRole:role(canonical.value)}):file;
-    }
-    if(group.receiptId)byReceipt.set(group.receiptId,group);
-    list(attempt.submissionFiles).forEach(file=>add(group,file));
-    list(attempt.evidenceUrls).forEach(url=>add(group,receiptFile({url})));
-    list(attempt.links).forEach(link=>add(group,receiptFile(link)));
-    if(attempt.viewUrl)add(group,receiptFile({url:attempt.viewUrl}));
-    if(canonical)add(group,canonical.file);
-  });
-  // Flat rows may enrich a known occurrence. Distinct receipt IDs are never
-  // collapsed merely because a learner submitted the same file again.
-  flat.filter(file=>file&&file.receiptId).forEach(file=>{
-    let group=byReceipt.get(file.receiptId);
-    if(!group){group={receiptId:file.receiptId,attempt:Number.isInteger(file.attempt)&&file.attempt>0?file.attempt:null,files:new Map()};groups.push(group);byReceipt.set(file.receiptId,group);}
-    add(group,file);
-  });
-  groups.forEach(group=>group.files.forEach((_,key)=>claimed.add(key)));
-  const unassigned={receiptId:'',attempt:null,files:new Map()};
-  flat.filter(file=>file&&!file.receiptId).forEach(file=>{
-    const key=DirectSubmissionHistory.fileKey(file.url);
-    // Only explicit row provenance can supersede an unassigned indexed PDF.
-    // Old cached files without provenance and different document roles remain.
-    if(key&&!claimed.has(key)&&!groups.some(group=>superseded(file,group.canonical)))add(unassigned,file);
-  });
-  if(!flat.length&&state.submissionUrl&&!claimed.has(DirectSubmissionHistory.fileKey(state.submissionUrl)))add(unassigned,{url:state.submissionUrl});
-  if(unassigned.files.size)groups.push(unassigned);
-  return groups.filter(group=>group.files.size).map(group=>({receiptId:group.receiptId,attempt:group.attempt,files:displayedFiles(group)})).filter(group=>group.files.length);
-}
-const fighterSubmittedFileActionsBeforeDedupe_=submittedFileActions_;
-submittedFileActions_=function(state,fallbackType){
-  if(!state)return fighterSubmittedFileActionsBeforeDedupe_.call(this,state,fallbackType);
-  return fighterSubmissionFileGroups_(state,fallbackType).flatMap(group=>{
-    const actions=fighterSubmittedFileActionsBeforeDedupe_.call(this,Object.assign({},state,{submissionFiles:group.files,submissionUrl:''}),fallbackType);
-    return group.attempt?actions.map(action=>action.replace(' →</a>',' · Lần '+group.attempt+' →</a>')):actions;
-  });
-};
-
-// A native empty response is a received attempt, never completed content.
-function fighterSubmissionSelectSelfStudyResult_(previous,current){
-  if(!previous)return current;
-  const empty=item=>Boolean(item&&(item.contentStatus==='empty'||item.contentMissing===true));
-  // Keep the existing last-result choice except when a later empty attempt
-  // would hide already received content. Every source occurrence stays visible.
-  const selected=!empty(previous)&&empty(current)?previous:current;
-  const attempts=item=>Array.isArray(item.submissionAttempts)&&item.submissionAttempts.length?item.submissionAttempts:[item];
-  return Object.assign({},selected,{submissionAttempts:DirectSubmissionHistory.merge(attempts(previous),attempts(current))});
-}
-function fighterEmptySubmissionMarkup_(state){
-  if(!state)return '';
-  const empty=(state.submissionAttempts||[]).filter(r=>r.contentStatus==='empty');
-  if(!state.contentMissing&&!empty.length)return '';
-  const current=state.contentMissing?'<strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p>':'';
-  const history=empty.map(r=>'<p>Lần '+esc(r.attempt||r.sourceAttempt||'')+' · '+esc(r.submittedAt||'')+' · Lượt gửi trống, không có video/tệp.</p>').join('');
-  return '<div class="direct-empty-submission" style="'+(state.contentMissing?'border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px':'color:#64748b')+'">'+current+history+'</div>';
-}
-
-function fighterSubmissionReadLabel_(){const state=submissionOwner_.readState;return ['idle','loading'].includes(state)?'Đang kiểm tra bài nộp':'Chưa kiểm tra được · Bấm Tải lại hồ sơ';}
+/* FIGHTER_SUBMISSION_STATUS_V1: verification never changes teacher evidence. */
+const submissionGuard_ = createSubmissionStatusGuard({
+  getIdentity: () => {const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?String(b.className)+'|'+b.studentName:'';},
+  isVisible: () => !document.hidden
+});
+let fighterSubmissionProjected_=null;
+function submissionCan_(item){return Boolean(item&&item.submissionManualAuthority&&fighterApi.parent.authorized)||submissionGuard_.can(item);}
+const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
+  isVisible:()=>!document.hidden,request:()=>fighterApi.parent.request('submissions',false),project:projectFighterReceipts_,
+  render:()=>{if(fighterParentPackage_&&fighterApi.parent.authorized&&!document.hidden)fighterParentApply_();}
+});
+function fighterSubmissionReset_(){submissionOwner_.suspend();fighterClearPendingHomeworkV15_();}
+function fighterSubmissionProfile_(){return fighterSubmissionProjected_&&fighterSubmissionProjected_.profile;}
+function fighterSubmissionAggregate_(){return submissionCan_(fighterSubmissionProfile_());}
+function fighterSubmissionRender_(){if(fighterApi.parent.authorized&&fighterParentPackage_)fighterParentApply_();}
+function fighterSubmissionMergeSelfStudy_(items){
+  return DirectSubmissionHistory.merge(items,fighterSubmissionProjected_&&fighterSubmissionProjected_.directSelfStudyItems||[],{numbered:false,scope:row=>{
+    const code=String(row.code||row.assignmentCode||'').trim().toUpperCase().replace(/[_\s]+/g,'-');
+    return code?code+'|'+String(row.part||''):'';
+  }});
+}
+const fighterSubmissionOriginalSelfStudy_=renderSelfStudyResultsForStudentV1_;
+renderSelfStudyResultsForStudentV1_=function(target,items,student){return fighterSubmissionOriginalSelfStudy_.call(this,target,fighterSubmissionMergeSelfStudy_(items),student);};
+window.addEventListener('fighter-parent-access',event=>{if(event.detail.status==='revoked'){submissionOwner_.clear();fighterSubmissionProjected_=null;}else if(event.detail.status!=='authorized')fighterSubmissionReset_();});
+
+/* FIGHTER_SUBMITTED_FILE_DEDUPE_V1: one file button per source occurrence. */
+/* FIGHTER_CANONICAL_PDF_DISPLAY_V2 */
+/* FIGHTER_CANONICAL_RECEIPT_PDF_V3 */
+/* FIGHTER_RECEIPT_ARTIFACT_SELECTION_V4 */
+function fighterSubmissionFileGroups_(state,fallbackType){
+  const list=value=>Array.isArray(value)?value:[];
+  const plain=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
+  const generic=type=>!type||['file','document','link','upload','attachment','unknown'].includes(type);
+  const specific=type=>!generic(type);
+  const flat=list(state.submissionFiles),types=new Map(),groups=[],byReceipt=new Map(),claimed=new Set(),knownFiles=new Map();
+  const history=DirectSubmissionHistory.merge([],list(state.submissionAttempts));
+  const role=file=>String(file.documentRole||file.role||'');
+  function fileType(file){
+    file=file||{};
+    const declared=plain(file.type),mime=plain(file.mimeType),label=plain([file.label,file.fileName,file.name].filter(Boolean).join(' ')),raw=plain(file.url);
+    if(declared==='pdf'||mime==='application/pdf'||file.generated===true||/\bpdf\b|pdf da ghep|merged.?pdf/.test(label)||/\.pdf(?:$|[?#])/.test(raw))return 'pdf';
+    if(declared==='video'||mime.startsWith('video/')||/\bvideo\b/.test(label)||/youtube|youtu\.be/.test(raw))return 'video';
+    if(declared==='audio'||mime.startsWith('audio/')||/\baudio\b|ghi am/.test(label))return 'audio';
+    if(declared==='image'||mime.startsWith('image/')||/\banh\b|\bscan\b/.test(label))return 'image';
+    return declared||'file';
+  }
+  function mergeFile(before,after){
+    before=before||{};after=after||{};
+    const result=Object.assign({},before,after),left=fileType(before),right=fileType(after);
+    result.type=specific(right)?right:specific(left)?left:(right||left||'file');
+    return result;
+  }
+  function canonicalProof(attempt){
+    const value=attempt&&attempt.canonicalPdf;
+    if(!value||value.proof!=='producer-original'||!attempt.receiptId||attempt.contentStatus==='empty')return null;
+    if(!value.sourceSpreadsheetId||!value.sourceTab||!Number.isInteger(value.sourceRow)||value.sourceRow<2)return null;
+    const time=DirectSubmissionDeadlinePolicy.receiptTime(attempt);
+    if(!time||!Number.isFinite(value.submittedAtMs)||time!==value.submittedAtMs)return null;
+    const key=DirectSubmissionHistory.fileKey(value.url);
+    if(!key||!key.startsWith('drive:'))return null;
+    const evidence=list(attempt.evidenceUrls).concat(list(attempt.links).map(file=>file.url),list(attempt.submissionFiles).map(file=>file.url));
+    if(!evidence.some(url=>DirectSubmissionHistory.fileKey(url)===key))return null;
+    return {key,value,file:Object.assign({},value,{type:'pdf',label:'PDF bài đã nộp',documentRole:role(value)})};
+  }
+  function sameSource(file,proof){
+    const value=proof.value;
+    return file.sourceSpreadsheetId===value.sourceSpreadsheetId&&file.sourceTab===value.sourceTab&&
+      Number.isInteger(file.sourceRow)&&file.sourceRow===value.sourceRow&&role(file)===role(value);
+  }
+  function superseded(file,proof){
+    return Boolean(proof&&file.type==='pdf'&&DirectSubmissionHistory.fileKey(file.url)!==proof.key&&sameSource(file,proof));
+  }
+  function typed(file){
+    const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return null;
+    const hint=types.get(key),merged=mergeFile(knownFiles.get(key),file),type=fileType(merged);
+    merged.type=!specific(type)&&hint?hint:type;
+    return {key,file:merged};
+  }
+  flat.forEach(file=>{
+    const key=DirectSubmissionHistory.fileKey(file&&file.url);if(!key)return;
+    const type=fileType(file);if(specific(type)&&!types.has(key))types.set(key,type);
+    knownFiles.set(key,mergeFile(knownFiles.get(key),file));
+  });
+  function displayedFiles(group){
+    const files=Array.from(group.files.values()).filter(file=>!superseded(file,group.canonical));
+    const pdfRoles=new Set(files.filter(file=>fileType(file)==='pdf').map(role));
+    const completedMergeCoversRaw=files.some(file=>fileType(file)==='pdf'&&file.generated===true&&file.coversRawImages===true);
+    const pdfCovers=file=>completedMergeCoversRaw||pdfRoles.has(role(file))||(!role(file)&&pdfRoles.size===1);
+    const fallback=plain(fallbackType||(state.kind==='shadowing'?'video':''));
+    let genericFallback=false;
+    return files.filter(file=>{
+      const type=fileType(file);
+      if(type==='pdf'||type==='video'||type==='audio')return true;
+      if(type==='image')return !pdfCovers(file);
+      if(specific(type))return true;
+      // Older receipt payloads exposed every raw Drive URL without a type or
+      // document role. They cannot be classified safely in the browser. Keep
+      // one usable fallback for that receipt instead of rendering every URL.
+      if(pdfCovers(file)||genericFallback)return false;
+      genericFallback=true;if(specific(fallback))file.type=fallback;return true;
+    });
+  }
+  function add(group,file){
+    const item=typed(file);if(!item)return;
+    const old=group.files.get(item.key);
+    if(!old)group.files.set(item.key,item.file);
+    else group.files.set(item.key,mergeFile(old,item.file));
+  }
+  history.forEach((attempt,index)=>{
+    const canonical=canonicalProof(attempt);
+    const group={receiptId:attempt.receiptId||'',attempt:index+1,files:new Map(),canonical};groups.push(group);
+    if(canonical)types.set(canonical.key,'pdf');
+    function receiptFile(file){
+      const known=knownFiles.get(DirectSubmissionHistory.fileKey(file.url));
+      return canonical&&!role(file)&&!role(known||{})?Object.assign({},file,{documentRole:role(canonical.value)}):file;
+    }
+    if(group.receiptId)byReceipt.set(group.receiptId,group);
+    list(attempt.submissionFiles).forEach(file=>add(group,file));
+    list(attempt.evidenceUrls).forEach(url=>add(group,receiptFile({url})));
+    list(attempt.links).forEach(link=>add(group,receiptFile(link)));
+    if(attempt.viewUrl)add(group,receiptFile({url:attempt.viewUrl}));
+    if(canonical)add(group,canonical.file);
+  });
+  // Flat rows may enrich a known occurrence. Distinct receipt IDs are never
+  // collapsed merely because a learner submitted the same file again.
+  flat.filter(file=>file&&file.receiptId).forEach(file=>{
+    let group=byReceipt.get(file.receiptId);
+    if(!group){group={receiptId:file.receiptId,attempt:Number.isInteger(file.attempt)&&file.attempt>0?file.attempt:null,files:new Map()};groups.push(group);byReceipt.set(file.receiptId,group);}
+    add(group,file);
+  });
+  groups.forEach(group=>group.files.forEach((_,key)=>claimed.add(key)));
+  const unassigned={receiptId:'',attempt:null,files:new Map()};
+  flat.filter(file=>file&&!file.receiptId).forEach(file=>{
+    const key=DirectSubmissionHistory.fileKey(file.url);
+    // Only explicit row provenance can supersede an unassigned indexed PDF.
+    // Old cached files without provenance and different document roles remain.
+    if(key&&!claimed.has(key)&&!groups.some(group=>superseded(file,group.canonical)))add(unassigned,file);
+  });
+  if(!flat.length&&state.submissionUrl&&!claimed.has(DirectSubmissionHistory.fileKey(state.submissionUrl)))add(unassigned,{url:state.submissionUrl});
+  if(unassigned.files.size)groups.push(unassigned);
+  return groups.filter(group=>group.files.size).map(group=>({receiptId:group.receiptId,attempt:group.attempt,files:displayedFiles(group)})).filter(group=>group.files.length);
+}
+const fighterSubmittedFileActionsBeforeDedupe_=submittedFileActions_;
+function fighterSubmissionActionLabel_(file){
+  const role=String(file&&(file.documentRole||file.role)||'');
+  const type=String(file&&file.type||'').toLowerCase();
+  if(role==='vocabularyNotebook'||role==='vocabulary')return type==='video'?'Xem video Sổ từ vựng đã nộp':'Xem Sổ từ vựng đã nộp';
+  if(role==='correctionNotebook'||role==='correction')return type==='video'?'Xem video Vở chữa bài đã nộp':'Xem Vở chữa bài đã nộp';
+  return '';
+}
+submittedFileActions_=function(state,fallbackType){
+  if(!state)return fighterSubmittedFileActionsBeforeDedupe_.call(this,state,fallbackType);
+  return fighterSubmissionFileGroups_(state,fallbackType).flatMap(group=>{
+    const actions=fighterSubmittedFileActionsBeforeDedupe_.call(this,Object.assign({},state,{submissionFiles:group.files,submissionUrl:''}),fallbackType);
+    return actions.map((action,index)=>{
+      const label=fighterSubmissionActionLabel_(group.files[index]);
+      if(label)action=action.replace(/>[^<]+ →<\/a>$/,'>'+label+' →</a>');
+      return group.attempt?action.replace(' →</a>',' · Lần '+group.attempt+' →</a>'):action;
+    });
+  });
+};
+
+// A native empty response is a received attempt, never completed content.
+function fighterSubmissionSelectSelfStudyResult_(previous,current){
+  if(!previous)return current;
+  const empty=item=>Boolean(item&&(item.contentStatus==='empty'||item.contentMissing===true));
+  // Keep the existing last-result choice except when a later empty attempt
+  // would hide already received content. Every source occurrence stays visible.
+  const selected=!empty(previous)&&empty(current)?previous:current;
+  const attempts=item=>Array.isArray(item.submissionAttempts)&&item.submissionAttempts.length?item.submissionAttempts:[item];
+  return Object.assign({},selected,{submissionAttempts:DirectSubmissionHistory.merge(attempts(previous),attempts(current))});
+}
+function fighterEmptySubmissionMarkup_(state){
+  if(!state)return '';
+  const empty=(state.submissionAttempts||[]).filter(r=>r.contentStatus==='empty');
+  if(!state.contentMissing&&!empty.length)return '';
+  const current=state.contentMissing?'<strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p>':'';
+  const history=empty.map(r=>'<p>Lần '+esc(r.attempt||r.sourceAttempt||'')+' · '+esc(r.submittedAt||'')+' · Lượt gửi trống, không có video/tệp.</p>').join('');
+  return '<div class="direct-empty-submission" style="'+(state.contentMissing?'border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px':'color:#64748b')+'">'+current+history+'</div>';
+}
+
+function fighterSubmissionReadLabel_(){const state=submissionOwner_.readState;return ['idle','loading'].includes(state)?'Đang kiểm tra bài nộp':'Đang xác minh bài nộp…';}
 
 /* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;
