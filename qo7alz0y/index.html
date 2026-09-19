@@ -249,9 +249,7 @@ const kidsApi = (() => {
       },
       submissions() {
         if(status!=='authorized')return Promise.reject(error('Đang kiểm tra hồ sơ.','AUTH_PENDING'));
-        if(preparedReceiptPackage&&preparedReceiptPackage.alias===keyOf(boundAlias)){
-          validateScope(preparedReceiptPackage.value,'submissions');return Promise.resolve(JSON.parse(JSON.stringify(preparedReceiptPackage.value)));
-        }
+        // KIDS_LIVE_VERIFICATION_V1: one current source read; prepared data is only the opening snapshot.
         return requestAction('submissions',false,receiptEpoch);
       },
       bootstrap(force = false, feedbackOnly = false) {
