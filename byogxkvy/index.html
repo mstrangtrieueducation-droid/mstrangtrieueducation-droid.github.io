@@ -4737,7 +4737,7 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       const retake=isRetake(assignment,task),program=key(assignment.program||'');
       const families=retake?['KIDS_RETAKE']:list(config.rules).filter(rule=>new RegExp(rule.programPattern).test(program)).flatMap(rule=>rule.families);
       if(!families.length)return [];
-      const scheduledPractice=assignment.kind==='self-practice'&&/^(?:PEPPA|PEPPAPIG|PHONICSVIDEO)$/.test(program);
+      const scheduledPractice=assignment.kind==='self-practice'&&/^(?:PEPPA|PEPPAPIG|PHONICSVIDEO|SCIENCE(?:K|G[12]))$/.test(program);
       const proposedNumber=Number(assignment.number||assignment.practiceNumber||(scheduledPractice?assignment.sessionNumber:0)||0);
       const number=scheduledPractice&&(!Number.isInteger(proposedNumber)||proposedNumber<1||proposedNumber>999)?0:proposedNumber;
       const keys=list(task.sourceKeys).concat(task.sourceCode||task.code||[],list(assignment.sourceKeys),
@@ -4751,7 +4751,7 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       // Only native family codes can verify absence; an opaque page/assignment
       // identifier is not a submission code for a newly published video.
       if(scheduledPractice){
-        const native=program==='PHONICSVIDEO'?/^PHONICSVIDEO\d{1,3}$/:/^PEPPA\d{1,3}$/;
+        const native=program==='PHONICSVIDEO'?/^PHONICSVIDEO\d{1,3}$/:/^SCIENCE(?:K|G[12])$/.test(program)?new RegExp('^'+program+'\\d{1,3}$'):/^PEPPA\d{1,3}$/;
         return families.flatMap(family=>strong.filter(code=>native.test(code)).map(code=>({family,code,exact:true,taskType:''})));
       }
       return families.flatMap(family=>strong.map(code=>({family,code,exact:false,taskType:count>1?matching.homeworkTaskType_([task.title,task.instructions].join(' ')):''})));
