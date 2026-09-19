@@ -4920,11 +4920,17 @@ return {normalizeKey_,normalizeSearchText_,assignmentSourceKeys_,practiceNumberK
       list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
         const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;
         const assignment=assignments.find(a=>a.id===retake.assignmentId);if(!assignment)return;
-        const task=list(assignment.tasks).find(t=>isRetake(assignment,t)&&t.feedback&&t.feedback.submitted);if(!task)return;
+        // KIDS_RETAKE_RESULT_VERIFICATION_V1: a verified absence belongs to
+        // the same retake in Results as in Lessons, even without a receipt.
+        const candidates=list(assignment.tasks).filter(t=>isRetake(assignment,t)&&t.feedback);
+        const exact=candidates.filter(t=>urlKey(t.url||t.learningUrl||t.taskUrl)===urlKey(retake.learningUrl)&&urlKey(retake.learningUrl));
+        const task=exact.length===1?exact[0]:candidates.length===1?candidates[0]:null;if(!task)return;
         const feedback=task.feedback;
+        ['directReceiptResolution','directReceiptDeadline','directReceiptExclusion'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(feedback,k))retake[k]=feedback[k];});
+        if(ticket&&guard.can(task))guard.transfer(task,retake);
+        if(!feedback.submitted)return;
         retake.submittedAt=feedback.submittedAt;retake.attempts=list(feedback.submissionAttempts).slice();retake.declaredAttemptCount=retake.attempts.length;
         if(Number.isFinite(feedback.score)){retake.score=feedback.score;retake.maximum=feedback.maximum;retake.scoreLabel=feedback.scoreLabel;}
-        if(ticket&&guard.can(task))guard.transfer(task,retake);
       });
       // The original summary counts online assignments, never paper marks.
       // Rebuild its existing reminders only when every relevant task was read.
