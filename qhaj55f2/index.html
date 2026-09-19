@@ -498,8 +498,8 @@ function parentLearningUrl_(value, enabled = true) { return taLearningPrefill_.d
       // Match the renderer's proof contract. A complete-but-stale response is
       // not a finished verification, even when its summary says complete.
       function verified(source){return Boolean(source&&source.complete===true&&source.freshRead===true&&Number.isFinite(Number(source.verifiedAt))&&Number(source.verifiedAt)>0);}
-      var sourcesComplete=Boolean(Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
-      var assignmentsComplete=!authority||authority.schema===1&&verified(authority);
+      var sourcesComplete=Boolean(payload&&payload.submissionVerification&&payload.submissionVerification.schema===1&&verified(payload.submissionVerification)&&Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
+      var assignmentsComplete=authority?authority.schema===1&&verified(authority):!options.requireAssignmentAuthority;
       return Boolean(sourcesComplete&&assignmentsComplete);
     }
     function renderSafely(){

@@ -4300,8 +4300,8 @@ function createStudentLearningPrefill(options) {
       // Match the renderer's proof contract. A complete-but-stale response is
       // not a finished verification, even when its summary says complete.
       function verified(source){return Boolean(source&&source.complete===true&&source.freshRead===true&&Number.isFinite(Number(source.verifiedAt))&&Number(source.verifiedAt)>0);}
-      var sourcesComplete=Boolean(Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
-      var assignmentsComplete=!authority||authority.schema===1&&verified(authority);
+      var sourcesComplete=Boolean(payload&&payload.submissionVerification&&payload.submissionVerification.schema===1&&verified(payload.submissionVerification)&&Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
+      var assignmentsComplete=authority?authority.schema===1&&verified(authority):!options.requireAssignmentAuthority;
       return Boolean(sourcesComplete&&assignmentsComplete);
     }
     function renderSafely(){
@@ -5166,7 +5166,7 @@ function parentLoadPreparedHistory_(page,generation) {
       return meta.label+(count>1?' · '+count+' lần':'')+(submittedAt?' · '+submittedAt:'');
     }
     function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
-    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,retryTransientSources:false,retryAuthority:false,
+    const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,requireAssignmentAuthority:true,retryTransientSources:false,retryAuthority:false,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
       isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>kidsApi.parent.submissions(),project:parentProjectPrepared_,
       render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
