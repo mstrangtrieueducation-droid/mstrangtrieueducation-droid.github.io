@@ -3197,6 +3197,26 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       }));target.submissionFiles=Array.from(files.values());
       return content;
     }
+    function clearUnmatchedDirectEvidence(target){
+      // Bootstrap/Toan dien rows can still contain files from an older task
+      // that reused the same program code.  Once the current Form source has
+      // been read and has no matching receipt, no old artifact may be shown on
+      // the current "Can nop" card.
+      target.submissionFiles=[];
+      target.submissionAttempts=[];
+      target.directReceiptContentEvidence=[];
+      target.directReceiptEvidence={types:[],ids:[]};
+      target.evidenceUrls=[];
+      target.links=[];
+      target.submissionUrl='';
+      target.viewUrl='';
+      target.reviewUrl='';
+      target.fileUrl='';
+      target.receiptReceived=false;
+      target.submitted=false;
+      target.submittedAt='';
+      target.contentMissing=false;
+    }
     function componentCompletion(found){
       if(!found.length)return {known:false,complete:false};
       if(found.every(r=>r.contentStatus==='empty'))return {known:true,complete:false,completedAt:0};
@@ -3262,6 +3282,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
           if(!state)return;
           if(manual(task,assignment)){state.submissionManualRead=manualAuthority(value,student,assignment,index,state,guard)||unmappedManualRead(value,student,state,guard);state.submissionManualAuthority=Boolean(state.submissionManualRead&&state.manualSubmissionVerification&&state.manualSubmissionVerification.decisionKnown===true&&state.tracked===true&&(state.completed===true||state.missing===true));return;}
           const found=matched.filter(row=>row.index===index).map(row=>row.receipt).sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b));const content=received(state,found,assignment,found.length?peersFor(found[0]):[]);
+          if(!found.length&&pendingProofs[index])clearUnmatchedDirectEvidence(state);
           const components=componentCompletion(content||found);
           if(components.known){state.completed=state.completed||components.complete;state.missing=!state.completed;state.status=state.completed?'Đã nộp bài':'Đã nộp một phần';}
           const scored=found.filter(r=>r.scoreSource==='automatic-score-source'&&Number.isFinite(r.scoreOutOfTen));
