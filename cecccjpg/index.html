@@ -958,6 +958,40 @@ body.f9-portal-locked #student-gateway {
 
 </style>
 <style id="submission-status-style">.submission-unverified{display:none!important}</style>
+<style>
+/* SUBMISSION_HISTORY_WINDOW_CSS_V1 */
+.submission-history-window{grid-column:1 / -1;min-width:0;margin:20px 0;border:0;background:transparent}
+.submission-history-window>summary{cursor:pointer;padding:14px 20px;border:1px solid #cbd6df;border-radius:14px;background:#fff;color:#0b294a;font-family:inherit;font-weight:600;font-size:16px;line-height:1.5;list-style-position:inside;width:fit-content;max-width:100%}
+.submission-history-window>summary:hover{background:#f2f6f9}
+.submission-history-window>summary:focus-visible{outline:3px solid #1675df;outline-offset:3px}
+.submission-history-window .history-hide,.submission-history-window[open] .history-show{display:none}
+.submission-history-window[open] .history-hide{display:inline}
+.submission-history-window__cards{display:grid;gap:24px;margin-top:20px}
+.grid.two>.submission-history-window .submission-history-window__cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:760px){.grid.two>.submission-history-window .submission-history-window__cards{grid-template-columns:1fr}.submission-history-window>summary{width:100%;box-sizing:border-box}}
+</style>
+<script>
+/* SUBMISSION_HISTORY_WINDOW_V1: presentation only; no requests or authority. */
+(function(root){
+  'use strict';
+  var expanded=Object.create(null),offset=7*3600000;
+  function cutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-2,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
+  function assigned(item){var p=root.DirectSubmissionDeadlinePolicy,keys=['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'];if(!p)return 0;for(var i=0;i<keys.length;i++){var n=p.time(item&&item[keys[i]],false);if(n)return n;}return 0;}
+  function historical(item,now){var date=assigned(item);return date>0&&date<cutoff(typeof now==='number'?now:Date.now());}
+  function scope(key){return String(root.location&&root.location.hash||'')+'|'+key;}
+  function render(items,card,key,options){
+    options=options||{};var recent=[],old=[],now=typeof options.now==='number'?options.now:Date.now();
+    (Array.isArray(items)?items:[]).forEach(function(item,index){(historical(item,now)?old:recent).push({item:item,index:index});});
+    function html(rows){return rows.map(function(row){return card(row.item,row.index);}).join('');}
+    var current=html(recent);if(!old.length)return current;
+    if(!/^[a-z0-9-]+$/.test(key))throw Error('HISTORY_SECTION_KEY');
+    return current+'<details class="submission-history-window" data-history-section="'+key+'"'+(expanded[scope(key)]?' open':'')+'><summary><span class="history-show">Xem thêm '+old.length+' bài cũ</span><span class="history-hide">Thu gọn bài cũ</span></summary><div class="submission-history-window__cards">'+html(old)+'</div></details>';
+  }
+  if(root.document)root.document.addEventListener('toggle',function(event){var el=event.target;if(el&&el.getAttribute){var key=el.getAttribute('data-history-section');if(key)expanded[scope(key)]=Boolean(el.open);}},true);
+  var api={cutoff:cutoff,assignedAt:assigned,historical:historical,render:render};root.DirectSubmissionHistoryWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+</script>
 </head>
 <body class="f9-portal-locked">
   <div id="loading" class="loading"><div><div class="spinner"></div><p>Đang tải thông tin học tập…</p></div></div>
@@ -1274,7 +1308,7 @@ body.f9-portal-locked #student-gateway {
       renderAssessmentReminders();updateNextClass();setInterval(updateNextClass,60000);
     }
     function renderAssignments(){
-      $('#assignment-list').innerHTML=orderedAssignments().map(sessionCard).join('')||'<div class="empty">Chưa có buổi học nào.</div>';
+      $('#assignment-list').innerHTML=DirectSubmissionHistoryWindow.render(orderedAssignments(), sessionCard, 'fighter-lessons')||'<div class="empty">Chưa có buổi học nào.</div>';
     }
     function assignmentIsNew_(a){return newsAssignments_&&Array.isArray(newsState_.newAssignmentIds)&&newsState_.newAssignmentIds.includes(assignmentNewsId_(a))}
     function sessionCard(a){const state=dueState(a.dueDate);const isNew=assignmentIsNew_(a);return `<article class="session"><header class="session-head"><div><span class="program-pill">${esc(a.program)}</span>${isNew?`<span class="assignment-new-pill">BÀI MỚI</span>`:''}<strong class="session-no">${esc(a.session)}</strong><div class="session-date">${esc(fullDate(a.lessonDate))}</div></div><div class="session-topic"><span>Chủ đề</span><h3>${esc(a.topic)}</h3></div></header><section class="lesson"><strong class="content-label">Nội dung buổi học</strong><p>${esc(a.lessonSummary)}</p></section><section class="tasks"><strong class="content-label">Bài tập về nhà</strong>${a.tasks.map((t,i)=>`<div class="task"><span class="task-num">${i+1}</span><div><h4>${esc(t.title)}</h4><p>${esc(t.instructions)}</p></div>${t.url?`<a class="action" href="${esc(parentLearningUrl_(t.url))}" target="_blank" rel="noopener">Mở bài</a>`:''}</div>`).join('')}</section><div class="deadline ${state==='overdue'?'is-overdue':''}"><strong>Hạn nộp bài</strong><span>${esc(fullDate(a.dueDate))}</span></div>${a.closingNote?`<p class="closing">${esc(a.closingNote)}</p>`:''}</article>`}
@@ -1582,7 +1616,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
       const target=$('#self-study-list');
       if(!target)return;
       const items=Array.isArray(dashboard.selfStudyAssignments)?dashboard.selfStudyAssignments:[];
-      target.innerHTML=items.map(function(item,index){return selfStudyCardV1_(item,index===0);}).join('')||'<div class="empty">Chưa có bài tự luyện được giao.</div>';
+      target.innerHTML=DirectSubmissionHistoryWindow.render(items, function(item,index){return selfStudyCardV1_(item,index===0);}, 'fighter-practice')||'<div class="empty">Chưa có bài tự luyện được giao.</div>';
     }
 
     function selfStudyCardV1_(item,isLatest){
@@ -2211,7 +2245,7 @@ function fighterPendingRegularEntriesV15_(student){
   (student&&Array.isArray(student.assignments)?student.assignments:[]).forEach(function(record){
     if(!record||record.tracked===false||!(Number(record.missingCount||0)>0))return;
     var assignment=fighterPendingAssignmentV15_(record);
-    if(!assignment||assignment.isAssessmentLesson||assignment.isAssessment||assignment.noHomework)return;
+    if(!assignment||DirectSubmissionHistoryWindow.historical(assignment)||assignment.isAssessmentLesson||assignment.isAssessment||assignment.noHomework)return;
     if(typeof fighterRegularEligibleUiV18_==='function'&&!fighterRegularEligibleUiV18_(student,assignment))return;
     var tasks=Array.isArray(assignment.tasks)?assignment.tasks:[];
     var states=Array.isArray(record.tasks)?record.tasks:[];
@@ -2238,7 +2272,7 @@ function fighterPendingSelfStudyEntriesV15_(student){
   });
   return assignments.map(function(assignment){
     var code=typeof selfStudyCanonicalCodeUiV4_==='function'?selfStudyCanonicalCodeUiV4_(assignment&&assignment.sourceCode||assignment&&assignment.code||''):fighterPendingKeyV15_(assignment&&assignment.sourceCode||assignment&&assignment.code||'');
-    if(!assignment||assignment.submissionReceived||!submissionCan_(assignment)||!code||completed[code]||!String(assignment.url||'').trim())return null;
+    if(!assignment||DirectSubmissionHistoryWindow.historical(assignment)||assignment.submissionReceived||!submissionCan_(assignment)||!code||completed[code]||!String(assignment.url||'').trim())return null;
     return {kind:'self-study',id:String(code),label:[assignment.program,assignment.session||assignment.topic||code,assignment.contentMissing?'Bài đã gửi nhưng còn trống':''].filter(Boolean).join(' · ')};
   }).filter(Boolean);
 }
@@ -2672,6 +2706,7 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
 (function(root){
   'use strict';
   var offset=7*3600000,cutover=Date.UTC(2026,8,1)-offset;
+  function historyCutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-2,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
   function time(value,endOfDay){
     if(typeof value==='number')return Number.isFinite(value)&&value>1e11&&value<=8640000000000000?value:0;
     var s=String(value||'').trim(),m;
@@ -2701,14 +2736,15 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
     var received=times.length>0,complete=received&&options.complete!==false;
     var completedAt=options.completedAt?time(options.completedAt,false):received?Math.min.apply(null,times):0;
     var now=typeof options.now==='number'?options.now:Date.now();
-    var pending=Boolean(assigned>=cutover&&assigned<=now&&options.verified===true&&!complete);
+    var historical=Boolean(assigned&&assigned<historyCutoff(now));
+    var pending=Boolean(!historical&&assigned>=cutover&&assigned<=now&&options.verified===true&&!complete);
     return {eligible:eligible,assignedAt:assigned,dueAt:due,received:received,complete:complete,
       late:Boolean(eligible&&complete&&completedAt>due),
       pending:pending,
-      missing:Boolean(eligible&&options.verified===true&&!complete&&now>due),
+      historical:historical,missing:Boolean(!historical&&eligible&&options.verified===true&&!complete&&now>due),
       label:complete?(eligible&&completedAt>due?'Đã nộp · Muộn':'Đã nộp'):received?'Đã nộp một phần':pending?(eligible&&now>due?'Chưa nộp · Quá hạn':'Cần nộp bài'):''};
   }
-  var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
+  var api={time:time,receiptTime:receiptTime,evaluate:evaluate,cutover:cutover,historyCutoff:historyCutoff};root.DirectSubmissionDeadlinePolicy=api;if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
 /* DIRECT_SUBMISSION_ASSIGNMENT_WINDOW_V1: source code reuse stays date-bound. */
