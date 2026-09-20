@@ -302,6 +302,8 @@ body.f9-portal-locked .student-gateway__lookup .button{min-width:190px;min-heigh
 @media(max-width:560px){body.f9-portal-locked .student-gateway__lookup .search-row{grid-template-columns:1fr}body.f9-portal-locked .student-gateway__lookup .button{width:100%;min-width:0}}
 /* FIGHTER9_MOBILE_CONTENT_FIRST_V4 */
 @media(max-width:820px){body.f9-portal-ready #assignment-list .task{display:grid}body.f9-portal-ready #assignment-list .task>.f9-inline-task-state{grid-column:1/-1!important;grid-row:auto!important;order:99;margin:4px 0 0}body.f9-portal-ready #self-study-list>.session{display:grid;grid-template-columns:1fr}body.f9-portal-ready #self-study-list>.session>.session-head,body.f9-portal-ready #self-study-list>.session>.lesson,body.f9-portal-ready #self-study-list>.session>.tasks,body.f9-portal-ready #self-study-list>.session>.deadline{grid-column:1;grid-row:auto!important;order:0}body.f9-portal-ready #self-study-list>.session>.f9-inline-self-study{grid-column:1;grid-row:auto!important;order:99;margin:16px}}
+/* FIGHTER_SELF_STUDY_READING_CARD_V28 */
+.session-topic>.program-pill{display:inline-flex;width:max-content;margin-top:10px;margin-bottom:0;padding:5px 9px;line-height:1;border-radius:999px}
 </style>
   <!-- VN_NATIONAL_DAY_THEME_2026_SCRIPT_START -->
 <script>
@@ -1623,7 +1625,34 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
       target.innerHTML=DirectSubmissionHistoryWindow.render(items, function(item,index){return selfStudyCardV1_(item,index===0);}, 'fighter-practice')||'<div class="empty">Chưa có bài tự luyện được giao.</div>';
     }
 
+    /* FIGHTER_SELF_STUDY_READING_FORMAT_V28: make RI3/4/5 cards match the common self-study layout. */
+    function fighterSelfStudyPresentationV28_(source) {
+      const item=Object.assign({},source||{});
+      const code=fighterReadingCodeUiV27_(item.sourceCode||item.code||'');
+      if(!code)return item;
+      const match=code.match(/^RI([345])-U(\d{2})$/);
+      if(!match)return item;
+      const level=match[1],unit=match[2];
+      const prefix=new RegExp('^\\s*READING(?:\\s+INTENSIVE)?\\s*'+level+'\\s*[—–-]\\s*UNIT\\s*0*'+Number(unit)+'\\s*[:·—–-]?\\s*','i');
+      const topic=String(item.topic||'').replace(prefix,'').trim();
+      const lines=String(item.instructions||'').replace(/\r\n?/g,'\n').split('\n');
+      while(lines.length&&/^\s*$/.test(lines[0]))lines.shift();
+      while(lines.length&&(
+        /FIGHTER\s*\d+\s*[—–-]\s*BÀI TỰ LUYỆN TUẦN/i.test(lines[0])||
+        prefix.test(lines[0])||
+        /^\s*BÀI TẬP VỀ NHÀ\s*$/i.test(lines[0])
+      ))lines.shift();
+      while(lines.length&&/^\s*$/.test(lines[0]))lines.shift();
+      item.program='READING INTENSIVE '+level;
+      item.session='UNIT '+unit;
+      item.weekLabel='Bài tự luyện · Unit '+unit;
+      item.topic=topic||'Reading Intensive '+level+' · Unit '+unit;
+      item.instructions=lines.join('\n').trim()||'Hoàn thành đầy đủ bài đọc, từ vựng và phần luyện tập của Unit '+unit+'.';
+      return item;
+    }
+
     function selfStudyCardV1_(item,isLatest){
+      item=fighterSelfStudyPresentationV28_(item);
       // FIGHTER_SELF_STUDY_GENERIC_CARD_V26
       const deadlineState=dueState(item.dueDate);
       const badge=isLatest?'<span class="program-pill" style="background:#fff0ef;color:#9b2424">MỚI</span>':'';
