@@ -35763,12 +35763,14 @@ const ieltsWritingAssignments_ = (() => {
 })();
 /* IELTS_WRITING_ASSIGNMENT_HELPERS_END_V1 */
 
-/* IELTS_WRITING_FEEDBACK_V1: personal results only, with live bearer authorization. */
+/* IELTS_WRITING_FEEDBACK_V1: personal results only, with live bearer authorization. IELTS_WRITING_HOMEWORK_WARM_V2 */
 const ieltsWritingReviews_ = (() => {
   'use strict';
   const REFRESH_INTERVAL_MS = 180000;
   let identity = '', generation = 0, status = 'idle', reviews = [], sourceStates = [], notebookStates = [], writingPolicyStates = [], inFlight = null, lastFetch = 0, hasLoaded = false, refreshing = false;
   let dialog = null, opener = null, scrollBefore = '', selectedReview = null;
+  const revisionCache = new Map();
+  let reviewWarmObserver = null, reviewWarmTimer = 0;
   const escape = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
   const normalizedName = value => String(value || '').normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleUpperCase('vi');
   const array = value => Array.isArray(value) ? value : [];
@@ -35789,6 +35791,9 @@ const ieltsWritingReviews_ = (() => {
   }
   function clear() {
     generation++; identity = ''; reviews = []; sourceStates = []; notebookStates = []; writingPolicyStates = []; status = 'idle'; inFlight = null; lastFetch = 0; hasLoaded = false; refreshing = false;
+    revisionCache.clear();
+    clearTimeout(reviewWarmTimer); reviewWarmTimer = 0;
+    reviewWarmObserver?.disconnect(); reviewWarmObserver = null;
     if (dialog) { close(); dialog.remove(); dialog = null; }
   }
   function current() {
@@ -36157,6 +36162,41 @@ const ieltsWritingReviews_ = (() => {
       : 'Bản sửa giữ nguyên các từ và dấu câu của bài em nộp.';
     return {essay,legend:legend+(deleted ? ' Phần đã lược bỏ không xuất hiện trong bản sửa; em đối chiếu ở tab Bài viết gốc - kèm chú thích.' : '')};
   }
+  function cachedRevisionHtml(record) {
+    const cached = revisionCache.get(record.resultId);
+    if (cached) return cached;
+    const computed = revisionHtml(record);
+    revisionCache.set(record.resultId, computed);
+    return computed;
+  }
+  function warmReviewButton(target) {
+    const button = target?.closest?.('[data-wr-open]');
+    if (!button) return;
+    const record = reviews.find(review => review.resultId === button.dataset.wrOpen);
+    if (!record || revisionCache.has(record.resultId)) return;
+    const warm = () => {
+      if (current() && reviews.includes(record) && !revisionCache.has(record.resultId)) cachedRevisionHtml(record);
+    };
+    if ('requestIdleCallback' in window) window.requestIdleCallback(warm, {timeout:350});
+    else setTimeout(warm, 0);
+  }
+  function observeReviewButtons() {
+    clearTimeout(reviewWarmTimer);
+    reviewWarmTimer = setTimeout(() => {
+      const buttons = document.querySelectorAll('[data-wr-open]');
+      if (!buttons.length) return;
+      if (!('IntersectionObserver' in window)) { warmReviewButton(buttons[0]); return; }
+      if (!reviewWarmObserver) reviewWarmObserver = new IntersectionObserver(items => items.forEach(item => {
+        if (!item.isIntersecting) return;
+        reviewWarmObserver?.unobserve(item.target);
+        warmReviewButton(item.target);
+      }), {rootMargin:'700px 0px'});
+      buttons.forEach(button => {
+        if (button.dataset.wrWarmObserved === '1') return;
+        button.dataset.wrWarmObserved = '1'; reviewWarmObserver.observe(button);
+      });
+    }, 0);
+  }
   function promptHtml(assignment, task) {
     const label = 'Đề ' + task.taskNumber;
     return '<section class="wr-section wr-prompt"><h3>Đề bài gốc · ' + escape(label) + '</h3>' +
@@ -36193,7 +36233,7 @@ const ieltsWritingReviews_ = (() => {
     dialog.dataset.wrAssignment = assignment.assignmentCode;
     const knowledgeRows = array(record.knowledge && record.knowledge.rows);
     const revisionLabel = record.revisionLabel || 'Bản sửa gợi ý';
-    const revision = revisionHtml(record);
+    const revision = cachedRevisionHtml(record);
     dialog.innerHTML = '<header class="wr-head"><div><span class="wr-kicker">' + escape(record.className) + ' · ' + escape(assignment.weekCode) + ' · Đề ' + task.taskNumber + '</span><h2 id="wr-title">Bài chữa của Cô</h2><p>' + escape(record.studentName) + '</p></div><button class="wr-close" type="button" aria-label="Đóng bài chữa" data-wr-close>×</button></header>' +
       '<div class="wr-body"><div class="wr-top"><span class="wr-verdict">' + escape(record.learningVerdict) + '</span>' + (record.submissionStatus === 'wrong_task' ? '<strong class="wr-wrong-task">Bài nộp chưa đúng đề</strong>' : '') + '<small>Bài gốc: ' + escape(record.originalWordCount) + ' từ</small><small data-wr-review-label>' + (isCurrentReview(record) ? 'Đã trả bài' : 'Bài chữa lần nộp trước') + '</small></div><div data-wr-freshness>' + freshnessHtml(record.assignmentCode, record.taskNumber, record) + '</div>' +
       promptHtml(assignment,task) +
@@ -36222,6 +36262,9 @@ const ieltsWritingReviews_ = (() => {
     const target=returnToEssay ? [...dialog.querySelectorAll('[data-wr-notes]')].find(mark => mark.dataset.wrNotes.split(',').some(i => ids.includes(Number(i)))) : dialog.querySelector('#wr-note-'+ids[0]);
     if(target){target.scrollIntoView({block:'nearest',behavior:'smooth'});target.focus({preventScroll:true});}
   }
+  document.addEventListener('pointerover', event => warmReviewButton(event.target), true);
+  document.addEventListener('focusin', event => warmReviewButton(event.target), true);
+  document.addEventListener('touchstart', event => warmReviewButton(event.target), {capture:true,passive:true});
   document.addEventListener('click', event => {
     const button=event.target.closest('button'); if(!button)return;
     if(button.hasAttribute('data-wr-open'))open(button.dataset.wrOpen,button);
@@ -36239,7 +36282,7 @@ const ieltsWritingReviews_ = (() => {
   const baseLock=ieltsParentLock_;
   ieltsParentLock_=function(){clear();return baseLock.apply(this,arguments);};
   const baseRender=parentRender_;
-  parentRender_=function(){const result=baseRender.apply(this,arguments);if(who())refresh();return result;};
+  parentRender_=function(){const result=baseRender.apply(this,arguments);if(who())refresh();observeReviewButtons();return result;};
   const baseResume=parentQuietResume_;
   parentQuietResume_=async function(){const result=await baseResume.apply(this,arguments);if(who())refresh(true);return result;};
   window.setInterval(() => {
