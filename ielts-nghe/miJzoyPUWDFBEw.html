@@ -180,10 +180,13 @@ function refreshDraftUi(){
   updateStageTabs();const progress=$("#partProgress");if(progress&&!finalRequested())progress.outerHTML=partProgressView();
   if(stage==="score"&&!finalRequested()){const content=$("#content");if(content)content.innerHTML=finalView()}
 }
+function answerMaskPattern(value){const clean=String(value||"").trim();if(clean.replace(/[^A-Za-z0-9]/g,"").length<3)return null;const escaped=clean.split(/\s+/).map(part=>part.replace(/[.*+?^$()|[\]\\{}]/g,"\\$&")).join("\\s+");return new RegExp("(^|[^A-Za-z0-9])("+escaped+")(?=$|[^A-Za-z0-9])","gi")}
+function maskVisibleAnswers(text,answerList){let output=String(text||"");for(const answer of answerList||[]){const pattern=answerMaskPattern(answer);if(pattern)output=output.replace(pattern,(match,prefix)=>prefix+"•••")}return output}
+function safeCloze(html,answerList){const template=document.createElement("template");template.innerHTML=String(html||"");const walker=document.createTreeWalker(template.content,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{node.nodeValue=maskVisibleAnswers(node.nodeValue,answerList)});return template.innerHTML}
 function render(){
   document.querySelectorAll(".section-tabs button").forEach((button,index)=>button.classList.toggle("on",index===si));updateStageTabs();
   if(stage==="vocab")$("#content").innerHTML=vocab();
-  if(stage==="dictation")$("#content").innerHTML=`<div class="workspace"><aside class="audio-side">${audioBox()}</aside><div class="scroll-panel transcript">${section().cloze}</div></div>${partProgressView()}`;
+  if(stage==="dictation")$("#content").innerHTML=`<div class="workspace"><aside class="audio-side">${audioBox()}</aside><div class="scroll-panel transcript">${safeCloze(section().cloze,section().clozeAnswers)}</div></div>${partProgressView()}`;
   if(stage==="ielts")$("#content").innerHTML=`<div class="workspace"><aside class="audio-side">${audioBox()}</aside><div class="scroll-panel">${section().questions}</div></div>${partProgressView()}`;
   if(stage==="score")$("#content").innerHTML=finalView();
   restoreInputs();if(stage==="dictation"||stage==="ielts")initAudioPlayer();
