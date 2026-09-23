@@ -1,0 +1,193 @@
+{
+  "version": 1,
+  "policy": "Every layout-sensitive map, plan, chart, or diagram must use a verified source image. Only linear flow charts may be rendered from structured HTML.",
+  "assets": [
+    {
+      "test": 22,
+      "section": 2,
+      "page": "0QSaUrdQLdjxKw.html",
+      "asset": "question-assets/test-22/section-2-visual-1.jpg",
+      "sha256": "1a7f955c28d680d032847398dc7162c31ca2733b0c6dd819843ce91a82b1cbec",
+      "sourceTitle": "Cambridge IELTS 14 Academic Listening Test 2"
+    },
+    {
+      "test": 8,
+      "section": 3,
+      "page": "a2dl_GcHO7x_nA.html",
+      "asset": "question-assets/test-8/section-3-visual-1.jpg",
+      "sha256": "94be6b80c6ddaa122bc58f6bb8625b5929064ef9a85f08d38661389585eebf0e",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 08",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-8-6-diagram-6a867fd467b74.jpg"
+    },
+    {
+      "test": 1,
+      "section": 4,
+      "page": "GkqQdR9PaccFaw.html",
+      "asset": "question-assets/test-1/section-4-visual-1.jpg",
+      "sha256": "0d4c81f061c0e35eb129d3019088b3e5fbdd9ae4b1571b9f0e10eb6d938ccaf4",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 01",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-1-7-diagram-6a8676a8aa4bb.jpg"
+    },
+    {
+      "test": 26,
+      "section": 2,
+      "page": "IwUnyAyHc941Jw.html",
+      "asset": "question-assets/test-26/section-2-visual-1.jpg",
+      "sha256": "bfa264db069d369a058588c176d8813fbcc2953eafc90e1e2b0b417cae4320f5",
+      "sourceTitle": "Cambridge IELTS 15 Academic Listening Test 2"
+    },
+    {
+      "test": 4,
+      "section": 4,
+      "page": "JLwga_1Y8MhFtg.html",
+      "asset": "question-assets/test-4/section-4-visual-1.jpg",
+      "sha256": "7798f3619000459fe252cb12dd1485e6cdbcfbfd8454de64f58f31833e588cfd",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 04",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-4-7-diagram-6a867ae189f76.jpg"
+    },
+    {
+      "test": 5,
+      "section": 4,
+      "page": "kDhtclbcVFR0MQ.html",
+      "asset": "question-assets/test-5/section-4-visual-1.jpg",
+      "sha256": "7d5a899952ea737a2111fafe03eae886dc8f39e1dae9416ec2026de216ff77f3",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 05",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-5-8-diagram-6a867c0c3dc2f.jpg"
+    },
+    {
+      "test": 18,
+      "section": 2,
+      "page": "kVaCd8c1IhCk9A.html",
+      "asset": "question-assets/test-18/section-2-visual-1.jpg",
+      "sha256": "ad16e5799880f234738dd0981846c33bc1d4c3fe9c40a7bae75ac4e5fc220ac4",
+      "sourceTitle": "Cambridge IELTS 9 Academic Listening Test 2",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/06/cambridge-ielts-09-academic-listening-test-2-4-diagram-6a2369ec2e64e.jpg"
+    },
+    {
+      "test": 29,
+      "section": 2,
+      "page": "lChoPJ-jbgrbTQ.html",
+      "asset": "question-assets/test-29/section-2-visual-1.jpg",
+      "sha256": "493c75c326e9b1e69e71d53329f66d5c6cea6814df9fe768f16cd39905bea5bd",
+      "sourceTitle": "Cambridge IELTS 16 Academic Listening Test 1"
+    },
+    {
+      "test": 28,
+      "section": 2,
+      "page": "miJzoyPUWDFBEw.html",
+      "asset": "question-assets/test-28/section-2-visual-1.jpg",
+      "sha256": "7057220ea5456cd7564e7be88f6c782ddc6ff5f6d8073ee2beca037a120fca3d",
+      "sourceTitle": "Cambridge IELTS 15 Academic Listening Test 4"
+    },
+    {
+      "test": 3,
+      "section": 4,
+      "page": "mjzLlZvW_FxioA.html",
+      "asset": "question-assets/test-3/section-4-visual-1.png",
+      "sha256": "19d0c72292963209d4990200cf64abbdb38d1aa071c55f618823dc0cf7432740",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 03",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-3-8-diagram-6a8679cd69e5.png"
+    },
+    {
+      "test": 5,
+      "section": 1,
+      "page": "n1Xd9eV8oBlDfA.html",
+      "asset": "question-assets/test-5/section-1-visual-1.jpg",
+      "sha256": "4e6b30f81f7fcf0cbf6511b29b1f2c75ddf08cba15cb9b5fad28b4958fcdd5c8",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 05",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-5-2-diagram-6a867c0bc99cb.jpg"
+    },
+    {
+      "test": 3,
+      "section": 2,
+      "page": "p7-GQi9XfW3KtQ.html",
+      "asset": "question-assets/test-3/section-2-visual-1.jpg",
+      "sha256": "736a8f6c3ea6cafa01533df511b8d24505e640c00a07c1c57a29a48e50ccdfcd",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 03",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-3-4-diagram-6a8679cd2d967.jpg"
+    },
+    {
+      "test": 7,
+      "section": 3,
+      "page": "pott0DKoYSJ0PQ.html",
+      "asset": "question-assets/test-7/section-3-visual-1.jpg",
+      "sha256": "1d34640a432a2d7a8a90ad2e863a021ef2b682f94bd2f1f1a72e9e643933f78d",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 07",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-7-7-diagram-6a867e6acf30e.jpg"
+    },
+    {
+      "test": 12,
+      "section": 2,
+      "page": "Q3OjhOm4tdgLSw.html",
+      "asset": "question-assets/test-12/section-2-visual-1.jpg",
+      "sha256": "1667d32e64bc51182083964809c98927313e84e0f9d09ebfbc95a007b9008b6f",
+      "sourceTitle": "Cambridge IELTS 8 Academic Listening Test 4",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/06/cambridge-ielts-08-academic-listening-test-4-3-diagram-6a261f0469b72.jpg"
+    },
+    {
+      "test": 10,
+      "section": 3,
+      "page": "tqTyL_Awgx4bZw.html",
+      "asset": "question-assets/test-10/section-3-visual-1.jpg",
+      "sha256": "5294a7c94f8a47deb601aea1ca25ca60231e39ac2e4863abdf7dc53f475b95f2",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 10",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-10-7-diagram-6a86875361a6d.jpg"
+    },
+    {
+      "test": 10,
+      "section": 4,
+      "page": "tqTyL_Awgx4bZw.html",
+      "asset": "question-assets/test-10/section-4-visual-1.jpg",
+      "sha256": "c541e769aaf45a6bed1a39ccb99c45b97cbc9f9d293c8ab373e0dae2bacb5123",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 10",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-10-9-diagram-6a8687538e9d2.jpg"
+    },
+    {
+      "test": 16,
+      "section": 2,
+      "page": "UF-slkJKlzQpqQ.html",
+      "asset": "question-assets/test-16/section-2-visual-1.jpg",
+      "sha256": "fa46bed30e99226fab604ed2acb061a99959dcf442f064c2d870dc6b8e846973",
+      "sourceTitle": "Cambridge IELTS 12 Academic Listening Test 4",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2023/07/cambridge-ielts-12-academic-listening-test-4-15-20.jpg"
+    },
+    {
+      "test": 17,
+      "section": 2,
+      "page": "Wqxda4CuMrhqtQ.html",
+      "asset": "question-assets/test-17/section-2-visual-1.jpg",
+      "sha256": "43a24756b4feff7d78028c18a191d2f06dcf21606971cf5efbc3db1bd92a337c",
+      "sourceTitle": "Cambridge IELTS 13 Academic Listening Test 1",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2023/07/cambridge-ielts-13-academic-listening-test-1-14-20.jpg"
+    },
+    {
+      "test": 8,
+      "section": 2,
+      "page": "YDYN6SY4YuVurQ.html",
+      "asset": "question-assets/test-8/section-2-visual-1.jpg",
+      "sha256": "caaf0f8925384c5352ac43619e67b69774ea622fda5de4d34e3304b8ef89c735",
+      "sourceTitle": "IELTS Simulation Tests Academic Listening Test 08",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-8-4-diagram-6a867fd4544b3.jpg"
+    }
+  ],
+  "structuredFlows": [
+    {
+      "test": 2,
+      "section": 2,
+      "type": "vertical-flow",
+      "reason": "Linear sequence; spatial position is not assessed."
+    },
+    {
+      "test": 6,
+      "section": 3,
+      "type": "flow-chart",
+      "reason": "Linear sequence; spatial position is not assessed."
+    },
+    {
+      "test": 10,
+      "section": 4,
+      "type": "cause-effect",
+      "reason": "Linear cause-and-effect sequence; spatial position is not assessed."
+    }
+  ]
+}
