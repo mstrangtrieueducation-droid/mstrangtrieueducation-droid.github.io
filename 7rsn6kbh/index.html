@@ -565,7 +565,7 @@ function classworkFastRequest(action,force,selector){
     if(action==='writing'&&preparedOpening){if(!preparedOpening.writing)throw new Error('PREPARED_WRITING_UNAVAILABLE');return JSON.parse(JSON.stringify(preparedOpening.writing));}
 
 
-    if(action==='submissions'&&preparedOpening)return JSON.parse(JSON.stringify(preparedOpening.submissions));
+    // Current receipt verification must read the live versioned sources.
 
 
     const key=action+'|'+Boolean(force)+'|'+JSON.stringify(history||null),started=performance.now(),epoch=generation;
@@ -32970,8 +32970,11 @@ const parentSubmissionGuard_=createSubmissionStatusGuard({getIdentity:parentRece
 
 
 
+// PARENT_LESSON_RELEASE_V2: durable Schedule and background academics.
 // PARENT_LESSON_RELEASE_V1: one receipt owner, same opening, same source rules.
 var parentLessonLatestV1_ = null;
+var parentLessonStorageLoadedV1_ = '';
+function parentLessonStorageKeyV1_(context){return 'parent-lesson-v1:'+context.className;}
 function parentLessonMomentV1_(date, time) {
   var text=String(date||''), match=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/), iso=text.match(/^(\d{4})-(\d{2})-(\d{2})/);
   var clock=String(time||'').match(/^(\d{1,2}):(\d{2})/);
@@ -32981,19 +32984,40 @@ function parentLessonMomentV1_(date, time) {
 }
 function parentLessonAcceptV1_(target,payload,ticket,guard) {
   var context=parentLessonContextV1_(),a=payload&&payload.assignmentAuthority;
+  // Public Schedule only. Restore after live identity binding; the final NEW
+  // filter still runs. Stored Schedule is never proof of submission absence.
+  if(context.identity&&parentLessonStorageLoadedV1_!==context.identity){
+    parentLessonStorageLoadedV1_=context.identity;
+    try{var stored=JSON.parse(localStorage.getItem(parentLessonStorageKeyV1_(context))||'null');
+      if(stored&&stored.className===context.className&&stored.lessonData&&Array.isArray(stored.lessonData.assignments)&&Array.isArray(stored.lessonData.lessonEvents)&&
+          Date.now()-Number(stored.verifiedAt)>=0&&Date.now()-Number(stored.verifiedAt)<604800000)
+        parentLessonLatestV1_={identity:context.identity,authority:stored,fromStorage:true};
+    }catch(_){}
+  }
   if(context.identity&&ticket&&guard.isCurrent(ticket)&&a&&a.schema===1&&a.className===context.className&&
       a.complete===true&&a.freshRead===true&&Number(a.verifiedAt)>0&&Number(a.lessonReleaseEvaluatedAt)>0&&
       a.lessonData&&Array.isArray(a.lessonData.assignments)&&Array.isArray(a.lessonData.lessonEvents)) {
     if(!parentLessonLatestV1_||parentLessonLatestV1_.identity!==context.identity||
         a.lessonReleaseEvaluatedAt>=parentLessonLatestV1_.authority.lessonReleaseEvaluatedAt)
-      parentLessonLatestV1_={identity:context.identity,authority:a};
+      {parentLessonLatestV1_={identity:context.identity,authority:a};
+       try{localStorage.setItem(parentLessonStorageKeyV1_(context),JSON.stringify(a));}catch(_){}
+       parentAcademicQueueV1_();}
   }
   if(!context.identity||!parentLessonLatestV1_||parentLessonLatestV1_.identity!==context.identity)return target;
   a=parentLessonLatestV1_.authority;
+  if(parentLessonLatestV1_.fromStorage){
+    var base=target.publicData||target.dashboard||{},stamp=String(base.generatedAt||'');
+    var bits=stamp.match(/^(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})/);
+    var built=Number(base.lessonReleaseEvaluatedAt)|| (bits?parentLessonMomentV1_(bits[1],bits[2]):Date.parse(stamp));
+    if(built>a.lessonReleaseEvaluatedAt){
+      if(context.family==='fighter'&&target.profile&&Array.isArray(base.assignments))target.profile.assignments=base.assignments;
+      return target;
+    }
+  }
   var data=JSON.parse(JSON.stringify(a.lessonData));
   // Only Schedule-owned fields move. Teacher records, scores, Writing,
   // roster identity, receipt history and enrollment stay in their owners.
-  function merge(destination){if(!destination)return;Object.keys(data).forEach(function(k){destination[k]=data[k];});destination.lessonReleaseEvaluatedAt=a.lessonReleaseEvaluatedAt;}
+  function merge(destination){if(!destination)return;['assignments','schedule','lessonEvents','cancelledLessonEvents','selfStudyAssignments','shadowingAssignments','assessmentReminders'].forEach(function(k){if(Array.isArray(data[k]))destination[k]=data[k];});destination.lessonReleaseEvaluatedAt=a.lessonReleaseEvaluatedAt;}
   if(context.family==='fighter') {
     merge(target.publicData);merge(target.fullDashboard);
     if(target.profile)target.profile.assignments=data.assignments;
@@ -33015,7 +33039,29 @@ function parentLessonTickV1_() {
   if(due)context.owner.refresh(true);
 }
 
-function parentLessonContextV1_(){return {family:'ielts',identity:parentReceiptIdentity_(),className:ieltsParentAccess.className,owner:parentReceiptOwner_};}
+// PARENT_ACADEMIC_REFRESH_V1: one background academic refresh after receipts.
+var parentAcademicSessionV1_ = null;
+function parentAcademicQueueV1_() {
+  var context=parentLessonContextV1_();
+  if(!context.academic||!context.identity)return;
+  if(parentAcademicSessionV1_&&parentAcademicSessionV1_.identity===context.identity)return;
+  var state={identity:context.identity,attempt:0};parentAcademicSessionV1_=state;
+  function current(){var c=parentLessonContextV1_();return parentAcademicSessionV1_===state&&c.identity===state.identity?c:null;}
+  function run(){
+    var c=current();if(!c){if(parentAcademicSessionV1_===state)parentAcademicSessionV1_=null;return;}
+    // Complete the current receipt owner first; background work never gates opening.
+    if(c.owner.inFlight||c.owner.retryQueued){setTimeout(run,1000);return;}
+    Promise.resolve().then(function(){return c.academic();}).then(function(){state.done=true;}).catch(function(){
+      if(!current())return;
+      var delays=[5000,10000,20000,40000,60000];
+      var delay=delays[Math.min(state.attempt++,delays.length-1)];
+      setTimeout(run,delay+Math.floor(Math.random()*3000));
+    });
+  }
+  setTimeout(run,0);
+}
+
+function parentLessonContextV1_(){return {family:'ielts',identity:parentReceiptIdentity_(),className:ieltsParentAccess.className,owner:parentReceiptOwner_,academic:parentAcademicLoadV1_};}
 const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
 
 
@@ -34180,7 +34226,7 @@ async function parentLoad_(id,prefetch){
 
 
 
-  }else{setSync('ok','Đã kiểm tra dữ liệu của con');parentReceiptOwner_.refresh();}
+  }else{setSync('ok','Đã kiểm tra dữ liệu của con');parentReceiptOwner_.refresh();parentAcademicQueueV1_();}
 
 
 
@@ -36489,6 +36535,10 @@ const ieltsClasswork_ = (()=>{
 
 
 
+</script>
+
+<script>
+function parentAcademicLoadV1_(){var identity=parentReceiptIdentity_(),id=parentState.requestId;return ieltsParentAccess.request('refreshProfile').then(function(value){if(parentReceiptIdentity_()!==identity||id!==parentState.requestId)return;if(!parentAccept_('profile',value,id))throw Error('ACADEMIC_SCOPE');});}
 </script>
 </body>
 
