@@ -3505,7 +3505,7 @@ function parentLessonAcceptV1_(target,payload,ticket,guard) {
         a.lessonReleaseEvaluatedAt>=parentLessonLatestV1_.authority.lessonReleaseEvaluatedAt)
       {parentLessonLatestV1_={identity:context.identity,authority:a};
        try{localStorage.setItem(parentLessonStorageKeyV1_(context),JSON.stringify(a));}catch(_){}
-       parentAcademicQueueV1_();}
+       parentAcademicQueueV1_(a.lessonReleaseEvaluatedAt);}
   }
   if(!context.identity||!parentLessonLatestV1_||parentLessonLatestV1_.identity!==context.identity)return target;
   a=parentLessonLatestV1_.authority;
@@ -3545,11 +3545,16 @@ function parentLessonTickV1_() {
 
 // PARENT_ACADEMIC_REFRESH_V1: one background academic refresh after receipts.
 var parentAcademicSessionV1_ = null;
-function parentAcademicQueueV1_() {
+function parentAcademicQueueV1_(cycle) {
   var context=parentLessonContextV1_();
   if(!context.academic||!context.identity)return;
-  if(parentAcademicSessionV1_&&parentAcademicSessionV1_.identity===context.identity)return;
-  var state={identity:context.identity,attempt:0};parentAcademicSessionV1_=state;
+  cycle=Number(cycle)||0;
+  if(parentAcademicSessionV1_&&parentAcademicSessionV1_.identity===context.identity){
+    var previous=parentAcademicSessionV1_;
+    if(!previous.cycle||!previous.done){previous.cycle=Math.max(previous.cycle||0,cycle);return;}
+    if(cycle<=previous.cycle)return;
+  }
+  var state={identity:context.identity,attempt:0,cycle:cycle};parentAcademicSessionV1_=state;
   function current(){var c=parentLessonContextV1_();return parentAcademicSessionV1_===state&&c.identity===state.identity?c:null;}
   function run(){
     var c=current();if(!c){if(parentAcademicSessionV1_===state)parentAcademicSessionV1_=null;return;}
