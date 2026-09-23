@@ -3482,6 +3482,8 @@ function parentLessonMomentV1_(date, time) {
 }
 function parentLessonAcceptV1_(target,payload,ticket,guard) {
   var context=parentLessonContextV1_(),a=payload&&payload.assignmentAuthority;
+  if(context.identity&&context.family==='fighter'&&target&&target.profile&&target.publicData&&Array.isArray(target.publicData.assignments))
+    target.profile.assignments=target.publicData.assignments;
   // Public Schedule only. Restore after live identity binding; the final NEW
   // filter still runs. Stored Schedule is never proof of submission absence.
   if(context.identity&&parentLessonStorageLoadedV1_!==context.identity){
@@ -3503,7 +3505,7 @@ function parentLessonAcceptV1_(target,payload,ticket,guard) {
   }
   if(!context.identity||!parentLessonLatestV1_||parentLessonLatestV1_.identity!==context.identity)return target;
   a=parentLessonLatestV1_.authority;
-  if(parentLessonLatestV1_.fromStorage){
+  {
     var base=target.publicData||target.dashboard||{},stamp=String(base.generatedAt||'');
     var bits=stamp.match(/^(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}:\d{2})/);
     var built=Number(base.lessonReleaseEvaluatedAt)|| (bits?parentLessonMomentV1_(bits[1],bits[2]):Date.parse(stamp));
