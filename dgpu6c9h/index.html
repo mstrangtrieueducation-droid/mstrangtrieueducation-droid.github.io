@@ -3804,6 +3804,62 @@ function fighterApplyEnrollmentCutoffV29_(bundle,binding){
   const scheduleEligible=item=>{if(item&&item.weekday!=null&&item.startTime){const end=fighterEnrollmentDateV29_(item.endDate);return !end||end>=joined;}return eligible(item,false);};
   const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||'').trim();
   const publicData=bundle.publicData||{},full=bundle.fullDashboard||{};
+  // NEW_SCORE_DISPLAY_CUTOFF_V1: presentation only; never delete source grades.
+  function parentEnrollmentScoresV1_(family,student,model,definitions,joined,dateOf) {
+    var list=function(v){return Array.isArray(v)?v:[];};
+    var normalize=function(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');};
+    var code=function(v){return normalize(v).replace(/^direct[-_:]/,'').replace(/[-_:](?:redo|retake)$/,'').replace(/[^a-z0-9]/g,'');};
+    var keys=function(row){return ['key','id','sourceCode','assignmentCode','assignmentId','scheduleAssignmentId'].map(function(k){return code(row&&row[k]);}).filter(Boolean);};
+    var dated=function(row){if(!row)return 0;var fields=['lessonDate','assignedDate','releaseDate','date','dateLabel','startDate'];for(var i=0;i<fields.length;i++){var n=dateOf(row[fields[i]]);if(n)return n;}return 0;};
+    var index={};
+    var indexRow=function(row){var n=dated(row);if(!n)return;keys(row).forEach(function(k){if(!index[k])index[k]=[];index[k].push(n);});};
+    list(definitions).forEach(indexRow);
+    // Match undated FIGHTER grade headings only to an actual test lesson,
+    // never to an ordinary study lesson or its submission/deadline date.
+    list(model&&model.assignments).forEach(function(row){
+      var text=[row.lessonSummary,row.assessmentTitle].concat(list(row.tasks).map(function(t){return t.title;})).join(' ');
+      if(/kiem tra|lam lai|\btest\b|critical|debate/.test(normalize(text)))indexRow(row);
+    });
+    var numeric=function(v){return typeof v==='number'?isFinite(v):typeof v==='string'&&/^\s*\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*$/.test(v);};
+    var hasScore=function(row){return ['score','grade','band','originalScore','retakeScore','raw'].some(function(k){return row&&numeric(row[k]);})||Boolean(row&&row.retake&&numeric(row.retake.score))||list(row&&row.components).some(function(c){return numeric(c.band)||numeric(c.raw);});};
+    var eligible=function(row){
+      var direct=dated(row);if(direct)return direct>=joined;
+      var dates=[];keys(row).forEach(function(k){dates=dates.concat(index[k]||[]);});
+      if(dates.length)return dates.some(function(n){return n>=joined;});
+      // An undated empty heading is not evidence of a test assigned to a NEW pupil.
+      // Retain a genuine undated result rather than silently discard a teacher grade.
+      return hasScore(row);
+    };
+    var filter=function(owner,key){if(owner&&Array.isArray(owner[key]))owner[key]=owner[key].filter(eligible);};
+    if(family==='fighter'||family==='ta'){
+      filter(student,'scoreDetails');filter(student,'retakes');
+      var scores=list(student.scoreDetails).filter(function(row){return typeof row.score==='number'&&isFinite(row.score);});
+      student.completedScores=scores.length;student.totalScoreSlots=list(student.scoreDetails).length;
+      student.average=scores.length?Math.round(scores.reduce(function(n,row){return n+row.score;},0)/scores.length*10)/10:null;
+      if(!scores.length){student.rank=null;student.rankEligible=false;}
+      if(family==='ta'&&!scores.length&&student.trend)student.trend={delta:null,state:'neutral',label:'Chưa đủ dữ liệu'};
+    }else if(family==='kids'){
+      ['results','tests','assessments','retakeResults'].forEach(function(k){filter(student,k);});
+      if(student.summary&&student.summary.latestTest&&!eligible(student.summary.latestTest)){
+        var results=list(student.results||student.tests||student.assessments).filter(hasScore).sort(function(a,b){return dated(b)-dated(a);});
+        student.summary.latestTest=results[0]||{};student.latestScore='—';student.testScore='—';
+      }
+    }else if(family==='ielts'){
+      filter(student,'assessmentResults');
+      filter(model,'assessmentReminders');
+      Object.keys(student.skills||{}).forEach(function(key){var skill=student.skills[key];if(!skill||!Array.isArray(skill.records))return;
+        skill.records=skill.records.filter(eligible);
+        var bands=skill.records.filter(function(row){return typeof row.band==='number'&&isFinite(row.band);});
+        skill.latestBand=bands.length?bands[0].band:null;skill.averageBand=bands.length?Math.round(bands.reduce(function(n,row){return n+row.band;},0)/bands.length*10)/10:null;
+      });
+    }
+    return eligible;
+  }
+  const gradeDefinitions=list(full.scoreDefinitions).concat(list(bundle.profile.scoreDefinitions));
+  const gradeEligible=parentEnrollmentScoresV1_('fighter',student,publicData,gradeDefinitions,joined,fighterEnrollmentDateV29_);
+  if(Array.isArray(full.scoreDefinitions))full.scoreDefinitions=full.scoreDefinitions.filter(gradeEligible);
+  if(Array.isArray(bundle.profile.scoreDefinitions))bundle.profile.scoreDefinitions=bundle.profile.scoreDefinitions.filter(gradeEligible);
+  list(full.students).forEach(row=>{if(row&&row.name===student.name)parentEnrollmentScoresV1_('fighter',row,publicData,gradeDefinitions,joined,fighterEnrollmentDateV29_);});
   publicData.assignments=list(publicData.assignments).filter(item=>eligible(item,false));
   publicData.selfStudyAssignments=list(publicData.selfStudyAssignments).filter(item=>eligible(item,true));
   publicData.schedule=list(publicData.schedule).filter(scheduleEligible);

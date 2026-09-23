@@ -33369,6 +33369,7 @@ function ieltsApplyEnrollmentCutoffV37_(projected,directory){
       }
     }else if(family==='ielts'){
       filter(student,'assessmentResults');
+      filter(model,'assessmentReminders');
       Object.keys(student.skills||{}).forEach(function(key){var skill=student.skills[key];if(!skill||!Array.isArray(skill.records))return;
         skill.records=skill.records.filter(eligible);
         var bands=skill.records.filter(function(row){return typeof row.band==='number'&&isFinite(row.band);});
