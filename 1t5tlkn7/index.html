@@ -2792,7 +2792,40 @@ html.vn-national-day-2026-root body .assignment.session {
       return source && source._start && typeof source._start.getTime === 'function' ? source._start.getTime() : Number.MAX_SAFE_INTEGER;
     }
 
+
+    // KIDS_LESSON_RELEASE_V1: reuse the schedule clock and serialized background lane.
+    var parentLessonReleaseAttemptsV1_ = {};
+    function parentLessonReleaseBoundaryV1_() {
+      var value = parentPackage_;
+      if (!value || !value.dashboard) return 0;
+      var built = Number(value.lessonReleaseEvaluatedAt || value.sourceModelBuiltAt);
+      if (!(built > 0)) return 0;
+      var now = Date.now(), latest = 0;
+      (value.dashboard.schedule || []).forEach(function(event) {
+        if (!event || event.isFallback || event.cancelled || event.status === 'cancelled') return;
+        var d = String(event.date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        var t = String(event.endTime || '').match(/^(\d{1,2}):(\d{2})$/);
+        if (!d || !t || +t[1] > 23 || +t[2] > 59) return;
+        var end = Date.UTC(+d[3], +d[2]-1, +d[1], +t[1]-7, +t[2]);
+        if (end > built && end <= now) latest = Math.max(latest, end);
+      });
+      return latest;
+    }
+    function parentLessonReleaseTickV1_() {
+      if (!kidsApi.parent || !kidsApi.parent.authorized || kidsApi.parent.revoked ||
+          parentBootstrapJob_ || parentBootstrapRetry_ || parentForceRecovery_) return;
+      var boundary = parentLessonReleaseBoundaryV1_();
+      if (!boundary) return;
+      var key = matchKey(kidsApi.parent.alias) + ':' + boundary;
+      var state = parentLessonReleaseAttemptsV1_[key] || {count:0,after:0};
+      if (state.count >= 3 || Date.now() < state.after) return;
+      state.count += 1; state.after = Date.now() + (state.count === 1 ? 60000 : 180000);
+      parentLessonReleaseAttemptsV1_[key] = state;
+      parentLoadBootstrap_(false,true,0,null,true);
+    }
+
     function scheduleMinuteTick_() {
+      parentLessonReleaseTickV1_();
       renderSchedule();
       if (app.child && app.activeTab === 'lessons') {
         renderSafely_('tiết học và bài tập', renderLessons, '#lessonsPanel');
@@ -5639,7 +5672,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
         // A fresh opening, a failed follow-up, or a later repaint cannot loop.
         if(!force&&!job.recovery&&!teacherRefresh&&!parentOpeningAcademicSeen_){
           parentOpeningAcademicSeen_=true;
-          if(stale)next={force:false,quiet:true,attempt:0,delay:0,teacherRefresh:true};
+          if(stale || parentLessonReleaseBoundaryV1_())next={force:false,quiet:true,attempt:0,delay:0,teacherRefresh:true};
         }
         return true;
       }).catch(error=>{
