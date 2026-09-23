@@ -2792,7 +2792,64 @@ html.vn-national-day-2026-root body .assignment.session {
       return source && source._start && typeof source._start.getTime === 'function' ? source._start.getTime() : Number.MAX_SAFE_INTEGER;
     }
 
+
+    // KIDS_LESSON_RELEASE_V2: reuse the single receipt owner; it already merges current Schedule assignments.
+    var parentLessonReleaseAttemptsV1_ = {};
+    var parentLessonAuthorityV2_ = null;
+    function parentReadLessonReceiptsV2_() {
+      var identity = matchKey(kidsApi.parent.alias);
+      return kidsApi.parent.submissions().then(function(payload) {
+        var a = payload && payload.assignmentAuthority;
+        if (kidsApi.parent.authorized && !kidsApi.parent.revoked && identity === matchKey(kidsApi.parent.alias) &&
+            a && a.schema === 1 && a.className === CLASS_NAME && a.complete === true && a.freshRead === true &&
+            Number(a.verifiedAt) > 0 && Array.isArray(a.schedule) && Array.isArray(a.assignments)) {
+          parentLessonAuthorityV2_ = {identity:identity,authority:a};
+        }
+        return payload;
+      });
+    }
+    function parentLessonReleaseBoundaryV1_() {
+      var value = parentPackage_;
+      if (!value || !value.dashboard) return 0;
+      var live = parentLessonAuthorityV2_ && parentLessonAuthorityV2_.identity === matchKey(kidsApi.parent.alias) && parentLessonAuthorityV2_.authority;
+      var built = Number(live ? live.lessonReleaseEvaluatedAt || live.verifiedAt : value.lessonReleaseEvaluatedAt || value.sourceModelBuiltAt);
+      if (!(built > 0)) return 0;
+      var now = Date.now(), latest = 0;
+      (live ? live.schedule : value.dashboard.schedule || []).forEach(function(event) {
+        if (!event || event.isFallback || event.cancelled || event.status === 'cancelled') return;
+        var d = String(event.date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        var t = String(event.endTime || '').match(/^(\d{1,2}):(\d{2})$/);
+        if (!d || !t || +t[1] > 23 || +t[2] > 59) return;
+        var end = Date.UTC(+d[3], +d[2]-1, +d[1], +t[1]-7, +t[2]);
+        if (end > built && end <= now) latest = Math.max(latest, end);
+      });
+      return latest;
+    }
+    function parentLessonAwaitingReleaseV2_(event) {
+      if (!event || event.isFallback || event.cancelled || event.status === 'cancelled' || !parentPackage_) return false;
+      var live = parentLessonAuthorityV2_ && parentLessonAuthorityV2_.identity === matchKey(kidsApi.parent.alias) && parentLessonAuthorityV2_.authority;
+      var built = Number(live ? live.lessonReleaseEvaluatedAt || live.verifiedAt : parentPackage_.lessonReleaseEvaluatedAt || parentPackage_.sourceModelBuiltAt);
+      var d = String(event.date || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      var t = String(event.endTime || '').match(/^(\d{1,2}):(\d{2})$/);
+      if (!d || !t || +t[1] > 23 || +t[2] > 59 || !(built > 0)) return false;
+      var end = Date.UTC(+d[3], +d[2]-1, +d[1], +t[1]-7, +t[2]);
+      return end > built && end <= Date.now();
+    }
+    function parentLessonReleaseTickV1_() {
+      if (!kidsApi.parent || !kidsApi.parent.authorized || kidsApi.parent.revoked ||
+          submissionOwner_.inFlight || submissionOwner_.retryQueued) return;
+      var boundary = parentLessonReleaseBoundaryV1_();
+      if (!boundary) return;
+      var key = matchKey(kidsApi.parent.alias) + ':' + boundary;
+      var state = parentLessonReleaseAttemptsV1_[key] || {count:0,after:0};
+      if (state.count >= 3 || Date.now() < state.after) return;
+      state.count += 1; state.after = Date.now() + (state.count === 1 ? 60000 : 180000);
+      parentLessonReleaseAttemptsV1_[key] = state;
+      submissionOwner_.refresh(true);
+    }
+
     function scheduleMinuteTick_() {
+      parentLessonReleaseTickV1_();
       renderSchedule();
       if (app.child && app.activeTab === 'lessons') {
         renderSafely_('tiết học và bài tập', renderLessons, '#lessonsPanel');
@@ -3046,10 +3103,11 @@ html.vn-national-day-2026-root body .assignment.session {
       const privateAssignment = matchedAssignment || {};
       const tracker = trackerLessonFor(session) || {};
       const hasAssignment = Boolean(matchedAssignment);
+      const awaitingLessonRelease = !hasAssignment && parentLessonAwaitingReleaseV2_(schedule);
       const isAssessmentLesson = Boolean(privateAssignment.isAssessmentLesson);
       const hasAssessmentNotice = Boolean(privateAssignment.hasAssessmentNotice || text(privateAssignment.assessmentType));
       const assessmentIsCurrent = assessmentOccursThisLesson(privateAssignment);
-      const meta = hasAssignment ? statusMeta(privateAssignment) : { cls: 'done', label: 'Đã học · Không có bài cần nộp' };
+      const meta = hasAssignment ? statusMeta(privateAssignment) : (awaitingLessonRelease ? { cls: 'pending', label: 'Đang xác minh' } : { cls: 'done', label: 'Đã học · Không có bài cần nộp' });
       const title = pick(privateAssignment, ['title', 'topic'], pick(schedule, ['topic', 'title'], pick(session, ['title', 'lessonTitle', 'topic'], 'Tiết học')));
       const date = pick(schedule, ['date'], pick(session, ['lessonDate', 'dateLabel', 'date'], ''));
       const sessionNumber = Number(pick(schedule, ['sessionNumber'], pick(session, ['sessionNumber', 'lessonNumber'], 0)));
@@ -3190,14 +3248,14 @@ html.vn-national-day-2026-root body .assignment.session {
       const webSectionTitle = downloadReviewWebActivity
         ? 'Tự tải bài & tự chữa'
         : (reviewOnlyWebActivity ? 'Xem lại bài trên web' : (optionalWebPractice ? 'Tự luyện trên web' : 'Bài tập trên web'));
-      const emptyWebText = downloadReviewWebActivity
+      const emptyWebText = awaitingLessonRelease ? 'Đang xác minh' : downloadReviewWebActivity
         ? 'Chưa có đường dẫn tải bài.'
         : (reviewOnlyWebActivity ? 'Chưa có đường dẫn xem lại bài.' : (optionalWebPractice ? 'Chưa có nội dung tự luyện trên web.' : 'Tiết này không có bài tập trên web.'));
       const homeworkAside = `<aside class="homework-column">
         <div class="homework-head"><div><p class="label">${nonSubmissionWebActivity ? 'Hoạt động' : 'Bài tập'} của ${escapeHtml(childName)}</p><h4>${nonSubmissionWebActivity ? 'Sau tiết học' : 'Bài tập sau tiết học'}</h4></div><div class="homework-head__status">${isNewHomework ? '<span class="new-work-badge">BÀI MỚI</span>' : ''}<span class="pill ${homeworkMeta.cls}">${escapeHtml(homeworkMeta.label)}</span></div></div>
         <section class="assignment-section web${nonSubmissionWebActivity ? ' optional' : ''}"><div class="assignment-section__head"><span class="assignment-section__number">1</span><strong>${webSectionTitle}</strong>${nonSubmissionWebActivity ? '<span class="pill optional">Không cần nộp</span>' : ''}</div>${taskHtml ? `<div class="homework-list">${taskHtml}</div>` : `<p class="assignment-empty">${emptyWebText}</p>`}</section>
         ${homeworkComment ? `<div class="teacher-box"><strong>Nhận xét bài tập về nhà</strong><div class="small">${nl2br(homeworkComment)}</div></div>` : ''}
-        ${hidesPaperHomework || (nonSubmissionWebActivity && !paperHomework) ? '' : `<section class="assignment-section paper"><div class="assignment-section__head"><span class="assignment-section__number">2</span><strong>Bài tập sách giấy</strong></div>${paperHomework ? `<span class="paper-pages__label">Phần cần hoàn thành</span><div class="paper-pages">${paperHomeworkHtml(paperHomework)}</div>${paperDueHtml}` : '<p class="assignment-empty">Tiết này không có bài tập sách giấy.</p>'}${paperGrade ? `<div class="paper-result ${paperGradeTone(paperGrade)}"><span>Kiểm tra bài tập sách giấy</span><strong>${escapeHtml(paperGrade)}</strong></div>` : ''}</section>`}
+        ${hidesPaperHomework || (nonSubmissionWebActivity && !paperHomework) ? '' : `<section class="assignment-section paper"><div class="assignment-section__head"><span class="assignment-section__number">2</span><strong>Bài tập sách giấy</strong></div>${paperHomework ? `<span class="paper-pages__label">Phần cần hoàn thành</span><div class="paper-pages">${paperHomeworkHtml(paperHomework)}</div>${paperDueHtml}` : (awaitingLessonRelease ? '<p class="assignment-empty">Đang xác minh</p>' : '<p class="assignment-empty">Tiết này không có bài tập sách giấy.</p>')}${paperGrade ? `<div class="paper-result ${paperGradeTone(paperGrade)}"><span>Kiểm tra bài tập sách giấy</span><strong>${escapeHtml(paperGrade)}</strong></div>` : ''}</section>`}
         ${!isRetakeOnlyAssignment && score !== '' && score !== null ? `<div class="paper-box"><strong>Kết quả bài nộp</strong><span class="paper-grade">${escapeHtml(score)}</span></div>` : ''}
         ${due && !nonSubmissionWebActivity ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
         ${reviewUrl ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}
@@ -5191,7 +5249,7 @@ function parentLoadPreparedHistory_(page,generation) {
     function submissionMissingText_(item){const meta=submissionMissingMeta_(item);return meta.detail?meta.label+'. '+meta.detail:meta.label;}
     const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,requireAssignmentAuthority:true,retryTransientSources:false,retryAuthority:false,
       getIdentity:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked?CLASS_NAME+'|'+kidsApi.parent.alias:'',
-      isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>kidsApi.parent.submissions(),project:parentProjectPrepared_,
+      isVisible:()=>kidsApi.parent.authorized&&!kidsApi.parent.revoked,request:()=>parentReadLessonReceiptsV2_(),project:parentProjectPrepared_,
       render:()=>{if(parentPackage_&&kidsApi.parent.authorized&&!document.hidden)parentApplyPackage_(true,false,true);}
     });
 // PARENT_SINGLE_SUBMISSION_SCAN_V1: one receipt read for one opened pupil.
