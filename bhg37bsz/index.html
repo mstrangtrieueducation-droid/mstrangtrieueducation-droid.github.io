@@ -36019,11 +36019,11 @@ const ieltsWritingReviews_ = (() => {
       const text = escape(source.slice(start,end));
       if (!active.length) return text;
       const ids = [...new Set(active)], serious = ids.some(i => notes[i].severity === 'serious');
-      return '<button type="button" class="wr-mark' + (serious ? ' is-serious' : '') + '" data-wr-notes="' + ids.join(',') + '" aria-label="Xem chú thích ' + escape(ids.map(i => notes[i].label || notes[i].id).join(', ')) + '">' + text + '</button>';
+      return '<button type="button" class="wr-mark' + (serious ? ' is-serious' : '') + '" data-wr-notes="' + ids.join(',') + '" aria-label="Xem chú thích ' + escape(ids.map(i => notes[i].label || String(i + 1)).join(', ')) + '">' + text + '</button>';
     }).join('');
   }
   function notesHtml(record) {
-    return array(record.annotations).map((note,index) => '<article class="wr-note' + (note.severity === 'serious' ? ' is-serious' : '') + '" id="wr-note-' + index + '" tabindex="-1"><h5>' + escape(note.label || note.id) + ' · ' + inline(note.title) + '</h5><div class="wr-copy">' + prose(note.bodyMarkdown) + '</div>' + (array(note.anchors).length ? '<button class="wr-note-jump" type="button" data-wr-back="' + index + '">Về đoạn được chú thích</button>' : '') + '</article>').join('');
+    return array(record.annotations).map((note,index) => '<article class="wr-note' + (note.severity === 'serious' ? ' is-serious' : '') + '" id="wr-note-' + index + '" tabindex="-1"><h5>' + escape(note.label || 'Chú thích ' + (index + 1)) + ' · ' + inline(note.title) + '</h5><div class="wr-copy">' + prose(note.bodyMarkdown) + '</div>' + (array(note.anchors).length ? '<button class="wr-note-jump" type="button" data-wr-back="' + index + '">Về đoạn được chú thích</button>' : '') + '</article>').join('');
   }
   function revisionHtml(record) {
     const paragraphs = array(record.suggestedRevisionParagraphs).map(p => String(p ?? ''));
