@@ -1277,6 +1277,7 @@ body.f9-portal-locked #student-gateway {
   }
     function remainingText(milliseconds){const totalMinutes=Math.max(1,Math.floor(milliseconds/60000));const days=Math.floor(totalMinutes/1440),hours=Math.floor(totalMinutes%1440/60),minutes=totalMinutes%60;if(days)return `${days} ngày${hours?' '+hours+' giờ':''}`;if(hours)return `${hours} giờ${minutes?' '+minutes+' phút':''}`;return `${minutes} phút`}
     function updateNextClass(){
+      parentLessonTickV1_();
       const target=$('#next-class');if(!target)return;
       const now=new Date(),event=nextClassEvent(now);
       if(!event){target.className='next-class';target.innerHTML='<div><div class="next-class__status">Lịch học</div><h3>Chưa có buổi học sắp tới</h3></div>';return}
@@ -3467,8 +3468,54 @@ const submissionGuard_ = createSubmissionStatusGuard({
 });
 let fighterSubmissionProjected_=null;
 function submissionCan_(item){return Boolean(item&&item.submissionManualAuthority&&fighterApi.parent.authorized)||submissionGuard_.can(item);}
+// PARENT_LESSON_RELEASE_V1: one receipt owner, same opening, same source rules.
+var parentLessonLatestV1_ = null;
+function parentLessonMomentV1_(date, time) {
+  var text=String(date||''), match=text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/), iso=text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  var clock=String(time||'').match(/^(\d{1,2}):(\d{2})/);
+  if(!clock||(!match&&!iso))return 0;
+  var y=Number(match?match[3]:iso[1]),m=Number(match?match[2]:iso[2]),d=Number(match?match[1]:iso[3]);
+  return Date.UTC(y,m-1,d,Number(clock[1])-7,Number(clock[2]));
+}
+function parentLessonAcceptV1_(target,payload,ticket,guard) {
+  var context=parentLessonContextV1_(),a=payload&&payload.assignmentAuthority;
+  if(context.identity&&ticket&&guard.isCurrent(ticket)&&a&&a.schema===1&&a.className===context.className&&
+      a.complete===true&&a.freshRead===true&&Number(a.verifiedAt)>0&&Number(a.lessonReleaseEvaluatedAt)>0&&
+      a.lessonData&&Array.isArray(a.lessonData.assignments)&&Array.isArray(a.lessonData.lessonEvents)) {
+    if(!parentLessonLatestV1_||parentLessonLatestV1_.identity!==context.identity||
+        a.lessonReleaseEvaluatedAt>=parentLessonLatestV1_.authority.lessonReleaseEvaluatedAt)
+      parentLessonLatestV1_={identity:context.identity,authority:a};
+  }
+  if(!context.identity||!parentLessonLatestV1_||parentLessonLatestV1_.identity!==context.identity)return target;
+  a=parentLessonLatestV1_.authority;
+  var data=JSON.parse(JSON.stringify(a.lessonData));
+  // Only Schedule-owned fields move. Teacher records, scores, Writing,
+  // roster identity, receipt history and enrollment stay in their owners.
+  function merge(destination){if(!destination)return;Object.keys(data).forEach(function(k){destination[k]=data[k];});destination.lessonReleaseEvaluatedAt=a.lessonReleaseEvaluatedAt;}
+  if(context.family==='fighter') {
+    merge(target.publicData);merge(target.fullDashboard);
+    if(target.profile)target.profile.assignments=data.assignments;
+  } else merge(target.dashboard);
+  return target;
+}
+function parentLessonTickV1_() {
+  var context=parentLessonContextV1_();
+  if(!context.identity||!context.owner||context.owner.inFlight||context.owner.retryQueued)return;
+  var a=parentLessonLatestV1_&&parentLessonLatestV1_.identity===context.identity?parentLessonLatestV1_.authority:null;
+  // The ordinary opening already starts its receipt read. Only a later class
+  // boundary may start another; missing source responses use the owner's retry.
+  if(!a)return;
+  var due=(a.lessonData.lessonEvents||[]).some(function(event){
+    if(!event||event.cancelled)return false;
+    var end=parentLessonMomentV1_(event.date,event.endTime);
+    return end>a.lessonReleaseEvaluatedAt&&end<=Date.now();
+  });
+  if(due)context.owner.refresh(true);
+}
+
+function parentLessonContextV1_(){var b=fighterApi.parent.binding;return {family:'fighter',identity:fighterApi.parent.authorized&&!fighterApi.parent.revoked&&b?b.className+'|'+b.studentName:'',className:b&&b.className,owner:submissionOwner_};}
 const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
-  isVisible:()=>Boolean(fighterApi.parent.authorized&&fighterApi.parent.binding),request:()=>fighterApi.parent.request('submissions',false),project:projectFighterReceipts_,
+  isVisible:()=>Boolean(fighterApi.parent.authorized&&fighterApi.parent.binding),request:()=>fighterApi.parent.request('submissions',false),project:(target,payload,ticket,guard)=>projectFighterReceipts_(parentLessonAcceptV1_(target,payload,ticket,guard),payload,ticket,guard),
   render:()=>{if(fighterParentPackage_&&fighterApi.parent.authorized&&!document.hidden)fighterParentApply_();}
 });
 function fighterSubmissionReset_(){submissionOwner_.suspend();fighterClearPendingHomeworkV15_();}
