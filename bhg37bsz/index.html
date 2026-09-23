@@ -35970,18 +35970,18 @@ const ieltsWritingReviews_ = (() => {
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
     const latestNote = !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
-    if (item.reviewMode === 'quick_check') {
+    if (item.reviewMode === 'quick_check' || complete) {
       const notebookLinks = array(item.notebookUrls).map((value, index) => {
         const url = ieltsWritingAssignments_.safeUrl(typeof value === 'string' ? value : value && value.url);
-        return url ? '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Mở PDF vở' + (item.notebookUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>' : '';
+        return url ? '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Mở vở đã nộp' + (item.notebookUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>' : '';
       }).join('');
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
-      const quickTitle = receiptTitle || (!current ? title : complete || failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
+      const quickTitle = complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
       if (writingBlocked) return blockedHtml();
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
-        (failed && hasWriting ? '<p class="wr-notebook-hold">Bài viết chờ vở đạt yêu cầu.</p>' : '') + latestSubmission +
+        (item.submittedAt && !latestSubmission ? '<p class="wr-submitted">Đã nhận vở: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '') + latestSubmission +
         (notebookLinks ? '<details class="wr-notebook-details"><summary>Xem vở lần nộp mới nhất</summary>' + notebookLinks + '</details>' : '') + '</section>';
     }
     if (writingBlocked) return blockedHtml();
