@@ -8,6 +8,8 @@ const root = path.resolve(process.argv[2] || '.');
 const siteDir = path.join(root, 'ielts-nghe');
 const manifestPath = path.join(__dirname, 'visual-manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const audioManifestPath = path.join(__dirname, 'audio-manifest.json');
+const audioManifest = JSON.parse(fs.readFileSync(audioManifestPath, 'utf8'));
 
 function parseData(text, file) {
   const match = /const DATA\s*=\s*/.exec(text);
@@ -65,6 +67,14 @@ assert.equal(pages.length, 40, 'Expected all 40 weekly IELTS Listening pages');
 
 const tests = new Map();
 const actualAssetRefs = new Map();
+const expectedAudio = new Map();
+for (const entry of audioManifest.entries || []) {
+  const key = `${entry.test}:${entry.section}`;
+  assert(!expectedAudio.has(key), `${key}: duplicate audio manifest entry`);
+  expectedAudio.set(key, entry);
+}
+assert.equal(expectedAudio.size, 120, 'Expected 120 reviewed audio manifest entries');
+const reviewedAudio = new Set();
 let sectionCount = 0;
 let questionCount = 0;
 let dictationGapCount = 0;
@@ -116,6 +126,35 @@ for (const name of pages) {
     assert(!summary.audios.has(audioKey), `Test ${test}: duplicated audio for section ${sectionNumber}`);
     summary.audios.add(audioKey);
 
+    const reviewKey = `${test}:${sectionNumber}`;
+    const review = expectedAudio.get(reviewKey);
+    assert(review, `Test ${test} Section ${sectionNumber}: missing semantic audio review`);
+    assert(!reviewedAudio.has(reviewKey), `Test ${test} Section ${sectionNumber}: audio reviewed twice`);
+    reviewedAudio.add(reviewKey);
+    assert.equal(review.page, name, `Test ${test} Section ${sectionNumber}: reviewed page mismatch`);
+    let audioBytes;
+    let audioRef;
+    if (isEmbeddedAudio) {
+      audioBytes = Buffer.from(audio.slice(audio.indexOf(',') + 1), 'base64');
+      audioRef = 'embedded';
+    } else {
+      audioRef = audio.slice(2);
+      const audioFile = path.join(siteDir, audioRef);
+      assert(fs.existsSync(audioFile), `Test ${test} Section ${sectionNumber}: audio file is missing`);
+      audioBytes = fs.readFileSync(audioFile);
+    }
+    assert.equal(review.audio, audioRef, `Test ${test} Section ${sectionNumber}: audio reference changed`);
+    assert.equal(review.bytes, audioBytes.length, `Test ${test} Section ${sectionNumber}: audio byte count changed`);
+    assert.equal(
+      review.sha256,
+      crypto.createHash('sha256').update(audioBytes).digest('hex'),
+      `Test ${test} Section ${sectionNumber}: audio changed without semantic review`,
+    );
+    assert(review.durationSeconds > 30, `Test ${test} Section ${sectionNumber}: reviewed duration is invalid`);
+    assert.equal(review.asrReview.matchedTest, test, `Test ${test} Section ${sectionNumber}: ASR matched another test`);
+    assert.equal(review.asrReview.matchedSection, sectionNumber, `Test ${test} Section ${sectionNumber}: ASR matched another section`);
+    assert(review.asrReview.score >= 0.10, `Test ${test} Section ${sectionNumber}: ASR confidence is too low`);
+
     const gaps = section.clozeAnswers || section.dictationAnswers || [];
     assert.equal(gaps.length, 20, `Test ${test} Section ${sectionNumber}: expected 20 dictation gaps`);
     dictationGapCount += gaps.length;
@@ -145,6 +184,7 @@ assert.equal(tests.size, 30, 'Expected Tests 1-30');
 assert.equal(sectionCount, 120, 'Expected 120 sections');
 assert.equal(questionCount, 1200, 'Expected 1,200 questions');
 assert.equal(dictationGapCount, 2400, 'Expected 2,400 dictation gaps');
+assert.equal(reviewedAudio.size, 120, 'Expected all 120 section audios to be reviewed');
 assert.equal(sourceImageCount, 11, 'Expected 11 converted legacy source visuals');
 
 const expectedRefs = new Map();
@@ -160,4 +200,5 @@ for (const item of manifest.assets) {
 assert.deepEqual([...actualAssetRefs.keys()].sort(), [...expectedRefs.keys()].sort(), 'Visual manifest and page references differ');
 
 console.log(`PASS visual audit: ${manifest.assets.length} verified source assets, ${manifest.structuredFlows.length} reviewed structured flows, 0 hand-drawn spatial diagrams`);
+console.log(`PASS audio audit: ${reviewedAudio.size} section audios locked to transcript-matched SHA-256 files`);
 console.log(`PASS full audit: ${tests.size} tests, ${sectionCount} sections, ${questionCount} questions, ${dictationGapCount} dictation gaps`);
