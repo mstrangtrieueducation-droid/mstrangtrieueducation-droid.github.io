@@ -13488,7 +13488,8 @@ const ieltsWritingReviews_ = (() => {
     if (!item) return assignment.notebook ? '<section class="wr-notebook wr-notebook-pending"><h5>Vở chép · Nhận xét của Cô</h5><p>Chưa có kết quả kiểm tra vở.' + (assignment.tasks.length ? ' Bài viết mới chỉ được chấm sau khi vở đạt yêu cầu.' : ' Kết quả sẽ hiện sau khi vở được đối chiếu với tài liệu Cô giao.') + '</p></section>' : '';
     const hasWriting = item.homeworkMode === 'notebook_and_writing';
     const current = item.current && !refreshing;
-    const failed = current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
+    const notebookFinal = !hasWriting && item.state === 'notebook_verdict_final' && Boolean(item.overall);
+    const failed = notebookFinal || current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
     const complete = current && item.state === 'notebook_complete';
     const finalLock = item.essayGradingLocked === true;
     const writingBlocked = hasWriting && !refreshing && (finalLock || (current && !complete));
@@ -13502,7 +13503,7 @@ const ieltsWritingReviews_ = (() => {
     const title = !current ? (receiptTitle || (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại')) :
       failed ? (item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
-    const latestNote = !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
+    const latestNote = !notebookFinal && !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
     if (item.reviewMode === 'quick_check' || complete) {
       const notebookLinks = array(item.notebookUrls).map((value, index) => {
@@ -13511,7 +13512,7 @@ const ieltsWritingReviews_ = (() => {
       }).join('');
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
-      const quickTitle = complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
+      const quickTitle = notebookFinal ? 'VỞ CHƯA ĐẠT YÊU CẦU' : complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
       if (writingBlocked) return blockedHtml();
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
