@@ -13463,7 +13463,7 @@ const ieltsWritingReviews_ = (() => {
     const results = assignment.tasks.map(task => reviews.find(record => code(record.assignmentCode) === assignment.assignmentCode && Number(record.taskNumber) === task.taskNumber));
     const count = results.filter(isCurrentReview).length;
     const essayBlocked = writingBlockedByNotebook(assignment);
-    const subtitle = policyBlocked ? '' : assignment.notebook && !assignment.tasks.length ? ' · Không chấm bài viết — chỉ kiểm tra vở' : essayBlocked ? ' · Vở chưa đạt yêu cầu' :
+    const subtitle = policyBlocked ? '' : essayBlocked ? ' · Vở chưa đạt yêu cầu' :
       assignment.tasks.length && status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa' + (policy?.state === 'grading_closed' ? '' : ' cho lần nộp mới nhất') : '';
     const title = policyBlocked ? 'Tình trạng nộp bài' : 'Nhận xét của Cô';
     return '<section class="wr-assignment" data-wr-assignment="' + escape(assignment.assignmentCode) + '" aria-label="' + title + ' · Writing ' + escape(assignment.weekCode) + '">' +
