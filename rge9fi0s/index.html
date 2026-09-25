@@ -8,10 +8,6 @@
 /* KIDS7_PARENT_LINK_V1: all data reads are bound to one server-validated token. */
 const kidsApi = (() => {
   const endpoint = 'https://script.google.com/macros/s/AKfycbz-nXdNSdjpYsYM6VegD4u6A0lIrQrDf-9zzwGpG0JIUMlKRKXcoKuVwprX2D0cdweiQQ/exec';
-  // KIDS_OPENING_GATEWAY_V1_START
-  const openingGateways = ['https://script.google.com/macros/s/AKfycbyaNwie4_jEtv8pF1Ymqzb7rz3UVX7r2YMLpXmiDuuNPg-G7uVhmcLTOEnbVXbkQDrSEQ/exec', endpoint];
-  let activeEndpoint = openingGateways[0];
-  // KIDS_OPENING_GATEWAY_V1_END
   const expectedClass = 21;
   const token = new URLSearchParams(window.location.hash.slice(1)).get('p') || '';
   const validToken = /^[A-Za-z0-9_-]{22}$/.test(token);
@@ -95,86 +91,12 @@ const kidsApi = (() => {
     }
     return boundAlias;
   }
-  // KIDS_OPENING_DIAGNOSTICS_V1
-  function openingDiagnostics_(enabled, started) {
-    if (!enabled) return null;
-    try {
-      const target = document.documentElement.dataset;
-      const attempt = Math.max(0, Number(target.openingAttempts) || 0) + 1;
-      const numeric = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 3600000 ? Math.round(value) : null;
-      const stages = {
-        parentTotal:'ParentTotal', parentInitialRoster:'InitialRoster', parentFinalRoster:'FinalRoster',
-        profileSource:'ProfileSource', model:'Model', modelTracker:'ModelTracker', modelSchedule:'ModelSchedule',
-        sheets:'Sheets', nativeSheetRead:'NativeSheetRead', nativeValuesRead:'NativeValuesRead',
-        submissions:'Submissions', submissionIndex:'SubmissionIndex', submissionSelect:'SubmissionSelect',
-        tests:'Tests', assessmentFiles:'AssessmentFiles', durableWrite:'DurableWrite', cacheWrite:'CacheWrite',
-        parentProfileClaimBusy:'ProfileClaimBusy', parentModelClaimBusy:'ModelClaimBusy'
-      };
-      const codes = new Set(['NETWORK_ERROR','DATA_UNAVAILABLE','INVALID_SCOPE','AUTH_PENDING',
-        'PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT','INITIAL_BOOTSTRAP_FALLBACK',
-        'PROFILE_LOADING','TEACHER_MODEL_BUSY','BOOTSTRAP_FORCE_TIMEOUT','DATA_STALE']);
-      const result = {Attempt:attempt}, put = (suffix, value) => {
-        result[suffix] = value;
-        if (Number(target.openingLastAttempt) === attempt) target['openingLast' + suffix] = String(value);
-      };
-      target.openingDiagVersion = '1'; target.openingAttempts = String(attempt);
-      target.openingLastAttempt = String(attempt);
-      // Remove the preceding attempt's optional metrics, never a first result.
-      ['HeadersMs','BodyMs','ResponseMs','ServerMs','ElapsedMs','ErrorCode'].concat(
-        Object.keys(stages).map(key => 'Stage' + stages[key] + 'Ms')
-      ).forEach(suffix => { delete target['openingLast' + suffix]; });
-      put('StartedMs', numeric(started) === null ? 0 : numeric(started)); put('Phase','request');
-      let headersAt = null;
-      return {
-        headers() {
-          try { headersAt = performance.now(); put('HeadersMs', Math.max(0, Math.round(headersAt-started))); put('Phase','headers'); } catch(ignore) {}
-        },
-        response(perf) {
-          try {
-            const at = performance.now();
-            put('ResponseMs',Math.max(0,Math.round(at-started)));
-            if(headersAt !== null) put('BodyMs',Math.max(0,Math.round(at-headersAt)));
-            if(perf && typeof perf === 'object') {
-              const total = numeric(perf.totalMs); if(total !== null) put('ServerMs',total);
-              Object.keys(stages).forEach(key => {
-                const time = numeric(perf.stages && perf.stages[key] && perf.stages[key].ms);
-                if(time !== null) put('Stage' + stages[key] + 'Ms',time);
-              });
-            }
-            put('Phase','response');
-          } catch(ignore) {}
-        },
-        success() {
-          try {
-            put('ElapsedMs',Math.max(0,Math.round(performance.now()-started))); put('Phase','success');
-            if(target.openingFirstSuccessAttempt === undefined) Object.keys(result).forEach(suffix => {
-              target['openingFirstSuccess' + suffix] = String(result[suffix]);
-            });
-          } catch(ignore) {}
-        },
-        failure(error) {
-          try {
-            const code = error && codes.has(error.code) ? error.code :
-              error && error.name === 'AbortError' ? 'ABORTED' :
-              error && error.name === 'TypeError' ? 'TRANSPORT_ERROR' : 'OTHER';
-            put('ErrorCode',code); put('ElapsedMs',Math.max(0,Math.round(performance.now()-started))); put('Phase','error');
-            if(target.openingFirstFailureAttempt === undefined) Object.keys(result).forEach(suffix => {
-              target['openingFirstFailure' + suffix] = String(result[suffix]);
-            });
-          } catch(ignore) {}
-        }
-      };
-    } catch(ignore) { return null; }
-  }
-
-  function requestAction(action, force, epoch, initialBootstrap = false, extra = {}, openingAttempt = 0) {
+  function requestAction(action, force, epoch, initialBootstrap = false, extra = {}) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
     const openingRead = action === 'bootstrap' && !force && !extra.feedback && !openingPackageDelivered;
     const key = JSON.stringify([openingRead, action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null, extra]);
     if (pending.has(key)) return pending.get(key);
-    const requestEndpoint = initialBootstrap ? openingGateways[openingAttempt === 1 ? 1 : 0] : activeEndpoint;
-    const url = new URL(requestEndpoint);
-    if(initialBootstrap){try{document.documentElement.dataset.openingGatewaySlot=String(requestEndpoint===openingGateways[0]?0:1);}catch(ignore){}}
+    const url = new URL(endpoint);
     url.searchParams.set('api', 'parent1');
     url.searchParams.set('class', String(expectedClass));
     url.searchParams.set('action', action);
@@ -188,18 +110,13 @@ const kidsApi = (() => {
     if (action === 'check') checkController = controller;
     controllers.add(controller);
     const started = performance.now();
-    const openingDiag = openingDiagnostics_(initialBootstrap || openingRead, started);
     let deadlineExpired = false;
-    // KIDS_OPENING_TRANSPORT_RETRY_V1: only the first opening delivery has a short bounded retry.
-    const openingDeadline = initialBootstrap && action === 'bootstrap' && !force ? (openingAttempt === 1 ? 85000 : 15000) : null;
-    const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, openingDeadline !== null ? openingDeadline : ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
+    const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
     const promise = fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
     }).then(async response => {
-      if(openingDiag) openingDiag.headers();
       if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
       const envelope = await response.json();
-      if(openingDiag) openingDiag.response(envelope && envelope.performance);
       if (initialBootstrap && epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       if ((action === 'check' && epoch !== checkEpoch) || (action === 'submissions' && epoch !== receiptEpoch)) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const data = envelope && envelope.data;
@@ -222,14 +139,10 @@ const kidsApi = (() => {
           preparedReceiptPackage={alias:keyOf(data.profile.englishName),generation:source.generation,value:JSON.parse(JSON.stringify(receipts))};
         }
       }
-      // Commit a gateway only after the response passes existing token/class/profile scope validation.
-      if(action==='bootstrap')activeEndpoint=requestEndpoint;
       document.documentElement.dataset[action + 'Ms'] = String(Math.round(performance.now() - started));
       document.documentElement.dataset[action + 'ReadyMs'] = String(Math.round(performance.now()));
-      if(openingDiag) openingDiag.success();
       return data;
     }).catch(err => {
-      if(openingDiag) openingDiag.failure(err);
       if (action === 'bootstrap' && force && deadlineExpired && status !== 'revoked') {
         const timeoutError = error('Kết nối đang chậm. Vui lòng thử lại.', 'BOOTSTRAP_FORCE_TIMEOUT');
         timeoutError.forcedBootstrapDeadline = true;
@@ -262,10 +175,7 @@ const kidsApi = (() => {
       typeof options.validateInitialBootstrap === 'function';
     if (initial) initialBootstrapAttempted = true;
     let handoff = null;
-    const readInitial = openingAttempt => {
-      let delivered = false;
-      return requestAction('bootstrap', false, epoch, true, {}, openingAttempt).then(data => {
-      delivered = true;
+    const request = initial ? requestAction('bootstrap', false, epoch, true).then(data => {
       if (status === 'revoked' || epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const alias = validateScope(data, 'check');
       // The same renderer validator checks every collection and generation.
@@ -279,19 +189,10 @@ const kidsApi = (() => {
       handoff = null;
       if (status === 'revoked' || epoch !== checkEpoch ||
           err && (err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
-      // A delivery failure gets one sequential non-forced bootstrap retry.
-      // Do not add check + another bootstrap after that transport budget.
-      const transportFailure = !delivered && err && (err.code === 'NETWORK_ERROR' || err.name === 'TypeError' || err.name === 'AbortError');
-      if (transportFailure) {
-        if (openingAttempt === 0) return readInitial(1);
-        throw err;
-      }
-      // A delivered but incomplete package retains the ordinary access check.
-      // Existing partial-data and force-recovery rules continue after it.
+      // One fallback to the ordinary access check. Existing loaders retain
+      // their normal retry/partial-data/force-recovery rules after this check.
       return requestAction('check', true, epoch);
-      });
-    };
-    const request = initial ? readInitial(0) : requestAction('check', true, epoch);
+    }) : requestAction('check', true, epoch);
     const job = request.then(data => {
       if (status === 'revoked' || epoch !== checkEpoch) return false;
       boundAlias = validateScope(data, 'check');
@@ -5786,9 +5687,6 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       },delay);
     }
     function parentLoadBootstrap_(force=false,quiet=false,attempt=0,reconcile=null,teacherRefresh=false) {
-      // Manual refresh of a prepared view uses the existing live teacher lane,
-      // not another read of the same immutable opening generation.
-      if(force&&parentPackage_&&parentPackage_.preparedSource){force=false;teacherRefresh=true;quiet=parentBootstrapPainted_;}
       if(kidsApi.parent.revoked)return Promise.resolve(false);
       if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt,reconcile,teacherRefresh};return Promise.resolve(false);}
       const recovery=parentForceRecovery_;
@@ -5863,13 +5761,8 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
           // still returns a stale/partial profile; explicit refresh remains available.
           // KIDS_TEACHER_MODEL_WAIT_V1: only an observed shared model owner
           // earns up to three cache-only checks. Never force or restart sources.
-          // KIDS_TEACHER_DELIVERY_RETRY_V2: one interrupted delivery may
-          // retry the ordinary shared model; subsequent checks are cache-only.
-          const teacherTransient=error&&(['NETWORK_ERROR','DATA_UNAVAILABLE','TEACHER_DATA_UNAVAILABLE'].includes(error.code)||
-            error.name==='TypeError'||error.name==='AbortError');
-          next=attempt<3&&(teacherTransient||error&&error.code==='TEACHER_MODEL_BUSY')
-            ?{force:false,quiet:true,attempt:attempt+1,delay:12000,
-              teacherRefresh:teacherTransient&&attempt===0?true:'wait'}:null;
+          next=error&&error.code==='TEACHER_MODEL_BUSY'&&attempt<3
+            ?{force:false,quiet:true,attempt:attempt+1,delay:12000,teacherRefresh:'wait'}:null;
           parentPackageWarning_=true;
           if(kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false);
           return false;
