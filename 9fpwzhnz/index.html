@@ -191,7 +191,7 @@ const kidsApi = (() => {
     const openingDiag = openingDiagnostics_(initialBootstrap || openingRead, started);
     let deadlineExpired = false;
     // KIDS_OPENING_TRANSPORT_RETRY_V1: only the first opening delivery has a short bounded retry.
-    const openingDeadline = initialBootstrap && action === 'bootstrap' && !force ? (openingAttempt === 1 ? 30000 : 15000) : null;
+    const openingDeadline = initialBootstrap && action === 'bootstrap' && !force ? (openingAttempt === 1 ? 85000 : 15000) : null;
     const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, openingDeadline !== null ? openingDeadline : ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
     const promise = fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
