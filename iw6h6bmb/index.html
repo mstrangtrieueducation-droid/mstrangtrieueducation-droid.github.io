@@ -163,7 +163,7 @@ const kidsApi = (() => {
     } catch(ignore) { return null; }
   }
 
-  function requestAction(action, force, epoch, initialBootstrap = false, extra = {}) {
+  function requestAction(action, force, epoch, initialBootstrap = false, extra = {}, openingAttempt = 0) {
     if (!validToken || status === 'revoked') return Promise.reject(error('Hồ sơ không còn hoạt động', 'PARENT_LINK_REVOKED'));
     const openingRead = action === 'bootstrap' && !force && !extra.feedback && !openingPackageDelivered;
     const key = JSON.stringify([openingRead, action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null, extra]);
@@ -184,7 +184,9 @@ const kidsApi = (() => {
     const started = performance.now();
     const openingDiag = openingDiagnostics_(initialBootstrap || openingRead, started);
     let deadlineExpired = false;
-    const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
+    // KIDS_OPENING_TRANSPORT_RETRY_V1: only the first opening delivery has a short bounded retry.
+    const openingDeadline = initialBootstrap && action === 'bootstrap' && !force ? (openingAttempt === 1 ? 30000 : 15000) : null;
+    const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, openingDeadline !== null ? openingDeadline : ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
     const promise = fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
     }).then(async response => {
@@ -252,7 +254,7 @@ const kidsApi = (() => {
       typeof options.validateInitialBootstrap === 'function';
     if (initial) initialBootstrapAttempted = true;
     let handoff = null;
-    const request = initial ? requestAction('bootstrap', false, epoch, true).then(data => {
+    const readInitial = openingAttempt => requestAction('bootstrap', false, epoch, true, {}, openingAttempt).then(data => {
       if (status === 'revoked' || epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const alias = validateScope(data, 'check');
       // The same renderer validator checks every collection and generation.
@@ -266,10 +268,18 @@ const kidsApi = (() => {
       handoff = null;
       if (status === 'revoked' || epoch !== checkEpoch ||
           err && (err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
-      // One fallback to the ordinary access check. Existing loaders retain
-      // their normal retry/partial-data/force-recovery rules after this check.
+      // A delivery failure gets one sequential non-forced bootstrap retry.
+      // Do not add check + another bootstrap after that transport budget.
+      const transportFailure = err && (err.code === 'NETWORK_ERROR' || err.name === 'TypeError' || err.name === 'AbortError');
+      if (transportFailure) {
+        if (openingAttempt === 0) return readInitial(1);
+        throw err;
+      }
+      // A delivered but incomplete package retains the ordinary access check.
+      // Existing partial-data and force-recovery rules continue after it.
       return requestAction('check', true, epoch);
-    }) : requestAction('check', true, epoch);
+    });
+    const request = initial ? readInitial(0) : requestAction('check', true, epoch);
     const job = request.then(data => {
       if (status === 'revoked' || epoch !== checkEpoch) return false;
       boundAlias = validateScope(data, 'check');
