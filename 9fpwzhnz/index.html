@@ -8,6 +8,10 @@
 /* KIDS7_PARENT_LINK_V1: all data reads are bound to one server-validated token. */
 const kidsApi = (() => {
   const endpoint = 'https://script.google.com/macros/s/AKfycbxKiVYJ5qc9K3aUVLyzmCoY4XnsdkB8t8afsF8c63_aJydThQXBGjfMhFn7iki1BfPLug/exec';
+  // KIDS_OPENING_GATEWAY_V1_START
+  const openingGateways = ['https://script.google.com/macros/s/AKfycbxJwhFAyW6_ayLyl4374DEv-Q0ZTu9XhznEyoPnALZoSV7O_TM8RDQaGI28-w4_CSh5zQ/exec', endpoint];
+  let activeEndpoint = openingGateways[0];
+  // KIDS_OPENING_GATEWAY_V1_END
   const expectedClass = 29;
   const token = new URLSearchParams(window.location.hash.slice(1)).get('p') || '';
   const validToken = /^[A-Za-z0-9_-]{22}$/.test(token);
@@ -168,7 +172,9 @@ const kidsApi = (() => {
     const openingRead = action === 'bootstrap' && !force && !extra.feedback && !openingPackageDelivered;
     const key = JSON.stringify([openingRead, action, Boolean(force), ['check','submissions'].includes(action) ? epoch : null, initialBootstrap ? epoch : null, extra]);
     if (pending.has(key)) return pending.get(key);
-    const url = new URL(endpoint);
+    const requestEndpoint = initialBootstrap ? openingGateways[openingAttempt === 1 ? 1 : 0] : activeEndpoint;
+    const url = new URL(requestEndpoint);
+    if(initialBootstrap){try{document.documentElement.dataset.openingGatewaySlot=String(requestEndpoint===openingGateways[0]?0:1);}catch(ignore){}}
     url.searchParams.set('api', 'parent1');
     url.searchParams.set('class', String(expectedClass));
     url.searchParams.set('action', action);
@@ -216,6 +222,8 @@ const kidsApi = (() => {
           preparedReceiptPackage={alias:keyOf(data.profile.englishName),generation:source.generation,value:JSON.parse(JSON.stringify(receipts))};
         }
       }
+      // Commit a gateway only after the response passes existing token/class/profile scope validation.
+      if(action==='bootstrap')activeEndpoint=requestEndpoint;
       document.documentElement.dataset[action + 'Ms'] = String(Math.round(performance.now() - started));
       document.documentElement.dataset[action + 'ReadyMs'] = String(Math.round(performance.now()));
       if(openingDiag) openingDiag.success();
