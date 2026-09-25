@@ -5687,6 +5687,9 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       },delay);
     }
     function parentLoadBootstrap_(force=false,quiet=false,attempt=0,reconcile=null,teacherRefresh=false) {
+      // Manual refresh of a prepared view uses the existing live teacher lane,
+      // not another read of the same immutable opening generation.
+      if(force&&parentPackage_&&parentPackage_.preparedSource){force=false;teacherRefresh=true;quiet=parentBootstrapPainted_;}
       if(kidsApi.parent.revoked)return Promise.resolve(false);
       if(!kidsApi.parent.authorized){parentBootstrapIntent_={force,quiet,attempt,reconcile,teacherRefresh};return Promise.resolve(false);}
       const recovery=parentForceRecovery_;
@@ -5761,8 +5764,13 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
           // still returns a stale/partial profile; explicit refresh remains available.
           // KIDS_TEACHER_MODEL_WAIT_V1: only an observed shared model owner
           // earns up to three cache-only checks. Never force or restart sources.
-          next=error&&error.code==='TEACHER_MODEL_BUSY'&&attempt<3
-            ?{force:false,quiet:true,attempt:attempt+1,delay:12000,teacherRefresh:'wait'}:null;
+          // KIDS_TEACHER_DELIVERY_RETRY_V2: one interrupted delivery may
+          // retry the ordinary shared model; subsequent checks are cache-only.
+          const teacherTransient=error&&(['NETWORK_ERROR','DATA_UNAVAILABLE','TEACHER_DATA_UNAVAILABLE'].includes(error.code)||
+            error.name==='TypeError'||error.name==='AbortError');
+          next=attempt<3&&(teacherTransient||error&&error.code==='TEACHER_MODEL_BUSY')
+            ?{force:false,quiet:true,attempt:attempt+1,delay:12000,
+              teacherRefresh:teacherTransient&&attempt===0?true:'wait'}:null;
           parentPackageWarning_=true;
           if(kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false);
           return false;
