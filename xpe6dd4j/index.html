@@ -26365,7 +26365,7 @@ const ieltsWritingReviews_ = (() => {
     const essayBlocked = writingBlockedByNotebook(assignment);
     const subtitle = policyBlocked ? '' : essayBlocked ? ' · Vở chưa đạt yêu cầu' :
       assignment.tasks.length && status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa' + (policy?.state === 'grading_closed' ? '' : ' cho lần nộp mới nhất') : '';
-    const title = policyBlocked ? 'Tình trạng nộp bài' : 'Nhận xét của Cô';
+    const title = policyBlocked ? 'Tình trạng nộp bài' : 'Nhận xét bài tập về nhà';
     return '<section class="wr-assignment" data-wr-assignment="' + escape(assignment.assignmentCode) + '" aria-label="' + title + ' · Writing ' + escape(assignment.weekCode) + '">' +
       '<header class="wr-feedback-head"><h4>' + title + '</h4><p>Writing ' + escape(assignment.weekCode) + subtitle + '</p></header>' +
       (policyBlocked ? writingPolicyHtml(policy) : status === 'ready' ? notebookHtml(assignment) + (assignment.tasks.length && !essayBlocked ? '<div class="wr-exercises">' + assignment.tasks.map((task,index) => card(results[index], assignment, task)).join('') + '</div>' : '') : loadStatus()) + '</section>';
