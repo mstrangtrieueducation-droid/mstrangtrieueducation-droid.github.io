@@ -254,7 +254,10 @@ const kidsApi = (() => {
       typeof options.validateInitialBootstrap === 'function';
     if (initial) initialBootstrapAttempted = true;
     let handoff = null;
-    const readInitial = openingAttempt => requestAction('bootstrap', false, epoch, true, {}, openingAttempt).then(data => {
+    const readInitial = openingAttempt => {
+      let delivered = false;
+      return requestAction('bootstrap', false, epoch, true, {}, openingAttempt).then(data => {
+      delivered = true;
       if (status === 'revoked' || epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const alias = validateScope(data, 'check');
       // The same renderer validator checks every collection and generation.
@@ -270,7 +273,7 @@ const kidsApi = (() => {
           err && (err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
       // A delivery failure gets one sequential non-forced bootstrap retry.
       // Do not add check + another bootstrap after that transport budget.
-      const transportFailure = err && (err.code === 'NETWORK_ERROR' || err.name === 'TypeError' || err.name === 'AbortError');
+      const transportFailure = !delivered && err && (err.code === 'NETWORK_ERROR' || err.name === 'TypeError' || err.name === 'AbortError');
       if (transportFailure) {
         if (openingAttempt === 0) return readInitial(1);
         throw err;
@@ -278,7 +281,8 @@ const kidsApi = (() => {
       // A delivered but incomplete package retains the ordinary access check.
       // Existing partial-data and force-recovery rules continue after it.
       return requestAction('check', true, epoch);
-    });
+      });
+    };
     const request = initial ? readInitial(0) : requestAction('check', true, epoch);
     const job = request.then(data => {
       if (status === 'revoked' || epoch !== checkEpoch) return false;
