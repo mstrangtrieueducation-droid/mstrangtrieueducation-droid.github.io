@@ -35761,7 +35761,7 @@ const ieltsWritingReviews_ = (() => {
       }).join('');
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
-      const quickTitle = notebookFinal ? 'VỞ CHƯA ĐẠT YÊU CẦU' : complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
+      const quickTitle = notebookFinal || (failed && item.homeworkMode === 'notebook_only') ? 'VỞ CHƯA ĐẠT YÊU CẦU' : complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
       if (writingBlocked) return blockedHtml();
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
