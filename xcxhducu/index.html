@@ -3344,6 +3344,13 @@ html.vn-national-day-2026-root body .assignment.session {
           if (index < 0) return item;
           used.add(index);
           const trackedItem = tracked[index];
+          // DIRECT_FORM_PRACTICE_MERGE_V1: only teacher fields may come from this row.
+          if(item.directFormSource){
+            const combined=Object.assign({},trackedItem,item);
+            combined.teacherComment=pick(item,['teacherComment'],pick(trackedItem,['teacherComment'],''));
+            DirectFormReceiptAuthority.copy(combined,item);
+            return submissionGuard_.transfer(item,combined);
+          }
           const teacherComment = pick(item, ['teacherComment'], pick(trackedItem, ['teacherComment'], ''));
           const submittedAt = pick(item, ['submittedAt'], pick(trackedItem, ['submittedAt'], ''));
           const submissionAttempts = arr(pick(item, ['submissionAttempts'], [])).length
@@ -4438,6 +4445,43 @@ function createStudentLearningPrefill(options) {
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionStatusGuard:createSubmissionStatusGuard};
 })(typeof globalThis==='object'?globalThis:this);
 
+/* DIRECT_FORM_RECEIPT_AUTHORITY_V1: tracker prose is never online receipt proof. */
+(function(root){
+  'use strict';
+  var receiptKeys=['submitted','completed','done','reviewed','tracked','missing','submittedAt','lastSubmittedAt','submissionAttempts','attempts','declaredAttemptCount','submissionCount','attemptCount','viewUrl','submissionUrl','reviewUrl','fileUrl','submissionFiles','evidenceUrls','links','hasContent','contentMissing','receiptReceived','submissionReceived','isLate','isOverdue','state','stateLabel','status','statusKey','statusLabel','submissionState','canViewSubmission','directSubmission','directReceiptContentEvidence','directReceiptEvidence'];
+  function clear(target){
+    if(!target)return;
+    receiptKeys.forEach(function(key){delete target[key];});
+    // False is not proof of absence: the submission guard alone may authorize
+    // a missing verdict after a successful read of the current Form source.
+    target.submitted=false;target.completed=false;target.receiptReceived=false;
+  }
+  function scope(identity,assignment,source){
+    return JSON.stringify([String(identity||''),String(assignment.id||assignment.assignmentId||''),root.DirectSubmissionAssignmentWindow.assignedAt(assignment),source]);
+  }
+  function reconcile(target,identity,assignment,source,found,accept){
+    var key=scope(identity,assignment,source),saved=target&&target.directFormEvidence;
+    var retained=identity&&saved&&saved.schema===1&&saved.scope===key&&Array.isArray(saved.receipts)?saved.receipts:[];
+    var rows=new Map();
+    retained.concat(Array.isArray(found)?found:[]).forEach(function(row){
+      if(!row||!row.id||!row.family||!row.code||!root.DirectSubmissionDeadlinePolicy.receiptTime(row)||!accept(row))return;
+      var previous=rows.get(row.id);
+      if(!previous||row.contentStatus!=='empty'||previous.contentStatus==='empty')rows.set(row.id,row);
+    });
+    clear(target);
+    var receipts=Array.from(rows.values());
+    target.directFormEvidence={schema:1,scope:key,receipts:receipts};
+    return receipts;
+  }
+  function copy(target,source){
+    clear(target);
+    receiptKeys.concat(['directFormSource','directFormEvidence','directReceiptResolution','directReceiptDeadline','directReceiptExclusion','directReceiptCurrent']).forEach(function(key){if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key];});
+    return target;
+  }
+  var api={clear:clear,copy:copy,reconcile:reconcile};root.DirectFormReceiptAuthority=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
 /* SUBMISSION_RECEIPT_OWNER_V1: one reliable current-pupil verification session. */
 (function(root){
   'use strict';
@@ -4522,14 +4566,18 @@ function createStudentLearningPrefill(options) {
     }
     function reapply(target){
       var active=who();
-      if(identity&&active&&active!==identity){clear();return target;}
-      if(!target||!identity||active!==identity||!visible())return target;
+      if(identity&&active&&active!==identity)clear();
+      if(!target||!active||!visible())return target;
+      if(!identity)identity=active;
       if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
       // A visibility-driven guard reset must not discard a completed read.
       // Rebind only this authenticated pupil's current response, never an old
       // retained positive-only snapshot, and do not read the sources again.
       if(current&&!options.guard.isCurrent(ticket))ticket=options.guard.begin('receipts');
-      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
+      // Sanitize the authorized first paint too, before the background read.
+      // A tracker-derived cached positive must not flash as a Form receipt.
+      var payload=Object.assign({receipts:[],coverage:[]},retained||{},{_receiptIdentity:identity});
+      return options.project(target,payload,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
     return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
@@ -5329,8 +5377,7 @@ ScienceStageContract.lessons=[
         if(payload.assignmentAuthority)payload=Object.assign({},payload,{assignmentAuthority:Object.assign({},payload.assignmentAuthority,{assignments:root.ScienceStageContract.expand(payload.assignmentAuthority.assignments,root.ScienceStageContract.lessons)})});
       }
       const profile=value.profile,receipts=list(payload.receipts).filter(r=>r&&r.contentStatus!=='empty'||r&&r.contentEvidenceSchema===2&&r.missingContentVerified===true),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
-
-      // Unassigned invalid attempts are shown separately; never mapped or counted as work done.
+      // Preserve the existing verified-empty contract independently from receipt authority.
       profile.unassignedEmptyReceipts=[];
       if(ticket&&guard.isCurrent(ticket)&&payload.receiptEvidenceSchema===2&&payload.className===value.className){
         const seen=new Set();
@@ -5357,8 +5404,15 @@ ScienceStageContract.lessons=[
         tasks.forEach(task=>{
           if(!task)return;const maps=mappings(assignment,task,required.length);
           const peers=peersFor(assignment,maps,active?list(authority.assignments):assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
-          const found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers));
+          const accepts=receipt=>maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers);
+          let found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&accepts(receipt));
           const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
+          if(maps.length){
+            found=root.DirectFormReceiptAuthority.reconcile(feedback,payload._receiptIdentity,assignment,maps.map(m=>m.family+'|'+key(m.code)+'|'+String(m.taskType||'')).sort(),found,accepts);
+            if(isRetake(assignment,task)||task.recordType==='automatic-score'){
+              ['score','maximum','scoreLabel','resultLabel'].forEach(k=>delete feedback[k]);
+            }
+          }
           if(maps.length){feedback.directReceiptResolution=proof&&ticket?'verified':active?'source-unavailable':authority?'not-current':'authority-unavailable';}
           // Reminder exclusions are policy/context, never a submission verdict.
           const assignedAt=root.DirectSubmissionAssignmentWindow.assignedAt(assignment);
@@ -5376,17 +5430,32 @@ ScienceStageContract.lessons=[
           // Its due date controls late status, not whether a fresh reminder may appear.
           if(active&&mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
         });
+        if(required.some(task=>mappings(assignment,task,required.length).length)){root.DirectFormReceiptAuthority.clear(assignment);assignment.directFormSource=true;}
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
         if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true});
         assignment.directReceiptCurrent=active;
         if(required.length===1){assignment.directReceiptResolution=required[0].feedback.directReceiptResolution;assignment.directReceiptDeadline=required[0].feedback.directReceiptDeadline;assignment.directReceiptExclusion=required[0].feedback.directReceiptExclusion;}
         if(required.some(t=>t.feedback&&t.feedback.contentMissing)){assignment.submitted=false;assignment.contentMissing=true;}else if(complete){assignment.contentMissing=false;}
-        if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
+        if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,list(required[0].feedback.directFormEvidence&&required[0].feedback.directFormEvidence.receipts).filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
         // Only a complete set of source-confirmed task receipts replaces the
         // assignment timing. Paper/teacher-only and unknown-source work stay intact.
         if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
       });
+      // The practice view also merges legacy tracker/prepared rows. Remove
+      // that second receipt fallback, without losing its independent comments.
+      [profile.selfPractice,profile.preparedPracticeRows].forEach(rows=>list(rows).forEach(row=>{
+        if(!row)return;
+        const id=String(row.scheduleAssignmentId||row.id||'');
+        const candidates=assignments.filter(a=>a.kind==='self-practice'&&a.directFormSource&&id&&a.id===id);
+        if(candidates.length===1){
+          const current=candidates[0];root.DirectFormReceiptAuthority.copy(row,current);
+          if(Array.isArray(row.tasks))row.tasks=current.tasks;
+          if(ticket&&guard.can(current))guard.transfer(current,row);
+        }else if(mappings(row,{url:row.learningUrl||row.url||row.taskUrl||''},1).length){
+          root.DirectFormReceiptAuthority.clear(row);row.directFormSource=true;
+        }
+      }));
       list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
         const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;
         const assignment=assignments.find(a=>a.id===retake.assignmentId);if(!assignment)return;
@@ -5396,6 +5465,10 @@ ScienceStageContract.lessons=[
         const exact=candidates.filter(t=>urlKey(t.url||t.learningUrl||t.taskUrl)===urlKey(retake.learningUrl)&&urlKey(retake.learningUrl));
         const task=exact.length===1?exact[0]:candidates.length===1?candidates[0]:null;if(!task)return;
         const feedback=task.feedback;
+        if(feedback.directFormEvidence){
+          root.DirectFormReceiptAuthority.clear(retake);
+          ['score','maximum','scoreLabel','resultLabel'].forEach(k=>delete retake[k]);
+        }
         ['directReceiptResolution','directReceiptDeadline','directReceiptExclusion'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(feedback,k))retake[k]=feedback[k];});
         if(ticket&&guard.can(task))guard.transfer(task,retake);
         if(!feedback.submitted)return;
