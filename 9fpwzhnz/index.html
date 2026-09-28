@@ -4438,6 +4438,38 @@ function createStudentLearningPrefill(options) {
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionStatusGuard:createSubmissionStatusGuard};
 })(typeof globalThis==='object'?globalThis:this);
 
+/* DIRECT_FORM_RECEIPT_AUTHORITY_V1: tracker prose is never online receipt proof. */
+(function(root){
+  'use strict';
+  var receiptKeys=['submitted','completed','tracked','missing','submittedAt','lastSubmittedAt','submissionAttempts','attempts','declaredAttemptCount','viewUrl','submissionUrl','reviewUrl','fileUrl','submissionFiles','evidenceUrls','links','hasContent','contentMissing','receiptReceived','submissionReceived','isLate','isOverdue','state','stateLabel','status','canViewSubmission','directSubmission','directReceiptContentEvidence','directReceiptEvidence'];
+  function clear(target){
+    if(!target)return;
+    receiptKeys.forEach(function(key){delete target[key];});
+    // False is not proof of absence: the submission guard alone may authorize
+    // a missing verdict after a successful read of the current Form source.
+    target.submitted=false;target.completed=false;target.receiptReceived=false;
+  }
+  function scope(identity,assignment,source){
+    return JSON.stringify([String(identity||''),String(assignment.id||assignment.assignmentId||''),root.DirectSubmissionAssignmentWindow.assignedAt(assignment),source]);
+  }
+  function reconcile(target,identity,assignment,source,found,accept){
+    var key=scope(identity,assignment,source),saved=target&&target.directFormEvidence;
+    var retained=identity&&saved&&saved.schema===1&&saved.scope===key&&Array.isArray(saved.receipts)?saved.receipts:[];
+    var rows=new Map();
+    retained.concat(Array.isArray(found)?found:[]).forEach(function(row){
+      if(!row||!row.id||!row.family||!row.code||!root.DirectSubmissionDeadlinePolicy.receiptTime(row)||!accept(row))return;
+      var previous=rows.get(row.id);
+      if(!previous||row.contentStatus!=='empty'||previous.contentStatus==='empty')rows.set(row.id,row);
+    });
+    clear(target);
+    var receipts=Array.from(rows.values());
+    target.directFormEvidence={schema:1,scope:key,receipts:receipts};
+    return receipts;
+  }
+  var api={clear:clear,reconcile:reconcile};root.DirectFormReceiptAuthority=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
 /* SUBMISSION_RECEIPT_OWNER_V1: one reliable current-pupil verification session. */
 (function(root){
   'use strict';
@@ -4522,14 +4554,18 @@ function createStudentLearningPrefill(options) {
     }
     function reapply(target){
       var active=who();
-      if(identity&&active&&active!==identity){clear();return target;}
-      if(!target||!identity||active!==identity||!visible())return target;
+      if(identity&&active&&active!==identity)clear();
+      if(!target||!active||!visible())return target;
+      if(!identity)identity=active;
       if(parked){ticket=options.guard.begin('receipts');if(ticket){current=parked;parked=null;needsFresh=false;}}
       // A visibility-driven guard reset must not discard a completed read.
       // Rebind only this authenticated pupil's current response, never an old
       // retained positive-only snapshot, and do not read the sources again.
       if(current&&!options.guard.isCurrent(ticket))ticket=options.guard.begin('receipts');
-      return options.project(target,retained,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
+      // Sanitize the authorized first paint too, before the background read.
+      // A tracker-derived cached positive must not flash as a Form receipt.
+      var payload=Object.assign({receipts:[],coverage:[]},retained||{},{_receiptIdentity:identity});
+      return options.project(target,payload,current&&options.guard.isCurrent(ticket)?ticket:null,options.guard)||target;
     }
     return {refresh:refresh,reapply:reapply,suspend:suspend,clear:clear,invalidate:invalidate,get inFlight(){return Boolean(job);},get retryQueued(){return retryTimer!==null||queued;},get readState(){return who()===identity&&identity?readState:'idle';}};
   }
@@ -5315,7 +5351,7 @@ ScienceStageContract.lessons=[
       target.receiptReceived=true;target.hasContent=priorContent||found.some(r=>r.contentStatus!=='empty');target.contentMissing=!target.hasContent;target.submitted=target.hasContent;
       if(last.viewUrl){try{const url=new URL(last.viewUrl);if(url.protocol==='https:'&&!url.username&&!url.password)target.viewUrl=url.href;}catch(_){} }
       target.state=target.teacherComment||target.comment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';
-      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':target.contentMissing?'Đã nộp nhưng không có link, video hoặc tệp bài làm':'Đã nộp bài';
+      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':target.contentMissing?'Đã nhận lượt nộp':'Đã nộp bài';
       if(last.scoreSource==='automatic-score-source'&&Number.isFinite(last.score)){
         target.score=last.score;if(Number.isFinite(last.maximum))target.maximum=last.maximum;
         target.scoreLabel=String(last.score)+(Number.isFinite(last.maximum)?'/'+last.maximum:'');
@@ -5328,18 +5364,7 @@ ScienceStageContract.lessons=[
         if(value.dashboard)value.dashboard.assignments=root.ScienceStageContract.expand(value.dashboard.assignments,root.ScienceStageContract.lessons);
         if(payload.assignmentAuthority)payload=Object.assign({},payload,{assignmentAuthority:Object.assign({},payload.assignmentAuthority,{assignments:root.ScienceStageContract.expand(payload.assignmentAuthority.assignments,root.ScienceStageContract.lessons)})});
       }
-      const profile=value.profile,receipts=list(payload.receipts).filter(r=>r&&r.contentStatus!=='empty'||r&&r.contentEvidenceSchema===2&&r.missingContentVerified===true),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
-
-      // Unassigned invalid attempts are shown separately; never mapped or counted as work done.
-      profile.unassignedEmptyReceipts=[];
-      if(ticket&&guard.isCurrent(ticket)&&payload.receiptEvidenceSchema===2&&payload.className===value.className){
-        const seen=new Set();
-        profile.unassignedEmptyReceipts=list(payload.unassignedReceipts).filter(r=>{
-          if(!r||r.contentEvidenceSchema!==2||r.contentStatus!=='empty'||r.missingContentVerified!==true||r.unassigned!==true||r.received!==true||typeof r.id!=='string'||seen.has(r.id)||typeof r.code!=='string'||!r.code.trim()||typeof r.submittedAt!=='string'||!root.DirectSubmissionDeadlinePolicy.receiptTime(r))return false;
-          if(!list(payload.coverage).some(c=>c.family===r.family&&c.freshRead===true&&Number.isFinite(c.verifiedAt)&&c.verifiedAt>0))return false;
-          seen.add(r.id);return true;
-        }).map(r=>({id:r.id,code:r.code.slice(0,180),submittedAt:r.submittedAt,family:r.family}));
-      }
+      const profile=value.profile,receipts=list(payload.receipts),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
       if(authority){
         const start=authority.scopeStartAt;
         if(typeof start==='number'){
@@ -5357,8 +5382,15 @@ ScienceStageContract.lessons=[
         tasks.forEach(task=>{
           if(!task)return;const maps=mappings(assignment,task,required.length);
           const peers=peersFor(assignment,maps,active?list(authority.assignments):assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
-          const found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers));
+          const accepts=receipt=>maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers);
+          let found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&accepts(receipt));
           const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
+          if(maps.length){
+            found=root.DirectFormReceiptAuthority.reconcile(feedback,payload._receiptIdentity,assignment,maps.map(m=>m.family+'|'+key(m.code)+'|'+String(m.taskType||'')).sort(),found,accepts);
+            if(isRetake(assignment,task)||task.recordType==='automatic-score'){
+              ['score','maximum','scoreLabel','resultLabel'].forEach(k=>delete feedback[k]);
+            }
+          }
           if(maps.length){feedback.directReceiptResolution=proof&&ticket?'verified':active?'source-unavailable':authority?'not-current':'authority-unavailable';}
           // Reminder exclusions are policy/context, never a submission verdict.
           const assignedAt=root.DirectSubmissionAssignmentWindow.assignedAt(assignment);
@@ -5376,6 +5408,7 @@ ScienceStageContract.lessons=[
           // Its due date controls late status, not whether a fresh reminder may appear.
           if(active&&mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
         });
+        if(required.some(task=>mappings(assignment,task,required.length).length))root.DirectFormReceiptAuthority.clear(assignment);
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
         if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true});
@@ -5396,6 +5429,10 @@ ScienceStageContract.lessons=[
         const exact=candidates.filter(t=>urlKey(t.url||t.learningUrl||t.taskUrl)===urlKey(retake.learningUrl)&&urlKey(retake.learningUrl));
         const task=exact.length===1?exact[0]:candidates.length===1?candidates[0]:null;if(!task)return;
         const feedback=task.feedback;
+        if(feedback.directFormEvidence){
+          root.DirectFormReceiptAuthority.clear(retake);
+          ['score','maximum','scoreLabel','resultLabel'].forEach(k=>delete retake[k]);
+        }
         ['directReceiptResolution','directReceiptDeadline','directReceiptExclusion'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(feedback,k))retake[k]=feedback[k];});
         if(ticket&&guard.can(task))guard.transfer(task,retake);
         if(!feedback.submitted)return;
@@ -5409,7 +5446,7 @@ ScienceStageContract.lessons=[
         if(!missing.length&&!checks.every(Boolean))return value;
         profile.submissionPendingIncomplete=!checks.every(Boolean);
         profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
-        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Đã nộp nhưng không có link, video hoặc tệp bài làm.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
+        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Bài đã gửi nhưng còn trống.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
       }
