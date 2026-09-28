@@ -3396,6 +3396,26 @@ html.vn-national-day-2026-root body .assignment.session {
     }
 
     /* SCIENCE_PRACTICE_DISPLAY_V1 */
+/* Same-origin handoff of an already received listening result. No submissions. */
+(function(root){
+ 'use strict';
+ const normalized=v=>String(v||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+ const key=(p,code)=>'science-g3-dashboard-receipt-v1:'+encodeURIComponent(p.className+'|'+normalized(p.name)+'|'+code);
+ function valid(r,p,code){
+  return !!(p&&r&&r.schema===1&&r.source==='parent-dashboard'&&r.code===code+'-LS'&&r.className===p.className&&normalized(r.name)===normalized(p.name)&&
+   typeof r.score==='number'&&Number.isFinite(r.score)&&r.score>=0&&r.total===30&&r.score<=r.total&&typeof r.submittedAt==='string'&&r.submittedAt.trim());
+ }
+ function read(storage,p,code){try{const r=JSON.parse(storage.getItem(key(p,code)));return valid(r,p,code)?r:null;}catch{return null;}}
+ function write(storage,p,code,feedback){
+  if(!p||!feedback||feedback.contentMissing||!feedback.submittedAt||feedback.score===null||feedback.score===undefined||feedback.score==='')return false;
+  const r={schema:1,source:'parent-dashboard',name:p.name,className:p.className,code:code+'-LS',score:Number(feedback.score),total:Number(feedback.maximum),submittedAt:String(feedback.submittedAt)};
+  if(!valid(r,p,code))return false;
+  try{storage.setItem(key(p,code),JSON.stringify(r));return true;}catch{return false;}
+ }
+ const api={key,valid,read,write};root.ScienceResume=api;
+ if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+
 function sciencePracticeTasksV1_(item){
  if(typeof ScienceStageContract==='undefined'||!item)return [];
  const expanded=ScienceStageContract.expand([item],ScienceStageContract.lessons)[0];
@@ -3433,6 +3453,14 @@ function sciencePracticeCardV1_(item,isNewPractice){
   const history=submissionHistoryHtml(attempts,reviewUrl,{compact:true,showSingle:true,fallbackScore:score,fallbackMaximum:maximum,fallbackScoreLabel:scoreText});
   const links=!history?submissionEvidenceActionsHtml_(feedback,reviewUrl):'';
   const learningUrl=parentLearningUrl_(safeUrl(pick(task,['url','learningUrl','taskUrl'],'')));
+  // This URL is personalized only by the existing authorized-profile guard.
+  if(automatic&&done&&typeof ScienceResume!=='undefined')try{
+   const u=new URL(learningUrl),id=ScienceStageContract.identify(item,task,ScienceStageContract.lessons);
+   if(u.origin===location.origin&&u.pathname==='/student-learning/'&&id&&id.stage==='listen'){
+    const p={name:u.searchParams.get('mtt_english')||u.searchParams.get('mtt_name'),className:u.searchParams.get('mtt_class')};
+    if(p.name&&p.className)ScienceResume.write(localStorage,p,id.known.code,feedback);
+   }
+  }catch(_){}
   return `<section class="homework-item science-stage" data-pending-target data-task-id="${escapeHtml(text(task.id))}" data-science-stage="${automatic?'listen':'talk'}"><div class="homework-row is-single"><div><strong>${escapeHtml(task.title)}</strong></div><div class="homework-actions"><span class="pill ${status.cls}">${escapeHtml(status.label)}</span>${learningUrl?`<a class="mini-action" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${automatic?'Mở bài nghe':'Mở bài / nộp video'}</a>`:''}</div></div><div class="task-feedback${automatic?' is-receipt-only':''}"><div class="feedback-cell"><strong>${automatic?'Điểm bài nghe':'Nhận video'}</strong>${scoreText?`<div class="feedback-score">Kết quả: ${escapeHtml(scoreText)}</div>`:''}<div class="feedback-value${feedback.contentMissing?' is-missing':''}">${escapeHtml(receipt)}</div>${history}${links}</div>${automatic?'':`<div class="feedback-cell teacher-feedback"><strong>${comment?'Cô đã nhận xét':'Nhận xét của giáo viên'}</strong><div class="feedback-value">${comment?nl2br(comment):done?'Chờ GV nhận xét':'Chưa có nhận xét'}</div></div>`}</div></section>`;
  }).join('');
  return `<article class="card sky science-practice" data-pending-target data-assignment-id="${escapeHtml(text(item.id))}" data-pending-title="${escapeHtml(matchKey(title))}"><div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice?'<span class="new-work-badge">BÀI MỚI</span>':''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div><h3 class="card-title">${escapeHtml(title)}</h3>${description?`<p class="soft">${nl2br(description)}</p>`:''}${taskHtml}${due?`<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>`:''}</article>`;
