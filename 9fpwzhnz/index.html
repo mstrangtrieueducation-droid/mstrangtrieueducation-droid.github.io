@@ -3344,6 +3344,13 @@ html.vn-national-day-2026-root body .assignment.session {
           if (index < 0) return item;
           used.add(index);
           const trackedItem = tracked[index];
+          // DIRECT_FORM_PRACTICE_MERGE_V1: only teacher fields may come from this row.
+          if(item.directFormSource){
+            const combined=Object.assign({},trackedItem,item);
+            combined.teacherComment=pick(item,['teacherComment'],pick(trackedItem,['teacherComment'],''));
+            DirectFormReceiptAuthority.copy(combined,item);
+            return submissionGuard_.transfer(item,combined);
+          }
           const teacherComment = pick(item, ['teacherComment'], pick(trackedItem, ['teacherComment'], ''));
           const submittedAt = pick(item, ['submittedAt'], pick(trackedItem, ['submittedAt'], ''));
           const submissionAttempts = arr(pick(item, ['submissionAttempts'], [])).length
@@ -4441,7 +4448,7 @@ function createStudentLearningPrefill(options) {
 /* DIRECT_FORM_RECEIPT_AUTHORITY_V1: tracker prose is never online receipt proof. */
 (function(root){
   'use strict';
-  var receiptKeys=['submitted','completed','tracked','missing','submittedAt','lastSubmittedAt','submissionAttempts','attempts','declaredAttemptCount','viewUrl','submissionUrl','reviewUrl','fileUrl','submissionFiles','evidenceUrls','links','hasContent','contentMissing','receiptReceived','submissionReceived','isLate','isOverdue','state','stateLabel','status','canViewSubmission','directSubmission','directReceiptContentEvidence','directReceiptEvidence'];
+  var receiptKeys=['submitted','completed','done','reviewed','tracked','missing','submittedAt','lastSubmittedAt','submissionAttempts','attempts','declaredAttemptCount','submissionCount','attemptCount','viewUrl','submissionUrl','reviewUrl','fileUrl','submissionFiles','evidenceUrls','links','hasContent','contentMissing','receiptReceived','submissionReceived','isLate','isOverdue','state','stateLabel','status','statusKey','statusLabel','submissionState','canViewSubmission','directSubmission','directReceiptContentEvidence','directReceiptEvidence'];
   function clear(target){
     if(!target)return;
     receiptKeys.forEach(function(key){delete target[key];});
@@ -4466,7 +4473,12 @@ function createStudentLearningPrefill(options) {
     target.directFormEvidence={schema:1,scope:key,receipts:receipts};
     return receipts;
   }
-  var api={clear:clear,reconcile:reconcile};root.DirectFormReceiptAuthority=api;
+  function copy(target,source){
+    clear(target);
+    receiptKeys.concat(['directFormSource','directFormEvidence','directReceiptResolution','directReceiptDeadline','directReceiptExclusion','directReceiptCurrent']).forEach(function(key){if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key];});
+    return target;
+  }
+  var api={clear:clear,copy:copy,reconcile:reconcile};root.DirectFormReceiptAuthority=api;
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
@@ -5351,7 +5363,7 @@ ScienceStageContract.lessons=[
       target.receiptReceived=true;target.hasContent=priorContent||found.some(r=>r.contentStatus!=='empty');target.contentMissing=!target.hasContent;target.submitted=target.hasContent;
       if(last.viewUrl){try{const url=new URL(last.viewUrl);if(url.protocol==='https:'&&!url.username&&!url.password)target.viewUrl=url.href;}catch(_){} }
       target.state=target.teacherComment||target.comment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';
-      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':target.contentMissing?'Đã nhận lượt nộp':'Đã nộp bài';
+      target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':target.contentMissing?'Đã nộp nhưng không có link, video hoặc tệp bài làm':'Đã nộp bài';
       if(last.scoreSource==='automatic-score-source'&&Number.isFinite(last.score)){
         target.score=last.score;if(Number.isFinite(last.maximum))target.maximum=last.maximum;
         target.scoreLabel=String(last.score)+(Number.isFinite(last.maximum)?'/'+last.maximum:'');
@@ -5364,7 +5376,17 @@ ScienceStageContract.lessons=[
         if(value.dashboard)value.dashboard.assignments=root.ScienceStageContract.expand(value.dashboard.assignments,root.ScienceStageContract.lessons);
         if(payload.assignmentAuthority)payload=Object.assign({},payload,{assignmentAuthority:Object.assign({},payload.assignmentAuthority,{assignments:root.ScienceStageContract.expand(payload.assignmentAuthority.assignments,root.ScienceStageContract.lessons)})});
       }
-      const profile=value.profile,receipts=list(payload.receipts),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
+      const profile=value.profile,receipts=list(payload.receipts).filter(r=>r&&r.contentStatus!=='empty'||r&&r.contentEvidenceSchema===2&&r.missingContentVerified===true),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
+      // Preserve the existing verified-empty contract independently from receipt authority.
+      profile.unassignedEmptyReceipts=[];
+      if(ticket&&guard.isCurrent(ticket)&&payload.receiptEvidenceSchema===2&&payload.className===value.className){
+        const seen=new Set();
+        profile.unassignedEmptyReceipts=list(payload.unassignedReceipts).filter(r=>{
+          if(!r||r.contentEvidenceSchema!==2||r.contentStatus!=='empty'||r.missingContentVerified!==true||r.unassigned!==true||r.received!==true||typeof r.id!=='string'||seen.has(r.id)||typeof r.code!=='string'||!r.code.trim()||typeof r.submittedAt!=='string'||!root.DirectSubmissionDeadlinePolicy.receiptTime(r))return false;
+          if(!list(payload.coverage).some(c=>c.family===r.family&&c.freshRead===true&&Number.isFinite(c.verifiedAt)&&c.verifiedAt>0))return false;
+          seen.add(r.id);return true;
+        }).map(r=>({id:r.id,code:r.code.slice(0,180),submittedAt:r.submittedAt,family:r.family}));
+      }
       if(authority){
         const start=authority.scopeStartAt;
         if(typeof start==='number'){
@@ -5408,18 +5430,32 @@ ScienceStageContract.lessons=[
           // Its due date controls late status, not whether a fresh reminder may appear.
           if(active&&mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
         });
-        if(required.some(task=>mappings(assignment,task,required.length).length))root.DirectFormReceiptAuthority.clear(assignment);
+        if(required.some(task=>mappings(assignment,task,required.length).length)){root.DirectFormReceiptAuthority.clear(assignment);assignment.directFormSource=true;}
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
         if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true});
         assignment.directReceiptCurrent=active;
         if(required.length===1){assignment.directReceiptResolution=required[0].feedback.directReceiptResolution;assignment.directReceiptDeadline=required[0].feedback.directReceiptDeadline;assignment.directReceiptExclusion=required[0].feedback.directReceiptExclusion;}
         if(required.some(t=>t.feedback&&t.feedback.contentMissing)){assignment.submitted=false;assignment.contentMissing=true;}else if(complete){assignment.contentMissing=false;}
-        if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,receipts.filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
+        if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,list(required[0].feedback.directFormEvidence&&required[0].feedback.directFormEvidence.receipts).filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
         // Only a complete set of source-confirmed task receipts replaces the
         // assignment timing. Paper/teacher-only and unknown-source work stay intact.
         if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
       });
+      // The practice view also merges legacy tracker/prepared rows. Remove
+      // that second receipt fallback, without losing its independent comments.
+      [profile.selfPractice,profile.preparedPracticeRows].forEach(rows=>list(rows).forEach(row=>{
+        if(!row)return;
+        const id=String(row.scheduleAssignmentId||row.id||'');
+        const candidates=assignments.filter(a=>a.kind==='self-practice'&&a.directFormSource&&id&&a.id===id);
+        if(candidates.length===1){
+          const current=candidates[0];root.DirectFormReceiptAuthority.copy(row,current);
+          if(Array.isArray(row.tasks))row.tasks=current.tasks;
+          if(ticket&&guard.can(current))guard.transfer(current,row);
+        }else if(mappings(row,{url:row.learningUrl||row.url||row.taskUrl||''},1).length){
+          root.DirectFormReceiptAuthority.clear(row);row.directFormSource=true;
+        }
+      }));
       list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
         const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;
         const assignment=assignments.find(a=>a.id===retake.assignmentId);if(!assignment)return;
@@ -5446,7 +5482,7 @@ ScienceStageContract.lessons=[
         if(!missing.length&&!checks.every(Boolean))return value;
         profile.submissionPendingIncomplete=!checks.every(Boolean);
         profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
-        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Bài đã gửi nhưng còn trống.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
+        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Đã nộp nhưng không có link, video hoặc tệp bài làm.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
       }
