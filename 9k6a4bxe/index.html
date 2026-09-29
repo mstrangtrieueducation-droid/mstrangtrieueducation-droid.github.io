@@ -135,15 +135,15 @@
   let lastNonce=0;
 
 
-// IELTS_CLASSWORK_FAST_TRANSPORT_V2: bounded, staggered read-only gateway race.
+// IELTS_CLASSWORK_FAST_TRANSPORT_V3: bounded, staggered read-only gateway race.
 const classworkPending=new Map();
 function classworkFastRequest(action,force,selector){
   if(!valid)return Promise.reject(Object.assign(new Error('Liên kết chưa hợp lệ.'),{code:'INVALID_LINK'}));
   const epoch=generation,key=epoch+'|'+action+'|'+Boolean(force)+'|'+JSON.stringify(selector);
   if(classworkPending.has(key))return classworkPending.get(key);
-  const started=performance.now(),budget=action==='classwork_source'?45000:30000;
+  const started=performance.now(),budget=action==='classwork_source'?60000:55000;
   const promise=new Promise((resolve,reject)=>{
-    let finished=false,failed=0,lastError;const controllers=[],timers=[];
+    let finished=false,failed=0,lastError;const attempts=endpoints.length*2;const controllers=[],timers=[];
     const finish=(error,data)=>{
       if(finished)return;finished=true;timers.forEach(clearTimeout);controllers.forEach(c=>c.abort());
       if(error)reject(error);else resolve(data);
@@ -152,7 +152,7 @@ function classworkFastRequest(action,force,selector){
       if(finished)return;
       if(epoch!==generation){finish(Object.assign(new Error('Phiên học viên đã thay đổi.'),{code:'INVALID_LINK'}));return;}
       const controller=new AbortController();controllers.push(controller);
-      const url=new URL(endpoints[index]);lastNonce=Math.max(Date.now(),lastNonce+1);
+      const url=new URL(endpoints[index%endpoints.length]);lastNonce=Math.max(Date.now(),lastNonce+1);
       Object.entries({api:'parent1',class:className,action,force:force?'1':'0',token,...selector,_:String(lastNonce)}).forEach(([k,v])=>url.searchParams.set(k,v));
       try{
         const response=await fetch(url.href,{credentials:'omit',mode:'cors',redirect:'follow',cache:'no-store',referrerPolicy:'no-referrer',signal:controller.signal});
@@ -168,7 +168,8 @@ function classworkFastRequest(action,force,selector){
         if(finished)return;
         if(error.code==='INVALID_LINK'){finish(error);return;}
         lastError=error;failed++;
-        if(failed===endpoints.length)finish(lastError);
+        if(index+endpoints.length<attempts)timers.push(setTimeout(()=>attempt(index+endpoints.length),800));
+        if(failed===attempts)finish(lastError);
       }
     };
     timers.push(setTimeout(()=>finish(Object.assign(new Error('Kết nối tải bài chữa đang chậm. Em bấm Thử lại.'),{code:'SOURCE_UNAVAILABLE'})),budget));
@@ -35980,7 +35981,7 @@ const ieltsClasswork_ = (()=>{
  function mount(host){
   if(!current()||!host)return;
   host.querySelectorAll('[data-classwork-host]').forEach(n=>n.remove());
-  if(status==='ready')for(const r of records){
+  if(records.length)for(const r of records){
    const lesson=Number((r.key.match(/^classwork-b([0-9]+)/)||[])[1]);
    const card=Array.from(host.querySelectorAll('article[data-assignment-id]')).find(c=>Number((c.querySelector('.session-no')?.textContent.match(/\d+/)||[])[0])===lesson);
    const target=card?.querySelector('.ielts-assignment-feedback');if(!target)continue;
@@ -35989,11 +35990,18 @@ const ieltsClasswork_ = (()=>{
    const p=el('p',r.title+' · '+r.date.split('-').reverse().join('/'));p.style.cssText='font-size:12px;margin:0 0 10px';box.append(p);
    const button=el('button','Xem nhận xét và bài chữa');button.type='button';button.style.cssText='border:0;border-radius:8px;background:#173e61;color:white;padding:10px 14px;cursor:pointer;font:inherit;font-size:13px';button.onclick=()=>open(r,button);box.append(button);target.append(box);
   }
-  if(status!=='loading'&&Date.now()-last>180000)load();
+  if(status==='loading'||status==='error'){
+   const box=el('section');box.dataset.classworkHost='';box.setAttribute('role','status');box.style.cssText='padding:14px;margin:12px 0;border:1px solid #dbe5f1;border-radius:10px';
+   box.append(el('strong','Nhận xét bài viết trên lớp'));
+   box.append(el('p',status==='loading'?'Đang tải danh sách bài chữa…':'Chưa tải được danh sách bài chữa. Em bấm thử lại.'));
+   if(status==='error'){const retry=el('button','Tải lại danh sách bài chữa');retry.type='button';retry.onclick=()=>load();box.append(retry);}
+   host.prepend(box);
+  }
+  if(status==='idle'||(status==='ready'&&Date.now()-last>180000))load();
  }
  async function load(){
 
-  if(!current())return;status='loading';last=Date.now();const id=identity,epoch=generation;
+  if(!current())return;status='loading';last=Date.now();const id=identity,epoch=generation;mount(document.querySelector('#panel-writing'));
 
   try{const d=checked(await ieltsParentAccess.request('classwork_index'),id);if(epoch!==generation)return;
 
@@ -36001,7 +36009,7 @@ const ieltsClasswork_ = (()=>{
 
    records=d.reviews;status='ready';
 
-  }catch(e){if(epoch!==generation)return;records=[];status='error';}
+  }catch(e){if(epoch!==generation)return;status='error';}
 
   mount(document.querySelector('#panel-writing'));
 
@@ -36036,11 +36044,13 @@ const ieltsClasswork_ = (()=>{
    info.hidden=false;info.textContent=message;
    const retry=el('button','Thử lại');retry.type='button';retry.style.cssText='display:block;margin-top:12px;padding:10px 16px;cursor:pointer';retry.onclick=()=>open(record,button);info.append(retry);
   }
+  let expired=false;
+  renderTimer=setTimeout(()=>{expired=true;failed('Chưa tải được bài chữa. Em bấm Thử lại.');},65000);
   try{
 
    const d=await reviewData(record,id,epoch);
 
-   if(epoch!==generation||modal!==openingModal||selected!==record)return;
+   if(expired||epoch!==generation||modal!==openingModal||selected!==record)return;
 
    if(d.key!==record.key||d.hash!==record.hash||d.part!=='core'||d.review.reviewKey!==record.key||d.review.parentStudentName!==parentState.name)throw Error('Review mismatch');
 
@@ -36078,7 +36088,7 @@ const ieltsClasswork_ = (()=>{
    frame.onload=()=>{if(modal===openingModal)frame.contentWindow.postMessage({type:'CLASSWORK_PORT_V1'},'*',[channel.port2]);};
 
    frame.srcdoc=CLASSWORK_TEMPLATE;frame.hidden=true;modal.append(frame);
-   renderTimer=setTimeout(()=>failed('Bài chữa chưa hiển thị được. Em bấm Thử lại.'),10000);
+   clearTimeout(renderTimer);renderTimer=setTimeout(()=>failed('Bài chữa chưa hiển thị được. Em bấm Thử lại.'),10000);
 
   }catch(e){failed('Kết nối tải bài chữa đang chậm hoặc bị gián đoạn. Em bấm Thử lại.');}
 
@@ -36097,6 +36107,10 @@ const ieltsClasswork_ = (()=>{
  return {reset,mount};
 
 })();
+
+
+
+
 
 
 
