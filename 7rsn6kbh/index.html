@@ -36246,7 +36246,7 @@ const ieltsWritingReviews_ = (() => {
   function writingBlockedByNotebook(assignment) {
     const item = notebookStates.find(entry => code(entry.assignmentCode) === assignment.assignmentCode);
     return Boolean(item && item.homeworkMode === 'notebook_and_writing' && !refreshing &&
-      (item.essayGradingLocked === true || (item.current && item.state !== 'notebook_complete')));
+      (item.essayGradingLocked === true || (item.current && !['notebook_complete', 'teacher_grading_exception'].includes(item.state))));
   }
   function notebookHtml(assignment) {
     const item = notebookStates.find(entry => code(entry.assignmentCode) === assignment.assignmentCode);
@@ -36254,10 +36254,11 @@ const ieltsWritingReviews_ = (() => {
     const hasWriting = item.homeworkMode === 'notebook_and_writing';
     const current = item.current && !refreshing;
     const notebookFinal = !hasWriting && item.state === 'notebook_verdict_final' && Boolean(item.overall);
-    const failed = notebookFinal || current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
+    const teacherException = current && item.state === 'teacher_grading_exception' && item.essayGradingLocked === false;
+    const failed = notebookFinal || teacherException || current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
     const complete = current && item.state === 'notebook_complete';
     const finalLock = item.essayGradingLocked === true;
-    const writingBlocked = hasWriting && !refreshing && (finalLock || (current && !complete));
+    const writingBlocked = hasWriting && !refreshing && (finalLock || (current && !complete && !teacherException));
     const blockedNotebookUrls = array(item.notebookUrls).map(value => ieltsWritingAssignments_.safeUrl(typeof value === 'string' ? value : value && value.url)).filter(Boolean);
     const blockedNotebookLinks = blockedNotebookUrls.map((url, index) => '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Mở vở đã nộp' + (blockedNotebookUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>').join('');
     const blockedHtml = () => '<section class="wr-notebook wr-notebook-quick wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><div class="wr-notebook-reason"><strong>Lý do vở chưa đạt:</strong>' + prose(item.overall || item.reason || 'Vở chưa đáp ứng yêu cầu của bài được giao.') + '</div>' +
@@ -36266,7 +36267,7 @@ const ieltsWritingReviews_ = (() => {
     // refreshes must never turn an unknown receipt into a missing notebook.
     const receiptTitle = item.receiptStatus === 'submitted' ? 'Đã nộp vở' : item.receiptStatus === 'not_submitted' ? 'Chưa nộp vở' : '';
     const title = !current ? (receiptTitle || (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại')) :
-      failed ? (item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
+      failed ? (teacherException || item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
     const latestNote = !notebookFinal && !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
@@ -36277,7 +36278,7 @@ const ieltsWritingReviews_ = (() => {
       }).join('');
       const latestSubmission = item.historical && item.submittedAt && item.submittedAt !== item.reviewSubmittedAt
         ? '<p class="wr-submitted">Lần nộp mới nhất: ' + escape(submissionDate(item.submittedAt)) + '</p>' : '';
-      const quickTitle = notebookFinal || (failed && item.homeworkMode === 'notebook_only') ? 'VỞ CHƯA ĐẠT YÊU CẦU' : complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
+      const quickTitle = notebookFinal || teacherException || (failed && item.homeworkMode === 'notebook_only') ? 'VỞ CHƯA ĐẠT YÊU CẦU' : complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : receiptTitle || (!current ? title : failed ? 'Vở đã nộp' : item.displayTitle || 'Kiểm tra vở');
       if (writingBlocked) return blockedHtml();
       return '<section class="wr-notebook wr-notebook-quick ' + (failed ? 'wr-notebook-blocked' : complete ? 'wr-notebook-complete' : 'wr-notebook-pending') + '" aria-label="Kiểm tra vở"><h5>' + escape(quickTitle) + '</h5>' + latestNote +
         (item.overall ? '<div class="wr-copy">' + prose(item.overall) + '</div>' : '<p>' + escape(item.reason || 'Đang chờ kết quả kiểm tra vở.') + '</p>') +
