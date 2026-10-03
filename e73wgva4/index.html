@@ -18,7 +18,7 @@
 
   // IELTS_PARENT_GATEWAY_FAILOVER_V49: a newly issued dashboard deployment is primary; the existing deployment remains a bounded fallback.
 
-  const endpoints=Object.freeze(['https://script.google.com/macros/s/AKfycbyzWuyXFfSv2_yT8pSSjCAyHIzSUqTCvXNtDnjyjAj9VZ7E6xBu0yKls_xDukHxPB31/exec','https://script.google.com/macros/s/AKfycbxX87trZP1qwFIlsB5YUVnOls8GcUaNtqweoKnAS4tqmkKv7dhQvQFAdYl2kLnbCGD9RA/exec']),endpoint=endpoints[0],className='IELTS 48';
+  const endpoints=Object.freeze(['https://script.google.com/macros/s/AKfycbzPBNjRrdK6eDL8CQUpbPFvPIJDlQnsyTwGPAOz9WeeoXWxM16rZRrGEEvv4SdR7Gwauw/exec','https://script.google.com/macros/s/AKfycbyCWtfi2hHWGut8qks2CKTa3q8QsUmoovYuAh83wORlMIhmaELYpWy6u5f36x36YTZWow/exec']),endpoint=endpoints[0],className='IELTS 48';
 
 
   const params=new URLSearchParams(location.hash.replace(/^#/,''));
@@ -129,7 +129,7 @@ function classworkFastRequest(action,force,selector){
 
 
         const selectedReview=['writing_assessment','writing_assessment_source'].includes(action);
-        const url=new URL(selectedReview ? 'https://script.google.com/macros/s/AKfycbxX87trZP1qwFIlsB5YUVnOls8GcUaNtqweoKnAS4tqmkKv7dhQvQFAdYl2kLnbCGD9RA/exec' : endpoints[attempt % endpoints.length]);
+        const url=new URL(selectedReview ? 'https://script.google.com/macros/s/AKfycbyCWtfi2hHWGut8qks2CKTa3q8QsUmoovYuAh83wORlMIhmaELYpWy6u5f36x36YTZWow/exec' : endpoints[attempt % endpoints.length]);
 
 
         lastNonce=Math.max(Date.now(),lastNonce+1);
@@ -2028,7 +2028,7 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
       <div><span>IELTS 48 · CỔNG HỌC TẬP</span><strong id="zalo-mobile-rescue-title">Mở dashboard toàn màn hình</strong><p>Chạm nút bên dưới, sau đó chọn tên học sinh để xem đầy đủ và cuộn thuận tiện trên điện thoại.</p></div>
 
 
-      <a class="zalo-mobile-rescue__action" href="https://script.google.com/macros/s/AKfycbyXETj9twerwWholwVpzLwS8NPpptbmMnvSUYdtTUwawR3SIa_C4ymTg8Z99DS5hIzUoA/exec?portal=full" target="_blank" rel="noopener noreferrer">Mở dashboard <b aria-hidden="true">↗</b></a>
+      <a class="zalo-mobile-rescue__action" href="https://script.google.com/macros/s/AKfycbykM2YK3d23ni5JzXvnPDTlAKqBOc1zUQ8aMduyrKUoQ9m5au__YMNbqlnGS8N1zu9Agg/exec?portal=full" target="_blank" rel="noopener noreferrer">Mở dashboard <b aria-hidden="true">↗</b></a>
 
 
     </div>
@@ -3891,7 +3891,7 @@ var ielts48ProfileRefreshV32_={id:0,name:'',pending:false,inFlight:false,attempt
 
 
 
-const IELTS48_ZALO_STANDALONE_URL_V29='https://script.google.com/macros/s/AKfycbyXETj9twerwWholwVpzLwS8NPpptbmMnvSUYdtTUwawR3SIa_C4ymTg8Z99DS5hIzUoA/exec?portal=full';
+const IELTS48_ZALO_STANDALONE_URL_V29='https://script.google.com/macros/s/AKfycbykM2YK3d23ni5JzXvnPDTlAKqBOc1zUQ8aMduyrKUoQ9m5au__YMNbqlnGS8N1zu9Agg/exec?portal=full';
 
 
 
