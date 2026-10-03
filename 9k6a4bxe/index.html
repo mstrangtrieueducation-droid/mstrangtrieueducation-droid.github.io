@@ -65120,6 +65120,9 @@ function parentAcademicQueueV1_(cycle) {
 
 
 
+// IELTS_ACADEMIC_LOADER_EARLY_V1: define before cached-profile rendering starts.
+function parentAcademicLoadV1_(){var identity=parentReceiptIdentity_(),id=parentState.requestId;return ieltsParentAccess.request('refreshProfile').then(function(value){if(parentReceiptIdentity_()!==identity||id!==parentState.requestId)return;if(!parentAccept_('profile',value,id))throw Error('ACADEMIC_SCOPE');});}
+
 function parentLessonContextV1_(){return {family:'ielts',identity:parentReceiptIdentity_(),className:ieltsParentAccess.className,owner:parentReceiptOwner_,academic:parentAcademicLoadV1_};}
 
 const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
@@ -70592,11 +70595,7 @@ function ielts49OpenPendingHomeworkV32_(){
 
 
 
-<script>
 
-function parentAcademicLoadV1_(){var identity=parentReceiptIdentity_(),id=parentState.requestId;return ieltsParentAccess.request('refreshProfile').then(function(value){if(parentReceiptIdentity_()!==identity||id!==parentState.requestId)return;if(!parentAccept_('profile',value,id))throw Error('ACADEMIC_SCOPE');});}
-
-</script>
 
 <script>
 
