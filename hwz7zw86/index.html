@@ -8408,7 +8408,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
 
 
 
-            '<div class="self-study-score-card__score"><span>Listening</span><strong>'+esc(selfStudyScoreTextV1_(result.listening,25))+'</strong></div>'+
+            '<div class="self-study-score-card__score"><span>Listening</span><strong>'+esc(selfStudyScoreTextV1_(result.listening, Number(result.maximum||result.maxScore)===50?40:25))+'</strong></div>'+
 
 
 
@@ -8418,7 +8418,7 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
 
 
 
-            '<div class="self-study-score-card__score"><span>T\u1ed5ng</span><strong>'+esc(selfStudyScoreTextV1_(result.total,35))+'</strong></div>'+
+            '<div class="self-study-score-card__score"><span>T\u1ed5ng</span><strong>'+esc(selfStudyScoreTextV1_(result.total, Number(result.maximum||result.maxScore)===50?50:35))+'</strong></div>'+
 
 
 
@@ -10398,7 +10398,7 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
 
 
 
-            '<span>Listening <strong>' + esc(selfStudyScoreTextV1_(result.listening, 25)) + '</strong></span>' +
+            '<span>Listening <strong>' + esc(selfStudyScoreTextV1_(result.listening, Number(result.maximum||result.maxScore)===50?40:25)) + '</strong></span>' +
 
 
 
@@ -10408,7 +10408,7 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
 
 
 
-            '<span>Tổng <strong>' + esc(selfStudyScoreTextV1_(result.total, 35)) + '</strong></span>' +
+            '<span>Tổng <strong>' + esc(selfStudyScoreTextV1_(result.total, Number(result.maximum||result.maxScore)===50?50:35)) + '</strong></span>' +
 
 
 
@@ -15449,10 +15449,10 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         if(!family)return;
         const accepts=r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers);
         const found=root.DirectFormReceiptAuthority.reconcile(assignment,payload._receiptIdentity,assignment,[family,code],receipts.filter(accepts),accepts);
-        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;/* FIGHTER_SOURCE_STATUS_WITHOUT_DEADLINE_V1 */ grant(guard,ticket,assignment,coverage,true);
         if(!found.length)return;assignment.receiptReceived=true;assignment.contentMissing=found.every(r=>r.contentStatus==='empty');assignment.submissionReceived=!assignment.contentMissing;
         const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
-        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,true);
+        assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);grant(guard,ticket,assignment,coverage,true);
         found.forEach(r=>{
           const item={receiptId:r.id,contentStatus:r.contentStatus,code,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),viewUrl:r.viewUrl,evidenceUrls:r.evidenceUrls,part:r.part,canonicalPdf:r.canonicalPdf,status:'Đã nộp bài',completed:false,kind:family==='FIGHTER_SHADOWING'?'shadowing':/^RI/.test(code)?'reading':'listening'};
           if(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)){
