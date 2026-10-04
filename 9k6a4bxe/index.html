@@ -71092,7 +71092,8 @@ const ieltsWritingReviews_ = (() => {
     const results = assignment.tasks.map(task => reviews.find(record => code(record.assignmentCode) === assignment.assignmentCode && Number(record.taskNumber) === task.taskNumber));
     const count = results.filter(isCurrentReview).length;
     const essayBlocked = writingBlockedByNotebook(assignment);
-    const subtitle = policyBlocked ? '' : essayBlocked ? ' · Vở chưa đạt yêu cầu' :
+    const finalNotebookFailure = notebookStates.some(item => code(item.assignmentCode) === assignment.assignmentCode && item.essayGradingLocked === true);
+    const subtitle = policyBlocked ? '' : essayBlocked ? (finalNotebookFailure ? ' · Vở chưa đạt yêu cầu' : ' · Chờ xác minh vở') :
       assignment.tasks.length && status === 'ready' ? ' · Đã trả ' + count + '/' + assignment.tasks.length + ' bài chữa' + (policy?.state === 'grading_closed' ? '' : ' cho lần nộp mới nhất') : '';
     const title = policyBlocked ? 'Tình trạng nộp bài' : 'Nhận xét bài tập về nhà';
     return '<section class="wr-assignment" data-wr-assignment="' + escape(assignment.assignmentCode) + '" aria-label="' + title + ' · Writing ' + escape(assignment.weekCode) + '">' +
@@ -71122,7 +71123,7 @@ const ieltsWritingReviews_ = (() => {
     const failed = notebookFinal || teacherException || current && item.state === 'awaiting_notebook_completion' && (array(item.issues).length || item.overall);
     const complete = current && item.state === 'notebook_complete';
     const finalLock = item.essayGradingLocked === true;
-    const writingBlocked = hasWriting && (finalLock || (current && !complete && !teacherException));
+    const writingBlocked = hasWriting && (finalLock || (current && failed && !teacherException));
     const blockedNotebookUrls = array(item.notebookUrls).map(value => ieltsWritingAssignments_.safeUrl(typeof value === 'string' ? value : value && value.url)).filter(Boolean);
     const blockedNotebookLinks = blockedNotebookUrls.map((url, index) => '<a class="wr-button secondary" href="' + escape(url) + '" target="_blank" rel="noopener noreferrer">Mở vở đã nộp' + (blockedNotebookUrls.length > 1 ? ' ' + (index + 1) : '') + '</a>').join('');
     const blockedHtml = () => '<section class="wr-notebook wr-notebook-quick wr-notebook-blocked" aria-label="Kiểm tra vở" role="alert"><span class="wr-kicker">Vở chép · Nhận xét của Cô</span><h5>KHÔNG ĐƯỢC CHẤM BÀI VIẾT</h5><div class="wr-notebook-alert"><strong>Vở chưa đạt yêu cầu nên bài viết không được chấm chữa chi tiết.</strong></div><div class="wr-notebook-reason"><strong>Lý do vở chưa đạt:</strong>' + prose(item.overall || item.reason || 'Vở chưa đáp ứng yêu cầu của bài được giao.') + '</div>' +
