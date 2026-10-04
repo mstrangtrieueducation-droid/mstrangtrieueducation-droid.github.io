@@ -1725,9 +1725,9 @@ function renderLeaderboard(){const c=dashboard.classSummary;$('#leaderboard').in
         const body=isShadowing
           ? submittedFileActionsMarkupV1_(result,'video')
           : isReading?fighterReadingScoreMarkupV27_(result,false):'<div class="self-study-score-card__scores">'+
-            '<div class="self-study-score-card__score"><span>Listening</span><strong>'+esc(selfStudyScoreTextV1_(result.listening,25))+'</strong></div>'+
+            '<div class="self-study-score-card__score"><span>Listening</span><strong>'+esc(selfStudyScoreTextV1_(result.listening, Number(result.maximum||result.maxScore)===50?40:25))+'</strong></div>'+
             '<div class="self-study-score-card__score"><span>Paraphrase</span><strong>'+esc(selfStudyScoreTextV1_(result.paraphrase,10))+'</strong></div>'+
-            '<div class="self-study-score-card__score"><span>T\u1ed5ng</span><strong>'+esc(selfStudyScoreTextV1_(result.total,35))+'</strong></div>'+
+            '<div class="self-study-score-card__score"><span>T\u1ed5ng</span><strong>'+esc(selfStudyScoreTextV1_(result.total, Number(result.maximum||result.maxScore)===50?50:35))+'</strong></div>'+
             '</div>';
         return '<article class="self-study-score-card" data-personal-history-row="1" data-needs-action="0"><div class="self-study-score-card__head"><div><strong>'+esc(row.code||title)+'</strong><p>'+esc(title)+'</p></div><div class="self-study-score-card__meta"><span class="self-study-score-card__status '+(complete?'is-complete':'is-pending')+'">'+esc(status)+'</span>'+(result.submittedAt?'<span>'+esc(result.submittedAt)+'</span>':'')+'</div></div>'+body+fighterEmptySubmissionMarkup_(result)+'</article>';
       }).join('')+'</div>':'<div class="empty">Ch\u01b0a c\u00f3 k\u1ebft qu\u1ea3 t\u1ef1 luy\u1ec7n \u0111\u01b0\u1ee3c ghi nh\u1eadn.</div>';
@@ -2123,14 +2123,14 @@ function f9PortalDecorateSelfStudyV2_(items, loaded) {
         var body = isShadowing
           ? submittedFileActionsMarkupV1_(result,'video')
           : isReading ? fighterReadingScoreMarkupV27_(result, true) : '<div class="f9-inline-self-study-scores">' +
-            '<span>Listening <strong>' + esc(selfStudyScoreTextV1_(result.listening, 25)) + '</strong></span>' +
+            '<span>Listening <strong>' + esc(selfStudyScoreTextV1_(result.listening, Number(result.maximum||result.maxScore)===50?40:25)) + '</strong></span>' +
             '<span>Paraphrase <strong>' + esc(selfStudyScoreTextV1_(result.paraphrase, 10)) + '</strong></span>' +
-            '<span>Tổng <strong>' + esc(selfStudyScoreTextV1_(result.total, 35)) + '</strong></span>' +
+            '<span>Tổng <strong>' + esc(selfStudyScoreTextV1_(result.total, Number(result.maximum||result.maxScore)===50?50:35)) + '</strong></span>' +
             '</div>';
         panel.innerHTML = '<div class="f9-inline-state-head"><strong>Tình trạng bài làm</strong><span class="status ' + (result.contentMissing ? 'missing' : complete ? 'done' : 'neutral') + '">' + esc(statusText) + '</span></div>' +
           (result.submittedAt ? '<div class="task-result">Ghi nhận ' + esc(result.submittedAt) + '</div>' : '') + body + fighterEmptySubmissionMarkup_(result);
       } else {
-        var status = !submissionCan_(assignment)?fighterSubmissionReadLabel_():assignment.dueDate && dueState(assignment.dueDate) === 'overdue' ? 'THIẾU BÀI' : 'CHƯA HOÀN THÀNH';
+        var status = !submissionCan_(assignment)?(assignment.submissionSourceRead?'Chưa ghi nhận bài nộp':fighterSubmissionReadLabel_()):assignment.dueDate && dueState(assignment.dueDate) === 'overdue' ? 'THIẾU BÀI' : 'CHƯA HOÀN THÀNH';
         panel.innerHTML = '<div class="f9-inline-state-head"><strong>Tình trạng bài làm</strong><span class="status '+(submissionCan_(assignment)?'missing':'neutral')+'">' + status + '</span></div>' +
           (assignment.url ? '<div class="feedback-actions"><a class="makeup" href="' + esc(parentLearningUrl_(assignment.url)) + '" target="_blank" rel="noopener">Làm bù →</a></div>' : '');
       }
@@ -3478,7 +3478,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         if(!family)return;
         const accepts=r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers);
         const found=root.DirectFormReceiptAuthority.reconcile(assignment,payload._receiptIdentity,assignment,[family,code],receipts.filter(accepts),accepts);
-        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;/* FIGHTER_SOURCE_STATUS_WITHOUT_DEADLINE_V1 */ assignment.submissionSourceRead=Boolean(ticket&&guard.isCurrent(ticket)&&proof(coverage));if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
         if(!found.length)return;assignment.receiptReceived=true;assignment.contentMissing=found.every(r=>r.contentStatus==='empty');assignment.submissionReceived=!assignment.contentMissing;
         const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
         assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,true);
