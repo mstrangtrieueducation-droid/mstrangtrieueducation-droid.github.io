@@ -5974,7 +5974,16 @@ function writtenTestDisplayTitle_(item) {
           !Number.isFinite(Number(value.dashboard.snapshotBuiltAt)) || Number(value.dashboard.snapshotBuiltAt) <= 0 ||
           !Array.isArray(value.studentAliases) || value.studentAliases.length !== 1 ||
           matchKey(pick(value.studentAliases[0], ['alias','englishName','value'], value.studentAliases[0])) !== matchKey(alias)) {
-        const error = new Error('Hồ sơ đầy đủ chưa sẵn sàng.'); error.code = 'INVALID_SCOPE'; throw error;
+        const error = new Error('Hồ sơ đầy đủ chưa sẵn sàng.'); // KIDS_PACKAGE_READINESS_V1: never install this rejected package.
+        const scoped = value && Number(value.classNumber) === CLASS_NUMBER && value.className === CLASS_NAME &&
+          validPublicData(value.dashboard) && value.profile &&
+          Number(value.profile.classNumber) === CLASS_NUMBER && text(value.profile.className) === CLASS_NAME &&
+          matchKey(value.profile.englishName) === matchKey(alias) &&
+          Array.isArray(value.studentAliases) && value.studentAliases.length === 1 &&
+          matchKey(pick(value.studentAliases[0], ['alias','englishName','value'], value.studentAliases[0])) === matchKey(alias) &&
+          Array.isArray(value.dashboard.studentAliases) && value.dashboard.studentAliases.length === 1 &&
+          matchKey(pick(value.dashboard.studentAliases[0], ['alias','englishName','value'], value.dashboard.studentAliases[0])) === matchKey(alias);
+        error.code = scoped ? 'DATA_UNAVAILABLE' : 'INVALID_SCOPE'; throw error;
       }
       return value;
     }
