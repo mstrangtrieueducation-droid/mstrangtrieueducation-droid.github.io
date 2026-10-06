@@ -114,8 +114,13 @@ const kidsApi = (() => {
     const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
     const promise = fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
-    }).then(async response => {
-      if (!response.ok) throw error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
+    }).catch(err => { err.openingTransportFailure = true; throw err; }).then(async response => {
+      if (!response.ok) {
+        const failure = error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
+        failure.openingTransportFailure = [404,408,500,502,503,504].includes(response.status);
+        failure.openingTransportBlocked = !failure.openingTransportFailure;
+        throw failure;
+      }
       const envelope = await response.json();
       if (initialBootstrap && epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       if ((action === 'check' && epoch !== checkEpoch) || (action === 'submissions' && epoch !== receiptEpoch)) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
@@ -175,7 +180,9 @@ const kidsApi = (() => {
       typeof options.validateInitialBootstrap === 'function';
     if (initial) initialBootstrapAttempted = true;
     let handoff = null;
-    const request = initial ? requestAction('bootstrap', false, epoch, true).then(data => {
+    // KIDS_OPENING_NETWORK_RECOVERY_V1: replace failed bootstrap -> check -> bootstrap with one
+    // sequential opening retry. All scope, epoch and renderer checks still run.
+    const acceptInitial = data => {
       if (status === 'revoked' || epoch !== checkEpoch) throw error('Đang kiểm tra hồ sơ.', 'AUTH_PENDING');
       const alias = validateScope(data, 'check');
       // The same renderer validator checks every collection and generation.
@@ -185,10 +192,16 @@ const kidsApi = (() => {
       }
       handoff = data;
       return data;
+    };
+    const opening = () => requestAction('bootstrap', false, epoch, true).then(acceptInitial);
+    const request = initial ? opening().catch(err => {
+      handoff = null;
+      if (status === 'revoked' || epoch !== checkEpoch || !err || !err.openingTransportFailure) throw err;
+      return opening().catch(second => { second.openingRetryExhausted = true; throw second; });
     }).catch(err => {
       handoff = null;
       if (status === 'revoked' || epoch !== checkEpoch ||
-          err && (err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
+          err && (err.openingRetryExhausted===true || err.openingTransportBlocked===true || err.preparedSourceUnavailable===true || err.code === 'INVALID_SCOPE' || err.code === 'PARENT_IDENTITY_CONFLICT' || terminalCodes.has(err.code))) throw err;
       // One fallback to the ordinary access check. Existing loaders retain
       // their normal retry/partial-data/force-recovery rules after this check.
       return requestAction('check', true, epoch);
