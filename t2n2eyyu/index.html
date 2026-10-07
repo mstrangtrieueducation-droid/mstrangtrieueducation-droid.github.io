@@ -646,7 +646,7 @@ function request(action,force=false){
 
     // IELTS_PARENT_SUBMISSION_FAILOVER_V50: retry a failed background receipt read on the alternate deployment.
 
-      const opening=['check','bootstrap'].includes(action),attemptLimit=opening?3:2;
+      const opening=['check','bootstrap'].includes(action),attemptLimit=action==='submissions'?1:(opening?3:2);
 
 
 
@@ -682,7 +682,7 @@ function request(action,force=false){
 
 
 
-      const timer=setTimeout(()=>controller.abort(),opening?10000:90000);
+      /* IELTS_SINGLE_BACKGROUND_RECEIPT_SCAN_V1 */const timer=setTimeout(()=>controller.abort(),action==='submissions'?240000:(opening?60000:90000));
 
 
 
