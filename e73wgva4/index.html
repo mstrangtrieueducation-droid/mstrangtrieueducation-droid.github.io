@@ -1975,7 +1975,7 @@ body.ielts48-fighter9-style .deadline{display:flex;justify-content:space-between
 (function(root){
   'use strict';
   var expanded=Object.create(null),offset=7*3600000;
-  function cutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-2,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
+  function cutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-1,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
   function assigned(item){var p=root.DirectSubmissionDeadlinePolicy,keys=['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'];if(!p)return 0;for(var i=0;i<keys.length;i++){var n=p.time(item&&item[keys[i]],false);if(n)return n;}return 0;}
   function historical(item,now){var date=assigned(item);return date>0&&date<cutoff(typeof now==='number'?now:Date.now());}
   function scope(key){return String(root.location&&root.location.hash||'')+'|'+key;}
@@ -10330,7 +10330,7 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
       // Match the renderer's proof contract. A complete-but-stale response is
       // not a finished verification, even when its summary says complete.
       function verified(source){return Boolean(source&&source.complete===true&&source.freshRead===true&&Number.isFinite(Number(source.verifiedAt))&&Number(source.verifiedAt)>0);}
-      var sourcesComplete=Boolean(payload&&payload.submissionVerification&&payload.submissionVerification.schema===1&&verified(payload.submissionVerification)&&Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
+      var sourcesComplete=Boolean(payload&&payload.submissionVerification&&payload.submissionVerification.schema===1&&verified(payload.submissionVerification)&&Array.isArray(coverage)&&coverage.length&&coverage.every(function(c){return verified(c)||options.singleSession&&c.readComplete===true&&verified(Object.assign({},c,{complete:true}));}));
       var assignmentsComplete=authority?authority.schema===1&&verified(authority):!options.requireAssignmentAuthority;
       return Boolean(sourcesComplete&&assignmentsComplete);
     }
@@ -10364,6 +10364,7 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
       var active=who();if(!active)return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
+      if(options.singleSession&&retry!==true&&!resuming&&readState!=='idle')return Promise.resolve(readState==='ready');
       cancelRetry(!resuming);
       var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
       renderSafely();
@@ -10391,9 +10392,10 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
       }).finally(function(){if(job===task){
         job=null;
         if(queued&&visible()&&who()===identity){queued=false;refresh();}
-        else if(retryNeeded&&isCurrent(run)){
+        else if(retryNeeded&&isCurrent(run)&&(!options.singleSession||retryCount<2)){
           var intent={run:run,identity:identity},delay=retryDelay();retryCount+=1;
           retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job)refresh(intent);},delay);
+        }else if(retryNeeded&&isCurrent(run)){readState='attention';renderSafely();
         }
       }});
       job=task;return task;
@@ -10423,11 +10425,12 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
 
 
 
+
 /* DIRECT_SUBMISSION_DEADLINE_POLICY_V1: dashboard deadlines, September 2026 onward. */
 (function(root){
   'use strict';
   var offset=7*3600000,cutover=Date.UTC(2026,8,1)-offset;
-  function historyCutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-2,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
+  function historyCutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-1,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
   function time(value,endOfDay){
     if(typeof value==='number')return Number.isFinite(value)&&value>1e11&&value<=8640000000000000?value:0;
     var s=String(value||'').trim(),m;
@@ -11635,7 +11638,7 @@ function parentAcademicQueueV1_(cycle) {
 function parentAcademicLoadV1_(){var identity=parentReceiptIdentity_(),id=parentState.requestId;return ieltsParentAccess.request('refreshProfile').then(function(value){if(parentReceiptIdentity_()!==identity||id!==parentState.requestId)return;if(!parentAccept_('profile',value,id))throw Error('ACADEMIC_SCOPE');});}
 
 function parentLessonContextV1_(){return {family:'ielts',identity:parentReceiptIdentity_(),className:ieltsParentAccess.className,owner:parentReceiptOwner_,academic:parentAcademicLoadV1_};}
-const parentReceiptOwner_=createSubmissionReceiptOwner({guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
+const parentReceiptOwner_=createSubmissionReceiptOwner({singleSession:true,guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
 
 
  request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>(target=parentLessonAcceptV1_(target,payload,ticket,guard),DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>ielts48AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts48UniqueBestMatch_(records,record=>ielts48RecordMatchScore_(item,record))})),
@@ -11665,7 +11668,7 @@ function parentSingleSubmissionScan_(owner,getIdentity){
     if(!identity||(!force&&requestedFor===identity))return Promise.resolve(false);
 
 
-    requestedFor=identity;return refresh();
+    requestedFor=identity;return refresh(force===true);
 
 
   };
