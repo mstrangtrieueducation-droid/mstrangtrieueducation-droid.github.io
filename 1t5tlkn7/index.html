@@ -6353,7 +6353,19 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
         parentForceRecovery_=null;
         parentClearBootstrapRetry_();parentBootstrapIntent_=null;
         // KIDS_PARENT_REFRESH_PAIR_V1: old authority was cleared before reauthorization.
-        return parentLoadBootstrap_(true,false,0).then(ok=>ok?submissionOwner_.refresh(true):false);
+        // KIDS_REFRESH_RECEIPT_RECOVERY_V1
+        const receiptIdentity=CLASS_NAME+'|'+kidsApi.parent.alias;
+        const receiptBootstrap=parentLoadBootstrap_(true,false,0);
+        const receiptGeneration=parentBootstrapGeneration_;
+        return receiptBootstrap.then(ok=>{
+          if(!kidsApi.parent.authorized||kidsApi.parent.revoked||
+              CLASS_NAME+'|'+kidsApi.parent.alias!==receiptIdentity||
+              parentBootstrapGeneration_!==receiptGeneration)return false;
+          // An independent current Form read still runs after an academic
+          // failure. A newer academic job keeps ownership of its own sequence.
+          if(!ok&&(parentBootstrapJob_||parentBootstrapRetry_||parentBootstrapIntent_))return false;
+          return submissionOwner_.refresh(true);
+        });
       }
       // Periodic authorization never restarts an exhausted academic budget.
       // A successful check may uncover the retained view, while a manual,
