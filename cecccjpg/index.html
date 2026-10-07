@@ -2684,7 +2684,7 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
       // Match the renderer's proof contract. A complete-but-stale response is
       // not a finished verification, even when its summary says complete.
       function verified(source){return Boolean(source&&source.complete===true&&source.freshRead===true&&Number.isFinite(Number(source.verifiedAt))&&Number(source.verifiedAt)>0);}
-      var sourcesComplete=Boolean(payload&&payload.submissionVerification&&payload.submissionVerification.schema===1&&verified(payload.submissionVerification)&&Array.isArray(coverage)&&coverage.length&&coverage.every(verified));
+      var sourcesComplete=Boolean(payload&&payload.submissionVerification&&payload.submissionVerification.schema===1&&verified(payload.submissionVerification)&&Array.isArray(coverage)&&coverage.length&&coverage.every(function(c){return verified(c)||options.singleSession&&c.readComplete===true&&verified(Object.assign({},c,{complete:true}));}));
       var assignmentsComplete=authority?authority.schema===1&&verified(authority):!options.requireAssignmentAuthority;
       return Boolean(sourcesComplete&&assignmentsComplete);
     }
@@ -2718,6 +2718,7 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
       var active=who();if(!active)return Promise.resolve(false);
       if(active!==identity){clear();identity=active;}
       if(job){if(needsFresh)queued=true;return job;}
+      if(options.singleSession&&retry!==true&&!resuming&&readState!=='idle')return Promise.resolve(readState==='ready');
       cancelRetry(!resuming);
       var run=++generation,retryNeeded=false;ticket=options.guard.begin('receipts');current=null;parked=null;needsFresh=!visible();readState='loading';
       renderSafely();
@@ -2744,10 +2745,12 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
         return false;
       }).finally(function(){if(job===task){
         job=null;
+        if(options.singleSession)queued=false;
         if(queued&&visible()&&who()===identity){queued=false;refresh();}
-        else if(retryNeeded&&isCurrent(run)){
+        else if(retryNeeded&&isCurrent(run)&&(!options.singleSession||retryCount<2)){
           var intent={run:run,identity:identity},delay=retryDelay();retryCount+=1;
           retryTimer=setTimeout(function(){retryTimer=null;if(isCurrent(run)&&!job)refresh(intent);},delay);
+        }else if(retryNeeded&&isCurrent(run)){readState='attention';renderSafely();
         }
       }});
       job=task;return task;
@@ -2772,6 +2775,7 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
   root.createSubmissionReceiptOwner=createSubmissionReceiptOwner;
   if(typeof module==='object'&&module.exports)module.exports={createSubmissionReceiptOwner:createSubmissionReceiptOwner};
 })(typeof globalThis==='object'?globalThis:this);
+
 
 /* DIRECT_SUBMISSION_DEADLINE_POLICY_V1: dashboard deadlines, September 2026 onward. */
 (function(root){
@@ -3298,11 +3302,22 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
       const category=m.retakeCategory_(assignment.program||assignment.sourceCode),redo=m.submissionTaskFactsV7_(task).redo;
       const candidates=list(payload.coverage).filter(c=>redo?c.family==='FIGHTER_RETAKE'&&c.category===category:
         ['FIGHTER_HOMEWORK','FIGHTER_PRACTICE_NOTEBOOKS'].includes(c.family)&&expectedCodes(assignment,task).some(code=>m.submissionTaskIndexV7_(assignment,{assignmentId:code,sourceTab:c.sourceTab,sourceName:c.sourceName})===index));
-      const candidate=candidates.find(c=>proof(c));if(!candidate)return null;
-      // A failed sibling tab in the same source family is not proof of absence.
-      const related=list(payload.coverage).filter(c=>c.family===candidate.family&&(!redo||c.category===category));
-      return related.length&&related.every(c=>proof(c))?{...candidate,verifiedAt:Math.min(...related.map(c=>Number(c.verifiedAt)||0))}:null;
+      function relevantIssue(c) { return list(c.issues).some(issue=>{
+        if(!issue.code||!issue.submittedAtMs)return true;
+        const stamp=root.DirectSubmissionAssignmentWindow.assignedAt(assignment);
+        if(stamp&&issue.submittedAtMs<stamp)return false;
+        if(redo)return retakeMatches({family:c.family,category:c.category,code:issue.code},assignment);
+        return m.submissionTaskIndexV7_(assignment,{assignmentId:issue.code,sourceTab:c.sourceTab,sourceName:c.sourceName})===index;
+      }); }
+      const readProof=c=>proof(c.readComplete===true?{...c,complete:true}:c);
+      const candidate=candidates.find(readProof);if(!candidate)return null;
+      // Only tabs capable of receiving this exact task may establish absence.
+      // A workbook read failure still blocks proof; a bad unrelated row does not.
+      const failures=list(payload.coverage).filter(c=>!c.sourceTab&&c.sourceName===candidate.sourceName&&c.family===candidate.family);
+      const related=candidates.concat(failures);
+      return related.length&&related.every(c=>readProof(c)&&!relevantIssue(c))?{...candidate,complete:true,verifiedAt:Math.min(...related.map(c=>Number(c.verifiedAt)||0))}:null;
     }
+
     function priorContent(target,found,assignment,peers){
       if(!assignment||!found.length||!root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known)return [];
       const reference=found[0],rows=list(target.directReceiptContentEvidence).concat(list(target.submissionAttempts),[target]);
@@ -3482,7 +3497,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
         if(!family)return;
         const accepts=r=>r.family===family&&m.canonicalSelfStudyResultCodeV1_(r.code)===code&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers);
         const found=root.DirectFormReceiptAuthority.reconcile(assignment,payload._receiptIdentity,assignment,[family,code],receipts.filter(accepts),accepts);
-        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?rows[0]:null;/* FIGHTER_SOURCE_STATUS_WITHOUT_DEADLINE_V1 */ assignment.submissionSourceRead=Boolean(ticket&&guard.isCurrent(ticket)&&proof(coverage));if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
+        const rows=list(payload.coverage).filter(c=>c.family===family),coverage=rows.length&&rows.every(c=>proof(c.readComplete===true?{...c,complete:true}:c)&&!list(c.issues).some(issue=>!issue.code||!issue.submittedAtMs||m.canonicalSelfStudyResultCodeV1_(issue.code)===code&&root.DirectSubmissionAssignmentWindow.contains(issue,assignment,peers)))&&root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers).known?{...rows[0],complete:true}:null;/* FIGHTER_SOURCE_STATUS_WITHOUT_DEADLINE_V1 */ assignment.submissionSourceRead=Boolean(ticket&&guard.isCurrent(ticket)&&proof(coverage));if(root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found,{verified:Boolean(coverage),complete:true}).pending)grant(guard,ticket,assignment,coverage,true);
         if(!found.length)return;assignment.receiptReceived=true;assignment.contentMissing=found.every(r=>r.contentStatus==='empty');assignment.submissionReceived=!assignment.contentMissing;
         const receivedDeadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{complete:!assignment.contentMissing,verified:Boolean(coverage)});
         assignment.isLate=Boolean(receivedDeadline.late);assignment.isOverdue=Boolean(receivedDeadline.missing);if(receivedDeadline.pending)grant(guard,ticket,assignment,coverage,true);
@@ -3508,6 +3523,7 @@ return {assignmentProgramKeyV7_,canonicalSubmissionCodeV2_,canonicalSelfStudyRes
   root.createFighterReceiptProjector=createFighterReceiptProjector;
   if(typeof module==='object'&&module.exports)module.exports={createFighterReceiptProjector};
 })(typeof globalThis==='object'?globalThis:this);
+
 
 const projectFighterReceipts_=createFighterReceiptProjector(fighterReceiptMatching_);
 
@@ -3617,7 +3633,7 @@ function parentAcademicQueueV1_(cycle) {
 }
 
 function parentLessonContextV1_(){var b=fighterApi.parent.binding;return {family:'fighter',identity:fighterApi.parent.authorized&&!fighterApi.parent.revoked&&b?b.className+'|'+b.studentName:'',className:b&&b.className,owner:submissionOwner_,academic:parentAcademicLoadV1_};}
-const submissionOwner_=createSubmissionReceiptOwner({guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
+const submissionOwner_=createSubmissionReceiptOwner({singleSession:true,guard:submissionGuard_,getIdentity:()=>{const b=fighterApi.parent.binding;return fighterApi.parent.authorized&&b?b.className+'|'+b.studentName:'';},
   isVisible:()=>Boolean(fighterApi.parent.authorized&&fighterApi.parent.binding),request:()=>fighterApi.parent.request('submissions',false),project:(target,payload,ticket,guard)=>projectFighterReceipts_(parentLessonAcceptV1_(target,payload,ticket,guard),payload,ticket,guard),
   render:()=>{if(fighterParentPackage_&&fighterApi.parent.authorized&&!document.hidden)fighterParentApply_();}
 });
@@ -3801,7 +3817,7 @@ function fighterEmptySubmissionMarkup_(state){
   return '<div class="direct-empty-submission" style="'+(state.contentMissing?'border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px':'color:#64748b')+'">'+current+history+'</div>';
 }
 
-function fighterSubmissionReadLabel_(){const state=submissionOwner_.readState;return ['idle','loading'].includes(state)?'Đang kiểm tra bài nộp':'Đang xác minh bài nộp…';}
+function fighterSubmissionReadLabel_(){const state=submissionOwner_.readState;return ['idle','loading'].includes(state)?'Đang kiểm tra bài nộp':'Cần đối chiếu dữ liệu bài nộp';}
 
 /* FIGHTER_PARENT_OPENING_V2: one complete bootstrap, original Kids 7 opening. */
 let fighterParentPackage_=null, fighterParentLoading_=null, fighterParentGeneration_=0, fighterParentPainted_=false;

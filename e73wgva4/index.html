@@ -10391,6 +10391,7 @@ function parentLearningUrl_(value, enabled = true) { return ieltsLearningPrefill
         return false;
       }).finally(function(){if(job===task){
         job=null;
+        if(options.singleSession)queued=false;
         if(queued&&visible()&&who()===identity){queued=false;refresh();}
         else if(retryNeeded&&isCurrent(run)&&(!options.singleSession||retryCount<2)){
           var intent={run:run,identity:identity},delay=retryDelay();retryCount+=1;
@@ -11632,7 +11633,7 @@ function parentLessonContextV1_(){return {family:'ielts',identity:parentReceiptI
 const parentReceiptOwner_=createSubmissionReceiptOwner({singleSession:true,guard:parentSubmissionGuard_,getIdentity:parentReceiptIdentity_,isVisible:()=>Boolean(parentReceiptIdentity_()),
 
 
- request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>(target=parentLessonAcceptV1_(target,payload,ticket,guard),DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>ielts48AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts48UniqueBestMatch_(records,record=>ielts48RecordMatchScore_(item,record))})),
+ request:()=>ieltsParentAccess.request('submissions'),project:(target,payload,ticket,guard)=>(target=parentLessonAcceptV1_(target,payload,ticket,guard),DirectGradingSheetProjectors.projectIeltsSubmissions(target,payload,ticket,guard,{eligible:(item,student,dashboard)=>!DirectSubmissionHistoryWindow.historical(item)&&ielts48AssignmentEligibleForStudentV35_(student,item)&&(item.skill!=='speaking'||parentReceiptSpeakingForStudent_(item,student,dashboard)),matchRecord:(item,records)=>ielts48UniqueBestMatch_(records,record=>ielts48RecordMatchScore_(item,record))})),
 
 
  render:()=>{if(parentState.authorized&&!parentState.locked&&parentState.dashboard&&parentState.profile&&!document.hidden){parentState.renderedProfile=null;parentRender_();}}

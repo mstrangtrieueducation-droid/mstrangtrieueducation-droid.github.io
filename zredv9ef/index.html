@@ -2881,6 +2881,7 @@ function parentLearningUrl_(value, enabled = true) { return fighterLearningPrefi
         return false;
       }).finally(function(){if(job===task){
         job=null;
+        if(options.singleSession)queued=false;
         if(queued&&visible()&&who()===identity){queued=false;refresh();}
         else if(retryNeeded&&isCurrent(run)&&(!options.singleSession||retryCount<2)){
           var intent={run:run,identity:identity},delay=retryDelay();retryCount+=1;
