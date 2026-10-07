@@ -3092,6 +3092,10 @@ function practiceTestNumberFromTextV8_(value) {
 
 function submissionCodePartsV7_(value, profile) {
   const code = normalizeSearchText_(canonicalSubmissionCodeV2_(value)).trim();
+  // RI1 correction pages submit RI1-C01; only its correction Form may route it.
+  const correctionCode=code.match(/^(ri[12])-c0*(\d+)$/);
+  if(correctionCode)return profile&&profile.role==='correction'&&profile.program===correctionCode[1]
+    ?{kind:'unit',program:correctionCode[1],unit:Number(correctionCode[2]),subunit:null}:null;
   let match = code.match(/^(vf1|vf2|gf|ri1|ri2|ap)-u0*(\d+)(?:[_ .]0*(\d+))?$/);
   if (match) return { kind: 'unit', program: match[1], unit: Number(match[2]), subunit: match[3] ? Number(match[3]) : null };
   match = code.match(/^pt[- ]*0*(\d+)$/);
@@ -3132,7 +3136,7 @@ function submissionTaskFactsV7_(task) {
     vocabulary: /so tu vung|video tra tu|quay video|tra tu|hoc ki tu vung[^.\n]*lam so|nop theo dung huong dan/.test(text),
     preparation: /chuan bi|ly thuyet|doc truoc|xem truoc|tra cuu/.test(text),
     theoryCopy: /chep|file bai giang goc|bai giang goc/.test(text),
-    correction: /vo chua|chua bai|sua loi/.test(text),
+    correction: /vo chua|so chua|chua bai|sua loi/.test(text),
     writing: /doan van|viet bai|bai viet|vo viet/.test(text),
     practiceNotebooks: /so luyen de|so tu vung/.test(text),
     unit: unitMatch ? Number(unitMatch[1]) : 0,
@@ -3691,6 +3695,7 @@ function fighterSubmissionFileGroups_(state,fallbackType){
     let genericFallback=false;
     return files.filter(file=>{
       const type=fileType(file);
+      if(file.readingNotebook)return true;
       if(type==='pdf'||type==='video'||type==='audio')return true;
       if(type==='image')return !pdfCovers(file);
       if(specific(type))return true;
@@ -3752,6 +3757,15 @@ function fighterSubmissionActionLabel_(file){
 submittedFileActions_=function(state,fallbackType){
   if(!state)return fighterSubmittedFileActionsBeforeDedupe_.call(this,state,fallbackType);
   return fighterSubmissionFileGroups_(state,fallbackType).flatMap(group=>{
+    if(group.files.some(file=>file.readingNotebook)){
+      return ['vocabularyNotebook','correctionNotebook'].flatMap(role=>{
+        const files=group.files.filter(file=>file.readingNotebook&&file.documentRole===role);
+        if(!files.length)return [];
+        const label=fighterSubmissionActionLabel_(files[0])+(group.attempt?' · Lần '+group.attempt:'');
+        if(files.length===1)return ['<a class="makeup submitted-file" href="'+esc(files[0].url)+'" target="_blank" rel="noopener noreferrer">'+esc(label)+' →</a>'];
+        return ['<details class="reading-notebook-files" style="flex-basis:100%"><summary class="makeup" style="cursor:pointer">'+esc(label)+' ('+files.length+' tệp)</summary><div style="display:flex;gap:12px;flex-wrap:wrap;padding:12px 0">'+files.map((file,index)=>'<a class="makeup submitted-file" href="'+esc(file.url)+'" target="_blank" rel="noopener noreferrer">Tệp '+(index+1)+' →</a>').join('')+'</div></details>'];
+      });
+    }
     const actions=fighterSubmittedFileActionsBeforeDedupe_.call(this,Object.assign({},state,{submissionFiles:group.files,submissionUrl:''}),fallbackType);
     return actions.map((action,index)=>{
       const label=fighterSubmissionActionLabel_(group.files[index]);
@@ -3910,9 +3924,35 @@ function fighterApplyEnrollmentCutoffV29_(bundle,binding){
   return bundle;
 }
 
+/* FIGHTER_READING_NOTEBOOKS_V1: apply new requirements only from 07/10/2026. */
+function fighterReadingNotebookTasksV1_(assignment) {
+  if(!assignment)return assignment;
+  const day=String(assignment.lessonDate||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!day||Number(day[3]+day[2].padStart(2,'0')+day[1].padStart(2,'0'))<20261007)return assignment;
+  const matching=typeof fighterReceiptMatching_!=='undefined'?fighterReceiptMatching_:{assignmentProgramKeyV7_:assignmentProgramKeyV7_,submissionTaskFactsV7_:submissionTaskFactsV7_};
+  const program=matching.assignmentProgramKeyV7_(assignment.program);
+  if(!/^ri[12]$/.test(program))return assignment;
+  (assignment.tasks||[]).forEach(function(task){
+    const facts=matching.submissionTaskFactsV7_(task);
+    const route=String(task.url||'').match(/\/ri([12])-u0*(\d+)-correction(?:\/|[?#]|$)/i);
+    if(facts.redo||(!facts.correction&&!(route&&'ri'+route[1]===program)))return;
+    const unit=facts.unit||(route&&Number(route[2]));
+    task.title='Sổ từ vựng & Vở chữa bài Reading Intensive '+program.slice(-1)+(unit?' — Unit '+unit:'');
+    const note='Nộp đủ Sổ từ vựng (các từ được in đỏ) và Vở chữa bài vào hai mục tương ứng trong Form trên trang bài học.';
+    if(String(task.instructions||'').indexOf(note)<0)task.instructions=String(task.instructions||'').trim()+'\n'+note;
+  });
+  return assignment;
+}
+function fighterReadingNotebookPackageV1_(value) {
+  [value&&value.publicData,value&&value.fullDashboard].forEach(function(part){
+    (part&&part.assignments||[]).forEach(fighterReadingNotebookTasksV1_);
+  });
+  return value;
+}
+
 function fighterParentApply_(){
   if(!fighterApi.parent.authorized||!fighterParentPackage_)return false;
-  fighterSubmissionProjected_=fighterApplyEnrollmentCutoffV29_(submissionOwner_.reapply(parentLessonAcceptV1_(JSON.parse(JSON.stringify(fighterParentPackage_)))),fighterApi.parent.binding);
+  fighterSubmissionProjected_=fighterApplyEnrollmentCutoffV29_(submissionOwner_.reapply(fighterReadingNotebookPackageV1_(parentLessonAcceptV1_(JSON.parse(JSON.stringify(fighterParentPackage_))))),fighterApi.parent.binding);
   const savedScroll=fighterParentPainted_?{x:window.scrollX,y:window.scrollY}:null;
   const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterSubmissionProjected_;
   if(profile.student.name!==binding.studentName)return false;
