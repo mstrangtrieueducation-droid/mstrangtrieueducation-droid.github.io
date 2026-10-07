@@ -3110,6 +3110,36 @@ html.vn-national-day-2026-root body .assignment.session {
       }).join('')}</div>`;
     }
 
+    // KIDS_CONFIRMED_EMPTY_WEB_SUMMARY_V1
+    function parentLessonHasConfirmedNoWebTasksV1_(item) {
+      // Suppress only the aggregate online-receipt badge. The existing text
+      // still explains that this lesson has no web homework; paper work,
+      // comments, marks and the lesson's NEW badge remain unchanged.
+      if (!item || item.directReceiptCurrent !== true ||
+          !kidsApi.parent.authorized || kidsApi.parent.revoked ||
+          submissionOwner_.readState !== 'ready' ||
+          item.isAssessmentLesson || item.isRetake ||
+          (item.retakeTracking && item.retakeTracking.tracked) ||
+          item.kind === 'self-practice' || assignmentsFor(item).length) return false;
+      var mode = text(item.webActivityMode).toLowerCase() || (item.optionalWebPractice ? 'self-directed' : 'required');
+      if (mode !== 'required') return false;
+      var state = parentLessonAuthorityV2_;
+      var authority = state && state.identity === matchKey(kidsApi.parent.alias) && state.authority;
+      if (!authority || authority.schema !== 1 || authority.className !== CLASS_NAME ||
+          authority.complete !== true || authority.freshRead !== true ||
+          !Number.isFinite(Number(authority.verifiedAt)) || Number(authority.verifiedAt) <= 0 ||
+          !Array.isArray(authority.schedule) || !Array.isArray(authority.assignments)) return false;
+      var id = text(item.id);
+      if (!id) return false;
+      var matches = authority.assignments.filter(function(row) { return row && text(row.id) === id; });
+      if (matches.length !== 1) return false;
+      var row = matches[0];
+      var sourceMode = text(row.webActivityMode).toLowerCase() || (row.optionalWebPractice ? 'self-directed' : 'required');
+      return Array.isArray(row.tasks) && row.tasks.length === 0 && sourceMode === 'required' &&
+        !row.isAssessmentLesson && !row.isRetake && !(row.retakeTracking && row.retakeTracking.tracked) &&
+        row.kind !== 'self-practice';
+    }
+
     function sessionCard(session, isNewHomework) {
       const schedule = scheduleEventFor(session) || {};
       const matchedAssignment = childAssignmentFor(session);
@@ -3265,7 +3295,7 @@ html.vn-national-day-2026-root body .assignment.session {
         ? 'Chưa có đường dẫn tải bài.'
         : (reviewOnlyWebActivity ? 'Chưa có đường dẫn xem lại bài.' : (optionalWebPractice ? 'Chưa có nội dung tự luyện trên web.' : 'Tiết này không có bài tập trên web.'));
       const homeworkAside = `<aside class="homework-column">
-        <div class="homework-head"><div><p class="label">${nonSubmissionWebActivity ? 'Hoạt động' : 'Bài tập'} của ${escapeHtml(childName)}</p><h4>${nonSubmissionWebActivity ? 'Sau tiết học' : 'Bài tập sau tiết học'}</h4></div><div class="homework-head__status">${isNewHomework ? '<span class="new-work-badge">BÀI MỚI</span>' : ''}<span class="pill ${homeworkMeta.cls}">${escapeHtml(homeworkMeta.label)}</span></div></div>
+        <div class="homework-head"><div><p class="label">${nonSubmissionWebActivity ? 'Hoạt động' : 'Bài tập'} của ${escapeHtml(childName)}</p><h4>${nonSubmissionWebActivity ? 'Sau tiết học' : 'Bài tập sau tiết học'}</h4></div><div class="homework-head__status">${isNewHomework ? '<span class="new-work-badge">BÀI MỚI</span>' : ''}${parentLessonHasConfirmedNoWebTasksV1_(privateAssignment) ? '' : `<span class="pill ${homeworkMeta.cls}">${escapeHtml(homeworkMeta.label)}</span>`}</div></div>
         <section class="assignment-section web${nonSubmissionWebActivity ? ' optional' : ''}"><div class="assignment-section__head"><span class="assignment-section__number">1</span><strong>${webSectionTitle}</strong>${nonSubmissionWebActivity ? '<span class="pill optional">Không cần nộp</span>' : ''}</div>${taskHtml ? `<div class="homework-list">${taskHtml}</div>` : `<p class="assignment-empty">${emptyWebText}</p>`}</section>
         ${homeworkComment ? `<div class="teacher-box"><strong>Nhận xét bài tập về nhà</strong><div class="small">${nl2br(homeworkComment)}</div></div>` : ''}
         ${hidesPaperHomework || (nonSubmissionWebActivity && !paperHomework) ? '' : `<section class="assignment-section paper"><div class="assignment-section__head"><span class="assignment-section__number">2</span><strong>Bài tập sách giấy</strong></div>${paperHomework ? `<span class="paper-pages__label">Phần cần hoàn thành</span><div class="paper-pages">${paperHomeworkHtml(paperHomework)}</div>${paperDueHtml}` : (awaitingLessonRelease ? '<p class="assignment-empty">Đang xác minh</p>' : '<p class="assignment-empty">Tiết này không có bài tập sách giấy.</p>')}${paperGrade ? `<div class="paper-result ${paperGradeTone(paperGrade)}"><span>Kiểm tra bài tập sách giấy</span><strong>${escapeHtml(paperGrade)}</strong></div>` : ''}</section>`}
