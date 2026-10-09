@@ -88,6 +88,37 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof window !== 'undefined' ? window : this);
 
+/* Revalidate prepared Cloudflare JSON only. Never initiate a Google scan. */
+(function(root){
+  'use strict';
+  function start(options){
+    var stopped=false,timer=null,running=false,failures=0,started=options.now(),previous='';
+    function delay(){return Math.min(60000,(options.hidden()?60000:options.now()-started<20000?3000:15000)*Math.pow(2,failures));}
+    function schedule(){if(!stopped){options.clearTimer(timer);timer=options.setTimer(tick,delay());}}
+    function tick(){
+      if(stopped||!options.current()){stop();return Promise.resolve(false);}
+      if(running)return Promise.resolve(false);
+      options.clearTimer(timer);running=true;
+      return Promise.resolve().then(function(){return options.read();}).then(function(value){
+        if(stopped||!options.current())return false;
+        var next=JSON.stringify(value),changed=next!==previous;
+        // A first successful read after an unavailable opening must also wake
+        // the native access gate. Await rendering before accepting the version:
+        // if rendering fails, the same packet must be retried next time.
+        return Promise.resolve(changed?options.changed(value):undefined).then(function(){
+          if(stopped||!options.current())return false;
+          previous=next;failures=0;return changed;
+        });
+      }).catch(function(){failures=Math.min(failures+1,3);return false;}).then(function(result){running=false;schedule();return result;});
+    }
+    function stop(){stopped=true;options.clearTimer(timer);}
+    function seed(value){previous=JSON.stringify(value);}
+    schedule();return {tick:tick,stop:stop,seed:seed};
+  }
+  root.KidsPreparedRefresh={start:start};
+  if(typeof module==='object'&&module.exports)module.exports={start:start};
+})(typeof window!=='undefined'?window:this);
+
 /* KIDS_PREPARED_PREVIEW_V1. Private capability POST; no pupil URL or persistent browser data. */
 (function (root) {
   'use strict';
@@ -266,7 +297,7 @@
       var entries = perf.getEntriesByType('resource'), google = 0, bundles = 0;
       entries.forEach(function (r) {
         if (/https:\/\/(?:script\.google\.com|script\.googleusercontent\.com)\//.test(r.name)) google += 1;
-        if (/\/v1\/parent$/.test(r.name)) bundles += 1;
+        if (/(?:\/v1\/parent|\/data\/\d+\/[a-f0-9]{64}\.json)$/.test(r.name)) bundles += 1;
       });
       put('google-requests', google); put('bundle-requests', bundles);
       var nav = perf.getEntriesByType('navigation')[0];
@@ -291,7 +322,7 @@
 
     var client=KidsPreparedSnapshotClient.create({classNumber:8,endpoint:"https://kids-dashboard-clusters-v1.mstrangtrieuenglishhub.workers.dev/v1/parent",token:match[1],sessionSnapshot:true,isCurrent:function(){return location.hash===initialHash&&location.pathname===initialPath;},onRequest:function(){window.__kidsPreviewMetrics.request();},onLoaded:function(){window.__kidsPreviewMetrics.mark('data-ms');window.__kidsPreviewMetrics.capture();}});
     window.__kidsPreparedPreview=client;
-    client.request('bootstrap').catch(function(){});
+    var refresh=KidsPreparedRefresh.start({now:Date.now,hidden:function(){return document.hidden;},current:function(){return location.hash===initialHash&&location.pathname===initialPath;},setTimer:setTimeout,clearTimer:clearTimeout,read:function(){return client.request('bootstrap',true);},changed:function(){return window.__kidsPreparedApply?window.__kidsPreparedApply():false;}});client.request('bootstrap').then(function(value){refresh.seed(value);},function(){});document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh.tick();});window.addEventListener('online',function(){refresh.tick();});window.addEventListener('pagehide',function(event){if(!event.persisted)refresh.stop();});
     window.addEventListener('hashchange',function(){client.clear();});
   } catch (_) {}
 })();
@@ -404,7 +435,7 @@ const kidsApi = (() => {
     const started = performance.now();
     let deadlineExpired = false;
     const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
-    const promise = (window.__kidsPreparedPreview && window.__kidsPreparedPreview.supports(action) ?
+    const promise = (window.__kidsPreparedPreview ?
       window.__kidsPreparedPreview.response(action, Boolean(force), extra) : fetch(url.href, {
       credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
     })).catch(err => { err.openingTransportFailure = true; throw err; }).then(async response => {
@@ -6766,6 +6797,8 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if(!document.hidden&&kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false,true);
     }
     function parentStart_() {
+      window.__kidsPreparedApply=()=>{if(!window.__kidsPreparedPreview)return Promise.resolve(false);const ready=kidsApi.parent.authorized?parentLoadBootstrap_(false,true):parentRecheck_({initialBootstrap:true});return Promise.resolve(ready).then(ok=>{if(!ok)throw Error('PREPARED_RENDER_PENDING');if(kidsApi.parent.authorized)return submissionOwner_.refresh(true);});};
+      
       window.addEventListener('kids-parent-access',event=>{
         if(event.detail.status!=='authorized')parentAccessGate_();
         else{parentConsumeDirectoryHint_();parentRenderIdentity_();}
