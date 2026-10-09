@@ -12,7 +12,7 @@
   function clear(){epoch++;cached=null;controller?.abort();pending=null;}
   async function load(force){
    if(force){cached=null;}
-   if(cached&&now()-cached.loadedAt<30000)return cached.value;
+   if(cached&&!cached.value.sourceStatus?.receiptProcessing&&now()-cached.loadedAt<30000)return cached.value;
    if(pending)return pending;
    const generation=epoch;controller=new AbortController();const active=controller;
    const work=(async()=>{
