@@ -163,7 +163,7 @@
       function stamp(){
         let badge=document.getElementById('public-snapshot-stamp');
         if(!badge){badge=document.createElement('div');badge.id='public-snapshot-stamp';badge.style.cssText='position:fixed;bottom:8px;right:8px;z-index:9999;background:#fff;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:5px 9px;font:11px system-ui;max-width:90vw';document.body.appendChild(badge);}
-        badge.textContent='Bản thử IELTS 50 · Dữ liệu lúc '+new Date(value.receiptUpdatedAt||value.capturedAt).toLocaleTimeString('vi-VN',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'})+' · Tự làm mới khi mở lại';
+        badge.textContent='Bản thử IELTS 50 · Dữ liệu lúc '+new Date(value.receiptUpdatedAt||value.capturedAt).toLocaleTimeString('vi-VN',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'})+(value.sourceStatus?.servingLastConfirmed?' · Đang giữ bài đã xác nhận; nguồn cập nhật tạm gián đoạn':' · Tự làm mới khi mở lại');
       }
       if(document.body)stamp();else document.addEventListener('DOMContentLoaded',stamp,{once:true});
     }});
