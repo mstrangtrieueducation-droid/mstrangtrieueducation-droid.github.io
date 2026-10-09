@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="vi">
 <head>
+<script>(function(){const p=new URLSearchParams(location.hash.slice(1)).get('p');if(!/^[A-Za-z0-9_-]{22}$/.test(p||''))return;const l=document.createElement('link');l.rel='preload';l.as='fetch';l.crossOrigin='anonymous';l.href='./data/'+p+'.json';document.head.appendChild(l)})();</script>
 <meta name="referrer" content="no-referrer">
 <script>const FIGHTER_SNAPSHOT_ENABLED=true;
 /* One package per opening; explicit reload is the only refresh. */
@@ -13,7 +14,7 @@
   const work=(async()=>{
    const url=options.baseUrl+encodeURIComponent(options.token)+'.json';
    options.onStart?.(url);
-   const r=await (options.fetchImpl||fetch)(url,{cache:'no-store',credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
+   const r=await (options.fetchImpl||fetch)(url,{cache:epoch?'reload':'default',credentials:'same-origin',mode:'cors',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
    if(!r.ok)throw fault('SNAPSHOT_NOT_READY');
    const s=await r.json();if(s.revoked===true&&s.className===options.className)throw fault('PARENT_LINK_REVOKED');const a=s.actions,b=a?.bootstrap,student=b?.profile?.student,klass=options.className;
    if(epoch!==generation)throw fault('OPENING_CHANGED');
@@ -28,7 +29,7 @@
    }
    cached=s;options.onLoaded?.(s);return s;
   })();pending=work;
-  try{return await work}finally{if(pending===work)pending=null}
+  return work;
  }
  return {clear(){generation++;cached=null;pending=null},async request(action){const s=await load();if(!Object.hasOwn(s.actions,action))throw fault('INVALID_REQUEST');return structuredClone(s.actions[action])}};
 }}})(typeof window==='undefined'?globalThis:window);
@@ -66,7 +67,7 @@ const fighterApi=(()=>{const className="FIGHTER 9";const token=new URLSearchPara
   <section class="hero"><div class="shell"><p class="eyebrow">MS Trang Trieu Education · Class Portal</p><h1>FIGHTER 9</h1><p class="tagline">Học có định hướng. Tiến bộ có minh chứng.</p><p class="programs" hidden style="display:none!important"></p><span id="updated" class="updated"></span></div></section>
   <section id="student-gateway" class="student-gateway parent-entry-gate">
     <div class="entry-card">
-      <img class="entry-logo" src="./brand-4522e70bbb8e.jpg" alt="Logo Ms. Trang Trieu Education">
+      <img class="entry-logo" src="./assets/brand-4522e70bbb8e.jpg" alt="Logo Ms. Trang Trieu Education">
       <p class="eyebrow">Ms. Trang Trieu Education</p>
       <h1>FIGHTER 9</h1>
       <p class="parent-opening-intro">Lịch học, bài tập và kết quả học tập của con.</p>
