@@ -3574,7 +3574,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
           document.documentElement.dataset.profileOpenSource = profile.browserSnapshot ? 'device' : 'server';
           app.profileLoad.openStartedAt = 0;
         }
-        if (!keepPosition) {
+        if (!keepPosition && !KidsStableView.rendering()) {
           switchTab(selectedTab);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -6185,14 +6185,65 @@ function kidsApplyEnrollmentCutoffV3_(value){
   return value;
 }
 
+// KIDS_STABLE_VIEW_V1
+/* Presentation only: preserve the reader's tab, lesson and open history during a background repaint. */
+var KidsStableView=(function(){
+  let depth=0;
+  const attributes=['data-assignment-id','data-task-id','data-lesson-key','data-assessment-id'];
+  const cards=attributes.map(key=>'['+key+']').join(',');
+  function keyOf(el){
+    const attr=attributes.find(key=>el.getAttribute(key));
+    if(!attr)return null;
+    const owner=el.closest('[data-assignment-id]');
+    return {attr,value:el.getAttribute(attr),owner:owner&&owner.getAttribute('data-assignment-id')||''};
+  }
+  function capture(){
+    const shell=document.getElementById('dashboardShell'),panel=document.querySelector('.panel.active');
+    if(!shell||shell.hidden)return null;
+    const visible=panel?Array.from(panel.querySelectorAll(cards)).filter(el=>{const r=el.getBoundingClientRect();return keyOf(el)&&r.width>0&&r.height>0&&r.bottom>80&&r.top<window.innerHeight;}):[];
+    // Prefer the task actually under the sticky navigation over its much taller lesson container.
+    const anchor=visible.reduce((best,el)=>!best||Math.abs(el.getBoundingClientRect().top-80)<Math.abs(best.getBoundingClientRect().top-80)?el:best,null);
+    const tabs=document.querySelector('.tabs');
+    return {shell,panelId:panel&&panel.id,x:window.scrollX||0,y:window.scrollY||0,height:shell.getBoundingClientRect().height,
+      anchor:anchor&&Object.assign(keyOf(anchor),{top:anchor.getBoundingClientRect().top}),
+      details:Array.from(shell.querySelectorAll('details[data-history-section]')).map(el=>({key:el.getAttribute('data-history-section'),open:el.open})),
+      focusId:document.activeElement&&document.activeElement.id,tabs,tabsLeft:tabs&&tabs.scrollLeft};
+  }
+  function update(view,render){
+    if(!view)return render();
+    const root=document.documentElement,shell=view.shell;
+    const saved=[shell.style.getPropertyValue('min-height'),shell.style.getPropertyPriority('min-height'),root.style.getPropertyValue('scroll-behavior'),root.style.getPropertyPriority('scroll-behavior'),root.style.getPropertyValue('overflow-anchor'),root.style.getPropertyPriority('overflow-anchor')];
+    shell.style.setProperty('min-height',view.height+'px','important');
+    root.style.setProperty('scroll-behavior','auto','important');root.style.setProperty('overflow-anchor','none','important');depth++;
+    try{return render();}
+    finally{
+      depth--;
+      try{
+        for(const el of shell.querySelectorAll('details[data-history-section]')){const old=view.details.find(row=>row.key===el.getAttribute('data-history-section'));if(old)el.open=old.open;}
+        shell.style.setProperty('min-height',saved[0],saved[1]);
+        const panel=document.getElementById(view.panelId),anchor=view.anchor&&panel&&Array.from(panel.querySelectorAll(cards)).find(el=>{const key=keyOf(el);return key&&key.attr===view.anchor.attr&&key.value===view.anchor.value&&key.owner===view.anchor.owner;});
+        const top=anchor?window.scrollY+anchor.getBoundingClientRect().top-view.anchor.top:view.y;
+        const focus=view.focusId&&document.getElementById(view.focusId);if(focus&&focus!==document.activeElement){try{focus.focus({preventScroll:true});}catch(ignore){/* Optional focus cannot fail a completed background paint. */}}
+        if(view.tabs)view.tabs.scrollLeft=view.tabsLeft;
+        window.scrollTo({left:view.x,top,behavior:'instant'});
+      }finally{
+        shell.style.setProperty('min-height',saved[0],saved[1]);
+        root.style.setProperty('scroll-behavior',saved[2],saved[3]);root.style.setProperty('overflow-anchor',saved[4],saved[5]);
+      }
+    }
+  }
+  return {capture,update,rendering:()=>depth>0};
+})();
+
 function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = false) {
       if (!kidsApi.parent.authorized || !parentPackage_) return false;
       // PARENT_HIDDEN_PACKAGE_V1: keep the completed request; defer only its DOM paint.
       if(document.hidden){parentValidatePackage_(parentPackage_);return true;}
-      const savedScroll=parentBootstrapPainted_?{left:window.scrollX,top:window.scrollY,behavior:'instant'}:null;
+      const stableView=parentBootstrapPainted_?KidsStableView.capture():null;
       const value=kidsApplyEnrollmentCutoffV3_(submissionOwner_.reapply(JSON.parse(JSON.stringify(parentValidatePackage_(parentPackage_))))),alias=kidsApi.parent.alias;
       parentConsumeDirectoryHint_();
       if (!app.directoryLoad.ready || !liveDirectoryContainsAlias_(alias)) return false;
+      return KidsStableView.update(stableView,()=>{
       app.data=value.dashboard;
       const loading=Boolean(preserveJob&&parentBootstrapJob_);
       app.dashboardLoad.ready=true;app.dashboardLoad.inFlight=loading;
@@ -6207,8 +6258,8 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Dữ liệu đã tải · Bấm Tải lại để cập nhật.';
       else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
       parentRenderPreparedHistory_();
-      if(savedScroll)window.scrollTo(savedScroll);
       return true;
+      });
     }
     function parentScheduleBootstrap_(intent, delay) {
       parentClearBootstrapRetry_();
