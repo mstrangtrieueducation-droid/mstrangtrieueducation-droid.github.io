@@ -28,6 +28,7 @@
 
 
 
+<script src="./public-snapshot-client.js?v=20261009a"></script>
 <script>const ieltsParentAccess = (() => {
 
 
@@ -104,7 +105,19 @@
 
 
 
+  let publicSnapshotClient=null;
   async function request(action,force=false){
+    // IELTS50_PUBLIC_SNAPSHOT_PILOT_V1: two existing pupil links; opt-in until measured.
+    if(new URLSearchParams(location.search).get('trial')==='static'&&valid){
+      if(!publicSnapshotClient)publicSnapshotClient=IeltsPublicSnapshotClient.create({...{"baseUrl":"https://ielts50-private-pilot.mstrangtrieuenglishhub.workers.dev/data/","hashes":["c355cc4fbdae47d7175a9140d0f116ac05baf093aed331dfbfd1f696f7d657e8","0aafa693d3a1faa37bdbd6bc8f927968943dc04a1c259f6c4f77ced5f6020049"]},token,onLoaded:value=>{
+        document.documentElement.dataset.publicSnapshotAt=value.capturedAt;
+        let badge=document.getElementById('public-snapshot-stamp');
+        if(!badge){badge=document.createElement('div');badge.id='public-snapshot-stamp';badge.style.cssText='position:fixed;bottom:8px;right:8px;z-index:9999;background:#fff;color:#334155;border:1px solid #cbd5e1;border-radius:8px;padding:5px 9px;font:11px system-ui;max-width:90vw';document.body.appendChild(badge);}
+        badge.textContent='Bản thử IELTS 50 · Dữ liệu lúc '+new Date(value.receiptUpdatedAt||value.capturedAt).toLocaleTimeString('vi-VN',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'})+' · Tự làm mới khi mở lại';
+      }});
+      if(await publicSnapshotClient.selected())return publicSnapshotClient.request(action,force);
+    }
+
 
 
 
@@ -418,7 +431,7 @@
 
 
 
-  return {request,token,valid,className,invalidate(){generation++}};
+  return {request,token,valid,className,invalidate(){generation++;publicSnapshotClient?.clear()}};
 
 
 
