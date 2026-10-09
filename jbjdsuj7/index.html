@@ -161,11 +161,22 @@
   let publicSnapshotClient=null,publicSnapshotPrime=null;
   const publicPilotEnabled=new URLSearchParams(location.search).get('trial')==='static'&&valid;
   if(publicPilotEnabled){
+    const traceRoot=document.documentElement;
+    traceRoot.dataset.publicScriptStartedMs=String(Math.round(performance.now()));
+    traceRoot.dataset.publicInitiallyHidden=String(document.hidden);
+    function recordPublicNavigation(){
+      const nav=performance.getEntriesByType('navigation')[0];if(!nav)return;
+      traceRoot.dataset.publicNavigation=JSON.stringify({requestStart:Math.round(nav.requestStart),responseStart:Math.round(nav.responseStart),responseEnd:Math.round(nav.responseEnd),domInteractive:Math.round(nav.domInteractive),domContentLoaded:Math.round(nav.domContentLoadedEventEnd),transferSize:nav.transferSize,encodedBodySize:nav.encodedBodySize});
+    }
+    document.addEventListener('DOMContentLoaded',()=>{traceRoot.dataset.publicDomReadyMs=String(Math.round(performance.now()));recordPublicNavigation();},{once:true});
+    window.addEventListener('load',recordPublicNavigation,{once:true});
+    document.addEventListener('visibilitychange',()=>{traceRoot.dataset.publicLastVisibility=JSON.stringify({hidden:document.hidden,at:Math.round(performance.now())});});
     document.documentElement.dataset.publicUpstreamRequests='0';
     if(typeof PerformanceObserver==='function')new PerformanceObserver(list=>{
       for(const entry of list.getEntries())if(['script.google.com','script.googleusercontent.com'].includes(new URL(entry.name).hostname))document.documentElement.dataset.publicUpstreamRequests=String(Number(document.documentElement.dataset.publicUpstreamRequests||0)+1);
     }).observe({entryTypes:['resource']});
     publicSnapshotClient=IeltsPublicSnapshotClient.create({...{"baseUrl":"https://ielts50-private-pilot.mstrangtrieuenglishhub.workers.dev/data/","hashes":["c355cc4fbdae47d7175a9140d0f116ac05baf093aed331dfbfd1f696f7d657e8","0aafa693d3a1faa37bdbd6bc8f927968943dc04a1c259f6c4f77ced5f6020049"]},token,onLoaded:value=>{
+      if(!traceRoot.dataset.publicDataReadyMs)traceRoot.dataset.publicDataReadyMs=String(Math.round(performance.now()));
       document.documentElement.dataset.publicSnapshotAt=value.capturedAt;
       function stamp(){
         let badge=document.getElementById('public-snapshot-stamp');
@@ -174,7 +185,7 @@
       }
       if(document.body)stamp();else document.addEventListener('DOMContentLoaded',stamp,{once:true});
     }});
-    publicSnapshotPrime=publicSnapshotClient.selected().then(selected=>selected?publicSnapshotClient.request('bootstrap'):null);
+    publicSnapshotPrime=publicSnapshotClient.selected().then(selected=>{traceRoot.dataset.publicFetchStartMs=String(Math.round(performance.now()));return selected?publicSnapshotClient.request('bootstrap'):null;});
     publicSnapshotPrime.catch(()=>{});
     const resumePublic=async()=>{
       if(document.hidden||!await publicSnapshotClient.selected()||typeof parentState==='undefined'||!parentState.authorized||parentState.locked||parentState.checking)return;
