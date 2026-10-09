@@ -1,0 +1,28 @@
+name: Update IELTS static data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: ielts-static-data
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: _maintenance/ielts-static
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Export verified profiles from Google and publish JSON
+        run: node _maintenance/ielts-static/sync-github.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IELTS_STATIC_ROUTES: ${{ secrets.IELTS_STATIC_ROUTES }}
