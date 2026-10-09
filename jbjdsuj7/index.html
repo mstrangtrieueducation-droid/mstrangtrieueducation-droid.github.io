@@ -154,6 +154,10 @@
   let publicSnapshotClient=null,publicSnapshotPrime=null;
   const publicPilotEnabled=new URLSearchParams(location.search).get('trial')==='static'&&valid;
   if(publicPilotEnabled){
+    document.documentElement.dataset.publicUpstreamRequests='0';
+    if(typeof PerformanceObserver==='function')new PerformanceObserver(list=>{
+      for(const entry of list.getEntries())if(['script.google.com','script.googleusercontent.com'].includes(new URL(entry.name).hostname))document.documentElement.dataset.publicUpstreamRequests=String(Number(document.documentElement.dataset.publicUpstreamRequests||0)+1);
+    }).observe({entryTypes:['resource']});
     publicSnapshotClient=IeltsPublicSnapshotClient.create({...{"baseUrl":"https://ielts50-private-pilot.mstrangtrieuenglishhub.workers.dev/data/","hashes":["c355cc4fbdae47d7175a9140d0f116ac05baf093aed331dfbfd1f696f7d657e8","0aafa693d3a1faa37bdbd6bc8f927968943dc04a1c259f6c4f77ced5f6020049"]},token,onLoaded:value=>{
       document.documentElement.dataset.publicSnapshotAt=value.capturedAt;
       function stamp(){
@@ -23973,6 +23977,8 @@ async function parentLoad_(id,prefetch){
 
 
 function parentCachedOpeningV43_(){
+  if(new URLSearchParams(location.search).get('bench')==='cold')return null;
+
 
 
 
