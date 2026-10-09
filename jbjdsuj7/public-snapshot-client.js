@@ -24,11 +24,15 @@
      const value=await response.json();
      if(generation!==epoch)throw code('INVALID_LINK');
      const age=now()-Date.parse(value.capturedAt),b=value.actions?.bootstrap;
-     if(![1,2].includes(value.schemaVersion)||value.className!=='IELTS 50'||!Number.isFinite(age)||age<0||age>1800000||!b?.name||b.name!==value.name&&value.name!==undefined||!b.rosterRevision||b.dashboard?.className!=='IELTS 50'||b.profile?.student?.name!==b.name)throw code('SNAPSHOT_NOT_READY');
+     const maximumAge=value.sourceStatus?.servingLastConfirmed===true?86400000:1800000;
+     if(![1,2].includes(value.schemaVersion)||value.className!=='IELTS 50'||!Number.isFinite(age)||age<0||age>maximumAge||!b?.name||b.name!==value.name&&value.name!==undefined||!b.rosterRevision||b.dashboard?.className!=='IELTS 50'||b.profile?.student?.name!==b.name)throw code('SNAPSHOT_NOT_READY');
      for(const part of [b.dashboard,b.profile])if(part.parentName!==b.name||part.parentRosterRevision!==b.rosterRevision||part.studentDirectory?.all?.length!==1||part.studentDirectory.all[0].name!==b.name)throw code('INVALID_SNAPSHOT');
      const receipts=value.actions.submissions;
      if(!receipts||receipts.schema!==1||!Array.isArray(receipts.receipts)||!Array.isArray(receipts.coverage))throw code('SNAPSHOT_NOT_READY');
      if(receipts.parentName!==b.name||receipts.parentRosterRevision!==b.rosterRevision)throw code('INVALID_SNAPSHOT');
+     if(value.sourceStatus?.servingLastConfirmed){
+      if(receipts.submissionVerification?.complete!==false||receipts.submissionVerification?.freshRead!==false||receipts.coverage.some(x=>x.complete!==false||x.freshRead!==false)||receipts.assignmentAuthority?.complete!==false||receipts.assignmentAuthority?.freshRead!==false)throw code('INVALID_SNAPSHOT');
+     }
      cached={value,loadedAt:now()};options.onLoaded?.(value);return value;
     }catch(e){if(active.signal.aborted)throw code('SOURCE_UNAVAILABLE');throw e;}finally{clearTimeout(timer);}
    })();
