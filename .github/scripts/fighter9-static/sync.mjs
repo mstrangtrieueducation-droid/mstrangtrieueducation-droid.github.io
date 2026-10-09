@@ -13,15 +13,15 @@ export async function exportProfiles({endpoint,secret},notify=()=>{}){
   const e={protocol:'fighter-static-v1',at:Date.now(),nonce:crypto.randomUUID(),body:JSON.stringify({classKey:'fighter:9',operation,deliveryId})};
   e.signature=crypto.createHmac('sha256',secret).update([e.at,e.nonce,e.body].join('\n')).digest('base64url');
   const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(e),signal:AbortSignal.timeout(operation==='export'?330000:60000)});
-  let v;try{v=await r.json()}catch{fault('SOURCE_RESPONSE')}
+  let v;try{v=await r.json()}catch{fault('SOURCE_RESPONSE_'+r.status)}
   if(!r.ok||!v?.ok)fault(/^[A-Z][A-Z0-9_]{2,80}$/.test(v?.error)?v.error:'SOURCE_UNAVAILABLE');return v;
  }
  // A lost HTTP response does not start a second scan. Collect the same delivery.
- try{await call('export')}catch{notify('Export response unavailable; collecting the original job.');}
+ try{await call('export')}catch(e){notify('Export transport: '+(/^[A-Z][A-Z0-9_]{2,80}$/.test(e.message)?e.message:'UNAVAILABLE'));}
  let result;
- for(let i=0;i<8;i++){
-  let v;try{v=await call('collect')}catch{await sleep(15000);continue}
-  if(v.pending){await sleep(15000);continue}
+ for(let i=0;i<12;i++){
+  let v;try{v=await call('collect')}catch(e){notify('Collect transport: '+(/^[A-Z][A-Z0-9_]{2,80}$/.test(e.message)?e.message:'UNAVAILABLE'));await sleep(15000);continue}
+  if(v.pending){if(i===2||i===6){try{await call('export')}catch(e){notify('Resume transport: '+(/^[A-Z][A-Z0-9_]{2,80}$/.test(e.message)?e.message:'UNAVAILABLE'));}}await sleep(15000);continue}
   if(v.encoding!=='gzip-base64'||typeof v.packed!=='string'||v.packed.length>10000000||crypto.createHash('sha256').update(v.packed).digest('hex')!==v.digest)fault('DELIVERY_INTEGRITY');
   result=JSON.parse(zlib.gunzipSync(Buffer.from(v.packed,'base64')).toString('utf8'));break;
  }
