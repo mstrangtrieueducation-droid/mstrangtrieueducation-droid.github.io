@@ -76,7 +76,7 @@
     var at = Number(status.receiptAsOf);
     if (status.profileRefreshError || !isFinite(at) || at <= 0) return '';
     if (status.servingLastConfirmed === true && status.receiptStatusMode === 'as-of-confirmed' && status.receiptVerificationMethod === 'prior-source-confirmation') {
-      return 'Thông tin bài nộp đến ' + stamp(at) + ' · Bấm Tải lại để xem cập nhật.';
+      return 'Thông tin bài nộp đến ' + stamp(at) + ' · Trang sẽ tự cập nhật khi có dữ liệu mới.';
     }
     if (status.servingLastConfirmed !== true && ['native-confirmed','version-confirmed'].indexOf(status.receiptStatusMode) >= 0) {
       return 'Bài nộp đã đối chiếu đến ' + stamp(at) + '.';
