@@ -20,7 +20,8 @@
     const timer=setTimeout(()=>active.abort(),options.timeoutMs||8000);
     try{
      const response=await (options.fetchImpl||fetch)(url.href,{credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',signal:active.signal});
-     if(!response.ok)throw code(response.status===404?'INVALID_LINK':'SNAPSHOT_NOT_READY');
+     if(response.status===202)throw code('SNAPSHOT_PREPARING');
+     if(!response.ok)throw code([404,410].includes(response.status)?'INVALID_LINK':'SNAPSHOT_NOT_READY');
      const value=await response.json();
      if(generation!==epoch)throw code('INVALID_LINK');
      const age=now()-Date.parse(value.capturedAt),b=value.actions?.bootstrap;
@@ -41,7 +42,9 @@
   }
   async function request(action,force=false){
    if(!supported.includes(action))throw code('INVALID_REQUEST');
-   const value=await load(force),key=({refreshDashboard:'dashboard',refreshProfile:'profile'})[action]||action;
+   const began=now(),session=epoch;let value;
+   for(;;){try{value=await load(force);break;}catch(e){if(e.code!=='SNAPSHOT_PREPARING'||now()-began>600000)throw e;options.onPreparing?.();await new Promise(resolve=>setTimeout(resolve,options.preparingRetryMs||3000));if(epoch!==session)throw code('SESSION_ENDED');}}
+   const key=({refreshDashboard:'dashboard',refreshProfile:'profile'})[action]||action;
    const data=value.actions[key];if(!data)throw code('SNAPSHOT_NOT_READY');
    // Each original renderer may mutate its input. Never mutate the shared package.
    return structuredClone(data);
