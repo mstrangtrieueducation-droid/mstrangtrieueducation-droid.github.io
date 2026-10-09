@@ -582,7 +582,7 @@ function parentLearningUrl_(value, enabled = true) { return taLearningPrefill_.d
       }
     }
     function retryDelay(){
-      var delays=[2000,5000,10000,20000,30000,45000,60000];
+      var delays=options.retryDelays||[2000,5000,10000,20000,30000,45000,60000];
       var base=delays[Math.min(retryCount,delays.length-1)],hash=0,value=identity;
       for(var i=0;i<value.length;i++)hash=(hash*31+value.charCodeAt(i))>>>0;
       return base+(hash%5000)+Math.floor(Math.random()*750);
@@ -1293,9 +1293,25 @@ function parentAcademicQueueV1_(cycle) {
 }
 
 function parentLessonContextV1_(){return {family:'ta',identity:taReceiptIdentity_(),className:EXPECTED_CLASS,owner:taReceiptOwner_};}
+// TA_GOOGLE_PREPARED_CLIENT_V1: package from this visit's live-authorized Google response.
+let taGoogleReceiptOffer_=null,taGoogleSeeding_=false;
+function taGoogleReceiptRequest_(){
+ if(taGoogleReceiptOffer_){const value=taGoogleReceiptOffer_;taGoogleReceiptOffer_=null;return Promise.resolve(value);}
+ const root=document.documentElement;root.dataset.googleReceiptRequests=String(Number(root.dataset.googleReceiptRequests||0)+1);
+ return taParent.request('submissions').then(value=>{root.dataset.googleReceiptReady='true';return value;});
+}
+async function taGoogleSeed_(payload,generation){
+ const value=payload&&payload.preparedSubmissions;
+ if(!value||value.className!==EXPECTED_CLASS||!value.prepared||value.prepared.provider!=='google'||!Array.isArray(value.receipts)||!Array.isArray(value.coverage))return false;
+ taGoogleSeeding_=true;taGoogleReceiptOffer_=value;
+ try{await taReceiptOwner_.refresh();}finally{taGoogleSeeding_=false;taGoogleReceiptOffer_=null;}
+ if(!parentCurrent(generation)||taParent.terminal)return false;
+ document.documentElement.dataset.googlePreparedAgeMs=String(value.prepared.sourceAgeMs);
+ return true;
+}
 const taReceiptOwner_=createSubmissionReceiptOwner({guard:taSubmissionGuard_,getIdentity:taReceiptIdentity_,isVisible:()=>true,
- request:()=>taParent.request('submissions').catch(error=>{if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code))parentFailed(error);throw error;}),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectTaSubmissions(parentLessonAcceptV1_(target,payload,ticket,guard),payload,ticket,guard,taReceiptRoutes_),
- render:()=>{if(activeStudent&&dashboard&&taParent.identity){const target=taApplyEnrollmentCutoffV3_(taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))}));activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo(x,y);}}
+ singleSession:true,requireAssignmentAuthority:true,retryDelays:[20000,40000],request:()=>taGoogleReceiptRequest_().catch(error=>{if(taParent.terminal||['INVALID_TOKEN','PARENT_LINK_REVOKED','PARENT_IDENTITY_CONFLICT'].includes(error&&error.code))parentFailed(error);throw error;}),project:(target,payload,ticket,guard)=>DirectGradingSheetProjectors.projectTaSubmissions(parentLessonAcceptV1_(target,payload,ticket,guard),payload,ticket,guard,taReceiptRoutes_),
+ render:()=>{if(!taGoogleSeeding_&&activeStudent&&dashboard&&taParent.identity){const target=taApplyEnrollmentCutoffV3_(taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(activeStudent)),dashboard:JSON.parse(JSON.stringify(dashboard))}));activeStudent=target.student;dashboard=target.dashboard;const x=window.scrollX,y=window.scrollY;renderPortal();window.scrollTo({left:x,top:y,behavior:'instant'});}}
 });
 function taReceiptView_(task,status){const direct=task&&task.directSubmission||status&&status.directSubmission,deadline=task&&task.directDeadline||status&&status.directDeadline;return direct?Object.assign({},status||{},{state:'done',status:deadline?deadline.label:'Đã nộp',tracked:true,completed:true,directSubmission:direct}):deadline?Object.assign({},status||{},{state:deadline.missing?'missing':deadline.pending?'pending':'unknown',status:deadline.label,tracked:true,completed:false,directDeadline:deadline}):status;}
 function taReceiptKnown_(task,status){return task&&task.type!=='redo'||Boolean(task&&task.directSubmission||status&&status.directSubmission)||Boolean(taSubmissionGuard_.can(task)&&task.directDeadline&&task.directDeadline.pending);}
@@ -1400,7 +1416,7 @@ function parentPaint(payload){
       const projected=taApplyEnrollmentCutoffV3_(taReceiptOwner_.reapply({student:JSON.parse(JSON.stringify(payload.student)),dashboard:JSON.parse(JSON.stringify(payload.dashboard))}));
       directory={className:EXPECTED_CLASS,program:PROGRAM_LABEL,logoUrl:payload.dashboard.logoUrl};dashboard=projected.dashboard;activeStudent=projected.student;
       renderPortal();document.body.classList.remove('portal-locked');document.body.classList.add('portal-ready');
-      $('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href','#app-main');
+      $('#student-gateway').hidden=true;$('#student-context').hidden=false;$('#refresh').disabled=false;$('#app-main').setAttribute('aria-busy','false');$('.skip-link').setAttribute('href',location.hash);
       if(!parentOpened){parentOpened=true;activateTab($('#tab-schedule'));document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));parentOpeningReceiptJob=taReceiptOwner_.refresh()}
       $('#portal-announcer').textContent='Đã mở hồ sơ của '+who.name+'.';
     }
@@ -1425,9 +1441,10 @@ function parentPaint(payload){
     // TA_KIDS_SINGLE_VISIT_V1: keep the opening package and its one receipt job.
     // A tab change only reveals this visit's result; it cannot create a request.
     function parentResumeSavedView(){
+      if(parentOpened){document.documentElement.dataset.parentResume="retained-visit";return;}
       if(!document.hidden&&activeStudent&&dashboard&&taParent.identity&&!taParent.terminal){
         const x=window.scrollX,y=window.scrollY;
-        parentPaint({found:true,student:activeStudent,dashboard});window.scrollTo(x,y);
+        parentPaint({found:true,student:activeStudent,dashboard});window.scrollTo({left:x,top:y,behavior:'instant'});
         document.documentElement.dataset.parentResume='retained-visit';
       }
     }
@@ -1462,10 +1479,13 @@ function parentPaint(payload){
           }
         }
         if(!parentCurrent(generation)||!payload)return;
+        const seeded=await taGoogleSeed_(payload,generation);
+        if(!parentCurrent(generation)||taParent.terminal)return;
         document.documentElement.dataset.parentIdentityReadyMs=String(Math.round(performance.now()));
         document.documentElement.dataset.parentResume='atomic-package';
         parentPaint(payload);
-        if(options.force)parentOpeningReceiptJob=taReceiptOwner_.refresh();
+        if(seeded&&payload.preparedSubmissions.prepared.needsRefresh)parentOpeningReceiptJob=taReceiptOwner_.refresh(true);
+        else if(options.force&&!seeded)parentOpeningReceiptJob=taReceiptOwner_.refresh();
         parentStatus(payload.dashboard.cacheStale?'Đang hiển thị dữ liệu gần nhất · Đang cập nhật phía sau…':'');
         if(payload.dashboard.cacheStale&&!options.force)parentAcademicFollowup(generation);
       }catch(error){if(parentCurrent(generation))await parentKeepAfterRefreshFailure(error,generation)}
@@ -1475,7 +1495,14 @@ function parentPaint(payload){
     function parentDispose(){taReceiptOwner_.clear();parentGeneration++;parentBusy=false;parentCancelWaits();taParent.invalidate(true);parentLock('Đang kiểm tra lại liên kết hồ sơ…')}
 
 
-    function renderPortal(){if(!dashboard||!activeStudent)throw new Error('MISSING_PORTAL_DATA');document.title=dashboard.className+' · '+activeStudent.name;$('#class-name').textContent=dashboard.className;$('#program').textContent=PROGRAM_LABEL;$('#updated').textContent=dashboard.generatedAt?'Cập nhật '+dashboard.generatedAt:'';$('#selected-student').textContent=activeStudent.englishName?activeStudent.name+' · '+activeStudent.englishName:activeStudent.name;setLogo(dashboard.logoUrl||directory.logoUrl);renderSchedule();renderAssignments(activeStudent);renderSelfStudy(activeStudent);renderStudentResults(activeStudent);renderOverview(activeStudent)}
+    function renderPortal(){
+      if(!parentOpened)return taGoogleRenderBody_();
+      const x=scrollX,y=scrollY,details=Array.from(document.querySelectorAll('details[data-history-section]')).map(e=>({key:e.getAttribute('data-history-section'),open:e.open}));
+      taGoogleRenderBody_();
+      for(const e of document.querySelectorAll('details[data-history-section]')){const old=details.find(d=>d.key===e.getAttribute('data-history-section'));if(old)e.open=old.open;}
+      window.scrollTo({left:x,top:y,behavior:'instant'});
+    }
+    function taGoogleRenderBody_(){if(!dashboard||!activeStudent)throw new Error('MISSING_PORTAL_DATA');document.title=dashboard.className+' · '+activeStudent.name;$('#class-name').textContent=dashboard.className;$('#program').textContent=PROGRAM_LABEL;$('#updated').textContent=dashboard.generatedAt?'Cập nhật '+dashboard.generatedAt:'';$('#selected-student').textContent=activeStudent.englishName?activeStudent.name+' · '+activeStudent.englishName:activeStudent.name;setLogo(dashboard.logoUrl||directory.logoUrl);renderSchedule();renderAssignments(activeStudent);renderSelfStudy(activeStudent);renderStudentResults(activeStudent);renderOverview(activeStudent)}
 
     function renderSchedule(){
       renderNextClass();renderScheduleNotice();const items=list(dashboard.schedule);
@@ -1522,6 +1549,7 @@ function parentPaint(payload){
     window.addEventListener('online',()=>{if(activeStudent)parentResumeSavedView();else if(!parentBusy&&!taParent.terminal)openParentPortal()});
     window.addEventListener('hashchange',()=>{parentDispose();location.reload()});
     setInterval(parentLessonTickV1_,60000);
+    $('.skip-link').addEventListener('click',event=>{event.preventDefault();$('#app-main').focus({preventScroll:true});$('#app-main').scrollIntoView();});
     openParentPortal();
   </script>
 </body>
