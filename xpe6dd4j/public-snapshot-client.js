@@ -8,7 +8,7 @@
   const now=options.now||Date.now;
   const identity=async()=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token))),v=>v.toString(16).padStart(2,'0')).join('');
   const id=identity();
-  async function selected(){return (options.hashes||[]).includes(await id);}
+  async function selected(){return /^[A-Za-z0-9_-]{22}$/.test(options.token||'');}
   function clear(){epoch++;cached=null;controller?.abort();pending=null;}
   async function load(force){
    if(force){cached=null;}
