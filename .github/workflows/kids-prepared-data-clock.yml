@@ -1,0 +1,23 @@
+name: KIDS prepared data clock
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kids-prepared-data-clock
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Advance KIDS background queue
+        env:
+          CLOCK_SECRET: ${{ secrets.KIDS_PREPARED_CLOCK }}
+        run: |
+          curl --fail-with-body --silent --show-error --max-time 290 \
+            -X POST -H "Authorization: Bearer $CLOCK_SECRET" \
+            -H 'Content-Type: application/json' --data '{}' \
+            https://kids-dashboard-clusters-v1.mstrangtrieuenglishhub.workers.dev/scheduler/tick
