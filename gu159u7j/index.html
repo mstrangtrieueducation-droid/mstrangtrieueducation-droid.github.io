@@ -5,6 +5,348 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
   <script>
+/* Prepared receipt reasons: supplied by verified source evidence, never URL guesses. */
+(function (root) {
+  'use strict';
+  var emptyText = 'Đã nộp nhưng không có link, video hoặc tệp bài làm';
+  var assetText = 'Đã nộp nhưng liên kết là hình trong đề bài, chưa phải bài làm';
+  function text(item) { return item && item.missingContentReason === 'assignment_asset' ? assetText : emptyText; }
+  function summary(rows) {
+    var invalid = (rows || []).filter(function (r) { return r && r.missingContentReason === 'assignment_asset'; });
+    return !invalid.length ? emptyText : invalid.length === rows.length ? assetText : 'Đã nộp nhưng một số lượt chưa có bài làm hợp lệ';
+  }
+  function annotate(value, receipts) {
+    var reasons = {}, assignments = {};
+    (receipts || []).forEach(function (r) {
+      if (r && r.id && r.contentStatus === 'empty' && r.missingContentVerified === true && r.missingContentReason === 'assignment_asset') reasons[r.id] = r.missingContentReason;
+    });
+    function walk(v) {
+      if (!v || typeof v !== 'object') return;
+      Object.keys(v).forEach(function (k) { walk(v[k]); });
+      var reason = reasons[v.receiptId || v.id];
+      if (reason && v.contentStatus === 'empty') v.missingContentReason = reason;
+      if (v.contentMissing === true) {
+        var attempts = v.submissionAttempts || [];
+        var last = attempts.length ? attempts[attempts.length - 1] : null;
+        if (last && last.missingContentReason === 'assignment_asset') {
+          v.missingContentReason = 'assignment_asset';
+          if (v.stateLabel === emptyText) v.stateLabel = assetText;
+        }
+      }
+      if (v.id && Array.isArray(v.tasks)) assignments[v.id] = v;
+    }
+    walk(value);
+    var profile = value && value.profile;
+    (profile && profile.privateReminders || []).forEach(function (reminder) {
+      var assignment = assignments[reminder.assignmentId];
+      var missing = assignment && assignment.tasks.filter(function (t) { return t.feedback && t.feedback.contentMissing; });
+      if (missing && missing.length && missing.every(function (t) { return t.feedback.missingContentReason === 'assignment_asset'; })) reminder.message = assetText + '.';
+    });
+    return value;
+  }
+  var api = {text: text, summary: summary, annotate: annotate};
+  root.KidsPreparedContentText = api;
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof globalThis === 'object' ? globalThis : this);
+
+/* Historical receipt proof is dated explicitly; it never certifies current absence. */
+(function (root) {
+  'use strict';
+  function stamp(at) {
+    var date = new Date(at + 7 * 60 * 60 * 1000);
+    function pad(n) { return n < 10 ? '0' + n : String(n); }
+    return pad(date.getUTCHours()) + ':' + pad(date.getUTCMinutes()) + ' ' +
+      pad(date.getUTCDate()) + '/' + pad(date.getUTCMonth() + 1) + '/' + date.getUTCFullYear();
+  }
+  function missing(original, item, options, status) {
+    item = item || {}; options = options || {}; status = status || {};
+    if (options.verified === true) return original(item, options);
+    var proof = item.preparedSubmissionVerification;
+    var at = Number(proof && proof.verifiedAt), asOf = Number(status.receiptAsOf);
+    if (status.servingLastConfirmed === true && status.receiptStatusMode === 'as-of-confirmed' &&
+        status.receiptVerificationMethod === 'prior-source-confirmation' && isFinite(at) && at > 0 &&
+        isFinite(asOf) && asOf > 0 && proof.complete === false && proof.freshRead === false) {
+      return {cls: 'neutral receipt-as-of', label: 'Chưa nộp đến ' + stamp(Math.min(at, asOf)),
+        detail: 'Đây là kết quả đối chiếu tại thời điểm ghi trên bài.'};
+    }
+    return original(item, options);
+  }
+  function header(status) {
+    status = status || {};
+    var at = Number(status.receiptAsOf);
+    if (status.profileRefreshError || !isFinite(at) || at <= 0) return '';
+    if (status.servingLastConfirmed === true && status.receiptStatusMode === 'as-of-confirmed' && status.receiptVerificationMethod === 'prior-source-confirmation') {
+      return 'Thông tin bài nộp đến ' + stamp(at) + ' · Bấm Tải lại để xem cập nhật.';
+    }
+    if (status.servingLastConfirmed !== true && ['native-confirmed','version-confirmed'].indexOf(status.receiptStatusMode) >= 0) {
+      return 'Bài nộp đã đối chiếu đến ' + stamp(at) + '.';
+    }
+    return '';
+  }
+  var api = {missing: missing, header: header};
+  root.KidsPreparedStatusDisplay = api;
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : this);
+
+(function(root){
+ 'use strict';
+ var original=root.KidsPreparedStatusDisplay.missing;
+ root.KidsPreparedStatusDisplay.missing=function(render,item,options,status){
+  if(status&&status.sourceCodeIssues===true&&!(options&&options.verified===true))return {cls:'neutral',label:'Cần đối chiếu mã bài',detail:'Có bài nộp ghi mã chưa rõ. Giáo viên cần đối chiếu trước khi xác nhận bài này.'};
+  return original(render,item,options,status);
+ };
+})(typeof window!=='undefined'?window:this);
+
+/* Revalidate prepared Cloudflare JSON only. Never initiate a Google scan. */
+(function(root){
+  'use strict';
+  function start(options){
+    var stopped=false,timer=null,running=false,failures=0,started=options.now(),previous='';
+    function delay(){return Math.min(60000,(options.hidden()?60000:options.now()-started<20000?3000:15000)*Math.pow(2,failures));}
+    function schedule(){if(!stopped){options.clearTimer(timer);timer=options.setTimer(tick,delay());}}
+    function tick(){
+      if(stopped||!options.current()){stop();return Promise.resolve(false);}
+      if(running)return Promise.resolve(false);
+      options.clearTimer(timer);running=true;
+      return Promise.resolve().then(function(){return options.read();}).then(function(value){
+        if(stopped||!options.current())return false;
+        var next=JSON.stringify(value),changed=next!==previous;
+        // A first successful read after an unavailable opening must also wake
+        // the native access gate. Await rendering before accepting the version:
+        // if rendering fails, the same packet must be retried next time.
+        return Promise.resolve(changed?options.changed(value):undefined).then(function(){
+          if(stopped||!options.current())return false;
+          previous=next;failures=0;return changed;
+        });
+      }).catch(function(){failures=Math.min(failures+1,3);return false;}).then(function(result){running=false;schedule();return result;});
+    }
+    function stop(){stopped=true;options.clearTimer(timer);}
+    function seed(value){previous=JSON.stringify(value);}
+    schedule();return {tick:tick,stop:stop,seed:seed};
+  }
+  root.KidsPreparedRefresh={start:start};
+  if(typeof module==='object'&&module.exports)module.exports={start:start};
+})(typeof window!=='undefined'?window:this);
+
+/* KIDS_PREPARED_PREVIEW_V1. Private capability POST; no pupil URL or persistent browser data. */
+(function (root) {
+  'use strict';
+  var own = Object.prototype.hasOwnProperty;
+  function failure(code) { var e = new Error(code); e.code = code; return e; }
+  function copy(value) { return JSON.parse(JSON.stringify(value)); }
+  function object(value) { return value && typeof value === 'object' && !Array.isArray(value); }
+  function finite(value) { return typeof value === 'number' && isFinite(value); }
+  function alias(value) {
+    var result = String(typeof value === 'string' ? value : value && (value.alias || value.englishName || value.value) || '').trim().toUpperCase();
+    return result.normalize ? result.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '') : result;
+  }
+  function verified(value) { return object(value) && value.complete === true && value.freshRead === true && finite(Number(value.verifiedAt)) && Number(value.verifiedAt) > 0; }
+  function withdrawn(value) { return object(value) && value.complete === false && value.freshRead === false; }
+  function unpack(value) {
+    if (object(value) && value.schema === 1 && object(value.actions) && object(value.actions.bootstrap) && object(value.actions.submissions) && !own.call(value.actions,'dashboard') && !own.call(value.actions,'profile')) {
+      value.actions.dashboard=value.actions.bootstrap.dashboard;
+      value.actions.profile=value.actions.bootstrap.profile;
+      value.actions.bootstrap.preparedSubmissions=value.actions.submissions;
+      return value;
+    }
+    if (!object(value) || !own.call(value, 'wireSchema')) return value;
+    if (value.wireSchema !== 1 || Object.keys(value).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
+        !object(value.bundle) || own.call(value.bundle, 'actions') || !object(value.check) || !object(value.bootstrap) ||
+        own.call(value.bootstrap, 'preparedSubmissions') || !object(value.submissions) || typeof value.embeddedSubmissions !== 'boolean') throw failure('INVALID_SNAPSHOT');
+    var result = {}, bootstrap = {};
+    Object.keys(value.bundle).forEach(function (key) { result[key] = value.bundle[key]; });
+    Object.keys(value.bootstrap).forEach(function (key) { bootstrap[key] = value.bootstrap[key]; });
+    if (value.embeddedSubmissions) bootstrap.preparedSubmissions = value.submissions;
+    result.actions = {check: value.check, bootstrap: bootstrap, dashboard: bootstrap.dashboard, profile: bootstrap.profile, submissions: value.submissions};
+    return result;
+  }
+  function validate(value, options, now) {
+    var className = 'KIDS ' + options.classNumber;
+    if (!object(value) || value.schema !== 1 || value.classNumber !== options.classNumber || value.className !== className || !alias(value.alias) || typeof value.rosterRevision !== 'string' || !value.rosterRevision) throw failure('INVALID_SCOPE');
+    var fallback = Boolean(value.sourceStatus && value.sourceStatus.servingLastConfirmed === true);
+    var age = now - (typeof value.capturedAt === 'number' ? value.capturedAt : Date.parse(value.capturedAt));
+    if (!finite(age) || age < -30000 || age > (fallback ? options.fallbackMaxAgeMs || 86400000 : options.maxAgeMs || 1800000)) throw failure('SNAPSHOT_NOT_READY');
+    var actions = value.actions, target = alias(value.alias), keys = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions'];
+    if (!object(actions) || keys.some(function (key) { return !object(actions[key]); })) throw failure('INVALID_SNAPSHOT');
+    function scoped(part, name, directory) {
+      if (!object(part) || part.classNumber !== options.classNumber || part.className !== className) throw failure('INVALID_SCOPE');
+      if (directory && (!Array.isArray(part.studentAliases) || part.studentAliases.length !== 1 || alias(part.studentAliases[0]) !== target)) throw failure('INVALID_SCOPE');
+      if (name && alias(part.englishName || part.alias) !== target) throw failure('INVALID_SCOPE');
+      if (own.call(part, 'rosterRevision') && part.rosterRevision !== value.rosterRevision) throw failure('INVALID_SCOPE');
+    }
+    scoped(actions.check, false, true); scoped(actions.bootstrap, false, true); scoped(actions.dashboard, false, true); scoped(actions.profile, true, false);
+    var boot = actions.bootstrap;
+    scoped(boot.dashboard, false, true); scoped(boot.profile, true, false);
+    if (!(Number(boot.sourceModelBuiltAt) > 0) || Number(boot.sourceModelBuiltAt) !== Number(boot.profile.sourceModelBuiltAt) || !(Number(boot.dashboard.snapshotBuiltAt) > 0) || !(Number(boot.profile.snapshotBuiltAt) > 0)) throw failure('INVALID_SNAPSHOT');
+    if (JSON.stringify(boot.dashboard) !== JSON.stringify(actions.dashboard) || JSON.stringify(boot.profile) !== JSON.stringify(actions.profile)) throw failure('INVALID_SNAPSHOT');
+    var sub = actions.submissions;
+    if (sub.className !== className || sub.schema !== 1 || !Array.isArray(sub.receipts) || !Array.isArray(sub.coverage) || !sub.coverage.length || own.call(sub, 'emptyReceipts') && !Array.isArray(sub.emptyReceipts)) throw failure('INVALID_SNAPSHOT');
+    if (sub.assignmentAuthority && sub.assignmentAuthority.className !== className) throw failure('INVALID_SCOPE');
+    var proof = fallback ? withdrawn : verified;
+    var codeIssues=!fallback&&value.sourceStatus&&value.sourceStatus.sourceCodeIssues===true;
+    if(codeIssues){
+      var incomplete=false;
+      var readable=sub.coverage.every(function(c){
+        if(!c||c.freshRead!==true||!finite(c.verifiedAt)||c.verifiedAt<=0||c.structurallyComplete!==true||c.sourceFailure||!Array.isArray(c.issues))return false;
+        if(c.complete===true)return c.issues.length===0;
+        if(c.complete!==false||!c.issues.length)return false;
+        incomplete=true;return c.issues.every(function(issue){return object(issue)&&(issue.reason||issue.type)==='CODE_UNRECOGNIZED';});
+      });
+      var p=sub.submissionVerification;
+      if(!readable||!incomplete||!p||p.complete!==false||p.freshRead!==true||!finite(p.verifiedAt)||p.verifiedAt<=0||!verified(sub.assignmentAuthority))throw failure('RECEIPTS_INCOMPLETE');
+    }else if (!proof(sub.submissionVerification) || !sub.coverage.every(proof) || !proof(sub.assignmentAuthority)) throw failure('RECEIPTS_INCOMPLETE');
+    if (boot.preparedHistory || sub.preparedProjection) {
+      var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
+      if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
+      if (JSON.stringify(embedded) !== JSON.stringify(sub)) throw failure('INVALID_SNAPSHOT');
+      var count = Number(boot.preparedHistory && boot.preparedHistory.pageCount), pages = value.historyPages;
+      if (!finite(count) || count < 0 || Math.floor(count) !== count || !object(pages) || Object.keys(pages).length !== count) throw failure('INVALID_SNAPSHOT');
+      for (var i = 0; i < count; i += 1) {
+        var page = pages[String(i)];
+        if (!object(page) || page.schema !== 1 || page.page !== i || !Array.isArray(page.entries) || page.classNumber !== options.classNumber || page.className !== className || alias(page.englishName) !== target || !page.preparedSource || page.preparedSource.generation !== generation) throw failure('INVALID_SNAPSHOT');
+      }
+    }
+    // Prepared history and projected positives survive source failures, but no
+    // nested receipt proof may accidentally reauthorize a negative status.
+    if (fallback) (function visit(node) {
+      if (!node || typeof node !== 'object') return;
+      if (node.preparedSubmissionVerification && !withdrawn(node.preparedSubmissionVerification)) throw failure('INVALID_SNAPSHOT');
+      Object.keys(node).forEach(function (key) { visit(node[key]); });
+    })({actions: actions, historyPages: value.historyPages});
+    return value;
+  }
+  function create(options) {
+    if (!options || !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(options.endpoint || '') && !/^http:\/\/127\.0\.0\.1:\d+\/v1\/parent$/.test(options.endpoint || '') || !/^[A-Za-z0-9_-]{22}$/.test(options.token || '') || !finite(options.classNumber) || options.classNumber <= 0) throw failure('INVALID_CONFIG');
+    var cached = null, pending = null, generation = 0, controller = null;
+    var now = options.now || Date.now, supported = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions', 'history'];
+    function current(epoch) { return epoch === generation && (!options.isCurrent || options.isCurrent() === true); }
+    function clear() { generation += 1; cached = null; pending = null; if (controller) controller.abort(); }
+    var endpoint = options.endpointPromise || Promise.resolve().then(function(){
+      var cryptoImpl=root.crypto||root.webkitCrypto, subtle=cryptoImpl&&(cryptoImpl.subtle||cryptoImpl.webkitSubtle);
+      if(!subtle)throw failure('CRYPTO_UNAVAILABLE');
+      var bytes=new Uint8Array(options.token.length);for(var i=0;i<bytes.length;i++)bytes[i]=options.token.charCodeAt(i);
+      return subtle.digest('SHA-256',bytes);
+    }).then(function(bytes){var hex='',a=new Uint8Array(bytes);for(var i=0;i<a.length;i++)hex+=('0'+a[i].toString(16)).slice(-2);return options.endpoint.replace(/\/v1\/parent$/,'/data/'+options.classNumber+'/'+hex+'.json');});
+    function load(force) {
+      if (pending) return pending;
+      // A prepared opening is one immutable read session. Existing background
+      // consumers share it; explicit refresh/reopen may request a new package.
+      // Keep the prior package visible when an explicit refresh fails.
+      if (cached && !force && (options.sessionSnapshot === true || now() - cached.loadedAt < (options.clientCacheMs === undefined ? 15000 : options.clientCacheMs))) return Promise.resolve(cached.value);
+      var epoch = generation, active = typeof AbortController === 'function' ? new AbortController() : null;
+      controller = active;
+      var timeout, finished = false;
+      var work = new Promise(function (resolve, reject) {
+        timeout = setTimeout(function () { if (finished) return; finished = true; if (active) active.abort(); reject(failure('SOURCE_UNAVAILABLE')); }, options.timeoutMs || 8000);
+        var init = {method: 'GET', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer'};
+        if (active) init.signal = active.signal;
+        Promise.resolve().then(function () {
+          if (options.onRequest) { try { options.onRequest(); } catch (_) {} }
+          return endpoint.then(function(url){return (options.fetchImpl || root.fetch)(url, init);});
+        }).then(function (response) {
+          if (!current(epoch)) throw failure('SESSION_ENDED');
+          if (!response.ok) throw failure('SNAPSHOT_NOT_READY');
+          return response.text();
+        }).then(function (text) {
+          if (!current(epoch)) throw failure('SESSION_ENDED');
+          if (text.length > (options.maxBodyChars || 8000000)) throw failure('INVALID_SNAPSHOT');
+          var value; try { value = JSON.parse(text); } catch (_) { throw failure('INVALID_SNAPSHOT'); }
+          value = unpack(value); validate(value, options, now());
+          if (finished) return;
+          finished = true; cached = {value: value, loadedAt: now()};
+          if (options.onLoaded) { try { options.onLoaded(copy(value)); } catch (_) {} }
+          resolve(value);
+        }).catch(function (e) { if (finished) return; finished = true; if (e && e.code === 'PARENT_LINK_REVOKED') clear(); reject(e && e.code ? e : failure('SOURCE_UNAVAILABLE')); });
+      });
+      pending = work;
+      var cleanup = function () { clearTimeout(timeout); if (pending === work) pending = null; if (controller === active) controller = null; };
+      work.then(cleanup, cleanup);
+      return work;
+    }
+    function request(action, force, extra) {
+      if (supported.indexOf(action) < 0) return Promise.reject(failure('INVALID_REQUEST'));
+      if (action === 'history') {
+        extra = extra || {};
+        var history = cached && cached.value, index = Number(extra.historyPage);
+        if (!history || !finite(index) || index < 0 || Math.floor(index) !== index || !history.actions.bootstrap.preparedSource || history.actions.bootstrap.preparedSource.generation !== extra.generation || !history.historyPages || !history.historyPages[String(index)] || options.isCurrent && options.isCurrent() !== true) return Promise.reject(failure('INVALID_SCOPE'));
+        return Promise.resolve(copy(history.historyPages[String(index)]));
+      }
+      return load(force === true && action === 'bootstrap').then(function (value) {
+        if (options.isCurrent && options.isCurrent() !== true) throw failure('SESSION_ENDED');
+        return copy(value.actions[action]);
+      });
+    }
+    function response(action, force, extra) {
+      return request(action, force, extra).then(function (data) { return {ok: true, status: 200, json: function () { return Promise.resolve({ok: true, data: data}); }}; }, function (error) {
+        if (error.code !== 'PARENT_LINK_REVOKED') throw error;
+        clear(); return {ok: true, status: 200, json: function () { return Promise.resolve({ok: false, revoked: true, code: 'PARENT_LINK_REVOKED'}); }};
+      });
+    }
+    return {request: request, response: response, clear: clear,
+      hasSnapshot: function () { return Boolean(cached && (!options.isCurrent || options.isCurrent() === true)); },
+      sourceStatus: function () {
+        if (!cached || options.isCurrent && options.isCurrent() !== true) return {};
+        var status = copy(cached.value.sourceStatus || {}), proof = cached.value.actions.submissions.submissionVerification;
+        if (!status.receiptAsOf) status.receiptAsOf = Number(proof && proof.verifiedAt) || 0;
+        if (!status.receiptStatusMode && verified(proof)) status.receiptStatusMode = 'native-confirmed';
+        return status;
+      },
+      supports: function (action) { return supported.indexOf(action) >= 0; }};
+  }
+  var api = {create: create, validate: validate, unpack: unpack};
+  root.KidsPreparedSnapshotClient = api;
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : this);
+
+(function(){
+  var initialHash=location.hash, initialPath=location.pathname, match=initialHash.match(/(?:^#|&)p=([A-Za-z0-9_-]{22})(?:&|$)/);
+  if(!match||typeof Promise!=='function'||typeof fetch!=='function')return;
+  try {
+    /* Preview diagnostics only: timings and counts, never URLs or pupil content. */
+(function (root) {
+  'use strict';
+  var node = document.documentElement, perf = root.performance;
+  function put(key, value) {
+    if (typeof value === 'number' && isFinite(value)) node.setAttribute('data-kids-preview-' + key, String(Math.round(value)));
+  }
+  function mark(key) { if (perf && typeof perf.now === 'function') put(key, perf.now()); }
+  function capture() {
+    try {
+      if (!perf || typeof perf.getEntriesByType !== 'function') return;
+      var entries = perf.getEntriesByType('resource'), google = 0, bundles = 0;
+      entries.forEach(function (r) {
+        if (/https:\/\/(?:script\.google\.com|script\.googleusercontent\.com)\//.test(r.name)) google += 1;
+        if (/(?:\/v1\/parent|\/data\/\d+\/[a-f0-9]{64}\.json)$/.test(r.name)) bundles += 1;
+      });
+      put('google-requests', google); put('bundle-requests', bundles);
+      var nav = perf.getEntriesByType('navigation')[0];
+      if (nav) {
+        ['responseStart', 'responseEnd', 'domInteractive', 'domContentLoadedEventEnd', 'loadEventEnd', 'transferSize', 'encodedBodySize'].forEach(function (key) {
+          put('nav-' + key.replace(/[A-Z]/g, function (letter) { return '-' + letter.toLowerCase(); }), nav[key]);
+        });
+      }
+    } catch (_) {}
+  }
+  var started = 0;
+  root.__kidsPreviewMetrics = {mark: mark, capture: capture, request: function () { started += 1; put('bundle-started', started); mark('request-ms'); }};
+  mark('start-ms'); capture();
+  root.addEventListener('load', capture); root.addEventListener('pageshow', capture); root.addEventListener('pagehide', capture);
+  if (typeof root.PerformanceObserver === 'function') {
+    try { new root.PerformanceObserver(capture).observe({entryTypes: ['resource', 'navigation']}); } catch (_) {}
+  }
+  if (typeof root.MutationObserver === 'function') {
+    try { new root.MutationObserver(capture).observe(node, {attributes: true, attributeFilter: ['data-parent-first-open-ms', 'data-parent-last-open-ms', 'data-parent-fresh-complete-ms']}); } catch (_) {}
+  }
+})(window);
+
+    var client=KidsPreparedSnapshotClient.create({classNumber:17,endpoint:"https://kids-dashboard-clusters-v1.mstrangtrieuenglishhub.workers.dev/v1/parent",token:match[1],sessionSnapshot:true,isCurrent:function(){return location.hash===initialHash&&location.pathname===initialPath;},onRequest:function(){window.__kidsPreviewMetrics.request();},onLoaded:function(){window.__kidsPreviewMetrics.mark('data-ms');window.__kidsPreviewMetrics.capture();}});
+    window.__kidsPreparedPreview=client;
+    var refresh=KidsPreparedRefresh.start({now:Date.now,hidden:function(){return document.hidden;},current:function(){return location.hash===initialHash&&location.pathname===initialPath;},setTimer:function(fn,ms){return window.setTimeout(fn,ms);},clearTimer:function(timer){window.clearTimeout(timer);},read:function(){return client.request('bootstrap',true);},changed:function(){return window.__kidsPreparedApply?window.__kidsPreparedApply():false;}});client.request('bootstrap').then(function(value){refresh.seed(value);},function(){});document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh.tick();});window.addEventListener('online',function(){refresh.tick();});window.addEventListener('pagehide',function(event){if(!event.persisted)refresh.stop();});
+    window.addEventListener('hashchange',function(){client.clear();});
+  } catch (_) {}
+})();
+</script>
+<script>
 /* KIDS7_PARENT_LINK_V1: all data reads are bound to one server-validated token. */
 const kidsApi = (() => {
   const endpoint = 'https://script.google.com/macros/s/AKfycbwBLuCv2s-qjbvXx8-o4vB0fDLTp1hY5RWP3cY0ixNI5YBD-dreRjoiOA1Y327CbgMx_g/exec';
@@ -112,9 +454,7 @@ const kidsApi = (() => {
     const started = performance.now();
     let deadlineExpired = false;
     const timer = setTimeout(() => { deadlineExpired = true; controller.abort(); }, ['directory','check'].includes(action) ? 28000 : action === 'bootstrap' && force ? 180000 : 85000);
-    const promise = fetch(url.href, {
-      credentials:'omit', mode:'cors', redirect:'follow', cache:'no-store', referrerPolicy:'no-referrer', signal:controller.signal
-    }).catch(err => { err.openingTransportFailure = true; throw err; }).then(async response => {
+    const promise = (window.__kidsPreparedPreview ? window.__kidsPreparedPreview.response(action, Boolean(force), extra) : Promise.reject(Error('PREPARED_CLIENT_PENDING'))).catch(err => { err.openingTransportFailure = true; throw err; }).then(async response => {
       if (!response.ok) {
         const failure = error('Kết nối đang chậm. Vui lòng thử lại.', 'NETWORK_ERROR');
         failure.openingTransportFailure = [404,408,500,502,503,504].includes(response.status);
@@ -1690,7 +2030,7 @@ html.vn-national-day-2026-root body .assignment.session {
 
     const CLASS_NUMBER = Number(17) || 7;
     const CLASS_NAME = "KIDS 17" || `KIDS ${CLASS_NUMBER}`;
-    const FALLBACK_LOGO = 'data:image/jpeg;base64,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';
+    const FALLBACK_LOGO = '../assets/brand-4522e70bbb8e7a81.jpg';
     // KIDS_RESILIENT_LOAD_V2
     const app = {
       data: null,
@@ -3074,7 +3414,7 @@ html.vn-national-day-2026-root body .assignment.session {
         viewUrl: safeUrl(pick(item, ['viewUrl', 'reviewUrl'], '')),
         score: pick(item, ['score'], null),
         maximum: pick(item, ['maximum'], null),
-        scoreLabel: text(pick(item, ['scoreLabel'], '')),evidence:submissionEvidenceFiles_(item),contentStatus:text(pick(item,['contentStatus'],''))
+        scoreLabel: text(pick(item, ['scoreLabel'], '')),evidence:submissionEvidenceFiles_(item),contentStatus:text(pick(item,['contentStatus'],'')),missingContentReason:item.missingContentReason
       })).filter(item => item.submittedAt);
       if (!attempts.length || (attempts.length < 2 && !config.showSingle && !attempts.some(item=>item.contentStatus==='empty'||item.evidence.length>1||item.evidence.length&&!safeUrl(fallbackUrl)))) return '';
       const fallbackScore = pick(config, ['fallbackScore'], null);
@@ -3097,7 +3437,7 @@ html.vn-national-day-2026-root body .assignment.session {
           const timeParts = submittedAt.split(/\s*·\s*/).filter(Boolean);
           const dateText = timeParts.shift() || submittedAt;
           const timeText = timeParts.join(' · ');
-          return `<div class="submission-attempt"><div class="submission-attempt__line"><strong>Lần ${escapeHtml(item.attempt)}</strong><span class="submission-attempt__separator">·</span><time>${escapeHtml(dateText)}</time>${timeText ? `<span class="submission-attempt__separator">·</span><time>${escapeHtml(timeText)}</time>` : ''}${scoreText ? `<span class="submission-attempt__separator">·</span><span class="submission-attempt__score">Điểm ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">Đã nộp nhưng không có link, video hoặc tệp bài làm</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
+          return `<div class="submission-attempt"><div class="submission-attempt__line"><strong>Lần ${escapeHtml(item.attempt)}</strong><span class="submission-attempt__separator">·</span><time>${escapeHtml(dateText)}</time>${timeText ? `<span class="submission-attempt__separator">·</span><time>${escapeHtml(timeText)}</time>` : ''}${scoreText ? `<span class="submission-attempt__separator">·</span><span class="submission-attempt__score">Điểm ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">'+escapeHtml(KidsPreparedContentText.text(item))+'</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
         }).join('')}</div>`;
       }
       return `<div class="submission-history">${attempts.map((item, index) => {
@@ -3106,7 +3446,7 @@ html.vn-national-day-2026-root body .assignment.session {
         const scoreText = item.scoreLabel || (hasScore
           ? `${item.score}${item.maximum !== null && item.maximum !== '' ? '/' + item.maximum : ''}`
           : '');
-        return `<div class="submission-attempt"><strong>Lần ${escapeHtml(item.attempt)}</strong><div class="submission-attempt__detail"><time>${escapeHtml(item.submittedAt)}</time>${scoreText ? `<span class="submission-attempt__score">Kết quả: ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">Đã nộp nhưng không có link, video hoặc tệp bài làm</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
+        return `<div class="submission-attempt"><strong>Lần ${escapeHtml(item.attempt)}</strong><div class="submission-attempt__detail"><time>${escapeHtml(item.submittedAt)}</time>${scoreText ? `<span class="submission-attempt__score">Kết quả: ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">'+escapeHtml(KidsPreparedContentText.text(item))+'</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
       }).join('')}</div>`;
     }
 
@@ -4583,7 +4923,7 @@ function createStudentLearningPrefill(options) {
         var merged=new Map();
         (retained&&retained.receipts||[]).forEach(function(receipt){merged.set(receipt.id,receipt);});
         payload.receipts.concat(payload.emptyReceipts||[]).forEach(function(receipt){if(receipt&&receipt.id&&receipt.submittedAt){var previous=merged.get(receipt.id);if(!previous||receipt.contentStatus!=='empty'||previous.contentStatus==='empty')merged.set(receipt.id,receipt);}});
-        retryNeeded=!authoritative(payload);
+        retryNeeded=!authoritative(payload)&&!(window.__kidsPreparedPreview&&window.__kidsPreparedPreview.hasSnapshot());
         if(!retryNeeded)cancelRetry(true);
         readState=retryNeeded?'loading':'ready';
         if(needsFresh||!visible()){parked=payload;current=null;}else{current=payload;parked=null;}
@@ -5590,7 +5930,7 @@ function renderUnassignedEmptyReceipts_() {
     box.setAttribute('role','status');box.setAttribute('aria-live','polite');anchor.parentNode.insertBefore(box,anchor);
   }
   const items=rows.map(function(row){return '<li><strong>'+escapeHtml(row.code)+'</strong><time>'+escapeHtml(row.submittedAt)+'</time></li>';}).join('');
-  const markup='<strong>Đã nộp nhưng không có link, video hoặc tệp bài làm</strong><p>Vui lòng nộp lại bài có đầy đủ nội dung.</p><details><summary>Xem '+rows.length+' lượt nộp</summary><ul>'+items+'</ul></details>';
+  const markup='<strong>'+escapeHtml(KidsPreparedContentText.summary(rows))+'</strong><p>Vui lòng nộp lại bài có đầy đủ nội dung.</p><details><summary>Xem '+rows.length+' lượt nộp</summary><ul>'+items+'</ul></details>';
   if(box.innerHTML!==markup)box.innerHTML=markup;
   box.hidden=false;
 }
@@ -5764,13 +6104,13 @@ function parentLoadPreparedHistory_(page,generation) {
     });
     function submissionCan_(item) { return submissionGuard_.can(item); }
     function submissionMissingMeta_(item) {
-      return KidsSubmissionDisplayStatus.missing(item, {verified:submissionCan_(item),readState:submissionOwner_.readState});
+      return window.__kidsPreparedPreview ? KidsPreparedStatusDisplay.missing(KidsSubmissionDisplayStatus.missing,item,{verified:submissionCan_(item),readState:submissionOwner_.readState},window.__kidsPreparedPreview.sourceStatus()) : KidsSubmissionDisplayStatus.missing(item, {verified:submissionCan_(item),readState:submissionOwner_.readState});
     }
     function submissionReceivedMeta_(item) {
       return item&&item.isLate?{cls:'late',label:'Nộp muộn'}:{cls:'wait',label:'Đã nhận'};
     }
     function submissionReceiptText_(item,count,submittedAt) {
-      if(item&&item.contentMissing)return 'Đã nộp nhưng không có link, video hoặc tệp bài làm. Vui lòng nộp lại bài có đầy đủ nội dung.';
+      if(item&&item.contentMissing)return KidsPreparedContentText.text(item)+'. Vui lòng nộp lại bài có đầy đủ nội dung.';
       const meta=submissionReceivedMeta_(item);
       return meta.label+(count>1?' · '+count+' lần':'')+(submittedAt?' · '+submittedAt:'');
     }
@@ -6254,7 +6594,8 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if(!applied)throw new Error('Hồ sơ chưa hiển thị trọn vẹn.');
       parentBootstrapPainted_=true;setLoading(loading);
       document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));
-      if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần thông tin chưa tải được. Bấm Tải lại để cập nhật.';
+      if(window.__kidsPreparedPreview&&KidsPreparedStatusDisplay.header(window.__kidsPreparedPreview.sourceStatus()))$('#metaLine').textContent=KidsPreparedStatusDisplay.header(window.__kidsPreparedPreview.sourceStatus());
+      else if(parentPackageWarning_||parentPackagePartial_(value))$('#metaLine').textContent='Đang hiển thị dữ liệu hiện có · Một phần thông tin chưa tải được. Bấm Tải lại để cập nhật.';
       else if(!fromServer||parentPackageStale_(value))$('#metaLine').textContent='Dữ liệu đã tải · Bấm Tải lại để cập nhật.';
       else document.documentElement.dataset.parentFreshCompleteMs=String(Math.round(performance.now()));
       parentRenderPreparedHistory_();
@@ -6338,7 +6679,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
         // A fresh opening, a failed follow-up, or a later repaint cannot loop.
         if(!force&&!job.recovery&&!teacherRefresh&&!parentOpeningAcademicSeen_){
           parentOpeningAcademicSeen_=true;
-          if(stale)next={force:false,quiet:true,attempt:0,delay:0,teacherRefresh:true};
+          if(stale&&!(window.__kidsPreparedPreview&&window.__kidsPreparedPreview.hasSnapshot()))next={force:false,quiet:true,attempt:0,delay:0,teacherRefresh:true};
         }
         return true;
       }).catch(error=>{
@@ -6472,6 +6813,8 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if(!document.hidden&&kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false,true);
     }
     function parentStart_() {
+      window.__kidsPreparedApply=()=>{if(!window.__kidsPreparedPreview)return Promise.resolve(false);const pending=parentBootstrapJob_&&parentBootstrapJob_.promise;return Promise.resolve(pending).catch(()=>{}).then(()=>kidsApi.parent.authorized?parentLoadBootstrap_(false,true):parentRecheck_({initialBootstrap:true})).then(ok=>{if(!ok)throw Error('PREPARED_RENDER_PENDING');if(kidsApi.parent.authorized)return submissionOwner_.refresh(true);});};
+      
       window.addEventListener('kids-parent-access',event=>{
         if(event.detail.status!=='authorized')parentAccessGate_();
         else{parentConsumeDirectoryHint_();parentRenderIdentity_();}
@@ -6531,9 +6874,9 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
     $('#entryName').addEventListener('change', () => setEntryState('', false));
     $('#entryRetry').addEventListener('click', () => { if (!kidsApi.parent.authorized) parentRecheck_(); else retryCurrentLoad(); });
     $('#refreshBtn').addEventListener('click', () => parentRecheck_({refresh:true}));
-    $('#brandLogo').addEventListener('error', event => { if (event.currentTarget.src !== FALLBACK_LOGO) event.currentTarget.src = FALLBACK_LOGO; });
+    $('#brandLogo').addEventListener('error', event => { if (event.currentTarget.getAttribute('src') !== FALLBACK_LOGO) event.currentTarget.src = FALLBACK_LOGO; });
     $('#entryLogo').src = FALLBACK_LOGO;
-    $('#entryLogo').addEventListener('error', event => { if (event.currentTarget.src !== FALLBACK_LOGO) event.currentTarget.src = FALLBACK_LOGO; });
+    $('#entryLogo').addEventListener('error', event => { if (event.currentTarget.getAttribute('src') !== FALLBACK_LOGO) event.currentTarget.src = FALLBACK_LOGO; });
     try {
       parentStart_();
 
