@@ -6797,7 +6797,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if(!document.hidden&&kidsApi.parent.authorized&&parentPackage_)parentApplyPackage_(true,false,true);
     }
     function parentStart_() {
-      window.__kidsPreparedApply=()=>{if(!window.__kidsPreparedPreview)return Promise.resolve(false);const ready=kidsApi.parent.authorized?parentLoadBootstrap_(false,true):parentRecheck_({initialBootstrap:true});return Promise.resolve(ready).then(ok=>{if(!ok)throw Error('PREPARED_RENDER_PENDING');if(kidsApi.parent.authorized)return submissionOwner_.refresh(true);});};
+      window.__kidsPreparedApply=()=>{if(!window.__kidsPreparedPreview)return Promise.resolve(false);const pending=parentBootstrapJob_&&parentBootstrapJob_.promise;return Promise.resolve(pending).catch(()=>{}).then(()=>kidsApi.parent.authorized?parentLoadBootstrap_(false,true):parentRecheck_({initialBootstrap:true})).then(ok=>{if(!ok)throw Error('PREPARED_RENDER_PENDING');if(kidsApi.parent.authorized)return submissionOwner_.refresh(true);});};
       
       window.addEventListener('kids-parent-access',event=>{
         if(event.detail.status!=='authorized')parentAccessGate_();
