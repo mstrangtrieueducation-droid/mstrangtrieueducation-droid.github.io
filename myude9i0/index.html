@@ -147,7 +147,7 @@
  }
  function fetchWithFallback(url,init,token,n,fetcher){
   var timer,done=false;var primary=Promise.race([Promise.resolve().then(function(){return fetcher(url,init);}),new Promise(function(_,reject){timer=setTimeout(function(){reject(Error('EDGE_TIMEOUT'));},3500);})]);
-  return primary.then(function(r){clearTimeout(timer);if(r.status>=500||r.status===429)return fallback(token,n,fetcher,init);return r;},function(e){clearTimeout(timer);if(init.signal&&init.signal.aborted)throw e;return fallback(token,n,fetcher,init);});
+  return primary.then(function(r){clearTimeout(timer);if(r.status>=500||r.status===429||r.status===403)return fallback(token,n,fetcher,init);return r;},function(e){clearTimeout(timer);if(init.signal&&init.signal.aborted)throw e;return fallback(token,n,fetcher,init);});
  }
  root.KidsClusterFallback={fetch:fetchWithFallback,decrypt:decrypt};
 })(typeof window!=='undefined'?window:globalThis);
