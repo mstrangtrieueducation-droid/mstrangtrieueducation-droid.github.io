@@ -1966,7 +1966,7 @@ function kidsFeedbackMarkup(value, escape) {
   function close(){if(list){out.push('</ul>');list=false;}}
   function inline(line){
     var match=line.match(/^([^:：\n]{2,64}[:：])(\s+)(.+)$/);
-    return match ? '<strong class="kids-feedback-label">'+escape(match[1])+'</strong>'+escape(match[2]+match[3]) : escape(line);
+    return match ? '<strong class="kids-feedback-label">'+escape(match[1])+'</strong> '+escape(match[3]) : escape(line);
   }
   lines.forEach(function(line){
     if(!line.trim()){close();return;}
