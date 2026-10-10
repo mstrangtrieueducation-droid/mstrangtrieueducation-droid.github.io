@@ -5268,7 +5268,7 @@ function homeworkTaskType_(value) {
   if (/ngu phap|grammar/.test(normalized)) return 'grammar';
   if (/phat am|pronunciation/.test(normalized)) return 'pronunciation';
   if (/long tieng|dubbing/.test(normalized)) return 'dubbing';
-  if (/reading|bai doc|doc hieu/.test(normalized)) return 'reading';
+  if (/reading|bai doc|doc hieu|\bdoc\b/.test(normalized)) return 'reading';
   if (/speaking|bai noi|noi tieng anh/.test(normalized)) return 'speaking';
   if (/writing|bai viet|viet cau/.test(normalized)) return 'writing';
   if (/listening|bai nghe|nghe hieu/.test(normalized)) return 'listening';
@@ -5728,9 +5728,13 @@ ScienceStageContract.lessons=[
       }
       return families.flatMap(family=>strong.map(code=>({family,code,exact:false,taskType:count>1?matching.homeworkTaskType_([task.title,task.instructions].join(' ')):''})));
     }
-    function matches(receipt,map){return receipt.family===map.family&&
+    function matches(receipt,map){
+      // Preserve the explicit reading subtype carried by the original Form code.
+      // Only trust originalCode when it exactly expands the canonical Discover code.
+      const typeCode=/^D[12]TIET[1-9][0-9]{0,2}$/.test(key(receipt.code))&&key(receipt.originalCode)===key(receipt.code)+'DOC'?receipt.originalCode:receipt.code;
+      return receipt.family===map.family&&
       (map.exact?key(receipt.code)===key(map.code):matching.sourceKeyMatches_(receipt.code,map.code))&&
-      (!map.taskType||matching.homeworkTaskType_(receipt.code)===map.taskType);}
+      (!map.taskType||matching.homeworkTaskType_(typeCode)===map.taskType);}
     function peersFor(assignment,maps,assignments){
       return assignments.filter(other=>list(other.tasks).some(task=>mappings(other,task,list(other.tasks).filter(t=>t.requiresSubmission!==false).length)
         .some(candidate=>maps.some(map=>candidate.family===map.family&&(matches({family:map.family,code:map.code},candidate)||matches({family:candidate.family,code:candidate.code},map))))));
