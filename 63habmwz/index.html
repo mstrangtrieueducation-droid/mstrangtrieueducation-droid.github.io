@@ -1924,6 +1924,59 @@ html.vn-national-day-2026-root body .assignment.session {
   if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 </script>
+<style id="kids-feedback-layout-v1">
+/* KIDS parent feedback: shared across homework, self-study and Science. */
+.task-feedback { grid-template-columns:minmax(0,.65fr) minmax(0,1.35fr); align-items:start; gap:14px; padding:14px; }
+.feedback-cell { padding:15px 16px; }
+.feedback-cell.teacher-feedback { padding:18px 20px; border:1px solid #d7e2de; border-left:3px solid #648d80; border-radius:12px; background:#fff; box-shadow:none; }
+.feedback-cell.teacher-feedback.is-corrective { border-color:#ead8c9; border-left-color:#b16d46; background:#fffdf9; }
+.teacher-feedback__head { align-items:flex-start; flex-wrap:wrap; gap:8px 12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #e9e8e2; }
+.teacher-feedback__head strong, .teacher-feedback > strong { color:#18384c; font-size:14px; font-weight:700; line-height:1.5; }
+.teacher-feedback .feedback-value { color:#354650; font-size:14px; font-weight:400; line-height:1.75; overflow-wrap:break-word; word-break:normal; }
+.teacher-feedback .feedback-value.is-pending { color:#6d7479; font-weight:400; }
+.teacher-feedback .feedback-attention { padding:5px 9px; background:#fbebde; color:#8d492b; font-size:11px; font-weight:650; line-height:1.5; white-space:normal; }
+.kids-feedback-copy { color:#354650; font-size:14px; font-weight:400; line-height:1.75; overflow-wrap:break-word; word-break:normal; }
+.kids-feedback-copy p { margin:0 0 12px; }
+.kids-feedback-copy p:last-child { margin-bottom:0; }
+.kids-feedback-copy .kids-feedback-label { display:inline; margin:0; color:#233f50; font-size:inherit; font-weight:700; }
+.kids-feedback-list { margin:0 0 12px; padding-left:20px; list-style:disc; }
+.kids-feedback-list:last-child { margin-bottom:0; }
+.kids-feedback-list li { padding-left:3px; margin:0 0 12px; }
+.kids-feedback-list li:last-child { margin-bottom:0; }
+.feedback-retry { margin-top:18px; padding-top:14px; border-top:1px solid #ece4db; }
+.feedback-retry .btn { min-height:42px; padding:10px 16px; border-radius:8px; background:#94573b; font-size:13px; font-weight:650; }
+.teacher-box { background:#fcfcfa; border-color:#dfe5e2; }
+@media(max-width:1000px) {
+  .task-feedback { grid-template-columns:minmax(0,1fr); }
+}
+@media(max-width:600px) {
+  .task-feedback { padding:10px; gap:10px; }
+  .feedback-cell { padding:13px 14px; }
+  .feedback-cell.teacher-feedback { padding:16px; }
+  .teacher-feedback .feedback-value,.kids-feedback-copy { font-size:14px; line-height:1.75; }
+  .teacher-feedback__head { gap:8px; }
+  .feedback-retry .btn { width:100%; justify-content:center; }
+}
+
+</style>
+<script id="kids-feedback-format-v1">
+function kidsFeedbackMarkup(value, escape) {
+  var lines=String(value==null?'':value).replace(/\r\n?/g,'\n').split('\n');
+  var out=[],list=false;
+  function close(){if(list){out.push('</ul>');list=false;}}
+  function inline(line){
+    var match=line.match(/^([^:：\n]{2,64}[:：])(\s+)(.+)$/);
+    return match ? '<strong class="kids-feedback-label">'+escape(match[1])+'</strong>'+escape(match[2]+match[3]) : escape(line);
+  }
+  lines.forEach(function(line){
+    if(!line.trim()){close();return;}
+    var bullet=line.match(/^\s*[•●▪\-*]\s+(.+)$/);
+    if(bullet){if(!list){out.push('<ul class="kids-feedback-list">');list=true;}out.push('<li>'+inline(bullet[1])+'</li>');}
+    else{close();out.push('<p>'+inline(line)+'</p>');}
+  });
+  close();return '<div class="kids-feedback-copy">'+out.join('')+'</div>';
+}
+</script>
 </head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
@@ -3590,7 +3643,7 @@ html.vn-national-day-2026-root body .assignment.session {
           fallbackScoreLabel: taskScoreText
         } : null);
         const submissionText = feedback.contentMissing ? submissionReceiptText_(feedback,0,'') : isRetakeTask && historyHtml ? '' : taskSubmitted ? submissionReceiptText_(feedback,taskAttempts.length,taskSubmittedAt) : submissionMissingText_(feedback);
-        const reviewText = taskComment ? nl2br(taskComment) : taskSubmitted&&!feedback.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
+        const reviewText = taskComment ? kidsFeedbackMarkup(taskComment, escapeHtml) : taskSubmitted&&!feedback.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
         return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${feedback.contentMissing ? 'is-missing' : taskSubmitted || !submissionCan_(feedback) || !(feedback.directReceiptDeadline&&feedback.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
       }).join('');
       const taskComments = tasks.map(task => text(pick(pick(task, ['feedback'], {}) || {}, ['teacherComment'], ''))).filter(Boolean);
@@ -3637,7 +3690,7 @@ html.vn-national-day-2026-root body .assignment.session {
       const homeworkAside = `<aside class="homework-column">
         <div class="homework-head"><div><p class="label">${nonSubmissionWebActivity ? 'Hoạt động' : 'Bài tập'} của ${escapeHtml(childName)}</p><h4>${nonSubmissionWebActivity ? 'Sau tiết học' : 'Bài tập sau tiết học'}</h4></div><div class="homework-head__status">${isNewHomework ? '<span class="new-work-badge">BÀI MỚI</span>' : ''}${parentLessonHasConfirmedNoWebTasksV1_(privateAssignment) ? '' : `<span class="pill ${homeworkMeta.cls}">${escapeHtml(homeworkMeta.label)}</span>`}</div></div>
         <section class="assignment-section web${nonSubmissionWebActivity ? ' optional' : ''}"><div class="assignment-section__head"><span class="assignment-section__number">1</span><strong>${webSectionTitle}</strong>${nonSubmissionWebActivity ? '<span class="pill optional">Không cần nộp</span>' : ''}</div>${taskHtml ? `<div class="homework-list">${taskHtml}</div>` : `<p class="assignment-empty">${emptyWebText}</p>`}</section>
-        ${homeworkComment ? `<div class="teacher-box"><strong>Nhận xét bài tập về nhà</strong><div class="small">${nl2br(homeworkComment)}</div></div>` : ''}
+        ${homeworkComment ? `<div class="teacher-box"><strong>Nhận xét bài tập về nhà</strong><div class="small">${kidsFeedbackMarkup(homeworkComment, escapeHtml)}</div></div>` : ''}
         ${hidesPaperHomework || (nonSubmissionWebActivity && !paperHomework) ? '' : `<section class="assignment-section paper"><div class="assignment-section__head"><span class="assignment-section__number">2</span><strong>Bài tập sách giấy</strong></div>${paperHomework ? `<span class="paper-pages__label">Phần cần hoàn thành</span><div class="paper-pages">${paperHomeworkHtml(paperHomework)}</div>${paperDueHtml}` : (awaitingLessonRelease ? '<p class="assignment-empty">Đang xác minh</p>' : '<p class="assignment-empty">Tiết này không có bài tập sách giấy.</p>')}${paperGrade ? `<div class="paper-result ${paperGradeTone(paperGrade)}"><span>Kiểm tra bài tập sách giấy</span><strong>${escapeHtml(paperGrade)}</strong></div>` : ''}</section>`}
         ${!isRetakeOnlyAssignment && score !== '' && score !== null ? `<div class="paper-box"><strong>Kết quả bài nộp</strong><span class="paper-grade">${escapeHtml(score)}</span></div>` : ''}
         ${due && !nonSubmissionWebActivity ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
@@ -3646,7 +3699,7 @@ html.vn-national-day-2026-root body .assignment.session {
       return `<article class="card lesson-ledger-card" data-pending-target data-assignment-id="${escapeHtml(text(pick(privateAssignment, ['id'], '')))}" data-lesson-key="${escapeHtml(text(pick(privateAssignment, ['lessonKey'], pick(session, ['lessonKey'], ''))))}" data-pending-title="${escapeHtml(matchKey(title))}">
         <header class="lesson-card-head"><div><span class="lesson-program">${escapeHtml(program || 'Chương trình học')}</span><strong class="lesson-number">${escapeHtml(lesson)}</strong><div class="lesson-date">${escapeHtml(fullDateLabel(date))}</div></div><div><span class="lesson-topic-label">Chủ đề</span><h3 class="lesson-title">${escapeHtml(title)}</h3></div></header>
         <div class="lesson-card-body">
-          <section class="lesson-column"><div class="teacher-box"><div class="teacher-box__head"><strong>Nhận xét buổi học</strong>${hasStars ? `<span class="lesson-stars">⭐ ${escapeHtml(Number(starValue))} sao</span>` : ''}</div><div class="small">${lessonComment ? nl2br(lessonComment) : 'Chưa có nhận xét'}</div></div></section>
+          <section class="lesson-column"><div class="teacher-box"><div class="teacher-box__head"><strong>Nhận xét buổi học</strong>${hasStars ? `<span class="lesson-stars">⭐ ${escapeHtml(Number(starValue))} sao</span>` : ''}</div><div class="small">${lessonComment ? kidsFeedbackMarkup(lessonComment, escapeHtml) : 'Chưa có nhận xét'}</div></div></section>
           ${isAssessmentLesson ? assessmentAside : homeworkAside}
         </div>${lessonAssessmentBanner}
       </article>`;
@@ -3850,7 +3903,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
     if(p.name&&p.className)ScienceResume.write(localStorage,p,id.known.code,feedback);
    }
   }catch(_){}
-  return `<section class="homework-item science-stage" data-pending-target data-task-id="${escapeHtml(text(task.id))}" data-science-stage="${automatic?'listen':'talk'}"><div class="homework-row is-single"><div><strong>${escapeHtml(task.title)}</strong></div><div class="homework-actions"><span class="pill ${status.cls}">${escapeHtml(status.label)}</span>${learningUrl?`<a class="mini-action" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${automatic?'Mở bài nghe':'Mở bài / nộp video'}</a>`:''}</div></div><div class="task-feedback${automatic?' is-receipt-only':''}"><div class="feedback-cell"><strong>${automatic?'Điểm bài nghe':'Nhận video'}</strong>${scoreText?`<div class="feedback-score">Kết quả: ${escapeHtml(scoreText)}</div>`:''}<div class="feedback-value${feedback.contentMissing?' is-missing':''}">${escapeHtml(receipt)}</div>${history}${links}</div>${automatic?'':`<div class="feedback-cell teacher-feedback"><strong>${comment?'Cô đã nhận xét':'Nhận xét của giáo viên'}</strong><div class="feedback-value">${comment?nl2br(comment):done?'Chờ GV nhận xét':'Chưa có nhận xét'}</div></div>`}</div></section>`;
+  return `<section class="homework-item science-stage" data-pending-target data-task-id="${escapeHtml(text(task.id))}" data-science-stage="${automatic?'listen':'talk'}"><div class="homework-row is-single"><div><strong>${escapeHtml(task.title)}</strong></div><div class="homework-actions"><span class="pill ${status.cls}">${escapeHtml(status.label)}</span>${learningUrl?`<a class="mini-action" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${automatic?'Mở bài nghe':'Mở bài / nộp video'}</a>`:''}</div></div><div class="task-feedback${automatic?' is-receipt-only':''}"><div class="feedback-cell"><strong>${automatic?'Điểm bài nghe':'Nhận video'}</strong>${scoreText?`<div class="feedback-score">Kết quả: ${escapeHtml(scoreText)}</div>`:''}<div class="feedback-value${feedback.contentMissing?' is-missing':''}">${escapeHtml(receipt)}</div>${history}${links}</div>${automatic?'':`<div class="feedback-cell teacher-feedback"><strong>${comment?'Cô đã nhận xét':'Nhận xét của giáo viên'}</strong><div class="feedback-value">${comment?kidsFeedbackMarkup(comment, escapeHtml):done?'Chờ GV nhận xét':'Chưa có nhận xét'}</div></div>`}</div></section>`;
  }).join('');
  return `<article class="card sky science-practice" data-pending-target data-assignment-id="${escapeHtml(text(item.id))}" data-pending-title="${escapeHtml(matchKey(title))}"><div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice?'<span class="new-work-badge">BÀI MỚI</span>':''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div><h3 class="card-title">${escapeHtml(title)}</h3>${description?`<p class="soft">${nl2br(description)}</p>`:''}${taskHtml}${due?`<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>`:''}</article>`;
 }
@@ -3877,7 +3930,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
         <h3 class="card-title">${escapeHtml(title)}</h3>
         ${description ? `<p class="soft">${nl2br(description)}</p>` : ''}
         ${score !== '' && score !== null ? `<p><strong>Kết quả: ${escapeHtml(score)}</strong></p>` : ''}
-        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${item.contentMissing ? 'is-missing' : submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? nl2br(comment) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
+        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${item.contentMissing ? 'is-missing' : submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? kidsFeedbackMarkup(comment, escapeHtml) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
         ${due ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
         ${actionLinks(item, true, 'Mở bài tự luyện')}
       </article>`;
