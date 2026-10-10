@@ -101,11 +101,12 @@
 (function(root){
   'use strict';
   function start(options){
-    var stopped=false,timer=null,running=false,failures=0,started=options.now(),previous='';
-    function delay(){return Math.min(60000,(options.hidden()?60000:options.now()-started<20000?3000:15000)*Math.pow(2,failures));}
-    function schedule(){if(!stopped){options.clearTimer(timer);timer=options.setTimer(tick,delay());}}
+    var stopped=false,timer=null,running=false,failures=0,previous='';
+    function delay(){return Math.min(120000,30000*Math.pow(2,failures));}
+    function schedule(){options.clearTimer(timer);timer=null;if(!stopped&&!options.hidden())timer=options.setTimer(tick,delay());}
     function tick(){
       if(stopped||!options.current()){stop();return Promise.resolve(false);}
+      if(options.hidden()){options.clearTimer(timer);timer=null;return Promise.resolve(false);}
       if(running)return Promise.resolve(false);
       options.clearTimer(timer);running=true;
       return Promise.resolve().then(function(){return options.read();}).then(function(value){
@@ -121,8 +122,9 @@
       }).catch(function(){failures=Math.min(failures+1,3);return false;}).then(function(result){running=false;schedule();return result;});
     }
     function stop(){stopped=true;options.clearTimer(timer);}
+    function visibilityChanged(){if(options.hidden()){options.clearTimer(timer);timer=null;return Promise.resolve(false);}return tick();}
     function seed(value){previous=JSON.stringify(value);}
-    schedule();return {tick:tick,stop:stop,seed:seed};
+    schedule();return {tick:tick,stop:stop,seed:seed,visibilityChanged:visibilityChanged};
   }
   root.KidsPreparedRefresh={start:start};
   if(typeof module==='object'&&module.exports)module.exports={start:start};
@@ -341,7 +343,7 @@
 
     var client=KidsPreparedSnapshotClient.create({classNumber:17,endpoint:"https://kids-dashboard-clusters-v1.mstrangtrieuenglishhub.workers.dev/v1/parent",token:match[1],sessionSnapshot:true,isCurrent:function(){return location.hash===initialHash&&location.pathname===initialPath;},onRequest:function(){window.__kidsPreviewMetrics.request();},onLoaded:function(){window.__kidsPreviewMetrics.mark('data-ms');window.__kidsPreviewMetrics.capture();}});
     window.__kidsPreparedPreview=client;
-    var refresh=KidsPreparedRefresh.start({now:Date.now,hidden:function(){return document.hidden;},current:function(){return location.hash===initialHash&&location.pathname===initialPath;},setTimer:function(fn,ms){return window.setTimeout(fn,ms);},clearTimer:function(timer){window.clearTimeout(timer);},read:function(){return client.request('bootstrap',true);},changed:function(){return window.__kidsPreparedApply?window.__kidsPreparedApply():false;}});client.request('bootstrap').then(function(value){refresh.seed(value);},function(){});document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh.tick();});window.addEventListener('online',function(){refresh.tick();});window.addEventListener('pagehide',function(event){if(!event.persisted)refresh.stop();});
+    var refresh=KidsPreparedRefresh.start({now:Date.now,hidden:function(){return document.hidden;},current:function(){return location.hash===initialHash&&location.pathname===initialPath;},setTimer:function(fn,ms){return window.setTimeout(fn,ms);},clearTimer:function(timer){window.clearTimeout(timer);},read:function(){return client.request('bootstrap',true);},changed:function(){return window.__kidsPreparedApply?window.__kidsPreparedApply():false;}});client.request('bootstrap').then(function(value){refresh.seed(value);},function(){});document.addEventListener('visibilitychange',function(){refresh.visibilityChanged();});window.addEventListener('online',function(){refresh.tick();});window.addEventListener('pagehide',function(event){if(!event.persisted)refresh.stop();});
     window.addEventListener('hashchange',function(){client.clear();});
   } catch (_) {}
 })();
