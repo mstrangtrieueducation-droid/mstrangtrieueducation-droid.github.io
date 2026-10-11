@@ -189,7 +189,11 @@
     if (!object(value) || value.schema !== 1 || value.classNumber !== options.classNumber || value.className !== className || !alias(value.alias) || typeof value.rosterRevision !== 'string' || !value.rosterRevision) throw failure('INVALID_SCOPE');
     var fallback = Boolean(value.sourceStatus && value.sourceStatus.servingLastConfirmed === true);
     var age = now - (typeof value.capturedAt === 'number' ? value.capturedAt : Date.parse(value.capturedAt));
-    if (!finite(age) || age < -30000 || age > (fallback ? options.fallbackMaxAgeMs || 86400000 : options.maxAgeMs || 1800000)) throw failure('SNAPSHOT_NOT_READY');
+    // KIDS_NIGHT_OPEN_VALIDATION_V1: same age clock as the scheduled backend.
+    var localClock = new Date(now + 25200000), ageClock = now;
+    if(localClock.getUTCHours()<6||localClock.getUTCHours()===6&&localClock.getUTCMinutes()<30) ageClock=Date.UTC(localClock.getUTCFullYear(),localClock.getUTCMonth(),localClock.getUTCDate())-25200000;
+    var expiryAge = fallback ? age : age - Math.max(0,now-ageClock);
+    if (!finite(age) || age < -30000 || expiryAge > (fallback ? options.fallbackMaxAgeMs || 86400000 : options.maxAgeMs || 1800000)) throw failure('SNAPSHOT_NOT_READY');
     var actions = value.actions, target = alias(value.alias), keys = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions'];
     if (!object(actions) || keys.some(function (key) { return !object(actions[key]); })) throw failure('INVALID_SNAPSHOT');
     function scoped(part, name, directory) {
