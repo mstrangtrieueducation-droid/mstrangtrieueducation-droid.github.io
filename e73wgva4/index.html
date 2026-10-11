@@ -1952,7 +1952,8 @@ const ieltsHybridReviews_ = (() => {
     });
     template.content.querySelectorAll('p > strong').forEach(node=>{if(node.textContent.trim().replace(/:$/,'')==='Nhận xét bài tập về nhà')node.textContent='Tình trạng nộp bài:';});
     const key=load(ref);
-    return template.innerHTML+'<section class="hy-result" data-hybrid-result="'+esc(key)+'" aria-label="Nhận xét bài tập về nhà"><p role="status">Đang mở bài chữa của em…</p></section>';
+    const saved=cache.get(key),ready=saved&&saved.identity===identity()&&saved.payload;
+    return template.innerHTML+'<section class="hy-result" data-hybrid-result="'+esc(key)+'"'+(ready?' data-hybrid-state="ready"':'')+' aria-label="Nhận xét bài tập về nhà">'+(ready?resultHtml(saved.payload):'<p role="status">Đang mở bài chữa của em…</p>')+'</section>';
   }
   window.addEventListener('hashchange',clear);window.addEventListener('pagehide',clear);
   return {fragment,clear};
@@ -2080,11 +2081,9 @@ const ieltsWritingReviews_ = (() => {
     const epoch = generation, startedFor = identity;
     lastFetch = Date.now(); refreshing = true;
     if (!hasLoaded) status = 'loading';
-    else {
-      // Expire currentness while checking again. Keep the saved review and its
-      // open tab/annotations intact; only freshness labels and counts change.
-      sourceStates = []; notebookStates = notebookStates.map(item => ({...item,current:false,historical:Boolean(item.overall),receiptStatus:undefined})); updateOpenFreshness(); repaint();
-    }
+    // A background read is not a change to a saved review. Keep the DOM and
+    // last authenticated snapshot until a response supplies new evidence.
+    const before = JSON.stringify([status,reviews,sourceStates,notebookStates,writingPolicyStates]);
     const request = ieltsParentAccess.request('writing', force).then(data => {
       if (epoch !== generation || who() !== startedFor) return;
       if (!data || data.className !== ieltsParentAccess.className || data.parentName !== parentState.name ||
@@ -2108,7 +2107,10 @@ const ieltsWritingReviews_ = (() => {
         else { reviews = []; status = 'error'; }
       }
     })
-      .finally(() => { if (epoch === generation && who() === startedFor) { inFlight = null; repaint(); } });
+      .finally(() => { if (epoch === generation && who() === startedFor) {
+        inFlight = null;
+        if (before !== JSON.stringify([status,reviews,sourceStates,notebookStates,writingPolicyStates])) repaint();
+      } });
     inFlight = request; return request;
   }
   function updateOpenFreshness() {
@@ -2129,6 +2131,8 @@ const ieltsWritingReviews_ = (() => {
   function freshnessHtml(assignmentCode, taskNumber, record) {
     if (isCurrentReview(record)) return '';
     const latest = sourceState(assignmentCode, taskNumber);
+    // A temporary source-read failure does not invalidate an already returned review.
+    if (record && latest.state === 'source_unavailable') return '';
     const messages = {
       current:'Đã có bài chữa cho lần nộp mới nhất. Em đang xem bài chữa được mở trước đó.',
       pending:'Lần nộp mới nhất của Đề ' + taskNumber + ' chưa có bài chữa theo tiêu chí hiện hành.',
