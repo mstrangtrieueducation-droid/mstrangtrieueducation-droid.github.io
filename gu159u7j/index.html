@@ -2006,7 +2006,8 @@ function kidsFeedbackMarkup(value, escape) {
 .kids-feedback-fold > summary { display:block; cursor:pointer; list-style:none; border-radius:6px; }
 .kids-feedback-fold > summary::-webkit-details-marker { display:none; }
 .kids-feedback-fold > summary:focus-visible { outline:2px solid #246281; outline-offset:4px; }
-.kids-feedback-preview { display:block; max-height:calc(7em + 12px); overflow:hidden; color:inherit; font-weight:400; line-height:1.75; overflow-wrap:break-word; }
+.kids-feedback-preview { display:block; max-height:7em; overflow:hidden; color:inherit; font-weight:400; line-height:1.75; overflow-wrap:break-word; }
+.kids-feedback-preview--sections { max-height:calc(7em + 12px); }
 .kids-feedback-toggle { display:inline-flex; align-items:center; margin-top:10px; min-height:36px; padding:4px 0; color:#23546b; font-size:13px; font-weight:650; text-decoration:underline; text-underline-offset:3px; }
 .kids-feedback-toggle--more::after { content:' ↓'; margin-left:6px; }
 .kids-feedback-toggle--less::after { content:' ↑'; margin-left:6px; }
@@ -2025,9 +2026,10 @@ function kidsFeedbackCollapsibleMarkup(value, escape) {
   if(plain.length<=240&&plain.split(/\r?\n/).filter(function(line){return line.trim();}).length<=4)return full;
   var preview=plain.slice(0,240);
   if(preview.length<plain.length){var word=preview.lastIndexOf(' ');if(word>180)preview=preview.slice(0,word);preview+='…';}
+  var previewClass=preview.split(/\r?\n/).filter(function(line){return line.trim();}).length>1?' kids-feedback-preview--sections':'';
   var key=2166136261;
   for(var i=0;i<plain.length;i++){key^=plain.charCodeAt(i);key=Math.imul(key,16777619);}
-  return '<details class="kids-feedback-fold" data-feedback-key="'+(key>>>0).toString(16)+'-'+plain.length+'"><summary><div class="kids-feedback-preview">'+kidsFeedbackMarkup(preview,escape)+'</div><span class="kids-feedback-toggle kids-feedback-toggle--more">Xem thêm</span><span class="kids-feedback-toggle kids-feedback-toggle--less">Thu gọn</span></summary>'+full+'</details>';
+  return '<details class="kids-feedback-fold" data-feedback-key="'+(key>>>0).toString(16)+'-'+plain.length+'"><summary><div class="kids-feedback-preview'+previewClass+'">'+kidsFeedbackMarkup(preview,escape)+'</div><span class="kids-feedback-toggle kids-feedback-toggle--more">Xem thêm</span><span class="kids-feedback-toggle kids-feedback-toggle--less">Thu gọn</span></summary>'+full+'</details>';
 }
 (function(){
   var expanded=new Set();
