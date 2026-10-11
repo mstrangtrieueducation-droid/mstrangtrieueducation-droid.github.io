@@ -2,7 +2,7 @@
 (function(root){
  'use strict';
  root.IeltsPublicSnapshotClient={create(options){
-  const code=(value)=>Object.assign(new Error(value),{code:value});
+  /* DASHBOARD_NIGHT_ACCESS_V1 */const accessClock=function scanClock(at){const local=new Date(at+25200000);return local.getUTCHours()<6||local.getUTCHours()===6&&local.getUTCMinutes()<30?Date.UTC(local.getUTCFullYear(),local.getUTCMonth(),local.getUTCDate())-25200000:at;};const code=(value)=>Object.assign(new Error(value),{code:value});
   let pending=null,cached=null,epoch=0,controller=null;
   const supported=['bootstrap','check','dashboard','profile','refreshDashboard','refreshProfile','submissions'];
   const now=options.now||Date.now;
@@ -21,12 +21,12 @@
     try{
      const response=await (options.fetchImpl||fetch)(url.href,{credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store',signal:active.signal});
      if(response.status===202)throw code('SNAPSHOT_PREPARING');
-     if(!response.ok)throw code([404,410].includes(response.status)?'INVALID_LINK':'SNAPSHOT_NOT_READY');
+     if(!response.ok){let failure={};try{failure=await response.json();}catch{}throw code(response.status===410&&failure.error==="INVALID_LINK"?"INVALID_LINK":"SNAPSHOT_NOT_READY");}
      const value=await response.json();
-     if(generation!==epoch)throw code('INVALID_LINK');
+     if(generation!==epoch)throw code("SESSION_ENDED");
      const age=now()-Date.parse(value.capturedAt),b=value.actions?.bootstrap;
-     const maximumAge=value.sourceStatus?.servingLastConfirmed===true?86400000:1800000;
-     if(![1,2].includes(value.schemaVersion)||value.className!=='IELTS 52'||!Number.isFinite(age)||age<0||age>maximumAge||!b?.name||b.name!==value.name&&value.name!==undefined||!b.rosterRevision||b.dashboard?.className!=='IELTS 52'||b.profile?.student?.name!==b.name)throw code('SNAPSHOT_NOT_READY');
+     const expiryAge=value.sourceStatus?.servingLastConfirmed===true?age:accessClock(now())-Date.parse(value.capturedAt);const maximumAge=value.sourceStatus?.servingLastConfirmed===true?86400000:1800000;
+     if(![1,2].includes(value.schemaVersion)||value.className!=='IELTS 52'||!Number.isFinite(age)||age<0||expiryAge>maximumAge||!b?.name||b.name!==value.name&&value.name!==undefined||!b.rosterRevision||b.dashboard?.className!=='IELTS 52'||b.profile?.student?.name!==b.name)throw code('SNAPSHOT_NOT_READY');
      for(const part of [b.dashboard,b.profile])if(part.parentName!==b.name||part.parentRosterRevision!==b.rosterRevision||part.studentDirectory?.all?.length!==1||part.studentDirectory.all[0].name!==b.name)throw code('INVALID_SNAPSHOT');
      const receipts=value.actions.submissions;
      if(!receipts||receipts.schema!==1||!Array.isArray(receipts.receipts)||!Array.isArray(receipts.coverage))throw code('SNAPSHOT_NOT_READY');
