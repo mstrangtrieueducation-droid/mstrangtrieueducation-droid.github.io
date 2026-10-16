@@ -2149,6 +2149,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
         <button class="refresh" id="refreshBtn" type="button" aria-label="Làm mới dữ liệu">↻ Làm mới</button>
       </div>
     </header>
+    <section id="titi-games" aria-label="Game ôn tập của con" hidden></section>
     <div class="meta-line" id="metaLine" aria-live="polite">Đang kết nối dữ liệu lớp…</div>
     <section class="pending-work-banner" id="pendingWorkBanner" role="status" aria-live="polite" aria-atomic="true" hidden>
       <span class="pending-work-banner__icon" aria-hidden="true">!</span>
@@ -2390,6 +2391,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
       $('#entryGate').hidden = true;
       $('#dashboardShell').hidden = false;
       parentRecordFirstOpen_();
+      window.dispatchEvent(new Event('titi-dashboard-ready'));
     }
 
     function validPublicData(data) {
@@ -2928,6 +2930,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
           ? `Một phần dashboard đang cần tải lại: ${failures.join(', ')}.`
           : '';
       }
+      window.dispatchEvent(new Event('titi-dashboard-ready'));
       return failures.length === 0;
     }
 
@@ -6384,6 +6387,18 @@ function writtenTestDisplayTitle_(item) {
         return {className: CLASS_NAME, rosterName: '', englishName: alias, submissionName: alias};
       }
     });
+    // The game adapter only receives the currently authorized profile and completed class evidence.
+    window.TitiDashboardSnapshot = function () {
+      const identity = kidsLearningPrefill_.getIdentity();
+      const student = new URLSearchParams(location.hash.slice(1)).get('p') || '';
+      if (!identity || !/^[A-Za-z0-9_-]{22}$/.test(student) || !validDashboardData(app.data) ||
+          $('#dashboardShell').hidden || kidsApi.parent.revoked) return null;
+      return { student, name: identity.englishName, className: identity.className,
+        gameUnlocks: app.data.gameUnlocks || {},
+        lessons: sessions().map(session => ({program: session.program,
+          lesson: session, assignment: childAssignmentFor(session) || {}})) };
+    };
+
     function parentLearningUrl_(value, enabled = true) { return kidsLearningPrefill_.decorate(value, enabled); }
 
 
@@ -7069,5 +7084,10 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if (typeof window.__kidsBootLive === 'function') window.__kidsBootLive();
     }
   </script>
+<link rel="stylesheet" href="./titi-games.css?v=classroom-1">
+<script src="/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-1"></script>
+<script src="/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-1"></script>
+<script src="/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-1"></script>
+<script src="./titi-games.js?v=classroom-1"></script>
 </body>
 </html>
