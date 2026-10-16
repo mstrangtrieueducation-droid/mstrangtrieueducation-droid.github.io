@@ -2077,7 +2077,7 @@ function kidsFeedbackCollapsibleMarkup(value, escape) {
 })();
 
 </script>
-</head>
+<script id="kids-ta-dashboard-entry" src="/student-learning/kids-ta-entry/access.4790e016dd80.js" defer></script><script src="/student-learning/kids-ta-entry/dashboard.31623945067f.js" defer></script></head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
     <div class="boot-recovery__card">
@@ -4868,7 +4868,7 @@ function createStudentLearningPrefill(options) {
       const outer = new URL(original);
       if (outer.origin === origin && /^\/(?:student-learning|kids-learning)(?:\/|$)/i.test(outer.pathname)) {
         const lessons = outer.searchParams.getAll('lesson');
-        if (!/^\/(?:student-learning|kids-learning)(?:\/index\.html|\/)?$/.test(outer.pathname) || lessons.length !== 1) return '';
+        if (!/^\/(?:student-learning(?:\/(?:class-entry|fighter9|kids-ta-entry))?|kids-learning)(?:\/index\.html|\/)?$/.test(outer.pathname) || lessons.length !== 1) return '';
         original = safe(lessons[0]);
         if (!target(original)) return '';
       }
@@ -4887,7 +4887,7 @@ function createStudentLearningPrefill(options) {
         ['mtt_name', 'mtt_class', 'mtt_english'].forEach(key => destination.searchParams.delete(key));
         return destination.href;
       }
-      const viewer = new URL('/student-learning/', origin);
+      const viewer=new URL(destination.origin===origin?"/student-learning/kids-ta-entry/":"/student-learning/",origin);
       viewer.searchParams.set('lesson', original);
       viewer.searchParams.set('mtt_name', submissionName);
       viewer.searchParams.set('mtt_class', className);
