@@ -4837,7 +4837,15 @@ function testCard(item) {
 /* KIDS_SEASON_COMPETITION_V1 */
 function renderKidsSeasonCompetitionV1_(season) {
   const panel=$('#competitionPanel'),escape=escapeHtml,fmt=n=>typeof n==='number'?n.toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1}):'—';
-  const self=season.self||{},missing=arr(self.missing),podium=arr(season.podium),period=season.period;
+  const self=season.self||{},podium=arr(season.podium),period=season.period;
+  // A live receipt may arrive before the next class-wide ranking snapshot.
+  // Keep ranking consistent while removing that received task from this CTA.
+  const missing=arr(self.missing).filter(m=>{
+    const assignment=arr(app.child&&app.child.assignments).find(a=>a.id===m.assignmentId);
+    if(!assignment)return true;
+    const task=arr(assignment.tasks).find(t=>t.id===m.taskId),feedback=task&&task.feedback;
+    return !(feedback&&(feedback.submitted===true||feedback.receiptReceived===true));
+  });
   const today=new Date(Date.now()+7*3600000),days=Math.max(0,Math.round((Date.UTC(2026,9,31)-Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate()))/86400000));
   const countdown=Date.now()>=period.endMs?'Đợt tháng 9 & 10 đã khép lại':days<=14?`⏳ Chặng nước rút · Còn ${days} ngày đến ngày chốt 31/10`:`⏳ Còn ${days} ngày đến ngày chốt 31/10`;
   const labels={tests:'Kiểm tra giấy',paper:'Bài tập giấy',practice:'Bài web & tự luyện',timeliness:'Đúng hạn'};
@@ -4848,7 +4856,7 @@ function renderKidsSeasonCompetitionV1_(season) {
   const rank=self.rank?`<span class="season-rank">Hạng <b>${String(self.rank).padStart(2,'0')}</b> / ${season.total} bạn</span>`:'<span class="season-rank">Chưa đủ điểm · Chưa xếp hạng</span>';
   const gap=self.rank&&self.rank<=3?'🌟 Con đang ở TOP 3. Tiếp tục giữ vững phong độ nhé!':self.gapToTop3!==null&&self.gapToTop3!==undefined?`🎯 ${escape(self.alias)} còn cách mốc điểm TOP 3 ${fmt(self.gapToTop3)} điểm.`:'Mỗi bài con hoàn thành là một bước tiến mới.';
   panel.innerHTML=`<header class="season-banner"><p class="season-eyebrow">Đấu trường thi đua · ${escape(app.data.className||'')}</p><h2>ĐỢT THI ĐUA: THÁNG 9 & 10</h2><p class="season-motto">HỌC HẾT SỨC, CHƠI HẾT MÌNH</p><span class="season-countdown">${countdown}</span></header>
-  <h2 class="season-heading">Bục vinh danh</h2>${podiumHTML?`<div class="season-podium">${podiumHTML}</div>`:'<div class="empty">Bục vinh danh sẽ mở khi có điểm trong đợt.</div>'}
+  <h2 class="season-heading">Bục vinh danh</h2>${podiumHTML?`<div class="season-podium">${podiumHTML}</div>`:'<div class="empty">Chưa có bạn đủ cả 4 thành phần để xếp hạng trong đợt.</div>'}
   <section class="season-self" aria-label="Vị trí của con"><div class="season-self-head"><div><h3>Vị trí của con · ${escape(self.alias||'')}</h3><span class="season-own-score">${fmt(self.score)} / 100 điểm</span></div>${rank}</div><p>${gap}${missing.length?` Con còn <strong>${missing.length} bài cần hoàn thành</strong> trong đợt. Cùng hoàn thành từng bài để tiến bộ nhé!`:' Con đã hoàn thành các bài đã được ghi nhận trong đợt. Tiếp tục cố gắng nhé!'}</p>
   ${missing.length?`<details class="season-missing"><summary>Làm bài ngay để tích điểm ↓</summary><ul>${missing.map((m,i)=>`<li><button type="button" data-season-work="${i}">${escape(m.title)} <span aria-hidden="true">→</span></button></li>`).join('')}</ul></details>`:''}</section>
   <h2 class="season-heading">Nỗ lực nào cũng đáng ghi nhận</h2><div class="season-awards"><article class="season-award"><h4>🚀 Ngôi sao tiến bộ</h4><p>${season.progress.length?season.progress.map(s=>`<strong>${escape(s.alias)}</strong> · tăng ${s.gain} bậc`).join('<br>'):'Cùng chờ những bước tiến mới trong đợt thi đua này nhé!'}</p></article><article class="season-award"><h4>⏰ Kỷ luật thép</h4><p>${season.discipline.length?`<strong>${season.discipline.map(escape).join(' · ')}</strong><br>100% bài đã nộp đúng hạn.`:'Cùng rèn thói quen nộp bài đúng hạn mỗi ngày nhé!'}</p></article></div>
