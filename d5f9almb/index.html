@@ -277,7 +277,7 @@
       var bytes=new Uint8Array(options.token.length);for(var i=0;i<bytes.length;i++)bytes[i]=options.token.charCodeAt(i);
       return subtle.digest('SHA-256',bytes);
     }).then(function(bytes){var hex='',a=new Uint8Array(bytes);for(var i=0;i<a.length;i++)hex+=('0'+a[i].toString(16)).slice(-2);return options.endpoint.replace(/\/v1\/parent$/,'/data/'+options.classNumber+'/'+hex+'.json');});
-    function load(force) {
+    function load(force, live) {
       if (pending) return pending;
       // A prepared opening is one immutable read session. Existing background
       // consumers share it; explicit refresh/reopen may request a new package.
@@ -292,7 +292,7 @@
         if (active) init.signal = active.signal;
         Promise.resolve().then(function () {
           if (options.onRequest) { try { options.onRequest(); } catch (_) {} }
-          return endpoint.then(function(url){return KidsClusterFallback.fetch(url, init, options.token, options.classNumber, options.fetchImpl || root.fetch);});
+          return endpoint.then(function(url){return live?(options.fetchImpl || root.fetch)(url.replace('/data/','/live-data/'),init):KidsClusterFallback.fetch(url, init, options.token, options.classNumber, options.fetchImpl || root.fetch);});
         }).then(function (response) {
           if (!current(epoch)) throw failure('SESSION_ENDED');
           if (!response.ok) throw failure('SNAPSHOT_NOT_READY');
@@ -332,7 +332,8 @@
         clear(); return {ok: true, status: 200, json: function () { return Promise.resolve({ok: false, revoked: true, code: 'PARENT_LINK_REVOKED'}); }};
       });
     }
-    return {request: request, response: response, clear: clear,
+    return {liveConfig:{endpoint:options.endpoint,classNumber:options.classNumber},request: request, response: response, clear: clear,
+      requestLive: function(){var active=pending;return Promise.resolve(active).catch(function(){}).then(function(){return load(true,true);}).then(function(value){return copy(value.actions.bootstrap);});},
       hasSnapshot: function () { return Boolean(cached && (!options.isCurrent || options.isCurrent() === true)); },
       sourceStatus: function () {
         if (!cached || options.isCurrent && options.isCurrent() !== true) return {};
@@ -391,6 +392,47 @@
 
     var client=KidsPreparedSnapshotClient.create({classNumber:37,endpoint:"https://kids-dashboard-cluster-three-v1.trieuthivantrangk45-kids.workers.dev/v1/parent",token:match[1],sessionSnapshot:true,isCurrent:function(){return location.hash===initialHash&&location.pathname===initialPath;},onRequest:function(){window.__kidsPreviewMetrics.request();},onLoaded:function(){window.__kidsPreviewMetrics.mark('data-ms');window.__kidsPreviewMetrics.capture();}});
     window.__kidsPreparedPreview=client;
+/* KIDS_RECEIPT_PUSH_V1: transport only; native renderers own all UI. */
+(function(root){'use strict';
+ function start(options){
+  if(typeof root.WebSocket!=='function')return;
+  var socket=null,timer=null,stopped=false,dirty=false,busy=false,attempt=0,retries=0,epoch=0;
+  function schedule(){clearTimeout(timer);if(!stopped&&!document.hidden)timer=setTimeout(connect,Math.min(30000,1000*Math.pow(2,Math.min(attempt++,5))));}
+  function update(){
+   if(stopped||!options.current()||document.hidden||busy||!dirty)return Promise.resolve(false);
+   busy=true;dirty=false;var run=epoch;
+   return Promise.resolve().then(options.update).then(function(){if(run!==epoch)return;retries=0;document.documentElement.dataset.receiptPushPaintedAt=String(Date.now());},function(){if(run===epoch){dirty=true;retries++;}}).then(function(){busy=false;if(dirty&&!stopped&&run===epoch&&retries<3)setTimeout(update,1000);});
+  }
+  function connect(){
+   if(stopped||document.hidden||!options.current()||socket&&socket.readyState<2)return;
+   clearTimeout(timer);var ws;try{ws=new root.WebSocket(options.url);socket=ws;}catch{schedule();return;}
+   ws.onmessage=function(event){if(socket!==ws||stopped)return;var v;try{v=JSON.parse(event.data);}catch{return;}
+    if(v.type==='ready'){attempt=0;document.documentElement.dataset.receiptPush='connected';dirty=true;retries=0;update();}
+    else if(v.type==='update'&&Number.isSafeInteger(v.at)){document.documentElement.dataset.receiptPushNotifiedAt=String(Date.now());dirty=true;retries=0;update();}
+   };
+   ws.onclose=function(){if(socket!==ws)return;socket=null;document.documentElement.dataset.receiptPush='reconnecting';schedule();};
+   ws.onerror=function(){try{ws.close();}catch{}};
+  }
+  function suspend(){clearTimeout(timer);var ws=socket;socket=null;if(ws)try{ws.close();}catch{}}
+  document.addEventListener('visibilitychange',function(){if(document.hidden)suspend();else{dirty=true;retries=0;update();connect();}});
+  root.addEventListener('online',function(){connect();dirty=true;retries=0;update();});
+  root.addEventListener('pagehide',function(){stopped=true;epoch++;suspend();});
+  root.addEventListener('pageshow',function(e){if(e.persisted){stopped=false;dirty=true;retries=0;connect();update();}});
+  root.addEventListener('hashchange',function(){if(!options.current()){stopped=true;epoch++;suspend();}});
+  connect();return {notify:function(){dirty=true;retries=0;return update();},stop:function(){stopped=true;epoch++;suspend();}};
+ }
+ root.KidsReceiptPush={start:start};if(typeof module==='object'&&module.exports)module.exports={start:start};
+})(typeof window!=='undefined'?window:globalThis);
+
+    Promise.resolve(client.request('bootstrap')).then(function(){
+      return crypto.subtle.digest('SHA-256',new TextEncoder().encode(match[1]));
+    }).then(function(bytes){
+      var hash=Array.from(new Uint8Array(bytes),function(x){return x.toString(16).padStart(2,'0');}).join('');
+      var config=client.liveConfig;
+      if(!config)return;
+      KidsReceiptPush.start({url:config.endpoint.replace(/^https:/,'wss:').replace('/v1/parent','/live/'+config.classNumber+'/'+hash),current:function(){return location.hash===initialHash&&location.pathname===initialPath;},update:function(){return client.requestLive().then(function(){if(!window.__kidsPreparedApply)throw Error('RENDER_NOT_READY');return window.__kidsPreparedApply();});}});
+    }).catch(function(){});
+
     var refresh=KidsPreparedRefresh.start({now:Date.now,hidden:function(){return document.hidden;},current:function(){return location.hash===initialHash&&location.pathname===initialPath;},setTimer:function(fn,ms){return window.setTimeout(fn,ms);},clearTimer:function(timer){window.clearTimeout(timer);},read:function(){return client.request('bootstrap',true);},needsApply:function(){return window.__kidsPreparedNeedsApply?window.__kidsPreparedNeedsApply():false;},changed:function(){return window.__kidsPreparedApply?window.__kidsPreparedApply():false;}});client.request('bootstrap').then(function(value){refresh.seed(value);},function(){});document.addEventListener('visibilitychange',function(){refresh.visibilityChanged();});window.addEventListener('online',function(){refresh.tick();});window.addEventListener('pagehide',function(event){if(!event.persisted)refresh.stop();});
     window.addEventListener('hashchange',function(){client.clear();});
   } catch (_) {}
