@@ -2146,28 +2146,28 @@ function kidsFeedbackDetailMarkup(value,escape) {
 /* Self-practice presentation only. Receipt, reminders and Game remain native. */
 #practicePanel>.grid.two,#practicePanel .submission-history-window__cards{grid-template-columns:minmax(0,1fr);gap:18px}
 #practicePanel .practice-card{padding:0;border:1px solid #dce5e1;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(18,49,64,.035)}
-#practicePanel .practice-card__heading{padding:23px 26px 19px;border-left:4px solid #8ba99d}
+#practicePanel .practice-card__heading{padding:23px 26px 19px;border-left:4px solid #8ba99d;background:linear-gradient(100deg,#f3f7fb,#fff 72%)}
 #practicePanel .practice-card__heading>.row{align-items:flex-start;gap:12px;margin-bottom:9px;flex-wrap:wrap}
-#practicePanel .practice-card__heading .label{font-size:11px;letter-spacing:.08em;margin:0;line-height:1.7}
-#practicePanel .practice-card__heading .card-title{font-size:20px;line-height:1.45;margin:0;color:#102e4d;overflow-wrap:anywhere}
+#practicePanel .practice-card__heading .label{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eaf3ff;color:#1557b0;font-size:11px;font-weight:850;letter-spacing:.04em;margin:0;line-height:1.7}
+#practicePanel .practice-card__heading .card-title{font:800 clamp(20px,3vw,25px)/1.32 "Be Vietnam Pro",sans-serif;margin:0;color:var(--navy);overflow-wrap:anywhere}
 #practicePanel .practice-card__heading>.soft{font-size:14px;line-height:1.6;margin:8px 0 0;color:#6c7b88}
 #practicePanel .practice-card__heading .homework-head__status{gap:8px;max-width:100%;flex-wrap:wrap}
 #practicePanel .practice-card__heading .pill{white-space:normal;line-height:1.45}
 #practicePanel .practice-card>.task-feedback{padding:20px 26px;grid-template-columns:minmax(220px,.8fr) minmax(0,2fr);gap:20px;background:#f7f9f8;border-top:1px solid #e5ebe8}
 #practicePanel .practice-card>.task-feedback>.feedback-cell:first-child{background:transparent;border:0;padding:4px 0}
-#practicePanel .practice-card .feedback-cell>strong{font-size:13px;margin-bottom:8px}
+#practicePanel .practice-card .feedback-cell>strong,#practicePanel .practice-card .teacher-feedback__head strong{font:800 16px/1.4 "Be Vietnam Pro",sans-serif;color:var(--navy);margin-bottom:8px}
 #practicePanel .practice-card .feedback-value{font-size:14px;line-height:1.7;overflow-wrap:anywhere}
 #practicePanel .practice-card .teacher-feedback{padding:18px 20px}
 #practicePanel .practice-card__footer{display:flex;align-items:center;justify-content:flex-start;gap:24px;flex-wrap:wrap;padding:16px 26px;border-top:1px solid #e5ebe8;background:#fff}
-#practicePanel .practice-card__footer .due-highlight{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;padding:0;margin:0;border:0;background:transparent;box-shadow:none;color:#667586;flex-wrap:wrap}
-#practicePanel .practice-card__footer .due-highlight span{font-size:11px;letter-spacing:.025em}
+#practicePanel .practice-card__footer .due-highlight{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;padding:10px 14px;margin:0;border:1px solid #eadbb7;background:#fffaf0;border-radius:10px;box-shadow:none;color:#805820;flex-wrap:wrap}
+#practicePanel .practice-card__footer .due-highlight span{font-size:12px;font-weight:800;letter-spacing:.025em}
 #practicePanel .practice-card__footer .due-highlight strong{font-size:14px;color:#9a6429}
 #practicePanel .practice-card__footer .actions{order:-1;margin:0;gap:10px;display:flex;flex-wrap:wrap}
 #practicePanel .practice-card .btn{min-height:44px;align-items:center;justify-content:center;display:inline-flex}
 #practicePanel .practice-card.science-practice>.science-stage{margin:0 26px 16px;border-radius:12px;overflow:hidden}
 @media(max-width:700px){
  #practicePanel .practice-card__heading{padding:18px 16px 16px}
- #practicePanel .practice-card__heading .card-title{font-size:17px;line-height:1.5}
+ #practicePanel .practice-card__heading .card-title{font-size:20px;line-height:1.4}
  #practicePanel .practice-card__heading>.row{gap:8px;flex-direction:column}
  #practicePanel .practice-card>.task-feedback{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}
  #practicePanel .practice-card .teacher-feedback{padding:16px}
@@ -2176,6 +2176,55 @@ function kidsFeedbackDetailMarkup(value,escape) {
  #practicePanel .practice-card__footer .actions>.btn{flex:1 1 auto}
  #practicePanel .practice-card.science-practice>.science-stage{margin:0 16px 16px}
 }
+</style>
+<style id="kids-season-competition-v1">
+#competitionPanel .season-banner{padding:28px 32px;border-radius:22px;background:linear-gradient(115deg,#102e4d,#225c72);color:#fff;position:relative;overflow:hidden}
+#competitionPanel .season-banner:after{content:'✦';position:absolute;right:26px;top:10px;font-size:130px;line-height:1;color:#ffffff12;pointer-events:none}
+#competitionPanel .season-eyebrow{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin:0 0 12px}
+#competitionPanel .season-banner h2{font:850 clamp(24px,4vw,34px)/1.25 'Be Vietnam Pro',sans-serif;color:#fff;margin:0 0 10px}
+#competitionPanel .season-banner .season-motto{font-size:16px;margin:0 0 18px;color:#e1eff3;font-weight:600}
+#competitionPanel .season-countdown{display:inline-flex;padding:9px 14px;border-radius:999px;background:#ffe9a8;color:#583b0d;font-size:13px;font-weight:750;line-height:1.5;position:relative;z-index:1}
+#competitionPanel .season-heading{font:800 21px/1.4 'Be Vietnam Pro',sans-serif;margin:30px 0 18px;color:var(--navy)}
+#competitionPanel .season-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:end;padding-top:12px}
+#competitionPanel .season-winner{background:#fff;border:1px solid #cfdce5;border-top:5px solid #a7b8c7;border-radius:18px;overflow:hidden;text-align:center;padding:23px 22px 20px;min-width:0;box-shadow:0 7px 22px #15374a08}
+#competitionPanel .season-winner[data-place='1']{border-color:#eac765;border-top-color:#d8a72d;background:linear-gradient(#fff9e7,#fff 65%);padding-top:34px;padding-bottom:30px}
+#competitionPanel .season-winner[data-place='3']{border-color:#dfc3b1;border-top-color:#be8256;padding-top:17px;padding-bottom:15px}
+#competitionPanel .season-medal{font-size:38px;line-height:1.3;display:block;margin-bottom:9px}
+#competitionPanel .season-winner[data-place='1'] .season-medal{font-size:48px}
+#competitionPanel .season-place{color:#697887;font-size:12px;font-weight:800;letter-spacing:.04em;margin:0 0 6px}
+#competitionPanel .season-name{font:850 24px/1.35 'Be Vietnam Pro',sans-serif;margin:0 0 8px;color:var(--navy);overflow-wrap:anywhere}
+#competitionPanel .season-score{font-size:29px;font-weight:850;color:#123b57;margin:0 0 16px}
+#competitionPanel .season-score small{font-size:13px;font-weight:500;color:#6a7b89}
+#competitionPanel .season-metrics{margin:0;display:grid;gap:7px;text-align:left;padding-top:14px;border-top:1px solid #e3e8e9}
+#competitionPanel .season-metrics>div{display:flex;justify-content:space-between;gap:8px;font-size:12px;line-height:1.5}
+#competitionPanel .season-metrics dt{color:#667783}#competitionPanel .season-metrics dd{margin:0;font-weight:750;color:#173951}
+#competitionPanel .season-self{margin-top:24px;padding:25px 28px;border:1px solid #bdcfdc;border-left:5px solid #29718c;background:linear-gradient(110deg,#edf7fa,#fff);border-radius:18px}
+#competitionPanel .season-self-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+#competitionPanel .season-self h3{font:800 21px/1.35 'Be Vietnam Pro',sans-serif;color:var(--navy);margin:0 0 7px}
+#competitionPanel .season-self p{margin:8px 0;line-height:1.8;color:#36566b}
+#competitionPanel .season-rank{display:inline-flex;padding:10px 15px;border-radius:12px;background:#fff;color:#174e68;border:1px solid #c7dee7;font-weight:800;gap:6px;align-items:baseline}
+#competitionPanel .season-rank b{font-size:27px}
+#competitionPanel .season-own-score{font-size:20px;font-weight:800;color:#123b57}
+#competitionPanel .season-missing{margin-top:16px}#competitionPanel .season-missing summary{display:inline-flex;padding:12px 18px;background:var(--navy);color:#fff;border-radius:11px;font-size:14px;font-weight:750;cursor:pointer;list-style:none}
+#competitionPanel .season-missing ul{padding:0;list-style:none;display:grid;gap:8px;margin:15px 0 0}
+#competitionPanel .season-missing button{display:block;width:100%;text-align:left;white-space:normal;border:1px solid #d4e3e8;border-radius:10px;background:#fff;color:var(--navy);font:650 14px/1.5 'Be Vietnam Pro',sans-serif;padding:12px 15px;cursor:pointer}
+#competitionPanel .season-awards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:0 0 24px}
+#competitionPanel .season-award{padding:20px 23px;background:#fff;border:1px solid #dde7e2;border-radius:16px}
+#competitionPanel .season-award h4{margin:0 0 10px;font:800 16px/1.5 'Be Vietnam Pro',sans-serif;color:var(--navy)}
+#competitionPanel .season-award p{margin:0;font-size:14px;line-height:1.7;color:#5a7180}
+#competitionPanel .season-criteria{border-top:1px solid #dbe4df;padding:20px 0;color:#627583;font-size:12px;line-height:1.8}
+#competitionPanel .season-criteria>div{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+#competitionPanel .season-criteria span{padding:5px 10px;border:1px solid #dae5e0;border-radius:8px;background:#fff;color:#284a60;font-weight:750}
+#competitionPanel .season-criteria p{margin:5px 0}
+#competitionPanel .season-missing summary:focus-visible,#competitionPanel .season-missing button:focus-visible{outline:3px solid #397cc1;outline-offset:3px}
+@media(max-width:700px){
+ #competitionPanel .season-banner{padding:24px 20px}#competitionPanel .season-podium{gap:8px}
+ #competitionPanel .season-winner{padding:17px 8px 15px;border-radius:12px}#competitionPanel .season-winner[data-place='1']{padding:25px 8px 23px}#competitionPanel .season-winner[data-place='3']{padding:12px 8px}
+ #competitionPanel .season-name{font-size:17px}#competitionPanel .season-score{font-size:23px}#competitionPanel .season-score small{display:block;font-size:11px}#competitionPanel .season-place{font-size:10px}
+ #competitionPanel .season-metrics>div{display:block;font-size:10px}#competitionPanel .season-metrics dd{font-size:12px}#competitionPanel .season-medal{font-size:30px}#competitionPanel .season-winner[data-place='1'] .season-medal{font-size:38px}
+ #competitionPanel .season-self{padding:21px 18px}#competitionPanel .season-awards{grid-template-columns:1fr}#competitionPanel .season-missing{padding-right:65px}
+}
+
 </style>
 </head>
 <body>
@@ -4785,7 +4834,33 @@ function testCard(item) {
 
     function competitionData() { return pick(app.data || {}, ['competition', 'classCompetition', 'leaderboard'], {}) || {}; }
 
+/* KIDS_SEASON_COMPETITION_V1 */
+function renderKidsSeasonCompetitionV1_(season) {
+  const panel=$('#competitionPanel'),escape=escapeHtml,fmt=n=>typeof n==='number'?n.toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1}):'—';
+  const self=season.self||{},missing=arr(self.missing),podium=arr(season.podium),period=season.period;
+  const today=new Date(Date.now()+7*3600000),days=Math.max(0,Math.round((Date.UTC(2026,9,31)-Date.UTC(today.getUTCFullYear(),today.getUTCMonth(),today.getUTCDate()))/86400000));
+  const countdown=Date.now()>=period.endMs?'Đợt tháng 9 & 10 đã khép lại':days<=14?`⏳ Chặng nước rút · Còn ${days} ngày đến ngày chốt 31/10`:`⏳ Còn ${days} ngày đến ngày chốt 31/10`;
+  const labels={tests:'Kiểm tra giấy',paper:'Bài tập giấy',practice:'Bài web & tự luyện',timeliness:'Đúng hạn'};
+  const podiumHTML=[podium[1],podium[0],podium[2]].filter(Boolean).map((s)=>{
+    const place=podium.indexOf(s)+1,metric=s.metrics||{};
+    return `<article class="season-winner" data-place="${place}"><span class="season-medal" aria-hidden="true">${['🏆','🥈','🥉'][place-1]}</span><p class="season-place">HẠNG ${s.rank} · ${s.rank===1?'QUÁN QUÂN':s.rank===2?'Á QUÂN':'VINH DANH'}</p><h3 class="season-name">${escape(s.alias)}</h3><p class="season-score">${fmt(s.score)} <small>/ 100 điểm</small></p><dl class="season-metrics">${Object.keys(labels).map(k=>`<div><dt>${labels[k]}</dt><dd>${fmt(metric[k])}${metric[k]!==null?'%':''}</dd></div>`).join('')}</dl></article>`;
+  }).join('');
+  const rank=self.rank?`<span class="season-rank">Hạng <b>${String(self.rank).padStart(2,'0')}</b> / ${season.total} bạn</span>`:'<span class="season-rank">Chưa đủ điểm · Chưa xếp hạng</span>';
+  const gap=self.rank&&self.rank<=3?'🌟 Con đang ở TOP 3. Tiếp tục giữ vững phong độ nhé!':self.gapToTop3!==null&&self.gapToTop3!==undefined?`🎯 ${escape(self.alias)} còn cách mốc điểm TOP 3 ${fmt(self.gapToTop3)} điểm.`:'Mỗi bài con hoàn thành là một bước tiến mới.';
+  panel.innerHTML=`<header class="season-banner"><p class="season-eyebrow">Đấu trường thi đua · ${escape(app.data.className||'')}</p><h2>ĐỢT THI ĐUA: THÁNG 9 & 10</h2><p class="season-motto">HỌC HẾT SỨC, CHƠI HẾT MÌNH</p><span class="season-countdown">${countdown}</span></header>
+  <h2 class="season-heading">Bục vinh danh</h2>${podiumHTML?`<div class="season-podium">${podiumHTML}</div>`:'<div class="empty">Bục vinh danh sẽ mở khi có điểm trong đợt.</div>'}
+  <section class="season-self" aria-label="Vị trí của con"><div class="season-self-head"><div><h3>Vị trí của con · ${escape(self.alias||'')}</h3><span class="season-own-score">${fmt(self.score)} / 100 điểm</span></div>${rank}</div><p>${gap}${missing.length?` Con còn <strong>${missing.length} bài cần hoàn thành</strong> trong đợt. Cùng hoàn thành từng bài để tiến bộ nhé!`:' Con đã hoàn thành các bài đã được ghi nhận trong đợt. Tiếp tục cố gắng nhé!'}</p>
+  ${missing.length?`<details class="season-missing"><summary>Làm bài ngay để tích điểm ↓</summary><ul>${missing.map((m,i)=>`<li><button type="button" data-season-work="${i}">${escape(m.title)} <span aria-hidden="true">→</span></button></li>`).join('')}</ul></details>`:''}</section>
+  <h2 class="season-heading">Nỗ lực nào cũng đáng ghi nhận</h2><div class="season-awards"><article class="season-award"><h4>🚀 Ngôi sao tiến bộ</h4><p>${season.progress.length?season.progress.map(s=>`<strong>${escape(s.alias)}</strong> · tăng ${s.gain} bậc`).join('<br>'):'Cùng chờ những bước tiến mới trong đợt thi đua này nhé!'}</p></article><article class="season-award"><h4>⏰ Kỷ luật thép</h4><p>${season.discipline.length?`<strong>${season.discipline.map(escape).join(' · ')}</strong><br>100% bài đã nộp đúng hạn.`:'Cùng rèn thói quen nộp bài đúng hạn mỗi ngày nhé!'}</p></article></div>
+  <footer class="season-criteria"><div><span>35% Kiểm tra</span><span>30% Bài giấy</span><span>25% Tự luyện web</span><span>10% Đúng hạn</span></div><p>Tính bài có ngày giao hoặc hạn nộp thuộc 01/09–31/10/2026. Bài giấy: A+ = 100 · A = 90 · B = 65 · F = 0.</p><p>Chỉ xếp hạng khi có đủ cả 4 thành phần. Phần chưa có điểm không được coi là 0; điểm 0 đã chấm vẫn được tính. Mỗi bài nộp được tính một lần; đúng hạn tính theo lần nộp hợp lệ đầu tiên.</p><p>Điểm đang cập nhật trong đợt · ${season.rankedCount}/${season.total} bạn đủ điểm xếp hạng.${season.progress.length?'':' Danh hiệu tiến bộ sẽ tính từ mốc xếp hạng đầu tiên của đợt.'}</p></footer>`;
+  panel.querySelectorAll('[data-season-work]').forEach(button=>button.addEventListener('click',()=>{
+    const reminder=missing[Number(button.dataset.seasonWork)],tab=reminder.targetTab==='practice'?'practice':'lessons';switchTab(tab);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{const target=pendingWorkTarget_($('#'+(tab==='practice'?'practicePanel':'lessonsPanel')),reminder);if(target){target.setAttribute('tabindex','-1');target.focus({preventScroll:true});target.scrollIntoView({behavior:'smooth',block:'center'});}}));
+  }));
+}
+
     function renderCompetition() {
+      if(validDashboardData(app.data)&&competitionData().schema===2){renderKidsSeasonCompetitionV1_(competitionData());return;}
       if (!validDashboardData(app.data)) {
         $('#competitionPanel').innerHTML = `<div class="hero competition-intro"><div class="hero-copy"><span class="kicker">Cùng nhau tiến bộ</span><h2>Ghi nhận nổi bật</h2></div></div><div class="empty">Đang tải dữ liệu thi đua của lớp…</div>`;
         return;
