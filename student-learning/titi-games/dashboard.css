@@ -1,4 +1,4 @@
-/* Scoped styles: a small launcher, with no extra dashboard card or font load. */
+/* Scoped launcher and existing course panel. No extra font or runtime. */
 #titi-games[hidden],#titi-games [hidden]{display:none!important}
 #titi-games{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + var(--titi-dock-lift,0px));z-index:90;width:100px;margin:0;padding:0;border:0;background:none;box-shadow:none;color:#20365c;font-family:inherit;line-height:1.5;isolation:isolate}
 #titi-games *{box-sizing:border-box}
@@ -42,32 +42,34 @@
 @media(max-width:520px){#titi-games{right:max(12px,env(safe-area-inset-right));bottom:calc(max(12px,env(safe-area-inset-bottom)) + var(--titi-dock-lift,0px));width:88px}#titi-games .titi-games-launcher{width:88px;min-height:94px}#titi-games .titi-orb{width:88px;height:78px}#titi-games .titi-games-launcher>span{font-size:10px}#titi-games .titi-games-panel{bottom:108px;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 140px - var(--titi-dock-lift,0px))}}
 @media(prefers-reduced-motion:reduce){#titi-games *,#titi-games *:before,#titi-games *:after{animation:none!important;transition:none!important}}
 @media(min-width:600px) and (max-height:520px){#titi-games .titi-games-panel{right:116px;bottom:0;max-height:calc(100dvh - 36px - var(--titi-dock-lift,0px))}#titi-games .titi-games-head{padding:14px 18px 10px}#titi-games .titi-games-head h2{font-size:18px;margin:5px 0}#titi-games .titi-games-head p{font-size:12px}#titi-games .titi-games-grid{padding:12px 18px}#titi-games .titi-game-course h3{font-size:15px;margin:4px 0 8px}#titi-games .titi-games-next{margin:9px 0}#titi-games .titi-games-footer{margin:0 18px 12px;padding-top:9px}}
-/* Arcade portal: reuses the established Titi artwork from the game. */
-#titi-games{width:134px}
-#titi-games .titi-games-launcher{width:134px;min-height:154px}
+/* Warm horizontal welcome — existing Titi sprite, CSS-only motion. */
+#titi-games{width:320px;max-width:calc(100vw - 36px)}
+#titi-games .titi-games-launcher{position:relative;display:block;width:100%;height:154px;min-height:0;padding:0;overflow:hidden;border:2px solid #ffe9a0;border-radius:25px;background:radial-gradient(ellipse at 27% 30%,#fffbd5 0,#ffe987 36%,transparent 64%),linear-gradient(120deg,#ffd758,#ffad38);box-shadow:inset 0 2px 0 #fff9df,0 5px 0 #d18425,0 12px 28px #92551425;color:#493014;text-align:left}
+#titi-games .titi-games-launcher:hover{transform:translateY(-3px);box-shadow:inset 0 2px 0 #fff9df,0 5px 0 #d18425,0 15px 32px #92551430}
 #titi-games .titi-games-launcher>*{pointer-events:none}
-#titi-games .titi-games-launcher>span:last-child{background:linear-gradient(#ffe77b,#ffbf39);border:2px solid #fff1a6;border-bottom:5px solid #aa5e1e;color:#493017;padding:8px 17px;font-size:14px;box-shadow:0 5px 0 #563259,0 10px 25px #573c6650;margin-top:-12px}
-#titi-games .titi-games-launcher>span:last-child b{margin-left:6px;font-size:11px}
-#titi-games .titi-arcade{position:relative;display:block;width:134px;height:132px;filter:drop-shadow(0 10px 8px #39265a40)}
-#titi-games .titi-portal-ring{position:absolute;inset:8px 10px 14px;border:4px solid #affcff;border-radius:50%;background:radial-gradient(ellipse at 35% 25%,#7060ce,#283571 58%,#102752);box-shadow:inset 0 0 18px #9b8aff,0 0 0 5px #7552c7,0 0 0 8px #d1b1ff88,0 0 24px #81d3fb77;transform:rotate(-16deg) scaleX(.9)}
-#titi-games .titi-portal-ring:before{content:'';position:absolute;inset:-10px;border:2px dashed #fff6ab;border-radius:50%;animation:titi-portal-spin 22s linear infinite}
-#titi-games .titi-flight{position:absolute;inset:0;animation:titi-ship-hover 3.6s ease-in-out infinite}
-#titi-games .titi-pilot-face{position:absolute;left:25px;top:0;width:84px;height:84px;background:url('/vanlang-on-thi-lop-6/game-kit/adventures/teacher-titi-chibi.webp') 0 0/300% 100%;clip-path:ellipse(49% 45% at 50% 49%);filter:drop-shadow(0 2px 2px #1b285a)}
-#titi-games .titi-flight svg{position:absolute;width:130px;height:76px;bottom:1px;left:2px;overflow:visible}
-#titi-games .titi-jet{transform-origin:80px 64px;animation:titi-jet-pulse .65s ease-in-out infinite alternate}
-#titi-games .titi-star{position:absolute;color:#ffe48c;text-shadow:0 0 10px #fff4a5;font-size:23px;z-index:2;animation:titi-star-pulse 2.8s ease-in-out infinite}
-#titi-games .s1{top:0;right:4px}#titi-games .s2{left:0;top:40px;font-size:16px;animation-delay:.7s}#titi-games .s3{bottom:15px;right:6px;font-size:13px;animation-delay:1.4s}
-#titi-games .titi-orbit-dot{position:absolute;left:20px;top:20px;width:5px;height:5px;background:#bdffff;border-radius:50%;box-shadow:74px 24px #e5ceff,17px 78px #8fffff}
-#titi-games .titi-games-panel{bottom:170px;border:2px solid #bba6f1;background:#faf8ff;box-shadow:0 20px 65px #2e205d40,0 5px 0 #a996ce}
-#titi-games .titi-games-head{background:radial-gradient(ellipse at 100% 0,#6562c9,transparent 75%),#293b76;border-bottom:4px solid #f2cc70}
-#titi-games .titi-games-head h2{color:#fff7dd}#titi-games .titi-games-head p{color:#d5e6ff}#titi-games .titi-games-eyebrow{color:#cbd1ff}
+#titi-games .titi-games-launcher>.titi-welcome-scene{position:absolute;inset:0 auto 0 0;width:150px;height:100%;margin:0;padding:0;background:none;border:0;border-radius:0;box-shadow:none}
+#titi-games .titi-sun-halo{position:absolute;inset:9px 1px 10px 3px;border-radius:50%;background:radial-gradient(circle,#fffef2 10%,#fff9be99 55%,transparent 72%);box-shadow:0 0 30px #fffbc177}
+#titi-games .titi-sun-halo:after{content:'';position:absolute;inset:8px;border:1px solid #fff9d9;border-radius:50%;transform:rotate(-20deg) scaleY(.88)}
+#titi-games .titi-floor-shadow{position:absolute;bottom:5px;left:40px;width:68px;height:9px;border-radius:50%;background:#a85f1a24;filter:blur(2px);animation:titi-walk-shadow 5.6s ease-in-out infinite}
+#titi-games .titi-teacher-walk{position:absolute;left:23px;bottom:6px;width:106px;height:141px;animation:titi-welcome-walk 5.6s ease-in-out infinite;transform-origin:50% 90%}
+#titi-games .titi-teacher-pose{display:block;width:100%;height:100%;background:url('/vanlang-on-thi-lop-6/game-kit/adventures/teacher-titi-idle.webp') 0 0/400% 100% no-repeat;filter:drop-shadow(0 3px 2px #9d5b1930);animation:titi-welcome-wave 5.6s steps(1,end) infinite}
+#titi-games .titi-spark{position:absolute;color:#fffef0;text-shadow:0 1px 4px #dd8515;font-size:22px;animation:titi-welcome-spark 3s ease-in-out infinite}
+#titi-games .spark-one{left:11px;top:22px}#titi-games .spark-two{right:0;top:9px;font-size:16px;animation-delay:.8s}#titi-games .spark-three{left:9px;bottom:23px;font-size:13px;animation-delay:1.6s}
+#titi-games .titi-games-launcher>.titi-invitation{position:absolute;left:153px;right:13px;top:15px;margin:0;padding:9px 10px;border:1px solid #fff6d1;border-radius:17px 17px 17px 4px;background:#fffdf1;color:#704212;box-shadow:0 3px 0 #d9902922;font-size:16px;font-weight:800;line-height:1.25;text-align:center;white-space:normal}
+#titi-games .titi-games-launcher>.titi-invitation:before{content:'';position:absolute;left:-8px;bottom:9px;border-top:8px solid transparent;border-bottom:2px solid transparent;border-right:9px solid #fffdf1}
+#titi-games .titi-games-launcher>.titi-learn-cta,#titi-games .titi-games-launcher>span:last-child:not(.titi-invitation):not(.titi-welcome-scene){position:absolute;left:153px;right:13px;bottom:16px;margin:0;padding:10px 8px;border:1px solid #fff3b6;border-bottom:4px solid #a75c14;border-radius:14px;background:linear-gradient(#ffe56f,#ffb829);color:#442706;box-shadow:inset 0 2px 0 #fff4b1,0 4px 0 #bd721a,0 6px 12px #a55e2033;font-size:16px;font-weight:850;line-height:1.2;white-space:nowrap;text-align:center}
+#titi-games .titi-learn-cta b{display:inline-block;margin-left:5px;color:#7d3f06;font-size:12px;filter:drop-shadow(0 0 3px #fff);animation:titi-welcome-spark 3s ease-in-out infinite}
+#titi-games .titi-games-launcher:active .titi-learn-cta{transform:translateY(3px);box-shadow:inset 0 1px 0 #fff4b1,0 1px 0 #bd721a}
+#titi-games .titi-games-panel{bottom:171px;max-height:calc(100dvh - 207px - var(--titi-dock-lift,0px));border-color:#ecd5aa;background:#fffefa;box-shadow:0 20px 64px #5b3a1930}
+#titi-games .titi-games-head{background:radial-gradient(ellipse at 100% 0,#ffe297,transparent 75%),#fff7de;border-bottom-color:#f0dfbc}
+#titi-games .titi-games-head h2{color:#20365c}#titi-games .titi-games-head p{color:#725a36}#titi-games .titi-games-eyebrow{color:#876027}
 #titi-games [data-game-course]{background:linear-gradient(#ffe98e,#ffca4e);color:#51351a;border-color:#edbd5c;border-bottom-color:#b57b25;box-shadow:inset 0 2px #fff6c9,0 5px 12px #e1ba7030}
 #titi-games [data-game-course]:hover{background:#ffdd74}
-@keyframes titi-portal-spin{to{transform:rotate(360deg)}}
-@keyframes titi-ship-hover{0%,100%{transform:translateY(1px) rotate(-4deg)}50%{transform:translateY(-6px) rotate(4deg)}}
-@keyframes titi-star-pulse{0%,100%{opacity:.55;scale:.8}50%{opacity:1;scale:1.15}}
-@keyframes titi-jet-pulse{to{transform:scaleY(.65);opacity:.65}}
-@media(max-width:520px){#titi-games{width:112px}#titi-games .titi-games-launcher{width:112px;min-height:130px}#titi-games .titi-arcade{width:134px;height:116px;transform:scale(.84);transform-origin:center bottom}#titi-games .titi-games-launcher>span:last-child{font-size:12px;padding:6px 14px}#titi-games .titi-games-panel{bottom:146px;max-height:calc(100dvh - 175px - var(--titi-dock-lift,0px))}}
-@media(min-width:600px) and (max-height:520px){#titi-games .titi-games-panel{right:150px;bottom:0}}
-#titi-games .titi-games-launcher>.titi-arcade{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+#titi-games [data-game-course]:disabled{background:#e6eeec;color:#61736f;border-color:#d1dfd9;box-shadow:none}
+@keyframes titi-welcome-walk{0%,100%{transform:translateX(-7px) rotate(-2deg)}12%{transform:translate(-4px,-2px) rotate(1deg)}25%{transform:translate(2px,0) rotate(-1deg)}38%{transform:translate(6px,-2px) rotate(1deg)}50%,65%{transform:translateX(7px) rotate(2deg)}78%{transform:translate(1px,-2px) rotate(-1deg)}90%{transform:translate(-4px,0) rotate(1deg)}}
+@keyframes titi-welcome-wave{0%,100%{background-position:0 0}18%,23%{background-position:33.3333% 0}27%,45%{background-position:0 0}50%,69%{background-position:100% 0}73%,78%{background-position:33.3333% 0}82%{background-position:0 0}}
+@keyframes titi-walk-shadow{0%,100%{transform:translateX(-7px) scaleX(.9)}50%,65%{transform:translateX(7px)}}
+@keyframes titi-welcome-spark{0%,100%{opacity:.65;transform:scale(.85)}50%{opacity:1;transform:scale(1.1)}}
+@media(max-width:520px){#titi-games{width:270px;max-width:calc(100vw - 24px)}#titi-games .titi-games-launcher{width:100%;height:128px;border-radius:21px}#titi-games .titi-games-launcher>.titi-welcome-scene{width:124px}#titi-games .titi-teacher-walk{width:87px;height:116px;left:18px;bottom:5px}#titi-games .titi-floor-shadow{left:30px;width:62px}#titi-games .titi-games-launcher>.titi-invitation{left:128px;right:10px;top:11px;padding:7px 8px;font-size:14px}#titi-games .titi-games-launcher>.titi-learn-cta,#titi-games .titi-games-launcher>span:last-child:not(.titi-invitation):not(.titi-welcome-scene){left:128px;right:10px;bottom:13px;font-size:14px;padding:8px 5px}#titi-games .titi-games-panel{bottom:145px;max-height:calc(100dvh - 173px - var(--titi-dock-lift,0px))}}
+@media(min-width:600px) and (max-height:520px){#titi-games{width:270px}#titi-games .titi-games-panel{right:286px;bottom:0;width:min(340px,calc(100vw - 322px));max-height:calc(100dvh - 36px - var(--titi-dock-lift,0px))}}
 @media(prefers-reduced-motion:reduce){#titi-games *,#titi-games *:before,#titi-games *:after{animation:none!important;transition:none!important}}
