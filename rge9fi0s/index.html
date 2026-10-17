@@ -66,8 +66,7 @@
     if (status.servingLastConfirmed === true && status.receiptStatusMode === 'as-of-confirmed' &&
         status.receiptVerificationMethod === 'prior-source-confirmation' && isFinite(at) && at > 0 &&
         isFinite(asOf) && asOf > 0 && proof.complete === false && proof.freshRead === false) {
-      return {cls: 'neutral receipt-as-of', label: 'Chưa nộp đến ' + stamp(Math.min(at, asOf)),
-        detail: 'Đây là kết quả đối chiếu tại thời điểm ghi trên bài.'};
+      return {cls: 'neutral receipt-as-of', label: ''};
     }
     return original(item, options);
   }
@@ -92,7 +91,7 @@
  'use strict';
  var original=root.KidsPreparedStatusDisplay.missing;
  root.KidsPreparedStatusDisplay.missing=function(render,item,options,status){
-  if(status&&status.sourceCodeIssues===true&&!(options&&options.verified===true))return {cls:'neutral',label:'Cần đối chiếu mã bài',detail:'Có bài nộp ghi mã chưa rõ. Giáo viên cần đối chiếu trước khi xác nhận bài này.'};
+  if(status&&status.sourceCodeIssues===true&&!(options&&options.verified===true))return {cls:'neutral',label:''};
   return original(render,item,options,status);
  };
 })(typeof window!=='undefined'?window:this);
@@ -174,180 +173,180 @@
  root.KidsClusterFallback={fetch:fetchWithFallback,decrypt:decrypt};
 })(typeof window!=='undefined'?window:globalThis);
 
-/* KIDS_PREPARED_PREVIEW_V1. Private capability POST; no pupil URL or persistent browser data. */
-(function (root) {
-  'use strict';
-  var own = Object.prototype.hasOwnProperty;
-  function failure(code) { var e = new Error(code); e.code = code; return e; }
-  function copy(value) { return JSON.parse(JSON.stringify(value)); }
-  function object(value) { return value && typeof value === 'object' && !Array.isArray(value); }
-  function finite(value) { return typeof value === 'number' && isFinite(value); }
-  function alias(value) {
-    var result = String(typeof value === 'string' ? value : value && (value.alias || value.englishName || value.value) || '').trim().toUpperCase();
-    return result.normalize ? result.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '') : result;
-  }
-  function verified(value) { return object(value) && value.complete === true && value.freshRead === true && finite(Number(value.verifiedAt)) && Number(value.verifiedAt) > 0; }
-  function withdrawn(value) { return object(value) && value.complete === false && value.freshRead === false; }
-  function unpack(value) {
-    if (object(value) && value.schema === 1 && object(value.actions) && object(value.actions.bootstrap) && object(value.actions.submissions) && !own.call(value.actions,'dashboard') && !own.call(value.actions,'profile')) {
-      value.actions.dashboard=value.actions.bootstrap.dashboard;
-      value.actions.profile=value.actions.bootstrap.profile;
-      value.actions.bootstrap.preparedSubmissions=value.actions.submissions;
-      return value;
-    }
-    if (!object(value) || !own.call(value, 'wireSchema')) return value;
-    if (value.wireSchema !== 1 || Object.keys(value).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
-        !object(value.bundle) || own.call(value.bundle, 'actions') || !object(value.check) || !object(value.bootstrap) ||
-        own.call(value.bootstrap, 'preparedSubmissions') || !object(value.submissions) || typeof value.embeddedSubmissions !== 'boolean') throw failure('INVALID_SNAPSHOT');
-    var result = {}, bootstrap = {};
-    Object.keys(value.bundle).forEach(function (key) { result[key] = value.bundle[key]; });
-    Object.keys(value.bootstrap).forEach(function (key) { bootstrap[key] = value.bootstrap[key]; });
-    if (value.embeddedSubmissions) bootstrap.preparedSubmissions = value.submissions;
-    result.actions = {check: value.check, bootstrap: bootstrap, dashboard: bootstrap.dashboard, profile: bootstrap.profile, submissions: value.submissions};
-    return result;
-  }
-  function validate(value, options, now) {
-    var className = 'KIDS ' + options.classNumber;
-    if (!object(value) || value.schema !== 1 || value.classNumber !== options.classNumber || value.className !== className || !alias(value.alias) || typeof value.rosterRevision !== 'string' || !value.rosterRevision) throw failure('INVALID_SCOPE');
-    var fallback = Boolean(value.sourceStatus && value.sourceStatus.servingLastConfirmed === true);
-    var age = now - (typeof value.capturedAt === 'number' ? value.capturedAt : Date.parse(value.capturedAt));
+/* KIDS_PREPARED_PREVIEW_V1. Private capability POST; no pupil URL or persistent browser data. */
+(function (root) {
+  'use strict';
+  var own = Object.prototype.hasOwnProperty;
+  function failure(code) { var e = new Error(code); e.code = code; return e; }
+  function copy(value) { return JSON.parse(JSON.stringify(value)); }
+  function object(value) { return value && typeof value === 'object' && !Array.isArray(value); }
+  function finite(value) { return typeof value === 'number' && isFinite(value); }
+  function alias(value) {
+    var result = String(typeof value === 'string' ? value : value && (value.alias || value.englishName || value.value) || '').trim().toUpperCase();
+    return result.normalize ? result.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/Đ/g, 'D').replace(/[^A-Z0-9]/g, '') : result;
+  }
+  function verified(value) { return object(value) && value.complete === true && value.freshRead === true && finite(Number(value.verifiedAt)) && Number(value.verifiedAt) > 0; }
+  function withdrawn(value) { return object(value) && value.complete === false && value.freshRead === false; }
+  function unpack(value) {
+    if (object(value) && value.schema === 1 && object(value.actions) && object(value.actions.bootstrap) && object(value.actions.submissions) && !own.call(value.actions,'dashboard') && !own.call(value.actions,'profile')) {
+      value.actions.dashboard=value.actions.bootstrap.dashboard;
+      value.actions.profile=value.actions.bootstrap.profile;
+      value.actions.bootstrap.preparedSubmissions=value.actions.submissions;
+      return value;
+    }
+    if (!object(value) || !own.call(value, 'wireSchema')) return value;
+    if (value.wireSchema !== 1 || Object.keys(value).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
+        !object(value.bundle) || own.call(value.bundle, 'actions') || !object(value.check) || !object(value.bootstrap) ||
+        own.call(value.bootstrap, 'preparedSubmissions') || !object(value.submissions) || typeof value.embeddedSubmissions !== 'boolean') throw failure('INVALID_SNAPSHOT');
+    var result = {}, bootstrap = {};
+    Object.keys(value.bundle).forEach(function (key) { result[key] = value.bundle[key]; });
+    Object.keys(value.bootstrap).forEach(function (key) { bootstrap[key] = value.bootstrap[key]; });
+    if (value.embeddedSubmissions) bootstrap.preparedSubmissions = value.submissions;
+    result.actions = {check: value.check, bootstrap: bootstrap, dashboard: bootstrap.dashboard, profile: bootstrap.profile, submissions: value.submissions};
+    return result;
+  }
+  function validate(value, options, now) {
+    var className = 'KIDS ' + options.classNumber;
+    if (!object(value) || value.schema !== 1 || value.classNumber !== options.classNumber || value.className !== className || !alias(value.alias) || typeof value.rosterRevision !== 'string' || !value.rosterRevision) throw failure('INVALID_SCOPE');
+    var fallback = Boolean(value.sourceStatus && value.sourceStatus.servingLastConfirmed === true);
+    var age = now - (typeof value.capturedAt === 'number' ? value.capturedAt : Date.parse(value.capturedAt));
     // KIDS_NIGHT_OPEN_VALIDATION_V1: same age clock as the scheduled backend.
     var localClock = new Date(now + 25200000), ageClock = now;
     if(localClock.getUTCHours()<6||localClock.getUTCHours()===6&&localClock.getUTCMinutes()<30) ageClock=Date.UTC(localClock.getUTCFullYear(),localClock.getUTCMonth(),localClock.getUTCDate())-25200000;
     var expiryAge = fallback ? age : age - Math.max(0,now-ageClock);
-    if (!finite(age) || age < -30000 || expiryAge > (fallback ? options.fallbackMaxAgeMs || 86400000 : options.maxAgeMs || 1800000)) throw failure('SNAPSHOT_NOT_READY');
-    var actions = value.actions, target = alias(value.alias), keys = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions'];
-    if (!object(actions) || keys.some(function (key) { return !object(actions[key]); })) throw failure('INVALID_SNAPSHOT');
-    function scoped(part, name, directory) {
-      if (!object(part) || part.classNumber !== options.classNumber || part.className !== className) throw failure('INVALID_SCOPE');
-      if (directory && (!Array.isArray(part.studentAliases) || part.studentAliases.length !== 1 || alias(part.studentAliases[0]) !== target)) throw failure('INVALID_SCOPE');
-      if (name && alias(part.englishName || part.alias) !== target) throw failure('INVALID_SCOPE');
-      if (own.call(part, 'rosterRevision') && part.rosterRevision !== value.rosterRevision) throw failure('INVALID_SCOPE');
-    }
-    scoped(actions.check, false, true); scoped(actions.bootstrap, false, true); scoped(actions.dashboard, false, true); scoped(actions.profile, true, false);
-    var boot = actions.bootstrap;
-    scoped(boot.dashboard, false, true); scoped(boot.profile, true, false);
-    if (!(Number(boot.sourceModelBuiltAt) > 0) || Number(boot.sourceModelBuiltAt) !== Number(boot.profile.sourceModelBuiltAt) || !(Number(boot.dashboard.snapshotBuiltAt) > 0) || !(Number(boot.profile.snapshotBuiltAt) > 0)) throw failure('INVALID_SNAPSHOT');
-    if (JSON.stringify(boot.dashboard) !== JSON.stringify(actions.dashboard) || JSON.stringify(boot.profile) !== JSON.stringify(actions.profile)) throw failure('INVALID_SNAPSHOT');
-    var sub = actions.submissions;
-    if (sub.className !== className || sub.schema !== 1 || !Array.isArray(sub.receipts) || !Array.isArray(sub.coverage) || !sub.coverage.length || own.call(sub, 'emptyReceipts') && !Array.isArray(sub.emptyReceipts)) throw failure('INVALID_SNAPSHOT');
-    if (sub.assignmentAuthority && sub.assignmentAuthority.className !== className) throw failure('INVALID_SCOPE');
-    var proof = fallback ? withdrawn : verified;
-    var codeIssues=!fallback&&value.sourceStatus&&value.sourceStatus.sourceCodeIssues===true;
-    if(codeIssues){
-      var incomplete=false;
-      var readable=sub.coverage.every(function(c){
-        if(!c||c.freshRead!==true||!finite(c.verifiedAt)||c.verifiedAt<=0||c.structurallyComplete!==true||c.sourceFailure||!Array.isArray(c.issues))return false;
-        if(c.complete===true)return c.issues.length===0;
-        if(c.complete!==false||!c.issues.length)return false;
-        incomplete=true;return c.issues.every(function(issue){return object(issue)&&(issue.reason||issue.type)==='CODE_UNRECOGNIZED';});
-      });
-      var p=sub.submissionVerification;
-      if(!readable||!incomplete||!p||p.complete!==false||p.freshRead!==true||!finite(p.verifiedAt)||p.verifiedAt<=0||!verified(sub.assignmentAuthority))throw failure('RECEIPTS_INCOMPLETE');
-    }else if (!proof(sub.submissionVerification) || !sub.coverage.every(proof) || !proof(sub.assignmentAuthority)) throw failure('RECEIPTS_INCOMPLETE');
-    if (boot.preparedHistory || sub.preparedProjection) {
-      var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
-      if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
-      if (JSON.stringify(embedded) !== JSON.stringify(sub)) throw failure('INVALID_SNAPSHOT');
-      var count = Number(boot.preparedHistory && boot.preparedHistory.pageCount), pages = value.historyPages;
-      if (!finite(count) || count < 0 || Math.floor(count) !== count || !object(pages) || Object.keys(pages).length !== count) throw failure('INVALID_SNAPSHOT');
-      for (var i = 0; i < count; i += 1) {
-        var page = pages[String(i)];
-        if (!object(page) || page.schema !== 1 || page.page !== i || !Array.isArray(page.entries) || page.classNumber !== options.classNumber || page.className !== className || alias(page.englishName) !== target || !page.preparedSource || page.preparedSource.generation !== generation) throw failure('INVALID_SNAPSHOT');
-      }
-    }
-    // Prepared history and projected positives survive source failures, but no
-    // nested receipt proof may accidentally reauthorize a negative status.
-    if (fallback) (function visit(node) {
-      if (!node || typeof node !== 'object') return;
-      if (node.preparedSubmissionVerification && !withdrawn(node.preparedSubmissionVerification)) throw failure('INVALID_SNAPSHOT');
-      Object.keys(node).forEach(function (key) { visit(node[key]); });
-    })({actions: actions, historyPages: value.historyPages});
-    return value;
-  }
-  function create(options) {
-    if (!options || !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(options.endpoint || '') && !/^http:\/\/127\.0\.0\.1:\d+\/v1\/parent$/.test(options.endpoint || '') || !/^[A-Za-z0-9_-]{22}$/.test(options.token || '') || !finite(options.classNumber) || options.classNumber <= 0) throw failure('INVALID_CONFIG');
-    var cached = null, pending = null, generation = 0, controller = null;
-    var now = options.now || Date.now, supported = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions', 'history'];
-    function current(epoch) { return epoch === generation && (!options.isCurrent || options.isCurrent() === true); }
-    function clear() { generation += 1; cached = null; pending = null; if (controller) controller.abort(); }
-    var endpoint = options.endpointPromise || Promise.resolve().then(function(){
-      var cryptoImpl=root.crypto||root.webkitCrypto, subtle=cryptoImpl&&(cryptoImpl.subtle||cryptoImpl.webkitSubtle);
-      if(!subtle)throw failure('CRYPTO_UNAVAILABLE');
-      var bytes=new Uint8Array(options.token.length);for(var i=0;i<bytes.length;i++)bytes[i]=options.token.charCodeAt(i);
-      return subtle.digest('SHA-256',bytes);
-    }).then(function(bytes){var hex='',a=new Uint8Array(bytes);for(var i=0;i<a.length;i++)hex+=('0'+a[i].toString(16)).slice(-2);return options.endpoint.replace(/\/v1\/parent$/,'/data/'+options.classNumber+'/'+hex+'.json');});
-    function load(force, live) {
-      if (pending) return pending;
-      // A prepared opening is one immutable read session. Existing background
-      // consumers share it; explicit refresh/reopen may request a new package.
-      // Keep the prior package visible when an explicit refresh fails.
-      if (cached && !force && (options.sessionSnapshot === true || now() - cached.loadedAt < (options.clientCacheMs === undefined ? 15000 : options.clientCacheMs))) return Promise.resolve(cached.value);
-      var epoch = generation, active = typeof AbortController === 'function' ? new AbortController() : null;
-      controller = active;
-      var timeout, finished = false;
-      var work = new Promise(function (resolve, reject) {
-        timeout = setTimeout(function () { if (finished) return; finished = true; if (active) active.abort(); reject(failure('SOURCE_UNAVAILABLE')); }, options.timeoutMs || 8000);
-        var init = {method: 'GET', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer'};
-        if (active) init.signal = active.signal;
-        Promise.resolve().then(function () {
-          if (options.onRequest) { try { options.onRequest(); } catch (_) {} }
-          return endpoint.then(function(url){return live?(options.fetchImpl || root.fetch)(url.replace('/data/','/live-data/'),init):KidsClusterFallback.fetch(url, init, options.token, options.classNumber, options.fetchImpl || root.fetch);});
-        }).then(function (response) {
-          if (!current(epoch)) throw failure('SESSION_ENDED');
-          if (!response.ok) throw failure('SNAPSHOT_NOT_READY');
-          return response.text();
-        }).then(function (text) {
-          if (!current(epoch)) throw failure('SESSION_ENDED');
-          if (text.length > (options.maxBodyChars || 8000000)) throw failure('INVALID_SNAPSHOT');
-          var value; try { value = JSON.parse(text); } catch (_) { throw failure('INVALID_SNAPSHOT'); }
-          value = unpack(value); validate(value, options, now());
-          if (finished) return;
-          finished = true; cached = {value: value, loadedAt: now()};
-          if (options.onLoaded) { try { options.onLoaded(copy(value)); } catch (_) {} }
-          resolve(value);
-        }).catch(function (e) { if (finished) return; finished = true; if (e && e.code === 'PARENT_LINK_REVOKED') clear(); reject(e && e.code ? e : failure('SOURCE_UNAVAILABLE')); });
-      });
-      pending = work;
-      var cleanup = function () { clearTimeout(timeout); if (pending === work) pending = null; if (controller === active) controller = null; };
-      work.then(cleanup, cleanup);
-      return work;
-    }
-    function request(action, force, extra) {
-      if (supported.indexOf(action) < 0) return Promise.reject(failure('INVALID_REQUEST'));
-      if (action === 'history') {
-        extra = extra || {};
-        var history = cached && cached.value, index = Number(extra.historyPage);
-        if (!history || !finite(index) || index < 0 || Math.floor(index) !== index || !history.actions.bootstrap.preparedSource || history.actions.bootstrap.preparedSource.generation !== extra.generation || !history.historyPages || !history.historyPages[String(index)] || options.isCurrent && options.isCurrent() !== true) return Promise.reject(failure('INVALID_SCOPE'));
-        return Promise.resolve(copy(history.historyPages[String(index)]));
-      }
-      return load(force === true && action === 'bootstrap').then(function (value) {
-        if (options.isCurrent && options.isCurrent() !== true) throw failure('SESSION_ENDED');
-        return copy(value.actions[action]);
-      });
-    }
-    function response(action, force, extra) {
-      return request(action, force, extra).then(function (data) { return {ok: true, status: 200, json: function () { return Promise.resolve({ok: true, data: data}); }}; }, function (error) {
-        if (error.code !== 'PARENT_LINK_REVOKED') throw error;
-        clear(); return {ok: true, status: 200, json: function () { return Promise.resolve({ok: false, revoked: true, code: 'PARENT_LINK_REVOKED'}); }};
-      });
-    }
+    if (!finite(age) || age < -30000 || expiryAge > (fallback ? options.fallbackMaxAgeMs || 86400000 : options.maxAgeMs || 1800000)) throw failure('SNAPSHOT_NOT_READY');
+    var actions = value.actions, target = alias(value.alias), keys = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions'];
+    if (!object(actions) || keys.some(function (key) { return !object(actions[key]); })) throw failure('INVALID_SNAPSHOT');
+    function scoped(part, name, directory) {
+      if (!object(part) || part.classNumber !== options.classNumber || part.className !== className) throw failure('INVALID_SCOPE');
+      if (directory && (!Array.isArray(part.studentAliases) || part.studentAliases.length !== 1 || alias(part.studentAliases[0]) !== target)) throw failure('INVALID_SCOPE');
+      if (name && alias(part.englishName || part.alias) !== target) throw failure('INVALID_SCOPE');
+      if (own.call(part, 'rosterRevision') && part.rosterRevision !== value.rosterRevision) throw failure('INVALID_SCOPE');
+    }
+    scoped(actions.check, false, true); scoped(actions.bootstrap, false, true); scoped(actions.dashboard, false, true); scoped(actions.profile, true, false);
+    var boot = actions.bootstrap;
+    scoped(boot.dashboard, false, true); scoped(boot.profile, true, false);
+    if (!(Number(boot.sourceModelBuiltAt) > 0) || Number(boot.sourceModelBuiltAt) !== Number(boot.profile.sourceModelBuiltAt) || !(Number(boot.dashboard.snapshotBuiltAt) > 0) || !(Number(boot.profile.snapshotBuiltAt) > 0)) throw failure('INVALID_SNAPSHOT');
+    if (JSON.stringify(boot.dashboard) !== JSON.stringify(actions.dashboard) || JSON.stringify(boot.profile) !== JSON.stringify(actions.profile)) throw failure('INVALID_SNAPSHOT');
+    var sub = actions.submissions;
+    if (sub.className !== className || sub.schema !== 1 || !Array.isArray(sub.receipts) || !Array.isArray(sub.coverage) || !sub.coverage.length || own.call(sub, 'emptyReceipts') && !Array.isArray(sub.emptyReceipts)) throw failure('INVALID_SNAPSHOT');
+    if (sub.assignmentAuthority && sub.assignmentAuthority.className !== className) throw failure('INVALID_SCOPE');
+    var proof = fallback ? withdrawn : verified;
+    var codeIssues=!fallback&&value.sourceStatus&&value.sourceStatus.sourceCodeIssues===true;
+    if(codeIssues){
+      var incomplete=false;
+      var readable=sub.coverage.every(function(c){
+        if(!c||c.freshRead!==true||!finite(c.verifiedAt)||c.verifiedAt<=0||c.structurallyComplete!==true||c.sourceFailure||!Array.isArray(c.issues))return false;
+        if(c.complete===true)return c.issues.length===0;
+        if(c.complete!==false||!c.issues.length)return false;
+        incomplete=true;return c.issues.every(function(issue){return object(issue)&&(issue.reason||issue.type)==='CODE_UNRECOGNIZED';});
+      });
+      var p=sub.submissionVerification;
+      if(!readable||!incomplete||!p||p.complete!==false||p.freshRead!==true||!finite(p.verifiedAt)||p.verifiedAt<=0||!verified(sub.assignmentAuthority))throw failure('RECEIPTS_INCOMPLETE');
+    }else if (!proof(sub.submissionVerification) || !sub.coverage.every(proof) || !proof(sub.assignmentAuthority)) throw failure('RECEIPTS_INCOMPLETE');
+    if (boot.preparedHistory || sub.preparedProjection) {
+      var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
+      if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
+      if (JSON.stringify(embedded) !== JSON.stringify(sub)) throw failure('INVALID_SNAPSHOT');
+      var count = Number(boot.preparedHistory && boot.preparedHistory.pageCount), pages = value.historyPages;
+      if (!finite(count) || count < 0 || Math.floor(count) !== count || !object(pages) || Object.keys(pages).length !== count) throw failure('INVALID_SNAPSHOT');
+      for (var i = 0; i < count; i += 1) {
+        var page = pages[String(i)];
+        if (!object(page) || page.schema !== 1 || page.page !== i || !Array.isArray(page.entries) || page.classNumber !== options.classNumber || page.className !== className || alias(page.englishName) !== target || !page.preparedSource || page.preparedSource.generation !== generation) throw failure('INVALID_SNAPSHOT');
+      }
+    }
+    // Prepared history and projected positives survive source failures, but no
+    // nested receipt proof may accidentally reauthorize a negative status.
+    if (fallback) (function visit(node) {
+      if (!node || typeof node !== 'object') return;
+      if (node.preparedSubmissionVerification && !withdrawn(node.preparedSubmissionVerification)) throw failure('INVALID_SNAPSHOT');
+      Object.keys(node).forEach(function (key) { visit(node[key]); });
+    })({actions: actions, historyPages: value.historyPages});
+    return value;
+  }
+  function create(options) {
+    if (!options || !/^https:\/\/[^\s/]+(?:\/[^\s]*)?$/.test(options.endpoint || '') && !/^http:\/\/127\.0\.0\.1:\d+\/v1\/parent$/.test(options.endpoint || '') || !/^[A-Za-z0-9_-]{22}$/.test(options.token || '') || !finite(options.classNumber) || options.classNumber <= 0) throw failure('INVALID_CONFIG');
+    var cached = null, pending = null, generation = 0, controller = null;
+    var now = options.now || Date.now, supported = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions', 'history'];
+    function current(epoch) { return epoch === generation && (!options.isCurrent || options.isCurrent() === true); }
+    function clear() { generation += 1; cached = null; pending = null; if (controller) controller.abort(); }
+    var endpoint = options.endpointPromise || Promise.resolve().then(function(){
+      var cryptoImpl=root.crypto||root.webkitCrypto, subtle=cryptoImpl&&(cryptoImpl.subtle||cryptoImpl.webkitSubtle);
+      if(!subtle)throw failure('CRYPTO_UNAVAILABLE');
+      var bytes=new Uint8Array(options.token.length);for(var i=0;i<bytes.length;i++)bytes[i]=options.token.charCodeAt(i);
+      return subtle.digest('SHA-256',bytes);
+    }).then(function(bytes){var hex='',a=new Uint8Array(bytes);for(var i=0;i<a.length;i++)hex+=('0'+a[i].toString(16)).slice(-2);return options.endpoint.replace(/\/v1\/parent$/,'/data/'+options.classNumber+'/'+hex+'.json');});
+    function load(force, live) {
+      if (pending) return pending;
+      // A prepared opening is one immutable read session. Existing background
+      // consumers share it; explicit refresh/reopen may request a new package.
+      // Keep the prior package visible when an explicit refresh fails.
+      if (cached && !force && (options.sessionSnapshot === true || now() - cached.loadedAt < (options.clientCacheMs === undefined ? 15000 : options.clientCacheMs))) return Promise.resolve(cached.value);
+      var epoch = generation, active = typeof AbortController === 'function' ? new AbortController() : null;
+      controller = active;
+      var timeout, finished = false;
+      var work = new Promise(function (resolve, reject) {
+        timeout = setTimeout(function () { if (finished) return; finished = true; if (active) active.abort(); reject(failure('SOURCE_UNAVAILABLE')); }, options.timeoutMs || 8000);
+        var init = {method: 'GET', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer'};
+        if (active) init.signal = active.signal;
+        Promise.resolve().then(function () {
+          if (options.onRequest) { try { options.onRequest(); } catch (_) {} }
+          return endpoint.then(function(url){return live?(options.fetchImpl || root.fetch)(url.replace('/data/','/live-data/'),init):KidsClusterFallback.fetch(url, init, options.token, options.classNumber, options.fetchImpl || root.fetch);});
+        }).then(function (response) {
+          if (!current(epoch)) throw failure('SESSION_ENDED');
+          if (!response.ok) throw failure('SNAPSHOT_NOT_READY');
+          return response.text();
+        }).then(function (text) {
+          if (!current(epoch)) throw failure('SESSION_ENDED');
+          if (text.length > (options.maxBodyChars || 8000000)) throw failure('INVALID_SNAPSHOT');
+          var value; try { value = JSON.parse(text); } catch (_) { throw failure('INVALID_SNAPSHOT'); }
+          value = unpack(value); validate(value, options, now());
+          if (finished) return;
+          finished = true; cached = {value: value, loadedAt: now()};
+          if (options.onLoaded) { try { options.onLoaded(copy(value)); } catch (_) {} }
+          resolve(value);
+        }).catch(function (e) { if (finished) return; finished = true; if (e && e.code === 'PARENT_LINK_REVOKED') clear(); reject(e && e.code ? e : failure('SOURCE_UNAVAILABLE')); });
+      });
+      pending = work;
+      var cleanup = function () { clearTimeout(timeout); if (pending === work) pending = null; if (controller === active) controller = null; };
+      work.then(cleanup, cleanup);
+      return work;
+    }
+    function request(action, force, extra) {
+      if (supported.indexOf(action) < 0) return Promise.reject(failure('INVALID_REQUEST'));
+      if (action === 'history') {
+        extra = extra || {};
+        var history = cached && cached.value, index = Number(extra.historyPage);
+        if (!history || !finite(index) || index < 0 || Math.floor(index) !== index || !history.actions.bootstrap.preparedSource || history.actions.bootstrap.preparedSource.generation !== extra.generation || !history.historyPages || !history.historyPages[String(index)] || options.isCurrent && options.isCurrent() !== true) return Promise.reject(failure('INVALID_SCOPE'));
+        return Promise.resolve(copy(history.historyPages[String(index)]));
+      }
+      return load(force === true && action === 'bootstrap').then(function (value) {
+        if (options.isCurrent && options.isCurrent() !== true) throw failure('SESSION_ENDED');
+        return copy(value.actions[action]);
+      });
+    }
+    function response(action, force, extra) {
+      return request(action, force, extra).then(function (data) { return {ok: true, status: 200, json: function () { return Promise.resolve({ok: true, data: data}); }}; }, function (error) {
+        if (error.code !== 'PARENT_LINK_REVOKED') throw error;
+        clear(); return {ok: true, status: 200, json: function () { return Promise.resolve({ok: false, revoked: true, code: 'PARENT_LINK_REVOKED'}); }};
+      });
+    }
     return {liveConfig:{endpoint:options.endpoint,classNumber:options.classNumber},request: request, response: response, clear: clear,
-      requestLive: function(){var active=pending;return Promise.resolve(active).catch(function(){}).then(function(){return load(true,true);}).then(function(value){return copy(value.actions.bootstrap);});},
-      hasSnapshot: function () { return Boolean(cached && (!options.isCurrent || options.isCurrent() === true)); },
-      sourceStatus: function () {
-        if (!cached || options.isCurrent && options.isCurrent() !== true) return {};
-        var status = copy(cached.value.sourceStatus || {}), proof = cached.value.actions.submissions.submissionVerification;
-        if (!status.receiptAsOf) status.receiptAsOf = Number(proof && proof.verifiedAt) || 0;
-        if (!status.receiptStatusMode && verified(proof)) status.receiptStatusMode = 'native-confirmed';
-        return status;
-      },
-      supports: function (action) { return supported.indexOf(action) >= 0; }};
-  }
-  var api = {create: create, validate: validate, unpack: unpack};
-  root.KidsPreparedSnapshotClient = api;
-  if (typeof module === 'object' && module.exports) module.exports = api;
-})(typeof window !== 'undefined' ? window : this);
+      requestLive: function(){var active=pending;return Promise.resolve(active).catch(function(){}).then(function(){return load(true,true);}).then(function(value){return copy(value.actions.bootstrap);});},
+      hasSnapshot: function () { return Boolean(cached && (!options.isCurrent || options.isCurrent() === true)); },
+      sourceStatus: function () {
+        if (!cached || options.isCurrent && options.isCurrent() !== true) return {};
+        var status = copy(cached.value.sourceStatus || {}), proof = cached.value.actions.submissions.submissionVerification;
+        if (!status.receiptAsOf) status.receiptAsOf = Number(proof && proof.verifiedAt) || 0;
+        if (!status.receiptStatusMode && verified(proof)) status.receiptStatusMode = 'native-confirmed';
+        return status;
+      },
+      supports: function (action) { return supported.indexOf(action) >= 0; }};
+  }
+  var api = {create: create, validate: validate, unpack: unpack};
+  root.KidsPreparedSnapshotClient = api;
+  if (typeof module === 'object' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : this);
 
 (function(){
   var initialHash=location.hash, initialPath=location.pathname, match=initialHash.match(/(?:^#|&)p=([A-Za-z0-9_-]{22})(?:&|$)/);
@@ -4158,7 +4157,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
  const tasks=sciencePracticeTasksV1_(item);if(!tasks.length)return null;
  const received=feedback=>!feedback.contentMissing&&Boolean(feedback.submitted||feedback.submittedAt||arr(feedback.submissionAttempts).length);
  const missing=tasks.filter(task=>!received(task.feedback||{}));
- const missingStatus=feedback=>feedback.contentMissing?{cls:'todo',label:'Chưa nộp'}:submissionMissingMeta_(feedback);
+ const missingStatus=feedback=>feedback.contentMissing?{cls:'todo',label:'Đã nhận lượt gửi nhưng bài trống'}:submissionMissingMeta_(feedback);
  const meta=missing.length?missingStatus(missing[0].feedback||{}):submissionReceivedMeta_({isLate:tasks.some(task=>(task.feedback||{}).isLate)});
  const title=pick(item,['title','name'],'Science G3'),description=pick(item,['lessonSummary','instruction','description','criteria'],''),due=pick(item,['dueLabel','dueDate','deadline'],'');
  const taskHtml=tasks.map(task=>{
@@ -4564,7 +4563,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
     }
     function statusMeta(item) {
       const meta=submissionOriginalStatusMeta_(item);
-      if(item&&item.contentMissing)return {cls:'todo',label:'Chưa nộp'};
+      if(item&&item.contentMissing)return {cls:'todo',label:'Đã nhận lượt gửi nhưng bài trống'};
       const received=Boolean(item&&(item.submitted||item.submittedAt||arr(item.submissionAttempts).length));
       if(received)return submissionReceivedMeta_(item);
       if(!received&&['todo','late'].includes(meta.cls)&&!submissionCan_(item))return submissionMissingMeta_(item);
@@ -6318,16 +6317,16 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
     // Only the one active read may present a waiting state. A failed or
     // incomplete read must never certify that a child has not submitted.
     if(options.readState==='idle'||options.readState==='loading'){
-      return {cls:'neutral receipt-loading',label:'Đang xác minh'};
+      return {cls:'neutral receipt-loading',label:''};
     }
     const exclusion=String(item.directReceiptExclusion||'');
     if(exclusion==='before-policy-cutoff'||exclusion==='outside-authority-horizon'){
-      return {cls:'neutral',label:'Bài cũ chưa xác nhận',detail:'Chưa đủ thông tin để xác nhận bài này đã nộp hay còn thiếu.'};
+      return {cls:'neutral',label:''};
     }
     if(exclusion==='not-in-current-authority'||item.directReceiptResolution==='not-current'){
-      return {cls:'neutral',label:'Cần cô xác nhận',detail:'Thông tin giao bài này chưa khớp. Cần cô kiểm tra lại trước khi kết luận con còn thiếu.'};
+      return {cls:'neutral',label:''};
     }
-    return {cls:'neutral',label:'Đang xác minh'};
+    return {cls:'neutral',label:''};
   }
   const api={missing:missing};
   root.KidsSubmissionDisplayStatus=api;
@@ -6477,7 +6476,7 @@ function parentLoadPreparedHistory_(page,generation) {
       return window.__kidsPreparedPreview ? KidsPreparedStatusDisplay.missing(KidsSubmissionDisplayStatus.missing,item,{verified:submissionCan_(item),readState:submissionOwner_.readState},window.__kidsPreparedPreview.sourceStatus()) : KidsSubmissionDisplayStatus.missing(item, {verified:submissionCan_(item),readState:submissionOwner_.readState});
     }
     function submissionReceivedMeta_(item) {
-      return item&&item.isLate?{cls:'late',label:'Nộp muộn'}:{cls:'wait',label:'Đã nhận'};
+      return item&&item.isLate?{cls:'late',label:'Đã nộp bài · Muộn'}:{cls:'wait',label:'Đã nộp bài'};
     }
     function submissionReceiptText_(item,count,submittedAt) {
       if(item&&item.contentMissing)return KidsPreparedContentText.text(item)+'. Vui lòng nộp lại bài có đầy đủ nội dung.';
