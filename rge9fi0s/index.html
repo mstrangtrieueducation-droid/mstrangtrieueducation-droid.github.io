@@ -3158,6 +3158,22 @@ function kidsFeedbackDetailMarkup(value,escape) {
       return Math.round((dueSerial - todaySerial) / 86400000);
     }
 
+    function paperReminderDismissKey_() {
+      return 'mtt-paper-reminder-dismissed:' + location.pathname + ':' + (new URLSearchParams(location.hash.slice(1)).get('p') || app.childAlias || '');
+    }
+    function isPaperReminderDismissed_(signature) {
+      if (app.paperReminderSeen === signature && app.paperReminderSeenKey === paperReminderDismissKey_()) return true;
+      try { return localStorage.getItem(paperReminderDismissKey_()) === signature; } catch (_) { return false; }
+    }
+    function dismissPaperHomeworkReminder_() {
+      const card = $('#paperHomeworkReminder');
+      const signature = text(card && card.dataset.signature);
+      app.paperReminderSeen = signature;
+      app.paperReminderSeenKey = paperReminderDismissKey_();
+      if (signature) { try { localStorage.setItem(paperReminderDismissKey_(), signature); } catch (_) {} }
+      if (card) card.hidden = true;
+    }
+
     function renderPaperHomeworkReminder() {
       const card = $('#paperHomeworkReminder');
       if (!card) return;
@@ -3177,7 +3193,12 @@ function kidsFeedbackDetailMarkup(value,escape) {
         card.hidden = true;
         return;
       }
-      const acknowledged = app.paperReminderSeen === signature;
+      const acknowledged = isPaperReminderDismissed_(signature);
+      if (acknowledged) {
+        card.dataset.signature = signature;
+        card.hidden = true;
+        return;
+      }
       const daysUntil = paperHomeworkReminderDaysUntil(dueDate);
       const urgent = daysUntil !== null && daysUntil >= 0 && daysUntil <= 1;
       card.classList.toggle('is-acknowledged', acknowledged);
@@ -7201,19 +7222,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       hidePendingWorkGate();
       openFirstPendingWork();
     });
-    $('#paperHomeworkReminderClose').addEventListener('click', () => {
-      const card = $('#paperHomeworkReminder');
-      if (card && card.classList.contains('is-compact')) {
-        switchTab('lessons');
-        window.requestAnimationFrame(() => {
-          const panel = $('#lessonsPanel');
-          if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-        return;
-      }
-      app.paperReminderSeen = text(card && card.dataset.signature);
-      renderPaperHomeworkReminder();
-    });
+    $('#paperHomeworkReminderClose').addEventListener('click', dismissPaperHomeworkReminder_);
     $('#lessonsPanel').addEventListener('click', event => {
       const button = event.target.closest('[data-open-assessment-result]');
       if (button) openAssessmentResult(button.dataset.openAssessmentResult);
@@ -7245,10 +7254,10 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if (typeof window.__kidsBootLive === 'function') window.__kidsBootLive();
     }
   </script>
-<link rel="stylesheet" href="/student-learning/titi-games/dashboard.css?v=warm-welcome-20261017">
+<link rel="stylesheet" href="/student-learning/titi-games/dashboard.css?v=floating-dock-20261017">
 <script src="/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"></script>
 <script src="/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"></script>
 <script src="/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"></script>
-<script src="/student-learning/titi-games/dashboard.js?v=warm-welcome-20261017"></script>
+<script src="/student-learning/titi-games/dashboard.js?v=floating-dock-20261017"></script>
 </body>
 </html>

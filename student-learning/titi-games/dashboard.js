@@ -14,8 +14,77 @@
  // Reparenting preserves that attribute; clear it only on our own detached widget.
  host.inert=false;
  const planet=`<span class="titi-welcome-scene" aria-hidden="true"><span class="titi-sun-halo"></span><span class="titi-floor-shadow"></span><span class="titi-teacher-walk"><span class="titi-teacher-pose"></span></span><span class="titi-spark spark-one">✦</span><span class="titi-spark spark-two">✧</span><span class="titi-spark spark-three">✦</span></span><span class="titi-invitation" lang="en">Let's learn<br>together!</span>`;
+ // Floating presentation controller. No network, profile or game-progress writes.
+ const dock=(()=>{
+  const KEY='mtt-titi-dock-v1',mobile=matchMedia('(max-width: 520px)');
+  let saved={};try{saved=JSON.parse(sessionStorage.getItem(KEY)||'{}')||{};}catch{}
+  let choice=typeof saved.collapsed==='boolean'?saved.collapsed:null;
+  let compact=choice===null?mobile.matches:choice,edge=saved.edge==='left'?'left':'right';
+  let fraction=Number.isFinite(saved.y)?Math.max(0,Math.min(1,saved.y)):null;
+  let gesture=null,blockClickUntil=0,frame=0;
+  const clamp=(n,a,b)=>Math.max(a,Math.min(Math.max(a,b),n));
+  function viewport(){const v=window.visualViewport;return {x:v?.offsetLeft||0,y:v?.offsetTop||0,w:v?.width||innerWidth,h:v?.height||innerHeight};}
+  function bounds(){const v=viewport(),r=host.getBoundingClientRect(),lift=parseFloat(host.style.getPropertyValue('--titi-dock-lift'))||0;return {left:v.x+12,right:Math.max(v.x+12,v.x+v.w-r.width-12),top:v.y+12,bottom:Math.max(v.y+12,v.y+v.h-r.height-12-lift)};}
+  function remember(){try{sessionStorage.setItem(KEY,JSON.stringify({collapsed:choice,edge,y:fraction}));}catch{}}
+  function place(x,y){host.style.left=x+'px';host.style.top=y+'px';}
+  function layoutPanel(){
+   const p=host.querySelector('.titi-games-panel');if(!p||p.hidden)return;
+   const v=viewport(),r=host.getBoundingClientRect(),w=Math.min(352,v.w-24);
+   const above=Math.max(0,r.top-v.y-24),below=Math.max(0,v.y+v.h-r.bottom-24);
+   p.style.width=w+'px';p.style.left=clamp(edge==='left'?r.left:r.right-w,v.x+12,v.x+v.w-w-12)+'px';
+   const room=Math.max(above,below);
+   if(room>=180){p.style.maxHeight=room+'px';const h=Math.min(p.scrollHeight+4,room);p.style.top=(above>=below?r.top-12-h:r.bottom+12)+'px';}
+   else {p.style.maxHeight=Math.max(100,v.h-24)+'px';p.style.top=(v.y+12)+'px';}
+  }
+  function layout(){
+   frame=0;if(gesture?.moved||host.hidden)return;
+   const b=bounds();place(edge==='left'?b.left:b.right,fraction===null?b.bottom:b.top+fraction*(b.bottom-b.top));layoutPanel();
+  }
+  function scheduleLayout(){if(!frame)frame=requestAnimationFrame(layout);}
+  function refresh(){
+   host.classList.add('titi-dock');host.classList.toggle('titi-compact',compact);
+   const launcher=host.querySelector('.titi-games-launcher');if(!launcher)return;
+   launcher.setAttribute('aria-label',compact?"Mở rộng Let's Learn":"Let's Learn — Mở sân chơi cùng Titi");
+   launcher.title=compact?'Chạm để mở · Kéo để di chuyển':'Kéo để di chuyển';
+   if(compact){launcher.setAttribute('aria-expanded','false');launcher.removeAttribute('aria-controls');}
+   else launcher.setAttribute('aria-controls','titi-games-panel');
+   let minimize=host.querySelector('.titi-minimize');
+   if(!minimize){minimize=document.createElement('button');minimize.type='button';minimize.className='titi-minimize';minimize.setAttribute('aria-label',"Thu gọn Let's Learn");minimize.title='Thu gọn';minimize.textContent='−';host.append(minimize);}
+   minimize.hidden=compact;scheduleLayout();
+  }
+  function setCompact(value){compact=value;choice=value;panel(false);refresh();remember();host.querySelector('.titi-games-launcher')?.focus({preventScroll:true});}
+  host.addEventListener('click',e=>{
+   if(Date.now()<blockClickUntil){e.preventDefault();e.stopImmediatePropagation();return;}
+   if(e.target.closest?.('.titi-minimize')){e.preventDefault();e.stopImmediatePropagation();setCompact(true);return;}
+   if(compact&&e.target.closest?.('.titi-games-launcher')){e.preventDefault();e.stopImmediatePropagation();setCompact(false);}
+  },true);
+  host.addEventListener('pointerdown',e=>{
+   if(!e.isPrimary||e.button!==0||!e.target.closest?.('.titi-games-launcher'))return;
+   const r=host.getBoundingClientRect();gesture={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false,threshold:e.pointerType==='mouse'?6:10};
+  });
+  function move(e){
+   if(!gesture||gesture.id!==e.pointerId)return;
+   const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
+   if(!gesture.moved&&Math.hypot(dx,dy)<gesture.threshold)return;
+   if(!gesture.moved){gesture.moved=true;panel(false);host.classList.add('titi-dragging');try{host.setPointerCapture(e.pointerId);}catch{}}
+   e.preventDefault();const b=bounds();place(clamp(gesture.left+dx,b.left,b.right),clamp(gesture.top+dy,b.top,b.bottom));
+  }
+  function finish(e){
+   if(!gesture||gesture.id!==e.pointerId)return;
+   const moved=gesture.moved;gesture=null;
+   if(moved){const r=host.getBoundingClientRect(),v=viewport(),b=bounds();edge=r.left+r.width/2<v.x+v.w/2?'left':'right';fraction=b.bottom>b.top?clamp((r.top-b.top)/(b.bottom-b.top),0,1):0;blockClickUntil=Date.now()+450;remember();}
+   host.classList.remove('titi-dragging');try{if(host.hasPointerCapture(e.pointerId))host.releasePointerCapture(e.pointerId);}catch{}
+   layout();
+  }
+  window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);host.addEventListener('lostpointercapture',finish);
+  window.addEventListener('blur',()=>{if(gesture)finish({pointerId:gesture.id});});
+  mobile.addEventListener('change',()=>{if(choice===null){compact=mobile.matches;if(compact)panel(false);refresh();}else scheduleLayout();});
+  window.visualViewport?.addEventListener('resize',scheduleLayout);window.visualViewport?.addEventListener('scroll',scheduleLayout);
+  return {refresh,layout:scheduleLayout,layoutPanel};
+ })();
 
- function panel(open,focus=false){expanded=open;if(open)syncOnce();host.querySelector('.titi-games-panel')?.toggleAttribute('hidden',!open);const button=host.querySelector('.titi-games-launcher');button?.setAttribute('aria-expanded',String(open));if(focus)(open?host.querySelector('.titi-games-close'):button)?.focus();}
+
+ function panel(open,focus=false){expanded=open;if(open)syncOnce();host.querySelector('.titi-games-panel')?.toggleAttribute('hidden',!open);const button=host.querySelector('.titi-games-launcher');button?.setAttribute('aria-expanded',String(open));dock.layoutPanel();if(focus)(open?host.querySelector('.titi-games-close'):button)?.focus();}
  function message(text){panel(true);const note=host.querySelector('#titi-games-note');if(note)note.textContent=text;}
  function snapshot(){try{const s=window.TitiDashboardSnapshot?.();return s&&C.validStudent(s.student)&&C.ROUTES[s.className.replace(/\s/g,'').toUpperCase()]===location.pathname&&s.parentRoute===location.pathname?s:null;}catch{return null;}}
  function load(){return assets||=Promise.all(['vu-tru/catalog.json','vu-tru/teaching-map.json'].map(p=>fetch(base+p+'?v=classroom-4').then(r=>{if(!r.ok)throw Error('Game catalogue unavailable');return r.json();}))).catch(e=>{assets=null;throw e;});}
@@ -38,15 +107,15 @@
    const issued=issue(s,all,map),courses=issued.courses,context=issued.context,fresh=issued.fresh,profile={student:s.student};
    const cards=courses.filter(c=>fresh.active.includes(c.id)),summaries=cards.map(c=>C.summary(c,G.load(storage,c.id,profile),context));
    const total=courses.reduce((sum,c)=>sum+G.load(storage,c.id,profile).stardust,0),signature=JSON.stringify([s.student,s.className,s.displayName,context.allowed,context.books,summaries,total,issued.saved]);
-   if(signature===lastSignature&&!force){host.hidden=false;return;}lastSignature=signature;
+   if(signature===lastSignature&&!force){host.hidden=false;dock.layout();return;}lastSignature=signature;
    const keepFocus=host.contains(document.activeElement),focusClass=document.activeElement?.className;
    host.innerHTML=`<div class="titi-games-panel" id="titi-games-panel" role="dialog" aria-labelledby="titi-games-title" ${expanded?'':'hidden'}><button type="button" class="titi-games-close" aria-label="Đóng bảng game">×</button><div class="titi-games-head"><span class="titi-games-eyebrow">SÂN CHƠI CỦA ${esc(s.displayName||s.name)}</span><h2 id="titi-games-title">Cùng Titi chinh phục! <span aria-hidden="true">✦</span></h2><p>🚀 Nhận nhiệm vụ · Chinh phục · Gom sao</p></div><div class="titi-games-grid">${cards.map((c,i)=>{const p=summaries[i],next=c.lessons[p.next-1],tracks=context.books[c.id];return `<article class="titi-game-course"><span class="titi-games-book-label">GIÁO TRÌNH LỚP ĐANG HỌC</span><h3>${esc(c.name)}</h3>${tracks.length?`<p class="titi-games-tracks">${tracks.map(esc).join(' · ')}</p>`:''}<div class="titi-games-progress"><span>${p.completed}/${p.limit} thử thách</span><span>⭐ ${p.stars}</span></div><progress max="${Math.max(1,p.limit)}" value="${p.completed}" aria-label="Tiến độ ${esc(c.name)}"></progress>${next?`<p class="titi-games-next">${p.completed>=p.limit?'Săn sao tại':'Thử thách tiếp theo'}<strong>${esc(next.title)}</strong></p>`:'<p class="titi-games-empty">Titi đang chờ lớp mình học đủ phần của thử thách này nhé!</p>'}<button type="button" data-game-course="${esc(c.id)}" ${p.limit?'':'disabled'}>${!p.limit?'🌱 Chờ thử thách mới':p.completed>=p.limit?'🌟 Săn thêm sao':p.completed?'🚀 Chơi tiếp cùng Titi':'🚀 Chơi cùng Titi'}</button></article>`;}).join('')||'<p class="titi-games-empty">🌱 Thử thách của giáo trình lớp mình đang được chuẩn bị. Con quay lại sau nhé!</p>'}</div><button type="button" class="titi-board-button" style="margin:0 30px 12px;padding:10px 16px;border-radius:16px;border:1px solid #b1a0e9;background:#f1eaff;color:#343775;font:inherit;font-weight:700;cursor:pointer">🏆 Bảng xếp hạng trung tâm</button><div class="titi-games-footer"><span>✨ ${total} Bụi Sao</span><span>${esc(s.className)}</span></div><p class="titi-games-note" id="titi-games-note" role="status">${!issued.saved?'Chưa giữ được lượt chơi. Con bấm Chơi để thử lại nhé.':storage.temporary?'Con vẫn chơi được. Tiến độ tạm giữ trong tab này; đừng đóng tab khi đang chơi nhé.':''}</p></div><button type="button" class="titi-games-launcher" aria-label="Let's Learn — Mở sân chơi cùng Titi" aria-controls="titi-games-panel" aria-expanded="${expanded}">${planet}<span class="titi-learn-cta" lang="en">Let's Learn <b aria-hidden="true">▶</b></span></button>`;
-   host.hidden=false;
+   host.hidden=false;dock.refresh();
    host.querySelectorAll('[data-game-course]').forEach(button=>button.onclick=()=>openCourse(button.dataset.gameCourse).catch(()=>message('Tín hiệu bị ngắt một chút. Con bấm chơi lại nhé!')));
    host.querySelector('.titi-board-button').onclick=()=>connectBoard().catch(()=>message('Chưa kết nối được bảng xếp hạng. Con thử lại nhé.'));
    host.querySelector('.titi-games-launcher').onclick=()=>panel(!expanded,true);host.querySelector('.titi-games-close').onclick=()=>panel(false,true);
    if(keepFocus)(host.querySelector(focusClass==='titi-games-launcher'?'.titi-games-launcher':'.titi-games-close'))?.focus({preventScroll:true});
-  }catch{if(ticket!==revision)return;host.hidden=false;host.innerHTML=`<button type="button" class="titi-games-launcher" aria-label="Tải lại sân chơi Titi">${planet}<span>Thử lại nhé</span></button>`;host.querySelector('button').onclick=()=>render(true);}
+  }catch{if(ticket!==revision)return;host.hidden=false;host.innerHTML=`<button type="button" class="titi-games-launcher" aria-label="Tải lại sân chơi Titi">${planet}<span>Thử lại nhé</span></button>`;host.querySelector('button').onclick=()=>render(true);dock.refresh();}
  }
  async function openCourse(id,destination){
   const s=snapshot();if(!s){render(true);return;}
@@ -66,7 +135,7 @@
  document.addEventListener('pointerdown',e=>{if(expanded&&!host.contains(e.target))panel(false);});
  document.addEventListener('keydown',e=>{if(expanded&&e.key==='Escape'){e.preventDefault();panel(false,true);}});
  // Give the existing homework reminder its own space on small screens.
- const position=()=>{const reminder=document.querySelector('.paper-homework-reminder:not([hidden])');const rect=reminder?.getBoundingClientRect();host.style.setProperty('--titi-dock-lift',rect&&rect.height&&rect.top<innerHeight?Math.max(0,innerHeight-rect.top)+'px':'0px');};
+ const position=()=>{const reminder=document.querySelector('.paper-homework-reminder:not([hidden])');const rect=reminder?.getBoundingClientRect();host.style.setProperty('--titi-dock-lift',rect&&rect.height&&rect.top<innerHeight?Math.max(0,innerHeight-rect.top)+'px':'0px');dock.layout();};
  window.addEventListener('resize',position);position();
  for(const event of ['titi-dashboard-ready','pageshow','focus','hashchange','fighter-parent-access'])window.addEventListener(event,schedule);
  window.addEventListener('storage',e=>{if(!e.key||e.key.startsWith('universe_progress_'))schedule();});
