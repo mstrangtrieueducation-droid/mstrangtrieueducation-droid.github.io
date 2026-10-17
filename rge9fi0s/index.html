@@ -2100,7 +2100,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
   return kidsFeedbackCollapsibleMarkup(kidsFeedbackQualityParts(value).body,escape);
 }
 </script>
-<script id="kids-pending-history-v2">
+<script id="kids-pending-history-v3">
 /* Keep a dated reminder from an explicitly confirmed snapshot, without granting
  * current absence authority or changing the underlying receipt verification. */
 (function(root){
@@ -2131,7 +2131,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
     // Bind each reminder to its profile projection; date the notice by the
     // earlier evidence time, never by a later projection/build timestamp.
     var at=Math.min(asOf,projectedAt);
-    return {count:safe.length,at:at,title:'Theo đối chiếu lúc '+stamp(at)+', con còn '+safe.length+' bài cần hoàn thành',
+    return {count:safe.length,at:at,title:'Con còn '+safe.length+' bài tập cần hoàn thành',
       note:'Nếu con vừa nộp, trạng thái sẽ tự cập nhật khi có dữ liệu mới.'};
   }
   var api={historical:historical};root.KidsPendingHistory=api;
@@ -2972,7 +2972,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
       return failures.length === 0;
     }
 
-    /* KIDS_PENDING_HISTORY_V2 */
+    /* KIDS_PENDING_HISTORY_V3 */
     function pendingWorkHistory_() {
       const status = window.__kidsPreparedPreview && window.__kidsPreparedPreview.sourceStatus();
       return window.KidsPendingHistory.historical(app.child, status, Date.now());
