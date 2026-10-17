@@ -2142,6 +2142,41 @@ function kidsFeedbackDetailMarkup(value,escape) {
   return kidsFeedbackCollapsibleMarkup(kidsFeedbackQualityParts(value).body,escape);
 }
 </script>
+<style id="kids-practice-layout-v1">
+/* Self-practice presentation only. Receipt, reminders and Game remain native. */
+#practicePanel>.grid.two,#practicePanel .submission-history-window__cards{grid-template-columns:minmax(0,1fr);gap:18px}
+#practicePanel .practice-card{padding:0;border:1px solid #dce5e1;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(18,49,64,.035)}
+#practicePanel .practice-card__heading{padding:23px 26px 19px;border-left:4px solid #8ba99d}
+#practicePanel .practice-card__heading>.row{align-items:flex-start;gap:12px;margin-bottom:9px;flex-wrap:wrap}
+#practicePanel .practice-card__heading .label{font-size:11px;letter-spacing:.08em;margin:0;line-height:1.7}
+#practicePanel .practice-card__heading .card-title{font-size:20px;line-height:1.45;margin:0;color:#102e4d;overflow-wrap:anywhere}
+#practicePanel .practice-card__heading>.soft{font-size:14px;line-height:1.6;margin:8px 0 0;color:#6c7b88}
+#practicePanel .practice-card__heading .homework-head__status{gap:8px;max-width:100%;flex-wrap:wrap}
+#practicePanel .practice-card__heading .pill{white-space:normal;line-height:1.45}
+#practicePanel .practice-card>.task-feedback{padding:20px 26px;grid-template-columns:minmax(220px,.8fr) minmax(0,2fr);gap:20px;background:#f7f9f8;border-top:1px solid #e5ebe8}
+#practicePanel .practice-card>.task-feedback>.feedback-cell:first-child{background:transparent;border:0;padding:4px 0}
+#practicePanel .practice-card .feedback-cell>strong{font-size:13px;margin-bottom:8px}
+#practicePanel .practice-card .feedback-value{font-size:14px;line-height:1.7;overflow-wrap:anywhere}
+#practicePanel .practice-card .teacher-feedback{padding:18px 20px}
+#practicePanel .practice-card__footer{display:flex;align-items:center;justify-content:flex-start;gap:24px;flex-wrap:wrap;padding:16px 26px;border-top:1px solid #e5ebe8;background:#fff}
+#practicePanel .practice-card__footer .due-highlight{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;padding:0;margin:0;border:0;background:transparent;box-shadow:none;color:#667586;flex-wrap:wrap}
+#practicePanel .practice-card__footer .due-highlight span{font-size:11px;letter-spacing:.025em}
+#practicePanel .practice-card__footer .due-highlight strong{font-size:14px;color:#9a6429}
+#practicePanel .practice-card__footer .actions{order:-1;margin:0;gap:10px;display:flex;flex-wrap:wrap}
+#practicePanel .practice-card .btn{min-height:44px;align-items:center;justify-content:center;display:inline-flex}
+#practicePanel .practice-card.science-practice>.science-stage{margin:0 26px 16px;border-radius:12px;overflow:hidden}
+@media(max-width:700px){
+ #practicePanel .practice-card__heading{padding:18px 16px 16px}
+ #practicePanel .practice-card__heading .card-title{font-size:17px;line-height:1.5}
+ #practicePanel .practice-card__heading>.row{gap:8px;flex-direction:column}
+ #practicePanel .practice-card>.task-feedback{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}
+ #practicePanel .practice-card .teacher-feedback{padding:16px}
+ #practicePanel .practice-card__footer{padding:16px;align-items:stretch;flex-direction:column;gap:14px}
+ #practicePanel .practice-card__footer .actions{order:0;padding-right:100px}
+ #practicePanel .practice-card__footer .actions>.btn{flex:1 1 auto}
+ #practicePanel .practice-card.science-practice>.science-stage{margin:0 16px 16px}
+}
+</style>
 </head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
@@ -4076,7 +4111,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
   }catch(_){}
   return `<section class="homework-item science-stage" data-pending-target data-task-id="${escapeHtml(text(task.id))}" data-science-stage="${automatic?'listen':'talk'}"><div class="homework-row is-single"><div><strong>${escapeHtml(task.title)}</strong></div><div class="homework-actions"><span class="pill ${status.cls}">${escapeHtml(status.label)}</span>${learningUrl?`<a class="mini-action" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${automatic?'Mở bài nghe':'Mở bài / nộp video'}</a>`:''}</div></div><div class="task-feedback${automatic?' is-receipt-only':''}"><div class="feedback-cell"><strong>${automatic?'Điểm bài nghe':'Nhận video'}</strong>${scoreText?`<div class="feedback-score">Kết quả: ${escapeHtml(scoreText)}</div>`:''}<div class="feedback-value${feedback.contentMissing?' is-missing':''}">${escapeHtml(receipt)}</div>${history}${links}</div>${automatic?'':`<div class="feedback-cell teacher-feedback"><div class="teacher-feedback__head"><strong>${comment?'Cô đã nhận xét':'Nhận xét của giáo viên'}</strong>${kidsFeedbackQualityBadge(comment, escapeHtml)}</div><div class="feedback-value">${comment?kidsFeedbackDetailMarkup(comment, escapeHtml):done?'Chờ GV nhận xét':'Chưa có nhận xét'}</div></div>`}</div></section>`;
  }).join('');
- return `<article class="card sky science-practice" data-pending-target data-assignment-id="${escapeHtml(text(item.id))}" data-pending-title="${escapeHtml(matchKey(title))}"><div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice?'<span class="new-work-badge">BÀI MỚI</span>':''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div><h3 class="card-title">${escapeHtml(title)}</h3>${description?`<p class="soft">${nl2br(description)}</p>`:''}${taskHtml}${due?`<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>`:''}</article>`;
+ return `<article class="card sky practice-card science-practice" data-pending-target data-assignment-id="${escapeHtml(text(item.id))}" data-pending-title="${escapeHtml(matchKey(title))}"><header class="practice-card__heading"><div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice?'<span class="new-work-badge">BÀI MỚI</span>':''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div><h3 class="card-title">${escapeHtml(title)}</h3>${description?`<p class="soft">${nl2br(description)}</p>`:''}</header>${taskHtml}<footer class="practice-card__footer">${due?`<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>`:''}</footer></article>`;
 }
     /* END_SCIENCE_PRACTICE_DISPLAY_V1 */
     function practiceCard(item, isNewPractice) {
@@ -4096,14 +4131,18 @@ function sciencePracticeCardV1_(item,isNewPractice){
       const submissionText = item.contentMissing || submitted || submissionAttempts.length ? submissionReceiptText_(item,submissionAttempts.length,submittedAt) : submissionMissingText_(item);
       const historyHtml = submissionHistoryHtml(submissionAttempts, reviewUrl);
       const needsReview = feedbackNeedsReview(comment);
-      return `<article class="card sky" data-pending-target data-assignment-id="${escapeHtml(text(pick(item, ['id'], '')))}" data-task-id="${escapeHtml(text(pick(firstTask, ['id'], '')))}" data-pending-title="${escapeHtml(matchKey(title))}">
-        <div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice ? '<span class="new-work-badge">BÀI MỚI</span>' : ''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div>
+      // Avoid repeating the exact evidence link already shown under Nhận bài.
+      const footerEvidence=safeUrl(pick(item,['submissionUrl','evidenceUrl','reviewUrl','viewUrl'],''));
+      const evidenceShown=reviewUrl&&footerEvidence===reviewUrl&&(!historyHtml||historyHtml.includes('href="'+escapeHtml(reviewUrl)+'"'));
+      const footerItem=evidenceShown?Object.assign({},item,{submissionUrl:'',evidenceUrl:'',reviewUrl:'',viewUrl:''}):item;
+      return `<article class="card sky practice-card" data-pending-target data-assignment-id="${escapeHtml(text(pick(item, ['id'], '')))}" data-task-id="${escapeHtml(text(pick(firstTask, ['id'], '')))}" data-pending-title="${escapeHtml(matchKey(title))}">
+        <header class="practice-card__heading"><div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice ? '<span class="new-work-badge">BÀI MỚI</span>' : ''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div>
         <h3 class="card-title">${escapeHtml(title)}</h3>
         ${description ? `<p class="soft">${nl2br(description)}</p>` : ''}
         ${score !== '' && score !== null ? `<p><strong>Kết quả: ${escapeHtml(score)}</strong></p>` : ''}
-        <div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${item.contentMissing ? 'is-missing' : submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${kidsFeedbackQualityBadge(comment, escapeHtml)}${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? kidsFeedbackDetailMarkup(comment, escapeHtml) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
-        ${due ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
-        ${actionLinks(item, true, 'Mở bài tự luyện')}
+        </header><div class="task-feedback"><div class="feedback-cell"><strong>Nhận bài</strong><div class="feedback-value ${item.contentMissing ? 'is-missing' : submitted || !submissionCan_(item) || !(item.directReceiptDeadline&&item.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>${historyHtml}${reviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(reviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div><div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${comment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${kidsFeedbackQualityBadge(comment, escapeHtml)}${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${comment ? '' : submitted ? 'is-pending' : ''}">${comment ? kidsFeedbackDetailMarkup(comment, escapeHtml) : submitted&&!item.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét'}</div>${needsReview && learningUrl ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div></div>
+        <footer class="practice-card__footer">${due ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
+        ${actionLinks(footerItem, true, 'Mở bài tự luyện')}</footer>
       </article>`;
     }
 
