@@ -2190,6 +2190,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
     <div id="fatal" class="fatal" hidden role="alert"></div>
 
     <main id="mainContent">
+<section id="titi-games" aria-label="Game ôn tập của con" hidden></section>
       <section class="panel active" id="schedulePanel" data-panel="schedule" role="tabpanel"></section>
       <section class="panel" id="lessonsPanel" data-panel="lessons" role="tabpanel"></section>
       <section class="panel" id="practicePanel" data-panel="practice" role="tabpanel"></section>
@@ -4918,7 +4919,7 @@ function createStudentLearningPrefill(options) {
       return viewer.href;
     } catch (_) { return original; }
   }
-  return Object.freeze({ decorate });
+  return Object.freeze({ decorate, getIdentity: options.getIdentity });
 }
 
 /* STUDENT_PREFILL_COMMON_END */
@@ -6384,6 +6385,12 @@ function writtenTestDisplayTitle_(item) {
         return {className: CLASS_NAME, rosterName: '', englishName: alias, submissionName: alias};
       }
     });
+/* TITI_CLASSROOM_GAMES_V2: authorized current student, completed classroom evidence only. */
+window.TitiDashboardSnapshot=function(){
+ const identity=kidsLearningPrefill_.getIdentity(),tokens=new URLSearchParams(location.hash.slice(1)).getAll('p');
+ if(!identity||tokens.length!==1||!/^[A-Za-z0-9_-]{22}$/.test(tokens[0])||!validDashboardData(app.data)||$('#dashboardShell').hidden||kidsApi.parent.revoked||!window.ClassroomProgress)return null;
+ return {student:tokens[0],name:identity.submissionName,displayName:identity.englishName||identity.submissionName,className:identity.className,parentRoute:location.pathname,family:'kids',lessons:sessions().map(session=>({program:session.program,lesson:session,assignment:childAssignmentFor(session)||{}}))};
+};
     function parentLearningUrl_(value, enabled = true) { return kidsLearningPrefill_.decorate(value, enabled); }
 
 
@@ -7069,5 +7076,10 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if (typeof window.__kidsBootLive === 'function') window.__kidsBootLive();
     }
   </script>
+<link rel="stylesheet" href="/student-learning/titi-games/dashboard.css?v=classroom-2">
+<script src="/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-2"></script>
+<script src="/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-2"></script>
+<script src="/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-2"></script>
+<script src="/student-learning/titi-games/dashboard.js?v=classroom-2"></script>
 </body>
 </html>

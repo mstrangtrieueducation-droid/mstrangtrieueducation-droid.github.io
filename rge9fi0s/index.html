@@ -4921,7 +4921,7 @@ function createStudentLearningPrefill(options) {
       return viewer.href;
     } catch (_) { return original; }
   }
-  return Object.freeze({ decorate });
+  return Object.freeze({ decorate, getIdentity: options.getIdentity });
 }
 
 /* STUDENT_PREFILL_COMMON_END */
@@ -6387,18 +6387,13 @@ function writtenTestDisplayTitle_(item) {
         return {className: CLASS_NAME, rosterName: '', englishName: alias, submissionName: alias};
       }
     });
-    // The game adapter only receives the currently authorized profile and completed class evidence.
-    window.TitiDashboardSnapshot = function () {
-      const identity = kidsLearningPrefill_.getIdentity();
-      const student = new URLSearchParams(location.hash.slice(1)).get('p') || '';
-      if (!identity || !/^[A-Za-z0-9_-]{22}$/.test(student) || !validDashboardData(app.data) ||
-          $('#dashboardShell').hidden || kidsApi.parent.revoked) return null;
-      return { student, name: identity.englishName, className: identity.className,
-        gameUnlocks: app.data.gameUnlocks || {},
-        lessons: sessions().map(session => ({program: session.program,
-          lesson: session, assignment: childAssignmentFor(session) || {}})) };
-    };
 
+/* TITI_CLASSROOM_GAMES_V2: authorized current student, completed classroom evidence only. */
+window.TitiDashboardSnapshot=function(){
+ const identity=kidsLearningPrefill_.getIdentity(),tokens=new URLSearchParams(location.hash.slice(1)).getAll('p');
+ if(!identity||tokens.length!==1||!/^[A-Za-z0-9_-]{22}$/.test(tokens[0])||!validDashboardData(app.data)||$('#dashboardShell').hidden||kidsApi.parent.revoked||!window.ClassroomProgress)return null;
+ return {student:tokens[0],name:identity.submissionName,displayName:identity.englishName||identity.submissionName,className:identity.className,parentRoute:location.pathname,family:'kids',lessons:sessions().map(session=>({program:session.program,lesson:session,assignment:childAssignmentFor(session)||{}}))};
+};
     function parentLearningUrl_(value, enabled = true) { return kidsLearningPrefill_.decorate(value, enabled); }
 
 
@@ -7084,10 +7079,10 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if (typeof window.__kidsBootLive === 'function') window.__kidsBootLive();
     }
   </script>
-<link rel="stylesheet" href="./titi-games.css?v=classroom-1">
-<script src="/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-1"></script>
-<script src="/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-1"></script>
-<script src="/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-1"></script>
-<script src="./titi-games.js?v=classroom-1"></script>
+<link rel="stylesheet" href="/student-learning/titi-games/dashboard.css?v=classroom-2">
+<script src="/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-2"></script>
+<script src="/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-2"></script>
+<script src="/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-2"></script>
+<script src="/student-learning/titi-games/dashboard.js?v=classroom-2"></script>
 </body>
 </html>
