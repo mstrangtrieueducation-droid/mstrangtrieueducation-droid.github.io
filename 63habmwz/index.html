@@ -2100,7 +2100,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
   return kidsFeedbackCollapsibleMarkup(kidsFeedbackQualityParts(value).body,escape);
 }
 </script>
-<script id="kids-pending-history-v1">
+<script id="kids-pending-history-v2">
 /* Keep a dated reminder from an explicitly confirmed snapshot, without granting
  * current absence authority or changing the underlying receipt verification. */
 (function(root){
@@ -2111,20 +2111,26 @@ function kidsFeedbackDetailMarkup(value,escape) {
   }
   function historical(profile,status,now){
     profile=profile||{};status=status||{};
-    var p=profile.preparedSubmissionVerification,at=Number(status.receiptAsOf);
+    var p=profile.preparedSubmissionVerification,asOf=Number(status.receiptAsOf);
+    var projectedAt=Number(p&&p.verifiedAt);
+    var validTime=function(at){return Number.isSafeInteger(at)&&at>0&&at<=now+120000&&now-at<=86400000;};
     var rows=profile.privateReminders;
     if(status.servingLastConfirmed!==true||status.receiptStatusMode!=='as-of-confirmed'||
        status.receiptVerificationMethod!=='prior-source-confirmation'||status.profileRefreshError||
-       status.sourceCodeIssues===true||!Number.isFinite(at)||at<=0||at>now+120000||now-at>86400000||
-       !p||p.schema!==1||p.complete!==false||p.freshRead!==false||Number(p.verifiedAt)!==at||
+       status.sourceCodeIssues===true||!validTime(asOf)||!validTime(projectedAt)||
+       !p||p.schema!==1||p.complete!==false||p.freshRead!==false||
        !Array.isArray(rows)||!rows.length)return null;
     var safe=rows.filter(function(r){
       var proof=r&&r.preparedSubmissionVerification;
       return r&&r.type==='pending'&&r.assignmentId&&r.title&&proof&&proof.schema===1&&
-        proof.complete===false&&proof.freshRead===false&&Number(proof.verifiedAt)===at;
+        proof.complete===false&&proof.freshRead===false&&Number(proof.verifiedAt)===projectedAt;
     });
     // Do not infer a missing item from a summary count or an unverified label.
     if(safe.length!==rows.length)return null;
+    // Receipt verification and prepared projection have independent clocks.
+    // Bind each reminder to its profile projection; date the notice by the
+    // earlier evidence time, never by a later projection/build timestamp.
+    var at=Math.min(asOf,projectedAt);
     return {count:safe.length,at:at,title:'Theo đối chiếu lúc '+stamp(at)+', con còn '+safe.length+' bài cần hoàn thành',
       note:'Nếu con vừa nộp, trạng thái sẽ tự cập nhật khi có dữ liệu mới.'};
   }
@@ -2964,7 +2970,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
       return failures.length === 0;
     }
 
-    /* KIDS_PENDING_HISTORY_V1 */
+    /* KIDS_PENDING_HISTORY_V2 */
     function pendingWorkHistory_() {
       const status = window.__kidsPreparedPreview && window.__kidsPreparedPreview.sourceStatus();
       return window.KidsPendingHistory.historical(app.child, status, Date.now());
