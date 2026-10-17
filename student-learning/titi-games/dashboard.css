@@ -92,3 +92,15 @@
 #titi-games.titi-dock .titi-games-panel{position:fixed;right:auto;bottom:auto;margin:0;z-index:4;animation:none;overscroll-behavior:contain}
 @media(max-width:520px){#titi-games.titi-dock .titi-minimize{width:36px;height:36px;right:-7px;top:-12px;font-size:26px}#titi-games.titi-dock:not(.titi-compact) .titi-games-launcher>.titi-invitation{right:20px;top:16px;font-size:13px}}
 @media(prefers-reduced-motion:reduce){#titi-games.titi-dock{transition:none}}
+
+/* Finger follows immediately; only the launcher blocks page panning. */
+#titi-games.titi-dock.titi-pressed{transition:none!important}
+#titi-games.titi-dock.titi-dragging{will-change:transform}
+#titi-games.titi-dock .titi-games-launcher{touch-action:none;-webkit-tap-highlight-color:transparent}
+#titi-games.titi-dock.titi-dragging .titi-games-launcher{transition:none!important;transform:none!important}
+#titi-games.titi-dock .titi-games-panel{touch-action:pan-y}
+#titi-games .titi-play-sign{display:none}
+#titi-games.titi-compact .titi-play-sign{display:block;position:absolute;z-index:2;left:-5px;bottom:8px;width:86px;box-sizing:border-box;padding:5px 4px 4px;border:2px solid #ffe5a0;border-bottom:4px solid #9a551f;border-radius:9px;background:linear-gradient(160deg,#fff2a6,#ffbf46);color:#493017;font:900 12px/1.05 system-ui,sans-serif;text-align:center;white-space:nowrap;box-shadow:0 3px 5px #20333e33;transform:rotate(-4deg)}
+#titi-games.titi-compact .titi-play-sign:before,#titi-games.titi-compact .titi-play-sign:after{content:'';position:absolute;top:-5px;width:13px;height:8px;border-radius:50%;background:linear-gradient(#ffbb74,#d5722d);border-bottom:2px solid #9a4e24}
+#titi-games.titi-compact .titi-play-sign:before{left:4px;transform:rotate(-20deg)}
+#titi-games.titi-compact .titi-play-sign:after{right:4px;transform:rotate(20deg)}

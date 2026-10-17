@@ -13,7 +13,7 @@
  // The dashboard may have marked its children inert before this script loads.
  // Reparenting preserves that attribute; clear it only on our own detached widget.
  host.inert=false;
- const planet=`<span class="titi-welcome-scene" aria-hidden="true"><span class="titi-sun-halo"></span><span class="titi-floor-shadow"></span><span class="titi-teacher-walk"><span class="titi-teacher-pose"></span></span><span class="titi-spark spark-one">✦</span><span class="titi-spark spark-two">✧</span><span class="titi-spark spark-three">✦</span></span><span class="titi-invitation" lang="en">Let's learn<br>together!</span>`;
+ const planet=`<span class="titi-welcome-scene" aria-hidden="true"><span class="titi-sun-halo"></span><span class="titi-floor-shadow"></span><span class="titi-teacher-walk"><span class="titi-teacher-pose"></span></span><span class="titi-play-sign" lang="en">Let's Play</span><span class="titi-spark spark-one">✦</span><span class="titi-spark spark-two">✧</span><span class="titi-spark spark-three">✦</span></span><span class="titi-invitation" lang="en">Let's learn<br>together!</span>`;
  // Floating presentation controller. No network, profile or game-progress writes.
  const dock=(()=>{
   const KEY='mtt-titi-dock-v1',mobile=matchMedia('(max-width: 520px)');
@@ -21,11 +21,12 @@
   let choice=typeof saved.collapsed==='boolean'?saved.collapsed:null;
   let compact=choice===null?mobile.matches:choice,edge=saved.edge==='left'?'left':'right';
   let fraction=Number.isFinite(saved.y)?Math.max(0,Math.min(1,saved.y)):null;
-  let gesture=null,blockClickUntil=0,frame=0;
+  let gesture=null,blockClickUntil=0,frame=0,dragFrame=0;
+  let horizontal=Number.isFinite(saved.x)?Math.max(0,Math.min(1,saved.x)):null;
   const clamp=(n,a,b)=>Math.max(a,Math.min(Math.max(a,b),n));
   function viewport(){const v=window.visualViewport;return {x:v?.offsetLeft||0,y:v?.offsetTop||0,w:v?.width||innerWidth,h:v?.height||innerHeight};}
   function bounds(){const v=viewport(),r=host.getBoundingClientRect(),lift=parseFloat(host.style.getPropertyValue('--titi-dock-lift'))||0;return {left:v.x+12,right:Math.max(v.x+12,v.x+v.w-r.width-12),top:v.y+12,bottom:Math.max(v.y+12,v.y+v.h-r.height-12-lift)};}
-  function remember(){try{sessionStorage.setItem(KEY,JSON.stringify({collapsed:choice,edge,y:fraction}));}catch{}}
+  function remember(){try{sessionStorage.setItem(KEY,JSON.stringify({collapsed:choice,edge,x:horizontal,y:fraction}));}catch{}}
   function place(x,y){host.style.left=x+'px';host.style.top=y+'px';}
   function layoutPanel(){
    const p=host.querySelector('.titi-games-panel');if(!p||p.hidden)return;
@@ -37,8 +38,8 @@
    else {p.style.maxHeight=Math.max(100,v.h-24)+'px';p.style.top=(v.y+12)+'px';}
   }
   function layout(){
-   frame=0;if(gesture?.moved||host.hidden)return;
-   const b=bounds();place(edge==='left'?b.left:b.right,fraction===null?b.bottom:b.top+fraction*(b.bottom-b.top));layoutPanel();
+   frame=0;if(gesture||host.hidden)return;
+   const b=bounds();place(horizontal===null?(edge==='left'?b.left:b.right):b.left+horizontal*(b.right-b.left),fraction===null?b.bottom:b.top+fraction*(b.bottom-b.top));layoutPanel();
   }
   function scheduleLayout(){if(!frame)frame=requestAnimationFrame(layout);}
   function refresh(){
@@ -58,36 +59,56 @@
    if(e.target.closest?.('.titi-minimize')){e.preventDefault();e.stopImmediatePropagation();setCompact(true);return;}
    if(compact&&e.target.closest?.('.titi-games-launcher')){e.preventDefault();e.stopImmediatePropagation();setCompact(false);}
   },true);
+  // Capture on touch-down; paint only transforms while dragging. No per-move
+  // layout reads, edge snapping, or delayed CSS transitions under the finger.
   host.addEventListener('pointerdown',e=>{
    if(!e.isPrimary||e.button!==0||!e.target.closest?.('.titi-games-launcher'))return;
-   const r=host.getBoundingClientRect();gesture={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,moved:false,threshold:e.pointerType==='mouse'?6:10};
+   const r=host.getBoundingClientRect(),b=bounds();
+   host.classList.add('titi-pressed');place(r.left,r.top);
+   gesture={id:e.pointerId,pointerType:e.pointerType,x:e.clientX,y:e.clientY,left:r.left,top:r.top,nextX:r.left,nextY:r.top,b,moved:false};
+   gesture.capture=e.target.closest('.titi-games-launcher');
   });
+  function paintDrag(){dragFrame=0;if(!gesture?.moved)return;host.style.transform='translate3d('+(gesture.nextX-gesture.left)+'px,'+(gesture.nextY-gesture.top)+'px,0)';}
   function move(e){
    if(!gesture||gesture.id!==e.pointerId)return;
    const dx=e.clientX-gesture.x,dy=e.clientY-gesture.y;
-   if(!gesture.moved&&Math.hypot(dx,dy)<gesture.threshold)return;
-   if(!gesture.moved){gesture.moved=true;panel(false);host.classList.add('titi-dragging');try{host.setPointerCapture(e.pointerId);}catch{}}
-   e.preventDefault();const b=bounds();place(clamp(gesture.left+dx,b.left,b.right),clamp(gesture.top+dy,b.top,b.bottom));
+   if(!gesture.moved&&Math.hypot(dx,dy)<3)return;
+   if(!gesture.moved){gesture.moved=true;panel(false);host.classList.add('titi-dragging');try{gesture.capture.setPointerCapture(e.pointerId);}catch{}}
+   if(e.cancelable)e.preventDefault();const b=gesture.b;
+   gesture.nextX=clamp(gesture.left+dx,b.left,b.right);gesture.nextY=clamp(gesture.top+dy,b.top,b.bottom);
+   if(!dragFrame)dragFrame=requestAnimationFrame(paintDrag);
   }
   function finish(e){
    if(!gesture||gesture.id!==e.pointerId)return;
-   const moved=gesture.moved;gesture=null;
-   if(moved){const r=host.getBoundingClientRect(),v=viewport(),b=bounds();edge=r.left+r.width/2<v.x+v.w/2?'left':'right';fraction=b.bottom>b.top?clamp((r.top-b.top)/(b.bottom-b.top),0,1):0;blockClickUntil=Date.now()+450;remember();}
-   host.classList.remove('titi-dragging');try{if(host.hasPointerCapture(e.pointerId))host.releasePointerCapture(e.pointerId);}catch{}
-   layout();
+   if(e.type==='pointerup'&&gesture.moved)move(e);
+   const g=gesture;gesture=null;cancelAnimationFrame(dragFrame);dragFrame=0;
+   host.style.transform='';
+   if(g.moved){
+    place(g.nextX,g.nextY);const b=g.b;
+    horizontal=b.right>b.left?clamp((g.nextX-b.left)/(b.right-b.left),0,1):0;
+    fraction=b.bottom>b.top?clamp((g.nextY-b.top)/(b.bottom-b.top),0,1):0;
+    edge=horizontal<.5?'left':'right';blockClickUntil=Date.now()+350;remember();
+   }
+   host.classList.remove('titi-dragging');
+   try{if(g.moved&&g.capture?.hasPointerCapture(e.pointerId))g.capture.releasePointerCapture(e.pointerId);}catch{}
+   // Commit the final position with transitions still disabled.
+   layout();requestAnimationFrame(()=>{if(!gesture)host.classList.remove('titi-pressed');});
+   if(!g.moved&&e.type==='pointerup'&&g.pointerType!=='mouse'&&g.capture?.isConnected){blockClickUntil=0;g.capture.click();blockClickUntil=Date.now()+350;}
   }
   window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);host.addEventListener('lostpointercapture',finish);
-  window.addEventListener('blur',()=>{if(gesture)finish({pointerId:gesture.id});});
+  host.addEventListener('dragstart',e=>{if(e.target.closest?.('.titi-games-launcher'))e.preventDefault();});
+  const endGesture=()=>{if(gesture)finish({pointerId:gesture.id});scheduleLayout();};
+  window.addEventListener('blur',endGesture);window.addEventListener('resize',endGesture);
   mobile.addEventListener('change',()=>{if(choice===null){compact=mobile.matches;if(compact)panel(false);refresh();}else scheduleLayout();});
   window.visualViewport?.addEventListener('resize',scheduleLayout);window.visualViewport?.addEventListener('scroll',scheduleLayout);
-  return {refresh,layout:scheduleLayout,layoutPanel};
+  return {refresh,layout:scheduleLayout,layoutPanel,active:()=>!!gesture};
  })();
 
 
  function panel(open,focus=false){expanded=open;if(open)syncOnce();host.querySelector('.titi-games-panel')?.toggleAttribute('hidden',!open);const button=host.querySelector('.titi-games-launcher');button?.setAttribute('aria-expanded',String(open));dock.layoutPanel();if(focus)(open?host.querySelector('.titi-games-close'):button)?.focus();}
  function message(text){panel(true);const note=host.querySelector('#titi-games-note');if(note)note.textContent=text;}
  function snapshot(){try{const s=window.TitiDashboardSnapshot?.();return s&&C.validStudent(s.student)&&C.ROUTES[s.className.replace(/\s/g,'').toUpperCase()]===location.pathname&&s.parentRoute===location.pathname?s:null;}catch{return null;}}
- function load(){return assets||=Promise.all(['vu-tru/catalog.json','vu-tru/teaching-map.json'].map(p=>fetch(base+p+'?v=classroom-4').then(r=>{if(!r.ok)throw Error('Game catalogue unavailable');return r.json();}))).catch(e=>{assets=null;throw e;});}
+ function load(){return assets||=Promise.all(['vu-tru/catalog.json','vu-tru/teaching-map.json'].map(p=>fetch(base+p+'?v=program-1').then(r=>{if(!r.ok)throw Error('Game catalogue unavailable');return r.json();}))).catch(e=>{assets=null;throw e;});}
  function scoped(courses,s){return courses.filter(c=>s.family==='kids'?/^(phonics-|family-friends-|discover-)/.test(c.id):s.family==='ta'?c.id==='van-lang':s.family==='fighter'?c.id==='fighter':s.family==='ielts'?c.id.startsWith('ielts'):false);}
  function issue(s,courses,map,courseId){
   const fresh=P.currentBooks(scoped(courses,s),map,s.lessons),scopedCourses=courses.filter(c=>Object.hasOwn(fresh.books,c.id)),course=scopedCourses.find(c=>c.id===courseId)||scopedCourses.find(c=>fresh.allowed[c.id]?.length)||scopedCourses[0];
@@ -99,7 +120,7 @@
  function revoke(){
   try{const student=new URLSearchParams(location.hash.slice(1)).get('p'),own=JSON.parse(storage.getItem('vl_student_context_'+student)||'null');if(own?.parentRoute!==location.pathname)return;storage.removeItem('vl_student_context_'+student);const active=JSON.parse(storage.getItem(C.ACTIVE)||'null');if(active?.student===student)storage.removeItem(C.ACTIVE);}catch{}
  }
- async function render(force=false){if(document.hidden)return;const ticket=++revision,s=snapshot();
+ async function render(force=false){if(document.hidden)return;if(dock.active()){clearTimeout(pending);pending=setTimeout(()=>render(force),100);return;}const ticket=++revision,s=snapshot();
   if(document.body.matches('.pending-work-locked,.fighter-pending-work-locked')){host.hidden=true;panel(false);return;}
   if(!s){host.hidden=true;host.replaceChildren();lastSignature='';expanded=false;owner='';revoke();return;}
   if(owner!==s.student){expanded=false;owner=s.student;}
