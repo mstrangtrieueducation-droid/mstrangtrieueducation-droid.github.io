@@ -2100,7 +2100,39 @@ function kidsFeedbackDetailMarkup(value,escape) {
   return kidsFeedbackCollapsibleMarkup(kidsFeedbackQualityParts(value).body,escape);
 }
 </script>
-</head>
+<script id="kids-pending-history-v1">
+/* Keep a dated reminder from an explicitly confirmed snapshot, without granting
+ * current absence authority or changing the underlying receipt verification. */
+(function(root){
+  'use strict';
+  function stamp(at){
+    var d=new Date(at+7*3600000),pad=function(n){return String(n).padStart(2,'0');};
+    return pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+' '+pad(d.getUTCDate())+'/'+pad(d.getUTCMonth()+1);
+  }
+  function historical(profile,status,now){
+    profile=profile||{};status=status||{};
+    var p=profile.preparedSubmissionVerification,at=Number(status.receiptAsOf);
+    var rows=profile.privateReminders;
+    if(status.servingLastConfirmed!==true||status.receiptStatusMode!=='as-of-confirmed'||
+       status.receiptVerificationMethod!=='prior-source-confirmation'||status.profileRefreshError||
+       status.sourceCodeIssues===true||!Number.isFinite(at)||at<=0||at>now+120000||now-at>86400000||
+       !p||p.schema!==1||p.complete!==false||p.freshRead!==false||Number(p.verifiedAt)!==at||
+       !Array.isArray(rows)||!rows.length)return null;
+    var safe=rows.filter(function(r){
+      var proof=r&&r.preparedSubmissionVerification;
+      return r&&r.type==='pending'&&r.assignmentId&&r.title&&proof&&proof.schema===1&&
+        proof.complete===false&&proof.freshRead===false&&Number(proof.verifiedAt)===at;
+    });
+    // Do not infer a missing item from a summary count or an unverified label.
+    if(safe.length!==rows.length)return null;
+    return {count:safe.length,at:at,title:'Theo đối chiếu lúc '+stamp(at)+', con còn '+safe.length+' bài cần hoàn thành',
+      note:'Nếu con vừa nộp, trạng thái sẽ tự cập nhật khi có dữ liệu mới.'};
+  }
+  var api={historical:historical};root.KidsPendingHistory=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window==='object'?window:globalThis);
+
+</script></head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
     <div class="boot-recovery__card">
@@ -2932,6 +2964,11 @@ function kidsFeedbackDetailMarkup(value,escape) {
       return failures.length === 0;
     }
 
+    /* KIDS_PENDING_HISTORY_V1 */
+    function pendingWorkHistory_() {
+      const status = window.__kidsPreparedPreview && window.__kidsPreparedPreview.sourceStatus();
+      return window.KidsPendingHistory.historical(app.child, status, Date.now());
+    }
     function renderPendingWorkBanner() {
       const banner = $('#pendingWorkBanner');
       if (!banner) return;
@@ -2939,8 +2976,9 @@ function kidsFeedbackDetailMarkup(value,escape) {
       const reminders = arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
       const summary = profile.summary || {};
       const summaryCount = Number(pick(summary, ['needsCompletionCount'], NaN));
-      const pendingCount = Math.max(0, Number.isFinite(summaryCount) ? summaryCount : 0, reminders.length);
-      if (!app.child || !submissionCan_(profile) || pendingCount < 1) {
+      const historical = !submissionCan_(profile) && pendingWorkHistory_();
+      const pendingCount = historical ? historical.count : Math.max(0, Number.isFinite(summaryCount) ? summaryCount : 0, reminders.length);
+      if (!app.child || (!submissionCan_(profile) && !historical) || pendingCount < 1) {
         banner.hidden = true;
         $('#pendingWorkTitle').textContent = '';
         $('#pendingWorkDetail').textContent = '';
@@ -2957,18 +2995,18 @@ function kidsFeedbackDetailMarkup(value,escape) {
       }).filter(Boolean);
       const shown = titles.slice(0, 2);
       const remaining = Math.max(0, pendingCount - shown.length);
-      const title = profile.submissionPendingIncomplete ? `Đã xác nhận ${pendingCount} bài cần hoàn thành` : `Con còn ${pendingCount} bài tập cần hoàn thành`;
+      const title = historical ? historical.title : profile.submissionPendingIncomplete ? `Đã xác nhận ${pendingCount} bài cần hoàn thành` : `Con còn ${pendingCount} bài tập cần hoàn thành`;
       const detail = shown.length
         ? `Cần hoàn thành: ${shown.join(' · ')}${remaining ? ` · và ${remaining} bài khác` : ''}.`
         : 'Bố mẹ cùng con mở phần Tiết học & Bài tập để hoàn thành nhé.';
       $('#pendingWorkTitle').textContent = title;
-      $('#pendingWorkDetail').textContent = detail;
+      $('#pendingWorkDetail').textContent = detail + (historical ? ' ' + historical.note : '');
       banner.hidden = false;
       const alias = text(pick(profile, ['englishName', 'alias', 'displayName'], app.childAlias)).toUpperCase();
       const reminderKeys = reminders.map(item => typeof item === 'string'
         ? text(item)
         : text(pick(item, ['assignmentId', 'id', 'title'], ''))).filter(Boolean);
-      showPendingWorkGate(`${alias}|${pendingCount}|${reminderKeys.join('|')}`, title, detail);
+      showPendingWorkGate(`${alias}|${pendingCount}|${reminderKeys.join('|')}`, title, detail + (historical ? ' ' + historical.note : ''));
     }
 
     function setPendingWorkLock(locked) {
@@ -2989,7 +3027,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
     function showPendingWorkGate(signature, title, detail) {
       const gate = $('#pendingWorkGate');
-      if (!submissionCan_(app.child) || !gate || !signature || app.pendingNoticeSeen === signature) {
+      if ((!submissionCan_(app.child) && !pendingWorkHistory_()) || !gate || !signature || app.pendingNoticeSeen === signature) {
         hidePendingWorkGate();
         return;
       }
