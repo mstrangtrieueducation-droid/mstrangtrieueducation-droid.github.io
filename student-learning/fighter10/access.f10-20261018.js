@@ -1,4 +1,4 @@
-/* F9-only, client-side entry control. Not authentication for public lesson assets. */
+/* F10-only, client-side entry control. Not authentication for public lesson assets. */
 (function(root){
   'use strict';
   const MARK='mtt-f10-window-entry-20261018';
