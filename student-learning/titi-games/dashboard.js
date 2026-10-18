@@ -108,7 +108,7 @@
  function panel(open,focus=false){expanded=open;if(open)syncOnce();host.querySelector('.titi-games-panel')?.toggleAttribute('hidden',!open);const button=host.querySelector('.titi-games-launcher');button?.setAttribute('aria-expanded',String(open));dock.layoutPanel();if(focus)(open?host.querySelector('.titi-games-close'):button)?.focus();}
  function message(text){panel(true);const note=host.querySelector('#titi-games-note');if(note)note.textContent=text;}
  function snapshot(){try{const s=window.TitiDashboardSnapshot?.();return s&&C.validStudent(s.student)&&C.ROUTES[s.className.replace(/\s/g,'').toUpperCase()]===location.pathname&&s.parentRoute===location.pathname?s:null;}catch{return null;}}
- function load(){return assets||=Promise.all(['vu-tru/catalog.json','vu-tru/teaching-map.json'].map(p=>fetch(base+p+'?v=program-1').then(r=>{if(!r.ok)throw Error('Game catalogue unavailable');return r.json();}))).catch(e=>{assets=null;throw e;});}
+ function load(){return assets||=Promise.all(['vu-tru/catalog.json','vu-tru/teaching-map.json'].map(p=>fetch(base+p+'?v=release-20261018a').then(r=>{if(!r.ok)throw Error('Game catalogue unavailable');return r.json();}))).catch(e=>{assets=null;throw e;});}
  function scoped(courses,s){return courses.filter(c=>s.family==='kids'?/^(phonics-|family-friends-|discover-)/.test(c.id):s.family==='ta'?c.id==='van-lang':s.family==='fighter'?c.id==='fighter':s.family==='ielts'?c.id.startsWith('ielts'):false);}
  function issue(s,courses,map,courseId){
   const fresh=P.currentBooks(scoped(courses,s),map,s.lessons),scopedCourses=courses.filter(c=>Object.hasOwn(fresh.books,c.id)),course=scopedCourses.find(c=>c.id===courseId)||scopedCourses.find(c=>fresh.allowed[c.id]?.length)||scopedCourses[0];
