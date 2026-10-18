@@ -2225,7 +2225,47 @@ function kidsFeedbackDetailMarkup(value,escape) {
 }
 
 </style>
-</head>
+<style id="parent-submission-more-style">.parent-submission-more{flex-basis:100%;width:100%;margin-top:8px}
+.parent-submission-more summary{cursor:pointer;color:#075dc6;font-weight:700;list-style:none;width:max-content;max-width:100%;padding:4px 0}
+.parent-submission-more summary::-webkit-details-marker{display:none}
+.parent-submission-more:not([open]) .parent-submission-more__hide,.parent-submission-more[open] .parent-submission-more__show{display:none}
+.parent-submission-more__content{display:flex;flex-wrap:wrap;gap:10px 14px;padding:10px 0 0}
+.parent-submission-more--attempts .parent-submission-more__content{display:block}
+.parent-submission-more--attempts .parent-submission-more__content>.submission-attempt,.parent-submission-more--attempts .parent-submission-more__content>.direct-submission-attempt{margin-top:10px}
+</style><script id="parent-submission-more-runtime">/* PARENT_SUBMISSION_MORE_V1: one disclosure rule for Kids and IELTS receipts. */
+(function(root){
+  'use strict';
+  const opened=new Set();
+  function key(kind,entries){
+    const raw=kind+'|'+location.pathname+'|'+location.hash+'|'+entries.join('|');
+    let hash=2166136261;
+    for(let index=0;index<raw.length;index++)hash=Math.imul(hash^raw.charCodeAt(index),16777619);
+    return 'm'+(hash>>>0).toString(36);
+  }
+  function disclosure(kind,entries,visibleCount,label){
+    const shown=entries.slice(-visibleCount);
+    const hidden=entries.slice(0,-visibleCount);
+    const id=key(kind,entries);
+    const summary='<details class="parent-submission-more parent-submission-more--'+kind+'" data-parent-submission-more="'+id+'"'+(opened.has(id)?' open':'')+'><summary><span class="parent-submission-more__show">Xem thêm '+hidden.length+' '+label+' ↓</span><span class="parent-submission-more__hide">Thu gọn ↑</span></summary><div class="parent-submission-more__content">'+hidden.join(' ')+'</div></details>';
+    return shown.join(' ')+summary;
+  }
+  function wrapLinks(links){
+    if(!Array.isArray(links)||links.length<=3)return Array.isArray(links)?links.join(' '):'';
+    return disclosure('links',links,2,'tệp đã nộp');
+  }
+  function wrapAttempts(cards){
+    if(!Array.isArray(cards)||cards.length<=2)return Array.isArray(cards)?cards.join(''):'';
+    return disclosure('attempts',cards,1,'lượt nộp trước');
+  }
+  document.addEventListener('toggle',event=>{
+    const node=event.target;
+    const id=node&&node.getAttribute&&node.getAttribute('data-parent-submission-more');
+    if(!id)return;
+    if(node.open)opened.add(id);else opened.delete(id);
+  },true);
+  root.SubmissionFilesMore=Object.freeze({wrapLinks,wrapAttempts});
+})(window);
+</script></head>
 <body>
   <section class="boot-recovery" id="bootRecovery" role="alert" aria-live="assertive" hidden>
     <div class="boot-recovery__card">
@@ -3753,7 +3793,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
         latest.scoreLabel = text(pick(config, ['fallbackScoreLabel'], '')) || `${fallbackScore}${fallbackMaximum !== null && fallbackMaximum !== '' ? '/' + fallbackMaximum : ''}`;
       }
       if (config.compact) {
-        return `<div class="submission-history is-compact">${attempts.map((item, index) => {
+        return `<div class="submission-history is-compact">${SubmissionFilesMore.wrapAttempts(attempts.map((item, index) => {
           const viewUrl = item.viewUrl || (item.contentStatus!=='empty' && index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
           const hasScore = item.score !== null && item.score !== '';
           const scoreText = item.scoreLabel || (hasScore
@@ -3764,16 +3804,16 @@ function kidsFeedbackDetailMarkup(value,escape) {
           const dateText = timeParts.shift() || submittedAt;
           const timeText = timeParts.join(' · ');
           return `<div class="submission-attempt"><div class="submission-attempt__line"><strong>Lần ${escapeHtml(item.attempt)}</strong><span class="submission-attempt__separator">·</span><time>${escapeHtml(dateText)}</time>${timeText ? `<span class="submission-attempt__separator">·</span><time>${escapeHtml(timeText)}</time>` : ''}${scoreText ? `<span class="submission-attempt__separator">·</span><span class="submission-attempt__score">Điểm ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">'+escapeHtml(KidsPreparedContentText.text(item))+'</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
-        }).join('')}</div>`;
+        }))}</div>`;
       }
-      return `<div class="submission-history">${attempts.map((item, index) => {
+      return `<div class="submission-history">${SubmissionFilesMore.wrapAttempts(attempts.map((item, index) => {
         const viewUrl = item.viewUrl || (item.contentStatus!=='empty' && index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
         const hasScore = item.score !== null && item.score !== '';
         const scoreText = item.scoreLabel || (hasScore
           ? `${item.score}${item.maximum !== null && item.maximum !== '' ? '/' + item.maximum : ''}`
           : '');
         return `<div class="submission-attempt"><strong>Lần ${escapeHtml(item.attempt)}</strong><div class="submission-attempt__detail"><time>${escapeHtml(item.submittedAt)}</time>${scoreText ? `<span class="submission-attempt__score">Kết quả: ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">'+escapeHtml(KidsPreparedContentText.text(item))+'</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
-      }).join('')}</div>`;
+      }))}</div>`;
     }
 
     // KIDS_CONFIRMED_EMPTY_WEB_SUMMARY_V1
@@ -6550,7 +6590,8 @@ function submissionEvidenceFiles_(item, fallbackUrl) {
   return visible.map((file,index)=>({...file,label:labelFor(file,index)}));
 }
 function submissionEvidenceActionsHtml_(item, fallbackUrl) {
-  return submissionEvidenceFiles_(item,fallbackUrl).map(file=>`<a href="${escapeHtml(file.url)}" target="_blank" rel="noopener">${escapeHtml(file.label)}</a>`).join(' ');
+  const actions=submissionEvidenceFiles_(item,fallbackUrl).map(file=>`<a href="${escapeHtml(file.url)}" target="_blank" rel="noopener">${escapeHtml(file.label)}</a>`);
+  return SubmissionFilesMore.wrapLinks(actions);
 }
 function writtenTestDisplayTitle_(item) {
   const original=text(pick(item,['title','name'],'Bài kiểm tra giấy'));
