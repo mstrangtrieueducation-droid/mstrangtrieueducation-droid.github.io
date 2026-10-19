@@ -15,7 +15,7 @@
  }
  window.MTTActiveRoster={check:check,isRevoked:()=>revoked};
  window.fetch=function(input,init){var url=new URL(typeof input==='string'?input:input.url,location.href);
-  if(/\.workers\.dev$/.test(url.hostname)||/\/data\/(?:fallback\.json|[a-f0-9]{64}\.json)$/.test(url.pathname)||url.hostname==='script.google.com')return check(false).then(()=>originalFetch(input,init));
+  if(/\.workers\.dev$/.test(url.hostname)||/\/data\/(?:fallback\.json|[a-f0-9]{64}\.json)$/.test(url.pathname)||url.hostname==='script.google.com')return check(false).then(()=>originalFetch(input,init)).then(async function(r){if(r.status===410){try{var v=await r.clone().json();if(v.revoked===true||v.code==='PARENT_LINK_REVOKED')block(true);}catch{}}return r;});
   return originalFetch(input,init);
  };
  function schedule(){clearTimeout(timer);if(!revoked&&!stopped&&!document.hidden)timer=setTimeout(function(){check(true).catch(()=>{}).finally(schedule);},30000);}
