@@ -1889,7 +1889,7 @@ const ieltsWritingReviews_ = (() => {
       ambiguous_source:'Có các bài Đề ' + taskNumber + ' khác nội dung cùng thời điểm nộp. Cần đối chiếu nguồn trước khi chấm.',
       source_error:'Thông tin tên hoặc thời điểm nộp Đề ' + taskNumber + ' cần được đối chiếu trước khi chấm.',
       not_submitted:'Chưa tìm thấy bài nộp Đề ' + taskNumber + ' trong nguồn chấm hiện tại.',
-      source_unavailable:refreshing ? 'Đang kiểm tra lần nộp mới nhất của Đề ' + taskNumber + '…' : 'Chưa xác minh được lần nộp mới nhất của Đề ' + taskNumber + '.'
+      source_unavailable:'Chưa có bài chữa chi tiết cho Đề ' + taskNumber + '.'
     };
     const message = messages[latest.state] || messages.source_unavailable;
     return '<p class="wr-status" role="status">' + escape(message) + (latest.submittedAt ? ' <span>Lần gửi: ' + escape(submissionDate(latest.submittedAt)) + '.</span>' : '') +
