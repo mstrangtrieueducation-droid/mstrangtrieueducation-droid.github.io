@@ -66,7 +66,7 @@ function prepareState(value){
 prepareState(state);
 
 const $=s=>document.querySelector(s);
-const norm=s=>String(s??"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[’']/g,"").replace(/[^a-z0-9]+/g," ").trim();
+const norm=s=>String(s??"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[’']/g,"").replace(/[^a-z0-9%]+/g," ").trim();
 const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");
 const identityPart=s=>String(s??"").normalize("NFKC").trim().toLowerCase().replace(/\s+/g," ");
 const identityKey=(name,studentClass)=>`${identityPart(name)}|${identityPart(studentClass)}`;
@@ -197,7 +197,7 @@ function gradeAllResponses(){
     let dictationScore=0;item.clozeAnswers.forEach((answer,gap)=>{if(norm(state.g[`${index+1}-${gap}`])===norm(answer))dictationScore++});scores[`d${index+1}`]=dictationScore;
     const [first,last]=range(index),grouped=new Set();let ieltsScore=0;
     for(const [key,numbers] of questionGroupsFor(index)){
-      const chosen=state.q[key]||[],valid=new Set(numbers.flatMap(question=>DATA.answers[question]||[]).map(norm));ieltsScore+=chosen.filter(value=>valid.has(norm(value))).length;numbers.forEach(question=>grouped.add(question));
+      const chosen=state.q[key]||[],valid=new Set(numbers.flatMap(question=>DATA.answers[question]||[]).map(norm));ieltsScore+=Math.min(numbers.length,[...new Set(chosen.map(norm))].filter(value=>valid.has(value)).length);numbers.forEach(question=>grouped.add(question));
     }
     for(let question=first;question<=last;question++){if(grouped.has(question))continue;if((DATA.answers[question]||[]).map(norm).includes(norm(state.q[question])))ieltsScore++}
     scores[`i${index+1}`]=ieltsScore;review[`s${index+1}`]={dictationScore,ieltsScore};
