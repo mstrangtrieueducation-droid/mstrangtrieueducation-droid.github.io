@@ -19,6 +19,7 @@ jobs:
       - run: node tests/ielts-submission/contract.test.cjs --root . --kind main --manifest tests/ielts-submission/contract.json
       - run: node tests/ielts-listening/content-audit.cjs .
       - run: node tests/ielts-listening/visual-ui.test.cjs .
+      - run: node tests/ielts-listening/content-runtime.test.cjs .
       - run: node tests/ielts-submission/client.test.cjs
       - run: node tests/ielts-submission/auto-submit-ui.test.cjs
       - run: node tests/ielts-submission/cross-tab.test.cjs

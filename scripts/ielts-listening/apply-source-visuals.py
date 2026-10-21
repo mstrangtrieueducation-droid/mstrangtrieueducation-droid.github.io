@@ -18,24 +18,24 @@ ROOT = Path(__file__).resolve().parents[2]
 PAGES = ROOT / "ielts-nghe"
 
 LEGACY_VISUALS = {
-    (1, 4): ("./question-assets/test-1/section-4-visual-1.jpg", "Antigen-antibody reaction diagram", range(38, 41)),
-    (3, 2): ("./question-assets/test-3/section-2-visual-1.jpg", "Museum first-floor plan", range(16, 21)),
-    (3, 4): ("./question-assets/test-3/section-4-visual-1.png", "Total rice production pie chart", [40]),
-    (4, 4): ("./question-assets/test-4/section-4-visual-1.jpg", "British Isles Venn diagram", range(33, 37)),
-    (5, 1): ("./question-assets/test-5/section-1-visual-1.jpg", "Route from Hotel Armitage map", range(6, 11)),
-    (5, 4): ("./question-assets/test-5/section-4-visual-1.jpg", "Hydroelectric dam diagram", range(36, 39)),
-    (7, 3): ("./question-assets/test-7/section-3-visual-1.jpg", "World-map survey bar chart", range(29, 31)),
-    (8, 2): ("./question-assets/test-8/section-2-visual-1.jpg", "Summerland site plan", range(17, 21)),
+    (1, 4): ("./question-assets/test-1/section-4-visual-1-restored.png", "Antigen-antibody reaction diagram", range(38, 41)),
+    (3, 2): ("./question-assets/test-3/section-2-visual-1-restored.png", "Museum first-floor plan", range(16, 21)),
+    (3, 4): ("./question-assets/test-3/section-4-visual-1-restored.png", "Total rice production pie chart", [40]),
+    (4, 4): ("./question-assets/test-4/section-4-visual-1-restored.png", "British Isles Venn diagram", range(33, 37)),
+    (5, 1): ("./question-assets/test-5/section-1-visual-1-restored.png", "Route from Hotel Armitage map", range(6, 11)),
+    (5, 4): ("./question-assets/test-5/section-4-visual-1-restored.png", "Hydroelectric dam diagram", range(36, 39)),
+    (7, 3): ("./question-assets/test-7/section-3-visual-1-restored.png", "World-map survey bar chart", range(29, 31)),
+    (8, 2): ("./question-assets/test-8/section-2-visual-1-restored.png", "Summerland site plan", range(17, 21)),
     (8, 3): ("./question-assets/test-8/section-3-visual-1.jpg", "Hydroculture systems diagram", range(23, 26)),
-    (10, 3): ("./question-assets/test-10/section-3-visual-1.jpg", "Mangrove litter cycle diagram", range(27, 31)),
-    (10, 4): ("./question-assets/test-10/section-4-visual-1.jpg", "Cloud types diagram", range(33, 38)),
+    (10, 3): ("./question-assets/test-10/section-3-visual-1-restored.png", "Mangrove litter cycle diagram", range(27, 31)),
+    (10, 4): ("./question-assets/test-10/section-4-visual-1-restored.png", "Cloud types diagram", range(33, 38)),
 }
 
 MODERN_VISUALS = {
     20: {
         "section": 2,
         "old_class": "heater-board",
-        "src": "./question-assets/test-20/section-2-visual-1.jpg",
+        "src": "./question-assets/test-20/section-2-visual-1-restored.png",
         "alt": "Water Heater: follow the original arrows for questions 11, 12 and 13",
         "source_ref": "Cambridge IELTS 9 Academic Listening Test 4",
         "answer_questions": [11, 12, 13],
@@ -44,7 +44,7 @@ MODERN_VISUALS = {
     12: {
         "section": 2,
         "old_class": "red-hill-map",
-        "src": "./question-assets/test-12/section-2-visual-1.jpg",
+        "src": "./question-assets/test-12/section-2-visual-1-restored.png",
         "alt": "Red Hill Improvement Plan - Cambridge IELTS 8 Test 4",
         "source_ref": "Cambridge IELTS 8 Academic Listening Test 4",
     },

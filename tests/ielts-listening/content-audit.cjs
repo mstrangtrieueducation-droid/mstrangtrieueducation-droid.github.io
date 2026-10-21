@@ -10,6 +10,14 @@ const manifestPath = path.join(__dirname, 'visual-manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const audioManifestPath = path.join(__dirname, 'audio-manifest.json');
 const audioManifest = JSON.parse(fs.readFileSync(audioManifestPath, 'utf8'));
+const sourceReview = JSON.parse(fs.readFileSync(path.join(__dirname,'source-review-20261022.json'),'utf8'));
+assert.equal(sourceReview.sections.length,120);
+assert.equal(new Set(sourceReview.sections.map(s=>`${s.test}:${s.section}`)).size,120);
+for(const section of sourceReview.sections){
+  const locked=audioManifest.entries.find(a=>a.test===section.test&&a.section===section.section);
+  assert.equal(section.siteSha256,locked?.sha256,'Source comparison must match the deployed audio');
+  assert(section.waveformCorrelation>.88,'Audio requires source alignment review');
+}
 
 function parseData(text, file) {
   const match = /const DATA\s*=\s*/.exec(text);
@@ -185,6 +193,12 @@ for (const name of pages) {
     assert(review.asrReview.score >= 0.10, `Test ${test} Section ${sectionNumber}: ASR confidence is too low`);
 
     const gaps = section.clozeAnswers || section.dictationAnswers || [];
+    if (test <= 10) {
+      assert.equal(section.dictationContentRevision, '20261022', `${name}: unreviewed legacy dictation`);
+      assert(!/You will hear|Now we shall begin|Before you hear the rest|That is the end of section/i.test(section.transcript), `${name}: narration outside the practice recording`);
+      const indexes = [...section.transcript.matchAll(/\[\[(\d+)\]\]/g)].map(m=>Number(m[1]));
+      assert.deepEqual(indexes.sort((a,b)=>a-b), Array.from({length:20},(_,i)=>i), `${name}: missing or duplicate dictation blank`);
+    }
     assert.equal(gaps.length, 20, `Test ${test} Section ${sectionNumber}: expected 20 dictation gaps`);
     dictationGapCount += gaps.length;
     summary.gaps += gaps.length;
@@ -228,6 +242,10 @@ for (const item of manifest.assets) {
   assert(fs.existsSync(file), `${item.asset}: asset is missing`);
   assert(fs.statSync(file).size >= 20_000, `${item.asset}: asset is unexpectedly small`);
   assert.equal(digest(file), item.sha256, `${item.asset}: source image changed without review`);
+  if (item.sourceAsset) {
+    assert.equal(digest(path.join(siteDir,item.sourceAsset)),item.sourceSha256,`${item.asset}: original reference changed`);
+    assert(item.restorationReview?.checks?.length>=4,`${item.asset}: missing restoration fidelity review`);
+  }
   assert.equal(actualAssetRefs.get(item.asset), item.page, `${item.asset}: page reference mismatch`);
   if (item.reviewedAnswers) {
     const data = parseData(fs.readFileSync(path.join(siteDir, item.page), 'utf8'), item.page);
