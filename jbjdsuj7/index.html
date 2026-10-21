@@ -1077,7 +1077,7 @@ const ieltsWritingReviews_ = (() => {
       current:'Đã có bài chữa cho lần nộp mới nhất. Em đang xem bài chữa được mở trước đó.',
       pending:'Lần nộp mới nhất của Đề ' + taskNumber + ' chưa có bài chữa theo tiêu chí hiện hành.',
       empty_submission:'Lần gửi mới nhất để trống Đề ' + taskNumber + '. Chưa có bài viết mới để chấm.',
-      ambiguous_source:'Có các bài Đề ' + taskNumber + ' khác nội dung cùng thời điểm nộp. Cần đối chiếu nguồn trước khi chấm.',
+      ambiguous_source:'Có các bài Đề ' + taskNumber + ' khác nội dung cùng thời điểm nộp. Cô sẽ kiểm tra bài trước khi chấm.',
       source_error:'Thông tin tên hoặc thời điểm nộp Đề ' + taskNumber + ' cần được đối chiếu trước khi chấm.',
       not_submitted:'Chưa tìm thấy bài nộp Đề ' + taskNumber + ' trong nguồn chấm hiện tại.',
       source_unavailable:refreshing ? 'Đang kiểm tra lần nộp mới nhất của Đề ' + taskNumber + '…' : 'Chưa xác minh được lần nộp mới nhất của Đề ' + taskNumber + '.'
@@ -1206,7 +1206,7 @@ const ieltsWritingReviews_ = (() => {
     const title = !current ? (receiptTitle || (item.historical ? 'Nhận xét vở lần kiểm tra trước' : 'Chờ xác minh vở hiện tại')) :
       failed ? (teacherException || item.homeworkMode === 'notebook_only' ? 'VỞ CHƯA ĐẠT YÊU CẦU' : 'KHÔNG ĐƯỢC CHẤM BÀI') :
       complete ? 'VỞ ĐÃ ĐẠT YÊU CẦU' : item.displayTitle || 'Chờ kiểm tra vở';
-    const latestNote = !notebookFinal && !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Cần đối chiếu vở mới nhất với tài liệu Cô giao.')) + '</p>' +
+    const latestNote = !notebookFinal && !current && (!receiptTitle || item.overall) ? '<p class="wr-notebook-freshness">' + (refreshing ? 'Đang đối chiếu lần nộp mới nhất…' : 'Kết quả bên dưới chưa xác nhận tình trạng vở hiện tại.' + (hasWriting ? ' Bài viết mới tiếp tục chờ kiểm tra vở.' : ' Bố mẹ xem hướng dẫn bài vở Cô đã giao.')) + '</p>' +
       (!refreshing && item.overall && item.reason ? '<p class="wr-notebook-current-reason"><strong>Lần nộp hiện tại: </strong>' + escape(item.reason) + '</p>' : '') : '';
     if (item.reviewMode === 'quick_check' || complete) {
       const notebookLinks = array(item.notebookUrls).map((value, index) => {
