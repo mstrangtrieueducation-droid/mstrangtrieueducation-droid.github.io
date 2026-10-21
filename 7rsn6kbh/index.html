@@ -226,27 +226,100 @@
 .speaking-feedback-criterion .is-praise{color:#1b5e20}.speaking-feedback-criterion .is-correction{color:#a81750}
 .speaking-feedback-note{font-size:12px;line-height:1.7;margin:0;color:#75869b;white-space:pre-line}
 @media(max-width:560px){.speaking-feedback-previews{grid-template-columns:1fr}.speaking-feedback-head{align-items:flex-start}.speaking-feedback-head>strong{font-size:17px}.speaking-feedback-band{padding:8px;gap:6px}.speaking-feedback-band small{max-width:45px}.speaking-feedback-criterion{padding:13px}}
-</style><script id="shadowing-feedback-v1">(function(b){"use strict";const c=t=>String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"),u=t=>String(t||"").replace(/\r\n?/g,`
-`).split(`
-`).filter(e=>!/^\s*\[(?:IELTS_SPEAKING_AI|SHADOWING_AI):[a-f\d]{64}\]\s*$/i.test(e)&&!/^\s*Model:\s*gemini-[\w.:-]+\s*$/i.test(e)&&!/^\s*Source:\s*[a-f\d]{64}\s*$/i.test(e)).join(`
-`).trim(),f=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/gi,"d").toUpperCase().replace(/\s+/g," ").trim(),h=t=>{const e=f(t).match(/^SHADOW\s*-\s*L([12])\s*-\s*0*(\d{1,3})$/);return e?"SHADOW-L"+e[1]+"-"+String(Number(e[2])).padStart(3,"0"):""},d=t=>{const e=String(t||"").match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);return e?e[1].padStart(2,"0")+"/"+e[2].padStart(2,"0")+"/"+e[3]:""};function w(t,e,s){const r=h(e&&(e.assignmentCode||e.sourceCode||e.code)),o=d(e&&e.dueDate);if(!r)return null;let a=(Array.isArray(t)?t:[]).filter(i=>i&&h(i.code)===r&&u(i.comment));if(o){const i=a.filter(l=>d(l.dueDate)===o);if(i.length)return i.length===1?i[0]:null;a=a.filter(l=>!d(l.dueDate))}else if(a.some(i=>d(i.dueDate)))return null;const n=(Array.isArray(s)?s:[]).filter(i=>h(i.assignmentCode||i.sourceCode||i.code)===r);return a.length===1&&n.length<=1?a[0]:null}const A=[{id:"pronunciation",label:"Phát âm, âm đuôi & trọng âm"},{id:"intonation",label:"Ngữ điệu & ngắt nghỉ theo mẫu"},{id:"fluency",label:"Tốc độ nói & độ trôi chảy"}];function p(t){const e=u(t),s=[],r=[];let o=null;for(const n of e.split(`
-`)){const i=n.replace(/^\s*[•*]\s*/,"").replace(/:\s*$/,"").trim(),l=A.find(N=>f(N.label)===f(i));l?(o={id:l.id,label:l.label,lines:[]},r.push(o)):o?o.lines.push(n):s.push(n)}const a=s.find(n=>/^Chất lượng:/i.test(n.trim()))||"";return{text:e,quality:a,intro:s.filter(n=>n!==a),sections:r}}function S(t){if(/^\s*\d{1,2}:\d{2}|\/(?:[^/\n]+)\/|→|->/.test(t))return"correction";if(/^Chưa nghe rõ|chưa kết luận đúng\/sai/i.test(t))return"neutral";const e=f(t);return/\b(?:CAN|SUA|THIEU|SAI|LOI|HAY LUYEN|CHUA)\b/.test(e)?"correction":/\b(?:TOT|DUNG|RO RANG|TIEN BO|HOAN THANH|GIU DUOC)\b/.test(e)?"praise":"neutral"}const g=t=>t.filter(e=>e.trim()).map(e=>'<p class="shadow-feedback-line is-'+S(e)+'">'+c(e)+"</p>").join("");function k(t){let e=2166136261;for(const s of String(t))e=Math.imul(e^s.charCodeAt(0),16777619);return(e>>>0).toString(36)}function y(t,e){if(!t||!u(t.comment))return"";const s=p(t.comment),r=s.text.length>440||s.text.split(`
-`).filter(n=>n.trim()).length>7,o=(s.intro.some(n=>n.trim())?'<div class="shadow-feedback-overview">'+g(s.intro)+"</div>":"")+s.sections.map(n=>'<section class="shadow-feedback-section"><h5>'+c(n.label)+"</h5>"+g(n.lines)+"</section>").join(""),a=s.sections.map(n=>'<div class="shadow-feedback-preview"><strong>'+c(n.label)+"</strong><p>"+c(n.lines.find(i=>i.trim())||"Xem nhận xét chi tiết bên dưới.")+"</p></div>").join("");return'<section class="shadow-feedback-card" aria-label="Nhận xét Shadowing"><header class="shadow-feedback-head"><strong>Nhận xét Shadowing</strong>'+(s.quality?"<span>"+c(s.quality)+"</span>":"")+"</header>"+(t.submittedAt?'<p class="shadow-feedback-date">Nhận xét lần nộp '+c(t.submittedAt)+"</p>":"")+(r?'<div class="shadow-feedback-previews">'+(a||'<p class="shadow-feedback-excerpt">'+c(s.text)+"</p>")+'</div><details class="shadow-feedback-details" data-history-section="shadow-feedback-'+k(e||t.code+"|"+t.dueDate)+'"><summary><span class="when-closed">Xem thêm nhận xét</span><span class="when-open">Thu gọn nhận xét</span></summary><div class="shadow-feedback-full">'+o+"</div></details>":'<div class="shadow-feedback-full">'+o+"</div>")+"</section>"}const m={clean:u,code:h,date:d,find:w,parse:p,render:y};b.ShadowingFeedback=m,typeof module=="object"&&module.exports&&(module.exports=m)})(typeof window=="object"?window:globalThis);
-</script><style id="shadowing-feedback-style-v1">.shadow-feedback-card{margin-top:18px;padding-top:18px;border-top:1px solid #dce5ef;color:#17324d;overflow-wrap:anywhere;text-align:left}
-.shadow-feedback-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:7px}
-.shadow-feedback-head>strong{font-size:17px;color:#0e2d50}.shadow-feedback-head>span{font-size:12px;color:#1b5e20;background:#eaf5ed;padding:6px 10px;border-radius:20px}
-.shadow-feedback-date{font-size:12px!important;color:#73839b;margin:0 0 14px!important}
-.shadow-feedback-previews{display:grid;gap:10px}.shadow-feedback-preview{padding:12px 14px;border:1px solid #dfe7f1;border-radius:12px;background:#fff;min-width:0}
-.shadow-feedback-preview>strong{display:block;font-size:14px;color:#17324d;margin-bottom:5px}.shadow-feedback-preview>p,.shadow-feedback-excerpt{margin:0!important;font-size:14px!important;line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#52647d}
-.shadow-feedback-excerpt{-webkit-line-clamp:3}
-.shadow-feedback-full{display:grid;gap:12px;margin-top:12px}.shadow-feedback-section{padding:14px;background:#fff;border:1px solid #dfe7f1;border-radius:12px}
-.shadow-feedback-section>h5{font-size:15px;line-height:1.5;color:#17324d;margin:0 0 10px}
-.shadow-feedback-card .shadow-feedback-line{margin:0 0 9px;font-size:14px;line-height:1.75;white-space:pre-wrap}.shadow-feedback-card .shadow-feedback-line:last-child{margin-bottom:0}
-.shadow-feedback-card .is-praise{color:#1b5e20}.shadow-feedback-card .is-correction{color:#a81750}.shadow-feedback-card .is-neutral{color:#52647d}
-.shadow-feedback-details{margin-top:13px;border-top:1px solid #dce5ef}.shadow-feedback-details>summary{display:flex;align-items:center;gap:8px;padding:13px 0;list-style:none;cursor:pointer;font-size:14px;font-weight:750;color:#1266d6}
-.shadow-feedback-details>summary::-webkit-details-marker{display:none}.shadow-feedback-details>summary::after{content:'⌄';margin-left:auto;font-size:19px}.shadow-feedback-details[open]>summary::after{content:'⌃'}
-.shadow-feedback-details .when-open,.shadow-feedback-details[open] .when-closed{display:none}.shadow-feedback-details[open] .when-open{display:inline}.shadow-feedback-details>summary:focus-visible{outline:3px solid #8dbcfb;outline-offset:3px;border-radius:5px}
-@media(max-width:560px){.shadow-feedback-head>strong{font-size:16px}.shadow-feedback-section{padding:12px}.shadow-feedback-preview{padding:11px 12px}}
+</style><script id="shadowing-feedback-v1">/* Shared IELTS/Fighter presentation. No fetch, grading, or source mutation. */
+(function(root){
+ 'use strict';
+ const escape=value=>String(value==null?'':value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+ const clean=value=>String(value||'').replace(/\r\n?/g,'\n').split('\n').filter(line=>!/^\s*\[(?:IELTS_SPEAKING_AI|SHADOWING_AI):[a-f\d]{64}\]\s*$/i.test(line)&&!/^\s*Model:\s*gemini-[\w.:-]+\s*$/i.test(line)&&!/^\s*Source:\s*[a-f\d]{64}\s*$/i.test(line)).join('\n').trim();
+ const norm=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toUpperCase().replace(/\s+/g,' ').trim();
+ const code=value=>{const m=norm(value).match(/^SHADOW\s*-\s*L([12])\s*-\s*0*(\d{1,3})$/);return m?'SHADOW-L'+m[1]+'-'+String(Number(m[2])).padStart(3,'0'):'';};
+ const date=value=>{const m=String(value||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);return m?m[1].padStart(2,'0')+'/'+m[2].padStart(2,'0')+'/'+m[3]:'';};
+ function find(records,item,peers){
+  const key=code(item&& (item.assignmentCode||item.sourceCode||item.code)),due=date(item&&item.dueDate);
+  if(!key)return null;
+  let rows=(Array.isArray(records)?records:[]).filter(r=>r&&code(r.code)===key&&clean(r.comment));
+  if(due){const exact=rows.filter(r=>date(r.dueDate)===due);if(exact.length)return exact.length===1?exact[0]:null;rows=rows.filter(r=>!date(r.dueDate));}
+  else if(rows.some(r=>date(r.dueDate)))return null;
+  const occurrences=(Array.isArray(peers)?peers:[]).filter(p=>code(p.assignmentCode||p.sourceCode||p.code)===key);
+  return rows.length===1&&occurrences.length<=1?rows[0]:null;
+ }
+ const criteria=[
+  {id:'pronunciation',label:'Phát âm, âm đuôi & trọng âm',aliases:['Phát âm, âm đuôi & trọng âm','Phát âm','Pronunciation']},
+  {id:'intonation',label:'Ngữ điệu & ngắt nghỉ theo mẫu',aliases:['Ngữ điệu & ngắt nghỉ theo mẫu','Ngữ điệu & ngắt nghỉ','Ngữ điệu','Intonation']},
+  {id:'fluency',label:'Tốc độ nói & độ trôi chảy',aliases:['Tốc độ nói & độ trôi chảy','Độ trôi chảy','Fluency & Coherence','Fluency']}
+ ];
+ const headingDefinition=value=>criteria.find(c=>c.aliases.some(alias=>norm(alias)===norm(value)));
+ // Old snapshots may flatten newlines but retain bullet headings. Split only
+ // these known headings; a correction mentioning "phát âm" stays intact.
+ function readable(value){
+  const titles=criteria.flatMap(c=>c.aliases).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+  return value.replace(new RegExp('\\s*[•*]\\s*('+titles+')\\s*:\\s*','giu'),'\n• $1:\n');
+ }
+ function parse(value){
+  const text=clean(value),intro=[],sections=[];let current=null;
+  for(const raw of readable(text).split('\n')){
+   const heading=raw.replace(/^\s*[•*]\s*/,'').replace(/:\s*$/,'').trim();
+   const definition=headingDefinition(heading);
+   if(definition){current=sections.find(s=>s.id===definition.id);if(!current){current={id:definition.id,label:definition.label,lines:[]};sections.push(current);}}
+   else if(current)current.lines.push(raw);else intro.push(raw);
+  }
+  const qualityLine=intro.find(line=>/^Chất lượng\s*:/i.test(line.trim()))||'';
+  const qualityMatch=qualityLine.match(/^\s*(Chất lượng\s*:\s*[^%\n]{0,70}\d+(?:[.,]\d+)?\s*%)\.?\s*/i);
+  const quality=qualityMatch?qualityMatch[1].trim():qualityLine.length<=90?qualityLine:'';
+  return {text,quality,intro:intro.map(line=>line===qualityLine&&quality?line.slice(qualityMatch?qualityMatch[0].length:quality.length).trim():line).filter(Boolean),sections};
+ }
+ function tone(line){
+  if(/^\s*\d{1,2}:\d{2}|\/(?:[^/\n]+)\/|→|->/.test(line))return 'correction';
+  if(/^Chưa nghe rõ|chưa kết luận đúng\/sai/i.test(line))return 'neutral';
+  const n=norm(line);if(/\b(?:CAN|SUA|THIEU|SAI|LOI|HAY LUYEN|CHUA)\b/.test(n))return 'correction';
+  return /\b(?:TOT|DUNG|RO RANG|TIEN BO|HOAN THANH|GIU DUOC)\b/.test(n)?'praise':'neutral';
+ }
+ const linesHtml=lines=>lines.filter(l=>l.trim()).map(line=>'<p class="shadow-feedback-line is-'+tone(line)+'">'+escape(line)+'</p>').join('');
+ function fingerprint(value){let n=2166136261;for(const c of String(value))n=Math.imul(n^c.charCodeAt(0),16777619);return(n>>>0).toString(36);}
+ function excerpt(value,maximum){
+  const text=String(value||'').replace(/^\s*[-•*]\s*/,'').replace(/\s+/g,' ').trim().replace(/^Tuy nhiên,.*?(?:sau đây nhé|chú ý nhé)\s*:\s*/i,'');
+  if(text.length<=maximum)return text;
+  const candidate=text.slice(0,maximum-1),space=candidate.lastIndexOf(' ');
+  return candidate.slice(0,space>maximum*0.6?space:candidate.length).trim()+'…';
+ }
+ function previewRows(parsed){
+  const rows=parsed.sections.map(s=>({label:s.label,text:excerpt(s.lines.find(line=>line.trim()&&tone(line)==='correction')||s.lines.find(line=>line.trim()),145)})).filter(row=>row.text);
+  if(!rows.length){
+   const visible=parsed.intro.filter(line=>line.trim());
+   for(const line of visible.slice(0,3))rows.push({label:'',text:excerpt(line,145)});
+  }
+  return rows.slice(0,3);
+ }
+ function render(record,key){
+  if(!record||!clean(record.comment))return '';
+  const p=parse(record.comment),rows=previewRows(p);
+  const content=(p.intro.some(l=>l.trim())?'<div class="shadow-feedback-overview">'+linesHtml(p.intro)+'</div>':'')+
+   p.sections.map(s=>'<section class="shadow-feedback-section"><h5>'+escape(s.label)+'</h5>'+linesHtml(s.lines)+'</section>').join('');
+  const previews=rows.map(row=>'<div class="shadow-feedback-preview">'+(row.label?'<strong>'+escape(row.label)+'</strong>':'')+'<p>'+escape(row.text)+'</p></div>').join('');
+  const more=p.sections.length>0||p.intro.join(' ').replace(/\s+/g,' ').length>rows.map(row=>row.text).join(' ').length;
+  return '<section class="shadow-feedback-card" data-shadow-feedback-version="2" aria-label="Nhận xét Shadowing"><header class="shadow-feedback-head"><strong>Nhận xét Shadowing</strong>'+(p.quality?'<span>'+escape(p.quality)+'</span>':'')+'</header>'+
+   (record.submittedAt?'<p class="shadow-feedback-date">Nhận xét lần nộp '+escape(record.submittedAt)+'</p>':'')+
+   (previews?'<div class="shadow-feedback-previews">'+previews+'</div>':'')+
+   (more?'<details class="shadow-feedback-details" data-history-section="shadow-feedback-'+fingerprint(key||record.code+'|'+record.dueDate)+'"><summary><span class="when-closed">Xem thêm nhận xét</span><span class="when-open">Thu gọn nhận xét</span></summary><div class="shadow-feedback-full">'+content+'</div></details>':'')+'</section>';
+ }
+ const api={version:2,clean,code,date,find,parse,render,previewRows};root.ShadowingFeedback=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window==='object'?window:globalThis);
+</script><style id="shadowing-feedback-style-v1">.shadow-feedback-card{margin-top:18px;padding-top:18px;border-top:1px solid #dce5ef;color:#17324d;overflow-wrap:anywhere;text-align:left}
+.shadow-feedback-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-bottom:7px}
+.shadow-feedback-head>strong{font-size:17px;color:#0e2d50}.shadow-feedback-head>span{font-size:12px;color:#1b5e20;background:#eaf5ed;padding:6px 10px;border-radius:20px}
+.shadow-feedback-date{font-size:12px!important;color:#73839b;margin:0 0 14px!important}
+.shadow-feedback-previews{display:grid;gap:10px}.shadow-feedback-preview{padding:12px 14px;border:1px solid #dfe7f1;border-radius:12px;background:#fff;min-width:0}
+.shadow-feedback-preview>strong{display:block;font-size:14px;color:#17324d;margin-bottom:5px}.shadow-feedback-preview>p,.shadow-feedback-excerpt{margin:0!important;font-size:14px!important;line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#52647d}
+.shadow-feedback-excerpt{-webkit-line-clamp:3}
+.shadow-feedback-full{display:grid;gap:12px;margin-top:12px}.shadow-feedback-section{padding:14px;background:#fff;border:1px solid #dfe7f1;border-radius:12px}
+.shadow-feedback-section>h5{font-size:15px;line-height:1.5;color:#17324d;margin:0 0 10px}
+.shadow-feedback-card .shadow-feedback-line{margin:0 0 9px;font-size:14px;line-height:1.75;white-space:pre-wrap}.shadow-feedback-card .shadow-feedback-line:last-child{margin-bottom:0}
+.shadow-feedback-card .is-praise{color:#1b5e20}.shadow-feedback-card .is-correction{color:#a81750}.shadow-feedback-card .is-neutral{color:#52647d}
+.shadow-feedback-details:not([open])>.shadow-feedback-full{display:none}
+.shadow-feedback-details{margin-top:13px;border-top:1px solid #dce5ef}.shadow-feedback-details>summary{display:flex;align-items:center;gap:8px;padding:13px 0;list-style:none;cursor:pointer;font-size:14px;font-weight:750;color:#1266d6}
+.shadow-feedback-details>summary::-webkit-details-marker{display:none}.shadow-feedback-details>summary::after{content:'⌄';margin-left:auto;font-size:19px}.shadow-feedback-details[open]>summary::after{content:'⌃'}
+.shadow-feedback-details .when-open,.shadow-feedback-details[open] .when-closed{display:none}.shadow-feedback-details[open] .when-open{display:inline}.shadow-feedback-details>summary:focus-visible{outline:3px solid #8dbcfb;outline-offset:3px;border-radius:5px}
+@media(max-width:560px){.shadow-feedback-head>strong{font-size:16px}.shadow-feedback-section{padding:12px}.shadow-feedback-preview{padding:11px 12px}}
 </style><script id="lesson-dashboard-entry" src="/student-learning/class-entry/access.bad8506c8a66.js" defer></script><script src="/student-learning/class-entry/dashboard.581ccad1d966.js" defer></script><!-- OTHER_PENDING_BANNER_INDEPENDENT_V1 -->
 <style id="ielts-writing-feedback-style">
 .wr-summary{padding:17px;border:1px solid #cad9ed;border-radius:13px;background:#fff;box-shadow:0 4px 16px #12325708}.wr-summary h4{margin:6px 0;color:#163c64;font-size:16px}.wr-kicker{color:#596f88;font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}.wr-summary p{margin:7px 0;color:#52637a;font-size:12px;line-height:1.6}.wr-verdict{display:inline-flex;padding:5px 9px;border-radius:7px;background:#fff1d8;color:#78500b;font-weight:800;font-size:12px}.wr-button{border:0;border-radius:9px;background:#164975;color:white;padding:10px 15px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.wr-button.secondary{background:#eaf0f7;color:#164975}.wr-summary .wr-button{margin-top:12px}.wr-status{font-size:12px;color:#56677a;padding:10px 0;line-height:1.6}.wr-status button{margin-left:8px}.wr-result-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:14px}.wr-personal{margin-top:26px}.wr-dialog{width:min(1240px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);padding:0;border:1px solid #d0dce9;border-radius:20px;background:#f2f5f9;color:#183956;box-shadow:0 30px 100px #0b264950;overflow:auto}.wr-dialog::backdrop{background:#102440ad;backdrop-filter:blur(3px)}.wr-dialog[open]{display:block}.wr-head{position:sticky;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:20px 25px;background:#143a60;color:white}.wr-head h2{font-size:21px;margin:4px 0}.wr-head p{margin:0;color:#d1dfec;font-size:12px}.wr-head .wr-kicker{color:#b9d1e9}.wr-close{flex:none;border:1px solid #ffffff50;background:#ffffff10;color:white;border-radius:9px;width:38px;height:38px;font-size:24px;cursor:pointer}.wr-body{padding:22px;display:grid;gap:18px}.wr-top{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}.wr-top small{color:#596c82;font-size:12px}.wr-section{padding:21px 23px;border:1px solid #d7e1ec;border-radius:14px;background:#fff;min-width:0}.wr-section h3{font-size:16px;color:#183b62;margin:0 0 12px}.wr-copy{line-height:1.8;font-size:14px;overflow-wrap:anywhere}.wr-copy p{margin:0 0 12px}.wr-copy p:last-child{margin-bottom:0}.wr-context{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.wr-scope{color:#5a6a7d;font-size:12px;line-height:1.65}.wr-writing{padding:0;overflow:hidden}.wr-writing-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 22px;border-bottom:1px solid #dce5ef}.wr-writing-head h3{margin:0;flex-shrink:0}.wr-tabs{display:flex;padding:5px;background:#f0f4f8;border-radius:11px;gap:3px}.wr-tab{font:inherit;font-size:12px;line-height:1.5;border:0;border-radius:8px;background:transparent;color:#60748c;padding:10px 14px;cursor:pointer}.wr-tab[aria-selected=true]{background:#fff;color:#0f5088;box-shadow:0 1px 4px #0b2f5612;font-weight:800}.wr-pane[hidden]{display:none!important}.wr-original-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(285px,.8fr);align-items:start}.wr-essay-col{padding:23px;min-width:0}.wr-essay-hint{font-size:11px;line-height:1.6;color:#607086;margin:0 0 20px}.wr-essay{color:#213e5b;font-size:16px;line-height:2;white-space:pre-wrap;overflow-wrap:anywhere}.wr-mark{display:inline;padding:1px 0;border:0;border-bottom:2px solid #dab151;background:#fff1c9;color:inherit;font:inherit;text-align:inherit;cursor:pointer;border-radius:2px;white-space:inherit}.wr-mark.is-serious{background:#ffe0dd;border-color:#cf6c63}.wr-mark.is-selected{background:#d6e9ff;border-color:#3374aa}.wr-notes{padding:20px;background:#f6f8fb;border-left:1px solid #dce5ef;max-height:780px;overflow:auto}.wr-notes h4{margin:0 0 12px;font-size:13px}.wr-note{margin-bottom:12px;padding:15px;background:#fff;border:1px solid #dce3ed;border-radius:11px;scroll-margin:10px;outline:none}.wr-note.is-selected{border:2px solid #3374aa;padding:14px;box-shadow:0 3px 12px #255b9720}.wr-note.is-serious{border-left:4px solid #bd4f49}.wr-note h5{margin:0 0 10px;font-size:13px;line-height:1.55;color:#183b62}.wr-note .wr-copy{font-size:12px;line-height:1.85}.wr-note-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}.wr-note-tags span{padding:3px 6px;border-radius:5px;background:#f0f3f7;color:#59667b;font-size:10px;font-weight:750}.wr-note-jump{margin-top:10px;border:0;background:none;color:#1c5d95;padding:0;font-size:11px;cursor:pointer;text-decoration:underline}.wr-revision{padding:25px;max-width:900px;margin:auto}.wr-revision .wr-essay{white-space:normal}.wr-revision .wr-essay p{margin:0 0 20px}.wr-applied{background:#f1f6fb;padding:18px;border-radius:11px;margin-top:20px}.wr-applied h4{font-size:13px;margin:0 0 10px}.wr-applied ul,.wr-next{padding-left:22px;margin:0}.wr-applied li,.wr-next li{margin:8px 0;line-height:1.8}.wr-knowledge{overflow:auto}.wr-knowledge table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;line-height:1.7}.wr-knowledge th{padding:11px;background:#f2f6fb;color:#183b62;vertical-align:top}.wr-knowledge td{padding:12px 11px;border-bottom:1px solid #e5ebf3;vertical-align:top}.wr-knowledge td:first-child{font-weight:700;min-width:160px}.wr-knowledge td:nth-child(2){min-width:155px}.wr-button:focus-visible,.wr-close:focus-visible,.wr-tab:focus-visible,.wr-mark:focus-visible,.wr-note-jump:focus-visible{outline:3px solid #60a3d8;outline-offset:3px}.wr-public-note{margin:12px 0;padding:13px 16px;border:1px solid #d5e0ed;border-radius:10px;background:#f6f9fd;color:#36536f;font-size:12px;line-height:1.7}.wr-public-note strong{display:block;color:#153c65;margin-bottom:3px}
