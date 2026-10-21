@@ -32,6 +32,15 @@ LEGACY_VISUALS = {
 }
 
 MODERN_VISUALS = {
+    20: {
+        "section": 2,
+        "old_class": "heater-board",
+        "src": "./question-assets/test-20/section-2-visual-1.jpg",
+        "alt": "Water Heater: follow the original arrows for questions 11, 12 and 13",
+        "source_ref": "Cambridge IELTS 9 Academic Listening Test 4",
+        "answer_questions": [11, 12, 13],
+        "options": "ABCDE",
+    },
     12: {
         "section": 2,
         "old_class": "red-hill-map",
@@ -168,6 +177,20 @@ def apply_modern(page: Path, text: str, data: dict, spec: dict) -> tuple[str, bo
             f'<figure class="verified-question-visual"><img src="{spec["src"]}" '
             f'alt="{spec["alt"]}" loading="lazy" decoding="async"></figure>'
         )
+        # The old controls were embedded in the invented drawing. Retain one
+        # accessible answer per numbered arrow, outside the original image.
+        if spec.get("answer_questions"):
+            controls = []
+            for number in spec["answer_questions"]:
+                options = '<option value="">—</option>' + ''.join(
+                    f'<option value="{letter}">{letter}</option>' for letter in spec["options"]
+                )
+                controls.append(
+                    f'<label class="source-answer"><strong class="q-number">{number}</strong>'
+                    f'<select data-q="{number}" onchange="setQ({number},this.value)" '
+                    f'aria-label="Question {number}">{options}</select></label>'
+                )
+            figure += '<div class="source-answer-grid">' + ''.join(controls) + '</div>'
         before = section["questions"]
         section["questions"] = replace_balanced_div(before, spec["old_class"], figure)
         if section["questions"] != before:
@@ -176,6 +199,8 @@ def apply_modern(page: Path, text: str, data: dict, spec: dict) -> tuple[str, bo
             raise ValueError(f"Neither old visual nor verified asset found in {page.name}")
     _, start, end = decode_data(text)
     new_text = text[:start] + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + text[end:]
+    if spec["old_class"] == "heater-board":
+        new_text = re.sub(r'[^{}\r\n]*\.heater-[^{}]*\{[^{}]*\}', '', new_text)
     if ".verified-question-visual{" not in new_text:
         new_text = new_text.replace("</style>", MODERN_CSS + "\n</style>", 1)
         changed = True
@@ -185,7 +210,7 @@ def apply_modern(page: Path, text: str, data: dict, spec: dict) -> tuple[str, bo
 def main() -> None:
     touched = []
     for page in sorted(PAGES.glob("*.html")):
-        original = page.read_text(encoding="utf-8")
+        original = page.read_bytes().decode("utf-8")
         try:
             data, _, _ = decode_data(original)
         except ValueError:
@@ -200,6 +225,12 @@ def main() -> None:
         if changed and text != original:
             page.write_text(text, encoding="utf-8", newline="")
             touched.append(page.name)
+        # Install the same non-destructive magnifier on all generated pages.
+        text = page.read_bytes().decode("utf-8")
+        if 'src="./question-visuals.js"' not in text:
+            text = text.replace('</head>', '<link rel="stylesheet" href="./question-visuals.css">'
+                                '<script defer src="./question-visuals.js"></script></head>', 1)
+            page.write_text(text, encoding="utf-8", newline="")
     print(f"Applied verified visuals to {len(touched)} page(s): {', '.join(touched)}")
 
 

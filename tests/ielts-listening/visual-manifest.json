@@ -168,6 +168,26 @@
       "sha256": "caaf0f8925384c5352ac43619e67b69774ea622fda5de4d34e3304b8ef89c735",
       "sourceTitle": "IELTS Simulation Tests Academic Listening Test 08",
       "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/08/ielts-simulation-tests-academic-listening-test-8-4-diagram-6a867fd4544b3.jpg"
+    },
+    {
+      "test": 20,
+      "section": 2,
+      "page": "l3QqnVDpjYDzQg.html",
+      "asset": "question-assets/test-20/section-2-visual-1.jpg",
+      "sha256": "a7889467f01a8fa8638d32481d94d0f92479402233d8ee927b878837b95ecbab",
+      "sourceTitle": "Cambridge IELTS 9 Academic Listening Test 4",
+      "sourceImageUrl": "https://engnovate.com/wp-content/uploads/2026/06/cambridge-ielts-09-academic-listening-test-4-4-diagram-6a2369ded8929.jpg",
+      "sourcePageUrl": "https://engnovate.com/ielts-listening-tests/cambridge-ielts-09-academic-listening-test-4/",
+      "questions": [
+        11,
+        12,
+        13
+      ],
+      "reviewedAnswers": {
+        "11": "B",
+        "12": "C",
+        "13": "E"
+      }
     }
   ],
   "structuredFlows": [
