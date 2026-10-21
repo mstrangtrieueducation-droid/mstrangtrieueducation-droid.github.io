@@ -21,7 +21,7 @@
   const direct=data.directSubmission||{},policy=data.directReceiptDeadline||data.directDeadline||{};
   const rows=[].concat(data.submissionAttempts||[],direct.receipts||[]).filter(r=>r&&r.contentStatus!=='empty'&&r.contentMissing!==true);
   const at=Math.max(time(options.submittedAt,false),time(data.submittedAtMs,false),time(data.submittedAt,false),time(data.lastSubmittedAt,false),...rows.map(r=>time(r.submittedAtMs||r.submittedAt,false)));
-  const missing=data.contentMissing===true||data.hasContent===false;
+  const missing=data.contentMissing===true||data.hasContent===false||['empty','unconfirmed','unavailable','unknown'].includes(data.contentStatus)||['unconfirmed','unavailable'].includes(data.evidenceStatus);
   const received=!missing&&(options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
   const due=time(deadline||data.dueDate||data.deadline||policy.dueDate||policy.dueAt||policy.deadline,false);
   const dateOnly=deadline||data.dueDate||data.deadline||policy.dueDate;
