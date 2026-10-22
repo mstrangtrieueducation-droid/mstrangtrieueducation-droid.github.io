@@ -29275,7 +29275,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
     const kidsJourneyPilotHash_=location.hash;
     window.addEventListener('titi-dashboard-ready',function(){
       if(!window.KidsJourneyPilot)return;
-      if(location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(kidsApi.parent.alias)!=='BEAN'||matchKey(app.childAlias)!=='BEAN'||!app.child||!app.child.kidsJourneyV1){window.KidsJourneyPilot.disable();return;}
+      if(location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(kidsApi.parent.alias)!==matchKey('BEAN')||matchKey(app.childAlias)!==matchKey('BEAN')||!app.child||!app.child.kidsJourneyV1){window.KidsJourneyPilot.disable();return;}
       try{
         const ready=window.KidsJourneyPilot.update({profile:app.child,dashboard:app.data||{},practice:practiceRows(),serverNow:Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt)});
         if(ready){hidePendingWorkGate();document.documentElement.dataset.kidsJourneyPilot='bean21';}
