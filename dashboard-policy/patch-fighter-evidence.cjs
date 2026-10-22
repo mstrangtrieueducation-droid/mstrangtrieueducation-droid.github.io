@@ -1,0 +1,13 @@
+const fs=require('fs'),assert=require('assert');
+module.exports=function(s){if(!s.includes('function fighterPendingRegularEntriesV15_'))return s;
+ if(s.includes('data-fighter-evidence="2"'))return s;
+ s=s.replace(/<head([^>]*)>/i,m=>m+'<script data-fighter-evidence="2">'+fs.readFileSync(__dirname+'/fighter-submission-evidence.js','utf8')+'</script>');
+ const old='taskState.completed===true||taskState.missing!==true';assert(s.includes(old),'Fighter pending status anchor');s=s.replaceAll(old,'FighterSubmissionEvidence.received(taskState)||taskState.missing!==true');
+ const meta='var meta=submissionOriginalFighterStatus_(state,missingCount);';assert(s.includes(meta),'Fighter card status anchor');s=s.replace(meta,meta+'if(FighterSubmissionEvidence.received(state))return Object.assign({},meta,{cls:"done",completed:true,neutral:false,text:state.isLate?"Đã nộp muộn":"Đã nộp bài"});');
+ s=s.replaceAll("state?.completed===true&&!state.contentMissing","FighterSubmissionEvidence.received(state)");
+ s=s.replaceAll('(live.completed===true||live.submissionReceived===true||live.receiptReceived===true)&&!live.contentMissing','FighterSubmissionEvidence.received(live)');
+ s=s.replaceAll('Number(item&&item.missingCount||0)','(Array.isArray(item?.tasks)?item.tasks.filter(t=>t?.missing===true&&!FighterSubmissionEvidence.received(t)).length:Number(item&&item.missingCount||0))');
+ s=s.replaceAll('state.completed?"done":"missing"','FighterSubmissionEvidence.received(state)?"done":"missing"');
+ s=s.replaceAll('submissionCan_(state)&&(state.missingItems||[]).length','!FighterSubmissionEvidence.received(state)&&submissionCan_(state)&&(state.missingItems||[]).length');
+ return s;
+};

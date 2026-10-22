@@ -32,6 +32,7 @@ for(const row of rows){
  };
  for(const[a,b]of Object.entries(labels))s=s.split(a).join(b);
  s=require('./patch-submission-evidence.cjs')(s);
+ s=require('./patch-fighter-evidence.cjs')(s);
  s=s.replace(/<head([^>]*)>/i,(m)=>m+'\n<script data-core-profile-policy="2">'+shared+'</script>');
  const scripts=[...s.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)].filter(m=>!(/\bsrc=|type=["'](?:application\/json|application\/ld\+json)/i.test(m[1])));
  for(let i=0;i<scripts.length;i++)new vm.Script(scripts[i][2],{filename:row.route+'/script'+i});
