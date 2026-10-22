@@ -7,8 +7,9 @@
 (function(root){
  'use strict';
  function failed(){return '<span class="dashboard-card-unavailable" data-dashboard-card-warning="1" role="status" style="display:block;padding:14px 18px;margin:8px 0;border:1px solid #dbe1e6;border-radius:12px;background:#f6f8fa;color:#596875;font-size:14px;line-height:1.5">Đang cập nhật link bài</span>';}
- function wrap(renderer){return function(){try{return renderer.apply(this,arguments);}catch(error){var node=arguments[0];if(node&&node.nodeType===1&&typeof node.insertAdjacentHTML==='function'){try{node.insertAdjacentHTML('beforeend',failed());}catch(ignore){}}return failed();}};}
- root.DashboardCardBoundary={failed:failed,wrap:wrap};
+ function decorate(markup,item){try{if(typeof markup!=='string'||markup.indexOf('data-dashboard-card-warning=')>=0||!item||typeof item!=='object')return markup;var unavailable=item.directReceiptResolution==='source-unavailable'||item.evidenceStatus==='unavailable'||item.evidenceStatus==='unconfirmed'||item.contentStatus==='unconfirmed';if(!unavailable)return markup;var at=markup.lastIndexOf('</article>');return at>=0?markup.slice(0,at)+failed()+markup.slice(at):markup+failed();}catch(error){return markup;}}
+ function wrap(renderer){return function(){try{return decorate(renderer.apply(this,arguments),arguments[0]);}catch(error){var node=arguments[0];if(node&&node.nodeType===1&&typeof node.insertAdjacentHTML==='function'){try{node.insertAdjacentHTML('beforeend',failed());}catch(ignore){}}return failed();}};}
+ root.DashboardCardBoundary={failed:failed,decorate:decorate,wrap:wrap};
  if(typeof module==='object'&&module.exports)module.exports=root.DashboardCardBoundary;
 })(typeof globalThis==='object'?globalThis:this);
 </script>
@@ -149,7 +150,7 @@
   function render(items,card,key,options){
     options=options||{};var recent=[],old=[],now=typeof options.now==='number'?options.now:Date.now();
     (Array.isArray(items)?items:[]).forEach(function(item,index){try{(historical(item,now)?old:recent).push({item:item,index:index});}catch(error){recent.push({item:item,index:index,failed:true});}});
-    function html(rows){return rows.map(function(row){try{return row.failed?DashboardCardBoundary.failed():card(row.item,row.index);}catch(error){return DashboardCardBoundary.failed();}}).join('');}
+    function html(rows){return rows.map(function(row){try{return row.failed?DashboardCardBoundary.failed():DashboardCardBoundary.decorate(card(row.item,row.index),row.item);}catch(error){return DashboardCardBoundary.failed();}}).join('');}
     var current=html(recent);if(!old.length)return current;
     if(!/^[a-z0-9-]+$/.test(key))return current+html(old);
     return current+'<details class="submission-history-window" data-history-section="'+key+'"'+(expanded[scope(key)]?' open':'')+'><summary><span class="history-show">Xem thêm '+old.length+' bài cũ</span><span class="history-hide">Thu gọn bài cũ</span></summary><div class="submission-history-window__cards">'+html(old)+'</div></details>';
