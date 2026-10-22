@@ -5,6 +5,7 @@ on:
     - cron: '19 * * * *'
 permissions:
   contents: write
+  pages: write
 concurrency:
   group: ielts48-writing-cache
   cancel-in-progress: false
