@@ -1,0 +1,29 @@
+name: IELTS dashboard prepared data
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 * * * *'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: ielts-dashboard-prepared-data
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+        id: checkout
+      - name: Update academic summaries from prepared edge data
+        run: node .github/ielts-ui/refresh-academic.mjs
+      - name: Prepare existing Writing reviews in the background
+        env:
+          IELTS_UI_PARENT_ROSTER: ${{ secrets.IELTS_UI_PARENT_ROSTER }}
+        run: node .github/ielts-ui/writing-export.mjs
+      - name: Publish prepared data only
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/ielts-ui/publish-data.mjs

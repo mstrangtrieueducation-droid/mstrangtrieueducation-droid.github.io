@@ -1,0 +1,124 @@
+{
+  "classes": [
+    {
+      "number": 45,
+      "route": "7rsn6kbh",
+      "className": "IELTS 45",
+      "baseUrl": "https://ielts45-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbz9zJO_kuP2ROK5aA2XpbfvBrXDy8xxZSBXbQje-FQg_jHQA0g8k5dRZReW1ChDe_lNpg/exec",
+        "https://script.google.com/macros/s/AKfycbxiIvE4QpOMia128EuiBpJpxL3Yyp8LJiPhfZH9w7ohfD4RPBmkF0F9AWVKkjbvpE_ECA/exec"
+      ],
+      "capabilities": {
+        "writing": true,
+        "classwork": true,
+        "assessment": false
+      }
+    },
+    {
+      "number": 46,
+      "route": "xpe6dd4j",
+      "className": "IELTS 46",
+      "baseUrl": "https://ielts46-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbxHRJmDX_EcKEi6hQDH5l2BsoWw4W-EkNPHkAg-WRnFwxn1yPw7--LBancNChI09xSyHg/exec",
+        "https://script.google.com/macros/s/AKfycbwQ8IKDZ-atgmzh5W8ENcpNLl2JgeBipm_JuSzyJj07qqF124SRnLULbcAzI_kVym5OKg/exec"
+      ],
+      "capabilities": {
+        "writing": true,
+        "classwork": true,
+        "assessment": true
+      }
+    },
+    {
+      "number": 47,
+      "route": "bhg37bsz",
+      "className": "IELTS 47",
+      "baseUrl": "https://ielts47-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbyZU6xN2BEKoPodCuCvBwe-EV0UjL0Kv9f8pwA8k_GKcelqkR0l6gw2xdjUbR4Mg6RF/exec",
+        "https://script.google.com/macros/s/AKfycbwLBzlEUBTQTWj4LY-6005XXLw8DkDcOQp_iE0mJI_CC630edry06sMf615pgjtvaBM/exec"
+      ],
+      "capabilities": {
+        "writing": true,
+        "classwork": false,
+        "assessment": true
+      }
+    },
+    {
+      "number": 48,
+      "route": "e73wgva4",
+      "className": "IELTS 48",
+      "baseUrl": "https://ielts48-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbzPBNjRrdK6eDL8CQUpbPFvPIJDlQnsyTwGPAOz9WeeoXWxM16rZRrGEEvv4SdR7Gwauw/exec",
+        "https://script.google.com/macros/s/AKfycbyCWtfi2hHWGut8qks2CKTa3q8QsUmoovYuAh83wORlMIhmaELYpWy6u5f36x36YTZWow/exec"
+      ],
+      "capabilities": {
+        "writing": true,
+        "classwork": true,
+        "assessment": true
+      }
+    },
+    {
+      "number": 49,
+      "route": "9k6a4bxe",
+      "className": "IELTS 49",
+      "baseUrl": "https://ielts49-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbzkmOic8_dMzRNhte3Ioid7T5tdMcwApC8Lt7rhn89ogTMoIQEWJklUUIrgNvfkYLX-MQ/exec",
+        "https://script.google.com/macros/s/AKfycbz2YivTnTMHb-CnDw8yxfA-5XU0Oxx2g1eQeKwVPHebjj7q0ra0wkeZMbkw6_tqJZ8ZCA/exec"
+      ],
+      "capabilities": {
+        "writing": true,
+        "classwork": true,
+        "assessment": false
+      }
+    },
+    {
+      "number": 50,
+      "route": "jbjdsuj7",
+      "className": "IELTS 50",
+      "baseUrl": "https://ielts50-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbyqjmoPJ7K5ZMCdR3kIbHnOAK6W8dbfF2urAEm1tz-1CJf9szeliaOSSrspS1dNgifERA/exec",
+        "https://script.google.com/macros/s/AKfycbwoxBUXC9dnRQWiiiMwEofDnVH2Ct4aBvmaX8dNuBfkl-00t8Cx3Ua-kjBNcHhCsxAObw/exec"
+      ],
+      "capabilities": {
+        "writing": true,
+        "classwork": false,
+        "assessment": false
+      }
+    },
+    {
+      "number": 51,
+      "route": "np93vg0b",
+      "className": "IELTS 51",
+      "baseUrl": "https://ielts51-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbzMVPWiGZ7x7MF-3FIdKEuFrIaME3vjOxa2WTmqVVwOEbVqX-XmB0bV1nxQe8_cr6wf/exec",
+        "https://script.google.com/macros/s/AKfycbzboGfHvCRgAa98P84XlbUnY5_LzhU_ZDBdvjANONQvMo-4uA2eicPT3EhqFVNSSNhw/exec"
+      ],
+      "capabilities": {
+        "writing": false,
+        "classwork": false,
+        "assessment": false
+      }
+    },
+    {
+      "number": 52,
+      "route": "t2n2eyyu",
+      "className": "IELTS 52",
+      "baseUrl": "https://ielts52-private-pilot.trangnga2024.workers.dev/data/",
+      "endpoints": [
+        "https://script.google.com/macros/s/AKfycbzLwWlDfypCAdwUF9_NKlFk0luGcjPTz025-ocrrCRusJyIZUZCrg22x9clRLcYRdXY/exec",
+        "https://script.google.com/macros/s/AKfycbwbJ2wjdgLfyAkbwTUTu2w5vWDL6UuwIIveeutBBpGKOik64DeAEe7sgHjcXHM4-O6l/exec"
+      ],
+      "capabilities": {
+        "writing": false,
+        "classwork": false,
+        "assessment": false
+      }
+    }
+  ]
+}

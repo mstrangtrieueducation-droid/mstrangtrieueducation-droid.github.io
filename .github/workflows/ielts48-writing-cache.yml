@@ -1,8 +1,6 @@
 name: IELTS 48 prepared Writing reviews
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '19 * * * *'
 permissions:
   contents: write
   pages: write
