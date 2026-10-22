@@ -29,7 +29,11 @@ function coreProfileMergeExtrasV2_(next,prior){
  var reads=next.sourceStatus&&next.sourceStatus.optionalReads||[];
  if(reads.indexOf('paragraph-reviews')>=0&&a.paragraphReviews&&b.paragraphReviews&&a.paragraphReviews.studentName===b.paragraphReviews.studentName&&!a.paragraphReviews.reviews.length)a.paragraphReviews=coreProfileCopyV2_(b.paragraphReviews);
  var student=a.profile&&a.profile.student,previous=b.profile&&b.profile.student;
- if(reads.indexOf('shadowing-feedback')>=0&&student&&previous&&student.name===previous.name&&(!student.shadowingFeedback||!student.shadowingFeedback.length))student.shadowingFeedback=coreProfileCopyV2_(previous.shadowingFeedback||[]);
+ if(reads.indexOf('shadowing-feedback')>=0&&student&&previous&&student.name===previous.name&&(!student.shadowingFeedback||!student.shadowingFeedback.length)){
+  student.shadowingFeedback=coreProfileCopyV2_(previous.shadowingFeedback||[]);
+  var embedded=a.bootstrap&&a.bootstrap.profile&&a.bootstrap.profile.student;if(embedded&&embedded.name===student.name)embedded.shadowingFeedback=coreProfileCopyV2_(student.shadowingFeedback);
+ }
+ if(reads.indexOf('self-study')>=0&&Array.isArray(a.selfStudy)&&!a.selfStudy.length&&Array.isArray(b.selfStudy))a.selfStudy=coreProfileCopyV2_(b.selfStudy);
  return next;
 }
 if(typeof module==='object'&&module.exports)module.exports={coreProfileOptionalV2_,coreProfileReceiptFallbackV2_,coreProfileReceiptShapeV2_,coreProfilePartialV2_,coreProfileMergeExtrasV2_};

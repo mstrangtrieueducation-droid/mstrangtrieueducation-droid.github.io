@@ -4,11 +4,12 @@ const shared=fs.readFileSync('confirmed-profile-client.js','utf8');new vm.Script
 const manifest=[];
 for(const row of rows){
  let s=fs.readFileSync('private/frontend/'+row.route+'.html','utf8').replace(/\r\n?/g,'\n');
+ s=s.replace(/<script\b[^>]*data-core-profile-policy=["']2["'][^>]*>[\s\S]*?<\/script>/gi,'');
  let gates=0;
  if(row.kind.startsWith('kids')){
   s=s.replace(/var proof = fallback \? withdrawn : verified;[\s\S]*?(?=if \(boot\.preparedHistory \|\| sub\.preparedProjection\))/,()=>{
    gates++;return `// CORE_PROFILE_POLICY_V2: optional completeness does not own profile availability.\n    if (!sub.coverage.every(function(c){return object(c)&&typeof c.family==='string'&&c.family!=='*'&&typeof c.complete==='boolean'&&typeof c.freshRead==='boolean';}) || !object(sub.submissionVerification) || typeof sub.submissionVerification.complete!=='boolean' || !object(sub.assignmentAuthority)) throw failure('INVALID_SNAPSHOT');\n    `;
-  });assert.equal(gates,1,row.className+' optional gate');
+  });assert(gates===1||gates===0&&s.includes('CORE_PROFILE_POLICY_V2: optional completeness does not own profile availability.'),row.className+' optional gate');
  }
  // Context-specific presentation labels: unavailable metadata is not an unsubmitted assignment.
  const labels={
@@ -20,7 +21,7 @@ for(const row of rows){
  'Đang cập nhật dữ liệu. Các phần đã tải vẫn có thể xem bình thường.':'Các phần đã lưu vẫn có thể xem bình thường.',
  'Đang cập nhật phần dữ liệu còn lại…':'Dữ liệu đã lưu','Đang cập nhật phía sau…':'Bản lưu gần nhất',
  'Hồ sơ chưa tải xong':'Hồ sơ học tập','Chưa thể kết nối hồ sơ':'Hồ sơ học tập','Chưa thể kiểm tra quyền truy cập':'Hồ sơ học tập',
- 'Đang cập nhật':'—','Đang xác minh':'— Chưa nộp bài','Chưa đọc đủ':'— Chưa nộp bài','Cần đối chiếu':'Cô sẽ kiểm tra'
+ 'Đang cập nhật':'—','Đang xác minh':'— Chưa nộp bài','Đang xác nhận':'— Chưa nộp bài','Chưa đọc đủ':'— Chưa nộp bài','Cần đối chiếu':'Cô sẽ kiểm tra'
  };
  for(const[a,b]of Object.entries(labels))s=s.split(a).join(b);
  s=s.replace(/<head([^>]*)>/i,(m)=>m+'\n<script data-core-profile-policy="2">'+shared+'</script>');
