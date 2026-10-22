@@ -279,7 +279,7 @@
         if(!c||c.freshRead!==true||!finite(c.verifiedAt)||c.verifiedAt<=0||c.structurallyComplete!==true||c.sourceFailure||!Array.isArray(c.issues))return false;
         if(c.complete===true)return c.issues.length===0;
         if(c.complete!==false||!c.issues.length)return false;
-        incomplete=true;return c.issues.every(function(issue){return object(issue)&&(issue.reason||issue.type)==='CODE_UNRECOGNIZED';});
+        incomplete=true;return c.issues.every(function(issue){return object(issue)&&['CODE_UNRECOGNIZED','EVIDENCE_UNAVAILABLE'].indexOf(issue.reason||issue.type)>=0;});
       });
       var p=sub.submissionVerification;
       if(!readable||!incomplete||!p||p.complete!==false||p.freshRead!==true||!finite(p.verifiedAt)||p.verifiedAt<=0||!verified(sub.assignmentAuthority))throw failure('RECEIPTS_INCOMPLETE');
