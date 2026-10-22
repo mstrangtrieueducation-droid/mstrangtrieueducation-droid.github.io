@@ -1,0 +1,24 @@
+name: IELTS 48 prepared Writing reviews
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '19 * * * *'
+permissions:
+  contents: write
+concurrency:
+  group: ielts48-writing-cache
+  cancel-in-progress: false
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Writing independently of parent visits
+        env:
+          IELTS48_PARENT_ROSTER: ${{ secrets.IELTS48_PARENT_ROSTER }}
+        run: node .github/ielts48/writing-cache-export.mjs
+      - name: Publish only prepared Writing data
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/ielts48/publish-writing-cache.mjs
