@@ -5,11 +5,18 @@ const manifest=[];
 for(const row of rows){
  let s=fs.readFileSync('private/frontend/'+row.route+'.html','utf8').replace(/\r\n?/g,'\n');
  s=s.replace(/<script\b[^>]*data-core-profile-policy=["']2["'][^>]*>[\s\S]*?<\/script>/gi,'');
+ s=s.replace(/(\/student-learning\/active-roster-v1\.js)(?:\?v=[^"']+)?/g,'$1?v=20261023-core-profile-v2');
  let gates=0;
  if(row.kind.startsWith('kids')){
   s=s.replace(/var proof = fallback \? withdrawn : verified;[\s\S]*?(?=if \(boot\.preparedHistory \|\| sub\.preparedProjection\))/,()=>{
    gates++;return `// CORE_PROFILE_POLICY_V2: optional completeness does not own profile availability.\n    if (!sub.coverage.every(function(c){return object(c)&&typeof c.family==='string'&&c.family!=='*'&&typeof c.complete==='boolean'&&typeof c.freshRead==='boolean';}) || !object(sub.submissionVerification) || typeof sub.submissionVerification.complete!=='boolean' || !object(sub.assignmentAuthority)) throw failure('INVALID_SNAPSHOT');\n    `;
   });assert(gates===1||gates===0&&s.includes('CORE_PROFILE_POLICY_V2: optional completeness does not own profile availability.'),row.className+' optional gate');
+  for(const [fn,arg]of [['responseHasErrors','data'],['parentPackagePartial_','value'],['parentPackageStale_','value']]){
+   const pattern=new RegExp('function '+fn+'\\('+arg+'\\) \\{');
+   assert(pattern.test(s),row.className+' '+fn);
+   const start=s.search(pattern),near=s.slice(start,start+250);
+   if(!near.includes('coreAvailableForViewV2'))s=s.replace(pattern,m=>m+'\n      // CORE_PROFILE_POLICY_V2: optional errors/age cannot veto a validated prepared core.\n      if ('+arg+' && '+arg+'.coreAvailableForViewV2 === true) return false;\n');
+  }
  }
  // Context-specific presentation labels: unavailable metadata is not an unsubmitted assignment.
  const labels={

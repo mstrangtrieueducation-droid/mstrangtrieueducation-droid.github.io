@@ -29,6 +29,15 @@
   if(next.actions.bootstrap&&next.actions.bootstrap.preparedSubmissions)next.actions.bootstrap.preparedSubmissions=a;
   next.sourceStatus=Object.assign({},next.sourceStatus,{retainedReceiptAsOf:old.sourceStatus&&old.sourceStatus.receiptAsOf||old.capturedAt});return next;
  }
+ // Availability of a validated prepared core is separate from freshness/completeness
+ // of supplementary sources. This marker never promotes receipt verification.
+ function available(packet){if(!packet||!packet.actions)return packet;var a=packet.actions,b=a.bootstrap;
+  [a.dashboard,a.profile,b,b&&b.dashboard,b&&b.profile].forEach(function(v){if(v&&typeof v==='object'){
+   v.coreAvailableForViewV2=true;
+   if(Array.isArray(v.errors)&&v.errors.length){v.optionalSourceErrors=copy(v.errors);v.errors=[];}
+  }});
+  if(packet.classNumber&&b&&b.partial){b.optionalSourcesPartial=true;b.partial=false;}return packet;
+ }
  function database(){if(!dbPromise)dbPromise=new Promise(function(resolve){
   try{var r=root.indexedDB.open('mtt-confirmed-profile-v2',1);r.onupgradeneeded=function(){r.result.createObjectStore('profiles');};r.onsuccess=function(){resolve(r.result);};r.onerror=function(){resolve(null);};r.onblocked=function(){resolve(null);};}catch(e){resolve(null);}
  });return dbPromise;}
@@ -39,13 +48,13 @@
   var original=api.create;api.create=function(options){
    var packet=null,sequence=0,ended=false,keyPromise=Promise.resolve().then(function(){return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token));}).then(function(b){return location.pathname+'|'+label+'|'+String(options.className||options.classNumber||'')+'|'+Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');});
    var loaded=options.onLoaded,opts=Object.assign({},options,{onLoaded:function(value){
-    present(retain(value,packet));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:2,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);
+    available(present(retain(value,packet)));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:2,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);
    }}),client=original.call(api,opts),request=client.request;
    function current(){return !revoked&&!ended&&(!options.isCurrent||options.isCurrent()===true);}
    function revoke(){ended=true;packet=null;keyPromise.then(function(key){disk(key,null);});}
    root.addEventListener('mtt:profile-revoked',revoke);
    root.addEventListener('hashchange',function(){ended=true;packet=null;});
-   async function prior(){if(!current())return null;if(packet)return packet;var key=await keyPromise,record=await disk(key);if(record&&record.schema===2&&record.packet&&record.packet.actions&&current())packet=record.packet;return packet;}
+   async function prior(){if(!current())return null;if(packet)return packet;var key=await keyPromise,record=await disk(key);if(record&&record.schema===2&&record.packet&&record.packet.actions&&current())packet=available(record.packet);return packet;}
    async function fallback(action,args){
     var p=await prior();if(!p||!current())return null;
     var a={refreshDashboard:'dashboard',refreshProfile:'profile'}[action]||action,value;
@@ -73,6 +82,7 @@
  root.ConfirmedProfilePolicyV2={present:present,withdraw:withdraw,retain:retain};
 })(typeof window!=='undefined'?window:globalThis);
 </script>
+
 
 <script id="dashboard-card-boundary-v1">/* Shared per-card boundary: presentation only; no network, scoring or access decisions. */
 (function(root){
@@ -133,7 +143,7 @@
 <link rel="preload" as="image" href="/vanlang-on-thi-lop-6/game-kit/art/teacher-titi-v1/welcome.webp">
 
 
-<script src="/student-learning/active-roster-v1.js?v=20261019-fail-open-v2" data-class-key="kids-39" data-access="https://kids-dashboard-cluster-three-v1.trieuthivantrangk45-kids.workers.dev"></script>
+<script src="/student-learning/active-roster-v1.js?v=20261023-core-profile-v2" data-class-key="kids-39" data-access="https://kids-dashboard-cluster-three-v1.trieuthivantrangk45-kids.workers.dev"></script>
 
 
 
@@ -10378,6 +10388,9 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
     function responseHasErrors(data) {
+      // CORE_PROFILE_POLICY_V2: optional errors/age cannot veto a validated prepared core.
+      if (data && data.coreAvailableForViewV2 === true) return false;
+
 
 
 
@@ -27084,6 +27097,9 @@ window.TitiDashboardSnapshot=function(){
 
 
     function parentPackagePartial_(value) {
+      // CORE_PROFILE_POLICY_V2: optional errors/age cannot veto a validated prepared core.
+      if (value && value.coreAvailableForViewV2 === true) return false;
+
 
 
 
@@ -27096,6 +27112,9 @@ window.TitiDashboardSnapshot=function(){
 
 
     function parentPackageStale_(value) {
+      // CORE_PROFILE_POLICY_V2: optional errors/age cannot veto a validated prepared core.
+      if (value && value.coreAvailableForViewV2 === true) return false;
+
 
 
 
