@@ -97,6 +97,7 @@
 
 
 
+
 <script id="dashboard-card-boundary-v1">/* Shared per-card boundary: presentation only; no network, scoring or access decisions. */
 (function(root){
  'use strict';
@@ -133,7 +134,7 @@
   const manual=data.submissionAuthority==='manual-tracker'||data.submissionManualAuthority===true||!!data.manualSubmissionVerification;
   const manualComplete=manual&&data.completed===true&&(!data.manualSubmissionVerification||data.manualSubmissionVerification.complete===true&&data.manualSubmissionVerification.decisionKnown===true);
   const legacyComplete=data.completed===true&&(data.tracked===true||['done','late'].includes(data.state)||['done','late'].includes(data.statusType));
-  const received=manualComplete||!missing&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
+  const received=manualComplete||rows.length>0||((data.contentMissing!==true&&data.hasContent!==false&&data.contentStatus!=='empty')&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true))||!missing&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
   const due=time(deadline||data.dueDate||data.deadline||policy.dueDate||policy.dueAt||policy.deadline,false);
   const dateOnly=deadline||data.dueDate||data.deadline||policy.dueDate;
   const cutoff=dateOnly?time(dateOnly,true):due;
@@ -2699,22 +2700,34 @@ root.Ielts48Grouped={install,sync,protect};
 })(globalThis);
 
 (function(root){'use strict';
-function read(item,record){item=item||{};record=record||{};const deadline=item.directDeadline||record.directDeadline,direct=item.directSubmission||record.directSubmission;
- const empty=item.contentMissing||record.contentMissing;
- const normalize=v=>String(v??'').normalize('NFC').replace(/<[^>]*>/g,'').replace(/\uFE0F/g,'').replace(/\s+/g,' ').trim().toLocaleLowerCase('vi');
- const manual=[item,record].some(v=>['completed','submitted_zalo'].includes(v.homeworkCode)||v.manualCompleted===true||[v.manualStatus,v.homeworkStatus,v.homeworkFeedback,v.homeworkTeacherComment].some(x=>['đủ','đạt','a+','tốt','✅','đã hoàn thành','đã nộp','✅ đã nộp','✅ đã hoàn thành','✅ đủ','✅ đạt'].includes(normalize(x))));
- const submitted=!empty&&(manual|| (deadline?deadline.complete===true:direct?direct.complete===true:record.submitted===true||record.statusType==='done'||Boolean(record.submittedAt)));
- const submittedAt=record.submittedAt||direct?.latestSubmittedAt||direct?.latestSubmittedAtMs||record.lastSubmittedAt||null;
- return {submitted,confirmed:true,label:submitted?(manual?'✅ ĐÃ HOÀN THÀNH':'✅ ĐÃ NỘP'):'— Chưa nộp bài',manual:submitted&&manual,late:deadline?.late===true,submittedAt};
+let writing=null,getStudent=()=>null;
+const norm=v=>String(v||'').normalize('NFC').trim().toLocaleLowerCase('vi');
+function setWriting(data,student){if(!data||!student||norm(data.studentName||data.parentName)!==norm(student.name))return false;writing=data;return true;}
+function read(item,record){item=item||{};record=record||{};
+ const sources=[item,record],deadline=item.directDeadline||record.directDeadline||{},direct=item.directSubmission||record.directSubmission||{};
+ const manual=sources.some(v=>['completed','submitted_zalo'].includes(v.homeworkCode)||v.manualCompleted===true||[v.manualStatus,v.homeworkStatus,v.homeworkFeedback,v.homeworkTeacherComment].some(x=>['đủ','đạt','a+','tốt','✅','đã hoàn thành','đã nộp','✅ đã nộp','✅ đã hoàn thành','✅ đủ','✅ đạt'].includes(norm(x).replace(/\uFE0F/g,''))));
+ const positive=sources.some(v=>v.submitted===true||['done','late'].includes(v.statusType)||Boolean(v.submittedAt||v.lastSubmittedAt));
+ const receipts=[...(direct.receipts||[]),...(record.submissionAttempts||[])].filter(r=>r&&r.contentStatus!=='empty'&&r.contentMissing!==true);
+ let reviews=[];
+ if(item.skill==='writing'&&writing&&norm(getStudent()?.name)===norm(writing.studentName||writing.parentName)){const n=Number(item.sessionNumber),code=item.assignmentCode|| (n>0?'IELTS-WRITING-W'+String(n).padStart(2,'0'):'');reviews=(writing.reviews||[]).filter(r=>r.assignmentCode===code&&r.publication?.status==='published'&&r.receiptId);}
+ // Optional incompleteness is not evidence that an independently confirmed submission is absent.
+ const submitted=manual||positive||reviews.length>0||receipts.length>0||deadline.complete===true||direct.complete===true;
+ const submittedAt=record.submittedAt||record.lastSubmittedAt||direct.latestSubmittedAt||direct.latestSubmittedAtMs||reviews[0]?.submittedAt||receipts[0]?.submittedAt||null;
+ return {submitted,confirmed:true,label:submitted?(manual?'✅ ĐÃ HOÀN THÀNH':'✅ ĐÃ NỘP'):'— Chưa nộp bài',manual:submitted&&manual,late:submitted&&deadline.late===true,submittedAt};
 }
-root.IeltsSubmissionStatus={read};
+root.IeltsSubmissionStatus={read,setWriting,configure:fn=>{getStudent=fn;writing=null;}};
 })(globalThis);
+;
 
 (function(root){'use strict';let opts,ready=null,cache=null;
 const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const key=(a,e={})=>a+'|'+JSON.stringify(Object.fromEntries(Object.entries(e).sort(([a],[b])=>a.localeCompare(b))));
 async function load(){const token=new URLSearchParams(location.hash.slice(1)).get('p');if(!/^[\w-]{22}$/.test(token||''))throw Error('INVALID_LINK');const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');const r=await fetch('./data/writing/'+hash+'.json',{cache:'no-cache'});if(!r.ok)throw Error('WRITING_CACHE_UNAVAILABLE');const p=await r.json();if(p.className!=='IELTS 48'||!p.actions)throw Error('INVALID_WRITING_CACHE');return p;}
-function update(){const s=opts.getState();if(!s.student||!s.dashboard)return;const bar=document.getElementById('portal-student-bar'),name=s.student.name,group=/^group([12])$/.exec(s.student.speakingGroup||'')?.[1];if(!bar)return;
+let evidenceIdentity='',evidenceBusy=false,evidenceNext=0;
+ function update(){const s=opts.getState();if(!s.student||!s.dashboard)return;
+ const who=s.student.name;
+ if(!evidenceBusy&&(who!==evidenceIdentity||Date.now()>evidenceNext)){evidenceBusy=true;const student=s.student;opts.access.request('writing',false,{}).then(data=>{if(opts.getState().student?.name!==who)return;root.IeltsSubmissionStatus.setWriting(data,student);evidenceIdentity=who;evidenceNext=Date.now()+300000;root.IeltsStudyHub?.render?.(opts.getState().active);}).catch(()=>{evidenceNext=Date.now()+30000;evidenceIdentity=who;}).finally(()=>{evidenceBusy=false;});}
+ const bar=document.getElementById('portal-student-bar'),name=s.student.name,group=/^group([12])$/.exec(s.student.speakingGroup||'')?.[1];if(!bar)return;
  if(['homework-all','speaking','writing','reading','listening','shadowing'].includes(s.active))root.Ielts48Master?.refresh();
  const html='<span class="compact-name">'+escape(name)+'</span><span class="compact-badge">IELTS 48'+(group?'.'+group:'')+'</span><span class="compact-badge group">🗣️ '+(group?'Speaking Nhóm '+group:'Nhóm Speaking chưa công bố')+'</span>';
  if(bar&&bar.__compact!==html){let content=bar.querySelector('[data-compact-student]');if(!content){content=document.createElement('div');content.dataset.compactStudent='';bar.appendChild(content);}content.innerHTML=html;bar.__compact=html;}
@@ -2725,7 +2738,7 @@ function update(){const s=opts.getState();if(!s.student||!s.dashboard)return;con
  if(box.__content!==content){box.innerHTML=content;box.__content=content;}
 
 }
-function install(o){opts=o;o.status();ready=load().then(p=>{cache=p;return p;});ready.catch(()=>{});const request=o.access.request;
+function install(o){opts=o;root.IeltsSubmissionStatus.configure(()=>opts.getState().student);o.status();ready=load().then(p=>{cache=p;return p;});ready.catch(()=>{});const request=o.access.request;
  o.access.request=async function(action,force,extra){if(['writing','classwork_index','classwork_review','classwork_source','writing_assessment','writing_assessment_source'].includes(action)){
   const p=cache||await ready,s=o.getState().student;if(s&&p.name!==s.name)throw Error('WRITING_CACHE_IDENTITY');let value=p.actions[key(action,extra||{})];if(!value||value.staticUnavailable)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');if(value.staticAsset){const r=await fetch('./data/writing/'+value.staticAsset,{cache:'force-cache'});if(!r.ok)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');value=await r.json();}return structuredClone(value);
  }return request.call(this,action,force,extra);};

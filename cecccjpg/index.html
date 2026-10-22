@@ -79,6 +79,7 @@
 
 
 
+
 <script id="dashboard-card-boundary-v1">/* Shared per-card boundary: presentation only; no network, scoring or access decisions. */
 (function(root){
  'use strict';
@@ -114,7 +115,7 @@
   const manual=data.submissionAuthority==='manual-tracker'||data.submissionManualAuthority===true||!!data.manualSubmissionVerification;
   const manualComplete=manual&&data.completed===true&&(!data.manualSubmissionVerification||data.manualSubmissionVerification.complete===true&&data.manualSubmissionVerification.decisionKnown===true);
   const legacyComplete=data.completed===true&&(data.tracked===true||['done','late'].includes(data.state)||['done','late'].includes(data.statusType));
-  const received=manualComplete||!missing&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
+  const received=manualComplete||rows.length>0||((data.contentMissing!==true&&data.hasContent!==false&&data.contentStatus!=='empty')&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true))||!missing&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
   const due=time(deadline||data.dueDate||data.deadline||policy.dueDate||policy.dueAt||policy.deadline,false);
   const dateOnly=deadline||data.dueDate||data.deadline||policy.dueDate;
   const cutoff=dateOnly?time(dateOnly,true):due;
