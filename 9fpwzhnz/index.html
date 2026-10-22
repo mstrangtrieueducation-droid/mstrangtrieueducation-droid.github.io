@@ -1,6 +1,15 @@
 <!doctype html>
 <html lang="vi">
 <head>
+<script id="dashboard-card-boundary-v1">/* Shared per-card boundary: presentation only; no network, scoring or access decisions. */
+(function(root){
+ 'use strict';
+ function failed(){return '<span class="dashboard-card-unavailable" data-dashboard-card-warning="1" role="status" style="display:block;padding:14px 18px;margin:8px 0;border:1px solid #dbe1e6;border-radius:12px;background:#f6f8fa;color:#596875;font-size:14px;line-height:1.5">Đang cập nhật link bài</span>';}
+ function wrap(renderer){return function(){try{return renderer.apply(this,arguments);}catch(error){var node=arguments[0];if(node&&node.nodeType===1&&typeof node.insertAdjacentHTML==='function'){try{node.insertAdjacentHTML('beforeend',failed());}catch(ignore){}}return failed();}};}
+ root.DashboardCardBoundary={failed:failed,wrap:wrap};
+ if(typeof module==='object'&&module.exports)module.exports=root.DashboardCardBoundary;
+})(typeof globalThis==='object'?globalThis:this);
+</script>
 <script id="shared-submission-status-v1">/* Presentation only: never mutates receipt evidence, grading or reminder totals. */
 (function(root){
  'use strict';
@@ -2033,27 +2042,26 @@ html.vn-national-day-2026-root body .assignment.session {
 .grid.two>.submission-history-window .submission-history-window__cards{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:760px){.grid.two>.submission-history-window .submission-history-window__cards{grid-template-columns:1fr}.submission-history-window>summary{width:100%;box-sizing:border-box}}
 </style>
-<script>
-/* SUBMISSION_HISTORY_WINDOW_V1: presentation only; no requests or authority. */
-(function(root){
-  'use strict';
-  var expanded=Object.create(null),offset=7*3600000;
-  function cutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-2,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
-  function assigned(item){var p=root.DirectSubmissionDeadlinePolicy,keys=['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'];if(!p)return 0;for(var i=0;i<keys.length;i++){var n=p.time(item&&item[keys[i]],false);if(n)return n;}return 0;}
-  function historical(item,now){var date=assigned(item);return date>0&&date<cutoff(typeof now==='number'?now:Date.now());}
-  function scope(key){return String(root.location&&root.location.hash||'')+'|'+key;}
-  function render(items,card,key,options){
-    options=options||{};var recent=[],old=[],now=typeof options.now==='number'?options.now:Date.now();
-    (Array.isArray(items)?items:[]).forEach(function(item,index){(historical(item,now)?old:recent).push({item:item,index:index});});
-    function html(rows){return rows.map(function(row){return card(row.item,row.index);}).join('');}
-    var current=html(recent);if(!old.length)return current;
-    if(!/^[a-z0-9-]+$/.test(key))throw Error('HISTORY_SECTION_KEY');
-    return current+'<details class="submission-history-window" data-history-section="'+key+'"'+(expanded[scope(key)]?' open':'')+'><summary><span class="history-show">Xem thêm '+old.length+' bài cũ</span><span class="history-hide">Thu gọn bài cũ</span></summary><div class="submission-history-window__cards">'+html(old)+'</div></details>';
-  }
-  if(root.document)root.document.addEventListener('toggle',function(event){var el=event.target;if(el&&el.getAttribute){var key=el.getAttribute('data-history-section');if(key)expanded[scope(key)]=Boolean(el.open);}},true);
-  var api={cutoff:cutoff,assignedAt:assigned,historical:historical,render:render};root.DirectSubmissionHistoryWindow=api;
-  if(typeof module==='object'&&module.exports)module.exports=api;
-})(typeof globalThis==='object'?globalThis:this);
+<script>/* SUBMISSION_HISTORY_WINDOW_V1: presentation only; no requests or authority. */
+(function(root){
+  'use strict';
+  var expanded=Object.create(null),offset=7*3600000;
+  function cutoff(now){var d=new Date(now+offset),y=d.getUTCFullYear(),m=d.getUTCMonth()-2,last=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(d.getUTCDate(),last))-offset;}
+  function assigned(item){var p=root.DirectSubmissionDeadlinePolicy,keys=['assignedAt','releaseDate','lessonDate','date','dateISO','dateKey'];if(!p)return 0;for(var i=0;i<keys.length;i++){var n=p.time(item&&item[keys[i]],false);if(n)return n;}return 0;}
+  function historical(item,now){var date=assigned(item);return date>0&&date<cutoff(typeof now==='number'?now:Date.now());}
+  function scope(key){return String(root.location&&root.location.hash||'')+'|'+key;}
+  function render(items,card,key,options){
+    options=options||{};var recent=[],old=[],now=typeof options.now==='number'?options.now:Date.now();
+    (Array.isArray(items)?items:[]).forEach(function(item,index){try{(historical(item,now)?old:recent).push({item:item,index:index});}catch(error){recent.push({item:item,index:index,failed:true});}});
+    function html(rows){return rows.map(function(row){try{return row.failed?DashboardCardBoundary.failed():card(row.item,row.index);}catch(error){return DashboardCardBoundary.failed();}}).join('');}
+    var current=html(recent);if(!old.length)return current;
+    if(!/^[a-z0-9-]+$/.test(key))return current+html(old);
+    return current+'<details class="submission-history-window" data-history-section="'+key+'"'+(expanded[scope(key)]?' open':'')+'><summary><span class="history-show">Xem thêm '+old.length+' bài cũ</span><span class="history-hide">Thu gọn bài cũ</span></summary><div class="submission-history-window__cards">'+html(old)+'</div></details>';
+  }
+  if(root.document)root.document.addEventListener('toggle',function(event){var el=event.target;if(el&&el.getAttribute){var key=el.getAttribute('data-history-section');if(key)expanded[scope(key)]=Boolean(el.open);}},true);
+  var api={cutoff:cutoff,assignedAt:assigned,historical:historical,render:render};root.DirectSubmissionHistoryWindow=api;
+  if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
 </script>
 <style id="kids-feedback-layout-v1">
 /* KIDS parent feedback: shared across homework, self-study and Science. */
@@ -3799,9 +3807,9 @@ function kidsFeedbackDetailMarkup(value,escape) {
       return parts.length ? `<div class="actions">${parts.join('')}</div>` : '';
     }
 
-    function paperHomeworkHtml(value) {
+    function paperHomeworkHtml(value) {try{
       return nl2br(value).replace(/((?:từ\s+)?trang\s+\d+(?:\s*(?:,|và)\s*(?:trang\s+)?\d+)*(?:\s+(?:đến|tới)\s+(?:hết\s+)?trang\s+\d+)?)/gi, '<mark class="page-highlight">$1</mark>');
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     function paperGradeTone(value) {
       const grade = text(value).toUpperCase();
@@ -3812,7 +3820,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
       return 'is-neutral';
     }
 
-    function submissionHistoryHtml(value, fallbackUrl, options) {
+    function submissionHistoryHtml(value, fallbackUrl, options) {try{
       const config = options || {};
       const attempts = DirectSubmissionHistory.merge([],arr(value)).map((item, index) => ({
         attempt: Number(pick(item, ['attempt', 'attemptNumber'], index + 1)) || index + 1,
@@ -3833,7 +3841,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
         latest.scoreLabel = text(pick(config, ['fallbackScoreLabel'], '')) || `${fallbackScore}${fallbackMaximum !== null && fallbackMaximum !== '' ? '/' + fallbackMaximum : ''}`;
       }
       if (config.compact) {
-        return `<div class="submission-history is-compact">${SubmissionFilesMore.wrapAttempts(attempts.map((item, index) => {
+        return `<div class="submission-history is-compact">${SubmissionFilesMore.wrapAttempts(attempts.map(DashboardCardBoundary.wrap((item, index) => {
           const viewUrl = item.viewUrl || (item.contentStatus!=='empty' && index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
           const hasScore = item.score !== null && item.score !== '';
           const scoreText = item.scoreLabel || (hasScore
@@ -3844,17 +3852,17 @@ function kidsFeedbackDetailMarkup(value,escape) {
           const dateText = timeParts.shift() || submittedAt;
           const timeText = timeParts.join(' · ');
           return `<div class="submission-attempt"><div class="submission-attempt__line"><strong>Lần ${escapeHtml(item.attempt)}</strong><span class="submission-attempt__separator">·</span><time>${escapeHtml(dateText)}</time>${timeText ? `<span class="submission-attempt__separator">·</span><time>${escapeHtml(timeText)}</time>` : ''}${scoreText ? `<span class="submission-attempt__separator">·</span><span class="submission-attempt__score">Điểm ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">'+escapeHtml(KidsPreparedContentText.text(item))+'</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
-        }))}</div>`;
+        })))}</div>`;
       }
-      return `<div class="submission-history">${SubmissionFilesMore.wrapAttempts(attempts.map((item, index) => {
+      return `<div class="submission-history">${SubmissionFilesMore.wrapAttempts(attempts.map(DashboardCardBoundary.wrap((item, index) => {
         const viewUrl = item.viewUrl || (item.contentStatus!=='empty' && index === attempts.length - 1 ? safeUrl(fallbackUrl) : '');
         const hasScore = item.score !== null && item.score !== '';
         const scoreText = item.scoreLabel || (hasScore
           ? `${item.score}${item.maximum !== null && item.maximum !== '' ? '/' + item.maximum : ''}`
           : '');
         return `<div class="submission-attempt"><strong>Lần ${escapeHtml(item.attempt)}</strong><div class="submission-attempt__detail"><time>${escapeHtml(item.submittedAt)}</time>${scoreText ? `<span class="submission-attempt__score">Kết quả: ${escapeHtml(scoreText)}</span>` : ''}</div>${item.contentStatus==='empty'?'<small class="submission-content-note">'+escapeHtml(KidsPreparedContentText.text(item))+'</small>':''}${submissionEvidenceActionsHtml_({links:item.evidence,contentStatus:item.contentStatus},viewUrl)}</div>`;
-      }))}</div>`;
-    }
+      })))}</div>`;
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     // KIDS_CONFIRMED_EMPTY_WEB_SUMMARY_V1
     function parentLessonHasConfirmedNoWebTasksV1_(item) {
@@ -3886,7 +3894,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
         row.kind !== 'self-practice';
     }
 
-    function sessionCard(session, isNewHomework) {
+    function sessionCard(session, isNewHomework) {try{
       const schedule = scheduleEventFor(session) || {};
       const matchedAssignment = childAssignmentFor(session);
       const privateAssignment = matchedAssignment || {};
@@ -3940,7 +3948,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
       const isRetakeOnlyAssignment = tasks.length === 1
         ? isRetakeAssignment
         : tasks.length > 1 && tasks.every(homeworkTaskIsRetake);
-      const taskHtml = tasks.map((task, index) => {
+      const taskHtml = tasks.map(DashboardCardBoundary.wrap((task, index) => {
         const url = parentLearningUrl_(pick(task, ['url', 'taskUrl', 'learningUrl'], ''));
         if (nonSubmissionWebActivity || pick(task, ['requiresSubmission'], true) === false) {
           const reviewDownload = downloadReviewWebActivity || pick(task, ['reviewDownload'], false) === true;
@@ -3998,7 +4006,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
         const submissionText = feedback.contentMissing ? submissionReceiptText_(feedback,0,'') : taskSubmitted ? submissionReceiptText_(feedback,taskAttempts.length,taskSubmittedAt) : submissionMissingText_(feedback);
         const reviewText = taskComment ? kidsFeedbackDetailMarkup(taskComment, escapeHtml) : taskSubmitted&&!feedback.contentMissing ? 'Chờ GV nhận xét' : 'Chưa có nhận xét';
         return `<div class="homework-item" data-pending-target data-task-id="${escapeHtml(text(pick(task, ['id'], '')))}"><div class="homework-row${showTaskNumbers ? '' : ' is-single'}">${showTaskNumbers ? `<span class="homework-number">${index + 1}</span>` : ''}<div><strong>${escapeHtml(pick(task,['title','name'],'Bài tập trên web'))}</strong>${pick(task,['instructions','instruction','description'],'') ? `<span class="soft small">${escapeHtml(pick(task,['instructions','instruction','description'],''))}</span>` : ''}</div><div class="homework-actions"><span class="pill ${taskDisplayMeta.cls}">${escapeHtml(taskDisplayMeta.label)}</span>${url ? `<a class="mini-action" href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(homeworkTaskActionLabel(task, isRetakeTask))}</a>` : ''}</div></div><div class="task-feedback${isRetakeTask ? ' is-receipt-only' : ''}"><div class="feedback-cell"><strong>Nhận bài</strong>${submissionText ? `<div class="feedback-value ${feedback.contentMissing ? 'is-missing' : taskSubmitted || !submissionCan_(feedback) || !(feedback.directReceiptDeadline&&feedback.directReceiptDeadline.pending) ? '' : 'is-missing'}">${escapeHtml(submissionText)}</div>` : ''}${!isRetakeTask && hasTaskScore ? `<div class="feedback-score">Kết quả làm lại: ${escapeHtml(taskScoreText)}</div>` : ''}${historyHtml}${taskReviewUrl && !historyHtml ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(taskReviewUrl)}" target="_blank" rel="noopener">Xem lại bài của con</a></div>` : ''}</div>${isRetakeTask ? '' : `<div class="feedback-cell teacher-feedback${needsReview ? ' is-corrective' : ''}"><div class="teacher-feedback__head"><strong>${taskComment ? 'Cô đã nhận xét' : 'Nhận xét của giáo viên'}</strong>${kidsFeedbackQualityBadge(taskComment, escapeHtml)}${needsReview ? '<span class="feedback-attention">Cần con xem lại</span>' : ''}</div><div class="feedback-value ${taskComment ? '' : taskSubmitted ? 'is-pending' : ''}">${reviewText}</div>${needsReview && url ? `<div class="feedback-retry"><a class="btn" href="${escapeHtml(url)}" target="_blank" rel="noopener">Làm lại / nộp lại</a></div>` : ''}</div>`}</div></div>`;
-      }).join('');
+      })).join('');
       const taskComments = tasks.map(task => text(pick(pick(task, ['feedback'], {}) || {}, ['teacherComment'], ''))).filter(Boolean);
       const taskReviewUrls = tasks.map(task => safeUrl(pick(pick(task, ['feedback'], {}) || {}, ['viewUrl'], ''))).filter(Boolean);
       const homeworkComment = !isRetakeOnlyAssignment && assignmentComment && !taskComments.includes(assignmentComment) ? assignmentComment : '';
@@ -4009,7 +4017,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
         <div class="assessment-notice__head"><div><span class="assessment-notice__label">${escapeHtml(assessmentTiming)}</span><h4>${escapeHtml(assessmentTitle)}</h4></div>${assessmentIsCurrent ? `<span class="pill ${assessmentPillClass}">${escapeHtml(assessmentStateLabel)}</span>` : ''}</div>
         ${pick(privateAssignment, ['assessmentTargetDate'], '') ? `<div class="assessment-notice__date">${escapeHtml(fullDateLabel(pick(privateAssignment, ['assessmentTargetDate'], '')))}</div>` : ''}
         ${assessmentResultAvailable ? `<div class="assessment-result-ready"><strong>Đã có kết quả</strong><button class="btn" type="button" data-open-assessment-result="${escapeHtml(assessmentId)}">Xem kết quả của con</button></div>` : ''}
-        ${noticeLines.length ? `<ul class="assessment-guidelines">${noticeLines.map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>` : ''}
+        ${noticeLines.length ? `<ul class="assessment-guidelines">${noticeLines.map(DashboardCardBoundary.wrap(line => `<li>${escapeHtml(line)}</li>`)).join('')}</ul>` : ''}
       </section>`;
       const assessmentAside = `<aside class="homework-column assessment-column">${assessmentNoticeCore}</aside>`;
       const lessonAssessmentBanner = !isAssessmentLesson && hasAssessmentNotice
@@ -4056,7 +4064,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
           ${isAssessmentLesson ? assessmentAside : homeworkAside}
         </div>${lessonAssessmentBanner}
       </article>`;
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     function renderLessons() {
       const rows = sessions();
@@ -4231,14 +4239,14 @@ function sciencePracticeRowsV1_(rows,assignments){
  current.forEach(item=>{if(!seen.has(item.id))result.push(item);});
  return result;
 }
-function sciencePracticeCardV1_(item,isNewPractice){
+function sciencePracticeCardV1_(item,isNewPractice){try{
  const tasks=sciencePracticeTasksV1_(item);if(!tasks.length)return null;
  const received=feedback=>!feedback.contentMissing&&Boolean(feedback.submitted||feedback.submittedAt||arr(feedback.submissionAttempts).length);
  const missing=tasks.filter(task=>!received(task.feedback||{}));
  const missingStatus=feedback=>feedback.contentMissing?{cls:'todo',label:'Đã nhận lượt gửi nhưng bài trống'}:submissionMissingMeta_(feedback);
  const meta=missing.length?missingStatus(missing[0].feedback||{}):submissionReceivedMeta_({isLate:tasks.some(task=>(task.feedback||{}).isLate)});
  const title=pick(item,['title','name'],'Science G3'),description=pick(item,['lessonSummary','instruction','description','criteria'],''),due=pick(item,['dueLabel','dueDate','deadline'],'');
- const taskHtml=tasks.map(task=>{
+ const taskHtml=tasks.map(DashboardCardBoundary.wrap(task=>{
   const feedback=task.feedback||{},automatic=task.recordType==='automatic-score',done=received(feedback),status=done?submissionReceivedMeta_(feedback):missingStatus(feedback);
   const attempts=arr(feedback.submissionAttempts),submittedAt=text(feedback.submittedAt||''),reviewUrl=safeUrl(pick(feedback,['viewUrl','reviewUrl','submissionUrl'],''));
   const score=pick(feedback,['score'],null),maximum=pick(feedback,['maximum'],null),hasScore=score!==null&&score!==''&&Number.isFinite(Number(score));
@@ -4257,11 +4265,11 @@ function sciencePracticeCardV1_(item,isNewPractice){
    }
   }catch(_){}
   return `<section class="homework-item science-stage" data-pending-target data-task-id="${escapeHtml(text(task.id))}" data-science-stage="${automatic?'listen':'talk'}"><div class="homework-row is-single"><div><strong>${escapeHtml(task.title)}</strong></div><div class="homework-actions"><span class="pill ${status.cls}">${escapeHtml(status.label)}</span>${learningUrl?`<a class="mini-action" href="${escapeHtml(learningUrl)}" target="_blank" rel="noopener">${automatic?'Mở bài nghe':'Mở bài / nộp video'}</a>`:''}</div></div><div class="task-feedback${automatic?' is-receipt-only':''}"><div class="feedback-cell"><strong>${automatic?'Điểm bài nghe':'Nhận video'}</strong>${scoreText?`<div class="feedback-score">Kết quả: ${escapeHtml(scoreText)}</div>`:''}<div class="feedback-value${feedback.contentMissing?' is-missing':''}">${escapeHtml(receipt)}</div>${history}${links}</div>${automatic?'':`<div class="feedback-cell teacher-feedback"><div class="teacher-feedback__head"><strong>${comment?'Cô đã nhận xét':'Nhận xét của giáo viên'}</strong>${kidsFeedbackQualityBadge(comment, escapeHtml)}</div><div class="feedback-value">${comment?kidsFeedbackDetailMarkup(comment, escapeHtml):done?'Chờ GV nhận xét':'Chưa có nhận xét'}</div></div>`}</div></section>`;
- }).join('');
+ })).join('');
  return `<article class="card sky practice-card science-practice" data-pending-target data-assignment-id="${escapeHtml(text(item.id))}" data-pending-title="${escapeHtml(matchKey(title))}"><header class="practice-card__heading"><div class="row"><p class="label">Tự luyện tại nhà</p><div class="homework-head__status">${isNewPractice?'<span class="new-work-badge">BÀI MỚI</span>':''}<span class="pill ${meta.cls}">${escapeHtml(meta.label)}</span></div></div><h3 class="card-title">${escapeHtml(title)}</h3>${description?`<p class="soft">${nl2br(description)}</p>`:''}</header>${taskHtml}<footer class="practice-card__footer">${due?`<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>`:''}</footer></article>`;
-}
+}catch(error){return DashboardCardBoundary.failed();}}
     /* END_SCIENCE_PRACTICE_DISPLAY_V1 */
-    function practiceCard(item, isNewPractice) {
+    function practiceCard(item, isNewPractice) {try{
       const scienceCard=sciencePracticeCardV1_(item,isNewPractice);if(scienceCard!==null)return scienceCard;
       const title = pick(item, ['title', 'name'], 'Bài tự luyện');
       const due = pick(item, ['dueLabel', 'dueDate', 'deadline'], '');
@@ -4291,7 +4299,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
         <footer class="practice-card__footer">${due ? `<div class="due-highlight"><span>⏰ Hạn hoàn thành</span><strong>${escapeHtml(due)}</strong></div>` : ''}
         ${actionLinks(footerItem, true, 'Mở bài tự luyện')}</footer>
       </article>`;
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     function renderPractice() {
       const rows = sciencePracticeRowsV1_(practiceRows(), arr((app.child || {}).assignments));
@@ -4331,10 +4339,10 @@ function sciencePracticeCardV1_(item,isNewPractice){
         return true;
       } catch (error) {
         console.error('KIDS profile could not be rendered.', error);
-        showEntryGate('', false);
-        setEntryState('Hồ sơ chưa hiển thị trọn vẹn. Bố mẹ bấm “Tải lại dữ liệu” nhé.', false, true);
-        return false;
-      }
+        showDashboard();
+        /* Keep the valid pupil package visible; individual cards own their failures. */
+        return true;
+      }
     }
 
     function scheduleProfileLoad(requestedAlias, options, delay) {
@@ -4649,7 +4657,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
       return ['wait','checked','done'].includes(meta.cls)?submissionReceivedMeta_(item):meta;
     }
 
-    function childTaskCard(item) {
+    function childTaskCard(item) {try{
       const meta = statusMeta(item);
       const title = pick(item, ['title', 'name', 'assignmentTitle'], 'Bài tập');
       const due = pick(item, ['dueLabel', 'dueDate', 'deadline'], '');
@@ -4668,9 +4676,9 @@ function sciencePracticeCardV1_(item,isNewPractice){
         ${comment ? `<blockquote>${nl2br(comment)}</blockquote>` : ''}
         ${actionLinks(item, true)}
       </article>`;
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
-    function speakingInterviewCard(item) {
+    function speakingInterviewCard(item) {try{
       const criteria = arr(pick(item, ['criteria'], []));
       const title = text(pick(item, ['title', 'name'], 'Kiểm tra nói cuối sách'));
       const titleKey = matchKey(title);
@@ -4710,11 +4718,11 @@ function sciencePracticeCardV1_(item,isNewPractice){
           ? `${totalScore}${totalMaximum !== null ? '/' + totalMaximum : ''}`
           : hasResult && Number.isFinite(numericPercentage) ? `${numericPercentage}%` : 'Chờ kết quả';
       const scoreClass = absent ? ' needs-work' : Number.isFinite(numericPercentage) ? numericPercentage >= 80 ? ' high' : numericPercentage < 60 ? ' needs-work' : ' medium' : '';
-      const criteriaHtml = criteria.map(criterion => {
+      const criteriaHtml = criteria.map(DashboardCardBoundary.wrap(criterion => {
         const score = pick(criterion, ['score'], '—');
         const maximum = pick(criterion, ['maximum'], '');
         return `<div class="criterion-card"><span>${escapeHtml(pick(criterion, ['label'], 'Tiêu chí'))}</span><strong>${escapeHtml(score)}${maximum !== '' ? '/' + escapeHtml(maximum) : ''}</strong></div>`;
-      }).join('');
+      })).join('');
       const videoSpotlight = videoUrl ? `<a class="interview-video-cta" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener"><span class="interview-video-cta__icon">▶</span><span><small>Video đúng hồ sơ của con</small><strong>Xem video bài kiểm tra của con</strong></span><span class="interview-video-cta__arrow">→</span></a>` : '';
       const actionButtons = resultUrl && resultUrl !== videoUrl
         ? `<a class="btn secondary" href="${escapeHtml(resultUrl)}" target="_blank" rel="noopener">Xem phiếu kết quả</a>`
@@ -4723,7 +4731,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
         <div class="score-card__main"><div><div class="score-card__eyebrow"><span class="score-card__book">${escapeHtml(program)}</span>${item.isNew ? '<span class="new-score-badge">ĐIỂM MỚI</span>' : ''}</div><h3 class="interview-title">${escapeHtml(vietnameseTitle)}</h3><span class="interview-title-en" lang="en">${escapeHtml(englishTitle)}</span>${date ? `<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>` : ''}</div><div class="score-badge${scoreClass}"><strong>${escapeHtml(result)}</strong><span>${Number.isFinite(numericPercentage) && !absent ? escapeHtml(numericPercentage) + '% · Tổng điểm' : absent ? 'Vắng buổi phỏng vấn' : hasResult ? 'Kết quả kiểm tra' : 'Chờ kết quả'}</span></div></div>
         <div class="interview-details">${videoSpotlight}${criteriaHtml ? `<div class="criteria-grid">${criteriaHtml}</div>` : ''}${absent ? '<div class="assessment-absent">Vắng buổi phỏng vấn</div>' : ''}${generalComment ? `<div class="assessment-teacher-comment"><div class="assessment-teacher-comment__head"><strong>Nhận xét chung của giáo viên</strong><span>Cô đã nhận xét</span></div><p>${nl2br(generalComment)}</p></div>` : ''}${actionButtons ? `<div class="actions interview-actions">${actionButtons}</div>` : ''}</div>
       </article>`;
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     function isRubricAssessment(item) {
       const type = text(pick(item, ['assessmentType'], '')).toLowerCase();
@@ -4735,7 +4743,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
       return arr(pick(item, ['criteria'], [])).length > 0 && /critical|debate|mindmap|thuyettrinh|tranhbien/.test(identity);
     }
 
-    function rubricAssessmentCard(item) {
+    function rubricAssessmentCard(item) {try{
       const criteria = arr(pick(item, ['criteria'], []));
       const rawTitle = text(pick(item, ['title', 'name'], 'Bài đánh giá'));
       const fallbackTitle = rawTitle.split(/\r?\n/).map(text).filter(Boolean)[0] || 'Bài đánh giá';
@@ -4775,7 +4783,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
       const scoreClass = absent ? ' needs-work' : numericPercentage !== null
         ? numericPercentage >= 80 ? ' high' : numericPercentage < 60 ? ' needs-work' : ' medium' : '';
       const overallProgress = numericPercentage !== null ? Math.max(0, Math.min(100, numericPercentage)) : 0;
-      const criteriaHtml = criteria.map((criterion, index) => {
+      const criteriaHtml = criteria.map(DashboardCardBoundary.wrap((criterion, index) => {
         const scoreValue = pick(criterion, ['score'], null);
         const maximumValue = pick(criterion, ['maximum'], null);
         const hasScore = scoreValue !== null && scoreValue !== '' && Number.isFinite(Number(scoreValue));
@@ -4785,7 +4793,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
         const label = text(pick(criterion, ['label'], 'Tiêu chí')) || 'Tiêu chí';
         const labelEn = text(pick(criterion, ['labelEn', 'secondaryLabel'], ''));
         return `<article class="criterion-card rubric-criterion"><div class="rubric-criterion__top"><span class="rubric-criterion__index">${String(index + 1).padStart(2, '0')}</span><div class="rubric-criterion__labels"><strong>${escapeHtml(label)}</strong>${labelEn ? `<em lang="en">${escapeHtml(labelEn)}</em>` : ''}</div><span class="rubric-criterion__score">${hasScore ? escapeHtml(scoreValue) : '—'}${hasMaximum ? '/' + escapeHtml(maximumValue) : ''}</span></div><div class="rubric-progress" role="progressbar" aria-label="${escapeHtml(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(criterionPercentage)}"><i style="width:${criterionPercentage}%"></i></div></article>`;
-      }).join('');
+      })).join('');
       const topicHtml = topic || topicEn
         ? `<div class="rubric-topic"><small>CHỦ ĐỀ</small>${topic ? `<strong>${escapeHtml(topic)}</strong>` : ''}${topicEn ? `<span lang="en">${escapeHtml(topicEn)}</span>` : ''}</div>` : '';
       const resultUrl = safeUrl(pick(item, ['resultUrl'], ''));
@@ -4795,7 +4803,7 @@ function sciencePracticeCardV1_(item,isNewPractice){
         <div class="score-card__main"><div><div class="score-card__eyebrow"><span class="score-card__book">${escapeHtml(program || 'ĐÁNH GIÁ')}</span>${item.isNew ? '<span class="new-score-badge">ĐIỂM MỚI</span>' : ''}</div><h3 class="rubric-card__title">${escapeHtml(title)}</h3>${subtitle ? `<span class="rubric-card__subtitle">${escapeHtml(subtitle)}</span>` : ''}${date ? `<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>` : ''}${topicHtml}</div><div class="score-badge${scoreClass}"><strong>${escapeHtml(result)}</strong><span>${numericPercentage !== null && !absent ? escapeHtml(numericPercentage) + '% · Mức độ hoàn thành' : absent ? 'Vắng buổi đánh giá' : hasResult ? 'Kết quả đánh giá' : 'Chờ kết quả'}</span>${numericPercentage !== null && !absent ? `<div class="rubric-summary-progress"><span><b>Tiến độ</b><b>${escapeHtml(numericPercentage)}%</b></span><div class="rubric-progress"><i style="width:${overallProgress}%"></i></div></div>` : ''}</div></div>
         <div class="rubric-details"><div class="rubric-section-head"><strong>Điểm từng tiêu chí</strong><span>${criteria.length ? escapeHtml(criteria.length) + ' tiêu chí' : 'Đang cập nhật tiêu chí'}</span></div>${criteriaHtml ? `<div class="criteria-grid">${criteriaHtml}</div>` : '<div class="empty">Tiêu chí đang được cập nhật.</div>'}${absent ? '<div class="assessment-absent">Vắng buổi đánh giá</div>' : ''}<div class="assessment-teacher-comment"><div class="assessment-teacher-comment__head"><strong>Nhận xét chung của giáo viên</strong><span>${generalComment ? 'Cô đã nhận xét' : 'Chờ nhận xét'}</span></div><p>${generalComment ? nl2br(generalComment) : 'Chưa có nhận xét của giáo viên.'}</p></div>${actionHtml}</div>
       </article>`;
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     function writtenTestHeading_(item,title){
   const original=text(title),compact=original.replace(/\s+/g,' ').trim();
@@ -4821,7 +4829,7 @@ function writtenTestHeadingHtml_(item,title,date){
   const heading=writtenTestHeading_(item,title);
   return `<div class="written-test__heading"><div class="written-test__eyebrow"><span>${escapeHtml(heading.eyebrow)}</span>${item.isNew?'<span class="new-score-badge">ĐIỂM MỚI</span>':''}</div><h3>${escapeHtml(heading.main)}</h3>${heading.subtitle?`<span class="written-test__subtitle">${escapeHtml(heading.subtitle)}</span>`:''}${heading.unit?`<div class="written-test__units"><span class="written-test__unit">${escapeHtml(heading.unit)}</span></div>`:''}${date?`<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>`:''}</div>`;
 }
-function testCard(item) {
+function testCard(item) {try{
       if (text(pick(item, ['assessmentType'], '')).toLowerCase() === 'speaking-interview') return speakingInterviewCard(item);
       if (isRubricAssessment(item)) return rubricAssessmentCard(item);
       const retakeOnly = Boolean(pick(item, ['retakeOnly'], false));
@@ -4870,7 +4878,7 @@ function testCard(item) {
             ? submissionReceivedMeta_(retake)
             : submissionMissingMeta_(retake);
       const attemptLabel = declaredAttemptCount ? submissionReceiptText_(retake,declaredAttemptCount,'') : retakeDisplayMeta.label;
-      const attemptCards = attempts.map((attempt, index) => {
+      const attemptCards = attempts.map(DashboardCardBoundary.wrap((attempt, index) => {
         const attemptNumber = Number(pick(attempt, ['attempt', 'attemptNumber'], index + 1)) || index + 1;
         const submittedAt = text(pick(attempt, ['submittedAt'], ''));
         const attemptScore = pick(attempt, ['score'], null);
@@ -4884,14 +4892,14 @@ function testCard(item) {
           : 'Đã nhận';
         const viewUrl = safeUrl(pick(attempt, ['viewUrl'], index === attempts.length - 1 ? retakeViewUrl : ''));
         return `<div class="retake-attempt"><div class="retake-attempt__head"><strong>Lần ${attemptNumber}</strong><time>${escapeHtml(submittedAt || 'Ngày giờ đang cập nhật')}</time></div><div class="retake-attempt__result">${escapeHtml(resultLabel)}</div>${viewUrl ? `<div class="actions"><a class="btn secondary" href="${escapeHtml(viewUrl)}" target="_blank" rel="noopener">Xem bài lần ${attemptNumber}</a></div>` : ''}</div>`;
-      }).join('');
+      })).join('');
       return `<article class="score-card${retakeOnly ? ' retake-only' : ' written-score-card'}">
         <div class="score-card__main">${retakeOnly ? `<div><div class="score-card__eyebrow">${bookLabel ? `<span class="score-card__book">${escapeHtml(bookLabel)}</span>` : ''}${item.isNew ? '<span class="new-score-badge">ĐIỂM MỚI</span>' : ''}</div><h3>${escapeHtml(assessmentTitle)}</h3>${date ? `<span class="score-card__date">${escapeHtml(fullDateLabel(date))}</span>` : ''}</div>` : writtenTestHeadingHtml_(item,title,date)}${mainScoreBadge}</div>
         <div class="retake-box"><div class="retake-box__head"><strong>Làm lại</strong><span class="pill ${retakeDisplayMeta.cls}">${escapeHtml(attemptLabel)}</span></div>
         ${attemptCards ? `<div class="retake-attempts">${attemptCards}</div>` : `<p>${retakeUrl ? 'Con có thể làm lại để củng cố phần chưa chắc.' : 'Chưa có bài làm lại được giao.'}</p>`}
         ${retakeUrl ? `<div class="actions"><a class="btn" href="${escapeHtml(retakeUrl)}" target="_blank" rel="noopener">Làm lại</a></div>` : ''}</div>
       </article>`;
-    }
+    }catch(error){return DashboardCardBoundary.failed();}}
 
     function reminderCard(item) {
       if (typeof item === 'string') return `<div class="notice"><span class="notice-icon">!</span><div class="notice-copy"><small>${nl2br(item)}</small></div></div>`;
@@ -4927,7 +4935,7 @@ function testCard(item) {
         <div class="grid three"><div class="metric score"><strong>${escapeHtml(latestScore)}</strong><span>Kết quả kiểm tra gần nhất</span></div><div class="metric stars"><strong><span class="metric-icon">⭐</span>${escapeHtml(stars)}</strong><span>Tổng số sao</span></div><div class="metric pending${pendingCount ? '' : ' is-clear'}"><strong>${escapeHtml(pendingCount)}</strong><span>Bài cần hoàn thành</span></div></div>
         ${notices ? `<div class="section-head"><div><h2>Con cần chú ý</h2></div></div>${notices}` : ''}
         <div class="section-head"><div><h2>Chi tiết từng bài kiểm tra</h2></div></div>
-        ${results.length ? `<div class="result-list">${results.map(testCard).join('')}</div>` : '<div class="empty">Chưa có kết quả kiểm tra mới.</div>'}`;
+        ${results.length ? `<div class="result-list">${results.map(DashboardCardBoundary.wrap(testCard)).join('')}</div>` : '<div class="empty">Chưa có kết quả kiểm tra mới.</div>'}`;
     }
 
     function competitionData() { return pick(app.data || {}, ['competition', 'classCompetition', 'leaderboard'], {}) || {}; }
