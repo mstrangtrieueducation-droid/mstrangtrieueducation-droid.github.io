@@ -1,6 +1,6 @@
 const fs=require('fs'),assert=require('assert');
 module.exports=function(s){if(!s.includes('function fighterPendingRegularEntriesV15_'))return s;
- if(s.includes('data-fighter-evidence="2"'))return s;
+ if(s.includes('data-fighter-evidence="2"'))return s.replace(/(<script data-fighter-evidence="2">)[\s\S]*?(<\/script>)/,(_,a,b)=>a+fs.readFileSync(__dirname+'/fighter-submission-evidence.js','utf8')+b);
  s=s.replace(/<head([^>]*)>/i,m=>m+'<script data-fighter-evidence="2">'+fs.readFileSync(__dirname+'/fighter-submission-evidence.js','utf8')+'</script>');
  const old='taskState.completed===true||taskState.missing!==true';assert(s.includes(old),'Fighter pending status anchor');s=s.replaceAll(old,'FighterSubmissionEvidence.received(taskState)||taskState.missing!==true');
  const meta='var meta=submissionOriginalFighterStatus_(state,missingCount);';assert(s.includes(meta),'Fighter card status anchor');s=s.replace(meta,meta+'if(FighterSubmissionEvidence.received(state))return Object.assign({},meta,{cls:"done",completed:true,neutral:false,text:state.isLate?"Đã nộp muộn":"Đã nộp bài"});');
