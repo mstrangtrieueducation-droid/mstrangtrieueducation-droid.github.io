@@ -24520,6 +24520,30 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
       }
+      // Existing reminders consume the same native task results as the cards.
+      // A positive task can resolve an old reminder even while other sources
+      // are unavailable; no new absence or homework is inferred here.
+      const reminderFields=['privateReminders','reminders','alerts'];
+      const reminderField=reminderFields.find(k=>Array.isArray(profile[k]));
+      if(reminderField){
+        const previous=profile[reminderField],resolved=new Set();
+        const retained=previous.filter(reminder=>{
+          if(!reminder||typeof reminder!=='object'||!reminder.assignmentId)return true;
+          const bound=assignments.filter(a=>a&&a.id===reminder.assignmentId);
+          if(bound.length!==1)return true;
+          const required=list(bound[0].tasks).filter(t=>t&&t.requiresSubmission!==false);
+          if(!required.length||!required.every(t=>t.feedback&&t.feedback.submitted===true))return true;
+          resolved.add(reminder.assignmentId);return false;
+        });
+        if(resolved.size){
+          profile.privateReminders=retained;
+          reminderFields.forEach(k=>{if(Array.isArray(profile[k]))profile[k]=retained;});
+          const oldCount=Number(profile.summary&&profile.summary.needsCompletionCount);
+          const count=Math.max(retained.length,Number.isFinite(oldCount)?oldCount-resolved.size:0);
+          profile.summary=Object.assign({},profile.summary,{needsCompletionCount:count,needsAttention:count>0});
+        }
+      }
+
       return value;
     };
   }
