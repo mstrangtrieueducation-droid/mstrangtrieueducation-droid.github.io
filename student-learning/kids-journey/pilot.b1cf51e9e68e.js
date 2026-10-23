@@ -1,0 +1,765 @@
+/* KIDS four-header tracker reader. Pure data projection; no network or storage. */
+(function(root){
+ 'use strict';
+ const text=v=>v==null?'':String(v).trim(),list=v=>Array.isArray(v)?v:[];
+ const norm=v=>text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toUpperCase();
+ const number=v=>{const s=text(v).replace(',','.');return /^-?\d+(?:\.\d+)?%?$/.test(s)?Number(s.replace('%','')):null;};
+ function date(value){
+  const m=text(value).match(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/);if(!m)return null;
+  const d=+m[1],mo=+m[2],y=+m[3],utc=Date.UTC(y,mo-1,d),v=new Date(utc);
+  return v.getUTCDate()===d&&v.getUTCMonth()===mo-1?{label:[String(d).padStart(2,'0'),String(mo).padStart(2,'0'),y].join('/'),at:utc-25200000}:null;
+ }
+ const day=now=>Math.floor((now+25200000)/86400000)*86400000-25200000;
+ function feedback(value){
+  const raw=text(value),n=norm(raw),marker=raw.match(/[—\-–]+\s*NHẬN XÉT GV\s*[—\-–]+/i);
+  let comment=marker?raw.slice(marker.index+marker[0].length).trim():'';
+  if(!marker&&!/DA NOP|CHUA GHI NHAN|DA LAM LAI|LAN DAU:|LAN MOI:/.test(n)&&raw.length>10)comment=raw;
+  if(/^(?:chưa có nhận xét|chờ gv nhận xét|đang cập nhật|—|-)\s*[.!]?$/i.test(comment))comment='';
+  const teacherConfirmed=comment.length>10&&/[\p{L}]/u.test(comment);
+  const submitted=/(?:DA NOP|DA LAM LAI|DA GHI NHAN)/.test(n)&&!/CHUA (?:NOP|GHI NHAN)/.test(n.split(/NHAN XET GV/)[0]);
+  const count=raw.match(/(?:ĐÃ NỘP|ĐÃ LÀM LẠI)\s*(\d+)\s*LẦN/i);
+  const quality=raw.match(/Chất lượng[^\n%]*?(\d+(?:[.,]\d+)?)\s*%/i);
+  const score=raw.match(/(?:Điểm\s*)?(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/i);
+  const matches=[...raw.matchAll(/\b\d{1,2}\/\d{1,2}\/20\d{2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?/g)];
+  return {complete:submitted||teacherConfirmed,teacherConfirmed,comment,attempts:count?+count[1]:submitted||teacherConfirmed?1:0,
+   percentage:quality?+quality[1].replace(',','.'):null,score:score?+score[1].replace(',','.'):null,maximum:score?+score[2].replace(',','.'):null,
+   submittedAt:matches.length?matches[matches.length-1][0]:'',supplemented:/MUON/.test(n)};
+ }
+ function urls(value){return [...new Set(list(value).flat().filter(v=>/^https:\/\//i.test(text(v))))];}
+ function groups(values){
+  const headers=values.slice(0,4),width=Math.max(...headers.map(r=>r.length)),starts=[];
+  for(let c=6;c<width;c++){
+   const h=headers.map(r=>text(r[c])),n=norm(h[0]);let type='';
+   if(/BUOI HOC NGAY/.test(n))type='session';
+   else if(/CHUOI VIDEO TU LUYEN/.test(n))type='video';
+   else if(/KIEM TRA NOI|SPEAKING INTERVIEW/.test(n))type='interview';
+   else if(/KIEM TRA GIAY|DIEM\s*\|\s*KIEM TRA/.test(n))type='written';
+   if(type)starts.push({start:c,type});
+  }
+  return starts.map((g,i)=>({...g,end:i+1<starts.length?starts[i+1].start-1:width-1}));
+ }
+ function projectPeriod(pupil,startDate){
+  const cutoff=date(startDate);if(!cutoff)return pupil;
+  const p=JSON.parse(JSON.stringify(pupil)),allSessions=p.sessions||[];
+  const column=v=>Number(String(v.id||'').split('-').pop());
+  const videoDate=v=>date(v.assignedDate)?.at||v.assignedAt||date(v.deadline)?.at||(v.dueAt?day(v.dueAt):null)||allSessions.filter(s=>column(s)<column(v)).sort((a,b)=>column(b)-column(a))[0]?.at;
+  p.videos=(p.videos||[]).filter(v=>videoDate(v)>=cutoff.at);
+  p.sessions=allSessions.filter(s=>s.at>=cutoff.at);p.tests=(p.tests||[]).filter(t=>t.at>=cutoff.at);p.interviews=(p.interviews||[]).filter(t=>t.at>=cutoff.at);p.periodStart=cutoff.label;
+  const past=p.sessions.filter(s=>!s.future),graded=past.filter(s=>s.paper&&/^(A\+|A|B|F)$/.test(s.paper.grade));let streak=0;
+  for(const s of graded){if(s.paper.grade!=='A+')break;streak++;}
+  const complete=p.videos.filter(v=>v.complete),q=complete.map(v=>v.percentage).filter(Number.isFinite);
+  p.summary={stars:past.reduce((n,s)=>n+(s.stars||0),0),paperAPlus:graded.filter(s=>s.paper.grade==='A+').length,paperGraded:graded.length,paperStreak:streak,videoComplete:complete.length,videoTotal:p.videos.length,videoAverage:q.length?q.reduce((a,b)=>a+b,0)/q.length:null,practiceAttempts:[...past.flatMap(s=>s.tasks),...p.videos].reduce((n,t)=>n+(t.attempts||0),0),testAverage:p.tests.length?p.tests.reduce((n,t)=>n+t.percentage,0)/p.tests.length:null};
+  return p;
+ }
+ function parseTracker(values,options){
+  const o=options||{},now=Number(o.now),headers=list(values).slice(0,4);
+  if(headers.length!==4||!Number.isFinite(now))return {schema:1,students:[],referenceDay:''};
+  const blocks=groups(values),headerLinks=list(o.headerLinks),studentLinks=o.studentLinks||{},students=[];
+  for(let r=4;r<values.length;r++){
+   const row=values[r]||[],alias=text(row[2]).split('\n')[0].toUpperCase();if(!/^\d+$/.test(text(row[0]))||!alias)continue;
+   const pupil={schema:1,alias,fullName:text(row[1]).split('\n')[0],classNumber:o.classNumber,className:o.className,sessions:[],videos:[],tests:[],interviews:[],sourceAt:now};
+   for(const group of blocks){
+    try{
+     const {start,end,type}=group,hs=[];for(let c=start;c<=end;c++)for(let h=0;h<4;h++)if(headers[h][c])hs.push(text(headers[h][c]));
+     const heading=hs.join('\n'),dt=date(heading),id=[type,dt?.label||'',start].join('-');
+     if(type==='session'){
+      const context=hs.find(v=>/Tiết học số\s*\d+/i.test(v))||'',match=context.match(/Tiết học số\s*(\d+)\s*:?\s*([\s\S]*)/i);
+      if(!match||!dt)continue;
+      const session={id,key:dt.label+'|'+Number(match[1]),date:dt.label,at:dt.at,number:+match[1],title:text(match[2]),program:(heading.match(/(?:Sách\s+)?(?:Oxford\s+)?Discover\s*\d+/i)||['Buổi học'])[0].replace(/^Sách\s*/i,''),tasks:[],paper:null,stars:null,teacherNote:'',future:dt.at>day(now)};
+      for(let c=start;c<=end;c++){
+       const h2=norm(headers[2][c]),h3=norm(headers[3][c]),raw=text(row[c]);
+       if(/BAI TAP VE NHA \(SACH GIAY\)|SACH WORK BOOK|SACH WORKBOOK/.test(h3)){
+        const grade=raw.match(/^\s*(A\+|A|B|F)(?=\s|$)/i);session.paper={grade:grade?grade[1]:'',note:raw};
+       }else if(/SO SAO/.test(h3))session.stars=number(raw);
+       else if(/^NHAN XET$/.test(h3))session.teacherNote=raw;
+       else if(/VIDEO|LAM LAI BAI KIEM TRA|BAI TAP VE NHA/.test(h2)&&!(/BUOI HOC/.test(h2))){
+        const f=feedback(raw),links=urls(studentLinks[alias]?.[c]),learning=urls(headerLinks.map(h=>h[c])).find(u=>u.includes('github.io'))||'';
+        const title=text(headers[3][c]).split(/\n|🔗/)[0]||(/LAM LAI/.test(h2)?'Làm lại bài kiểm tra':'Video bài học');
+        session.tasks.push({id:id+'-task-'+c,column:c,title,type:/LAM LAI/.test(h2)?'retake':/NGU PHAP/.test(h3)?'grammar':/TU VUNG|TU MOI/.test(h3)?'vocabulary':/DOC|READING/.test(h3)?'reading':'video',learningUrl:learning,links,...f});
+       }
+      }
+      pupil.sessions.push(session);
+     }else if(type==='video'){
+      const vm=heading.match(/VIDEO\s*(\d+)/i);if(!vm)continue;
+      const f=feedback(row[start]);pupil.videos.push({id,number:+vm[1],title:'Video '+vm[1],program:/PEPPA/i.test(heading)?'Peppa Pig':/PHONICS/i.test(heading)?'Phonics':'Discover English',deadline:dt?.label||'',dueAt:dt?dt.at+86399999:null,learningUrl:urls(headerLinks.map(h=>h[start])).find(u=>u.includes('github.io'))||'',links:urls(studentLinks[alias]?.[start]),...f});
+     }else if(type==='written'){
+      const scoreHeaders=headers[3].slice(start,end+1).join('\n'),maxMatch=scoreHeaders.match(/Tổng[^\d]*(\d+)\s*câu/i)||scoreHeaders.match(/\/\s*(\d+)/),maximum=maxMatch?+maxMatch[1]:null;
+      let score=null,percentage=null;for(let c=start;c<=end;c++){const n=number(row[c]);if(n===null)continue;if(score===null)score=n;else if(percentage===null)percentage=n<=1?n*100:n;}
+      if(score===null||maximum===null||score<0||score>maximum)continue;
+      pupil.tests.push({id,type:'written',date:dt?.label||'',at:dt?.at||0,title:(heading.match(/UNIT\s*\d+(?:\s*\+\s*\d+)?/i)||['Kiểm tra giấy'])[0],score,maximum,percentage:score/maximum*100,sourcePercentage:percentage});
+     }else if(type==='interview'){
+      const criteria=[];let total=null,maximum=null,percentage=null,comment='';
+      for(let c=start;c<=end;c++){
+       const h=headers.map(r=>text(r[c])).join('\n'),n=norm(h),v=number(row[c]);
+       const skill=/PRONUNCIATION|PHAT AM/.test(n)?'Phát âm':/GRAMMAR|NGU PHAP/.test(n)?'Ngữ pháp':/VOCABULARY|TU VUNG/.test(n)?'Từ vựng':/FLUENCY|TROI CHAY/.test(n)?'Độ trôi chảy':'';
+       if(skill){const max=text(headers[3][c]).match(/\/\s*(\d+)/);if(v!==null&&max)criteria.push({title:skill,score:v,maximum:+max[1]});}
+       else if(/TONG DIEM|\bTOTAL\b/.test(n)){total=v;maximum=+(h.match(/\/\s*(\d+)/)||[])[1]||null;}
+       else if(/PERCENTAGE|MUC DO/.test(n))percentage=v===null?null:v<=1?v*100:v;
+       else if(/NHAN XET CHUNG|GENERAL NOTES/.test(n))comment=text(row[c]);
+      }
+      if(total!==null)pupil.interviews.push({id,title:'Phỏng vấn nói 1-1',date:dt?.label||'',at:dt?.at||0,score:total,maximum,percentage:maximum?total/maximum*100:percentage,criteria,comment});
+     }
+    }catch(_){/* One malformed source group cannot suppress other sessions. */}
+   }
+   pupil.sessions.sort((a,b)=>b.at-a.at||b.number-a.number);pupil.videos.sort((a,b)=>b.number-a.number);pupil.tests.sort((a,b)=>a.at-b.at);
+   const past=pupil.sessions.filter(s=>!s.future),graded=past.filter(s=>s.paper&&/^(A\+|A|B|F)$/.test(s.paper.grade));let streak=0;
+   for(const s of graded){if(s.paper.grade!=='A+')break;streak++;}
+   const complete=pupil.videos.filter(v=>v.complete),qualities=complete.map(v=>v.percentage).filter(Number.isFinite);
+   pupil.summary={stars:past.reduce((sum,s)=>sum+(s.stars||0),0),paperAPlus:graded.filter(s=>s.paper.grade==='A+').length,paperGraded:graded.length,paperStreak:streak,videoComplete:complete.length,videoTotal:pupil.videos.length,videoAverage:qualities.length?qualities.reduce((a,b)=>a+b,0)/qualities.length:null,practiceAttempts:[...past.flatMap(s=>s.tasks),...pupil.videos].reduce((n,t)=>n+t.attempts,0),testAverage:pupil.tests.length?pupil.tests.reduce((n,t)=>n+t.percentage,0)/pupil.tests.length:null};
+   students.push(o.startDate?projectPeriod(pupil,o.startDate):pupil);
+  }
+  const board=students.map(s=>({alias:s.alias,fullName:s.fullName,...s.summary})).sort((a,b)=>b.stars-a.stars||a.alias.localeCompare(b.alias));
+  board.forEach((s,i)=>{s.rank=i&&s.stars===board[i-1].stars?board[i-1].rank:i+1});
+  return {schema:1,referenceDay:new Date(day(now)+25200000).toISOString().slice(0,10),students,board};
+ }
+ const api={parseTracker,projectPeriod,feedback,date,day,norm};root.KidsJourneyParser=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+(function(root){
+ 'use strict';
+ const P=root.KidsJourneyParser||(typeof require==='function'?require('./parser.js'):null),arr=v=>Array.isArray(v)?v:[],copy=v=>JSON.parse(JSON.stringify(v)),txt=v=>v==null?'':String(v).trim();
+ const urls=v=>[...new Set(arr(v).flatMap(x=>typeof x==='string'?[x]:x&&typeof x==='object'?[x.url,x.href,x.viewUrl]:[]).filter(x=>/^https:\/\//.test(x||'')))];
+ function mergeTask(base,live){
+  if(!live)return base;const f=live.feedback||live,review=txt(f.teacherComment||f.comment),parsed=P.feedback(review);
+  const attempts=arr(f.submissionAttempts||f.attempts),complete=base.complete||f.completed===true||f.submitted===true||f.receiptReceived===true||parsed.teacherConfirmed;
+  const q=parsed.percentage??(typeof f.percentage==='number'?f.percentage:null);
+  const links=urls([...(base.links||[]),...arr(f.links),...attempts.flatMap(x=>[x.viewUrl,x.submissionUrl,...arr(x.links)]),f.viewUrl,f.submissionUrl]);
+  const last=attempts[attempts.length-1]||{},latestLinks=urls([f.viewUrl,f.submissionUrl,last.viewUrl,last.submissionUrl,...arr(last.links)]);
+  return {...base,complete,comment:parsed.comment||base.comment,attempts:Math.max(base.attempts||0,attempts.length,Number(f.declaredAttemptCount)||0,complete?1:0),percentage:q??base.percentage,submittedAt:f.lastSubmittedAt||f.submittedAt||base.submittedAt,learningUrl:live.url||live.learningUrl||base.learningUrl,links,latestLinks:latestLinks.length?latestLinks:base.latestLinks||[],supplemented:base.supplemented||f.isLate===true};
+ }
+ function build(raw,input){
+  const profile=input.profile||{},dashboard=input.dashboard||{};
+  const displayStart=P.date(input.cutoffDate||dashboard.cutoffDate||profile.cutoffDate||raw.periodStart||'10/08/2026')||P.date('10/08/2026');
+  const join=P.date(profile.joinDate||raw.joinDate),cutoff=Math.max(displayStart.at,join?.at||0),periodStart=P.date(join&&join.at>displayStart.at?join.label:displayStart.label).label;
+  const m=P.projectPeriod(raw,periodStart),today=P.day(Number(input.serverNow)||raw.sourceAt),assignments=arr(profile.assignments),practice=arr(input.practice);
+  m.dashboardStart=displayStart.label;m.joinDate=join?.label||'';
+  m.interviews=m.interviews.map(i=>{const t=arr(profile.tests).find(t=>t.assessmentType==='speaking-interview'&&P.date(t.date)?.label===i.date);return {...i,videoUrl:t?.videoUrl||i.videoUrl||'',resultUrl:t?.resultUrl||i.resultUrl||''};});
+  for(const s of m.sessions){
+   s.future=s.at>today;
+   const a=assignments.find(a=>Number(a.sessionNumber)===s.number&&P.date(a.lessonDate||a.assignedDate)?.label===s.date);
+   if(a){
+    s.dueDate=a.dueDate||'';s.title=s.title||a.title||'';
+    const used=new Set();s.tasks=s.tasks.map(t=>{
+     let i=arr(a.tasks).findIndex((x,i)=>!used.has(i)&&x.url&&t.learningUrl&&x.url===t.learningUrl);
+     if(i<0)i=arr(a.tasks).findIndex((x,i)=>!used.has(i)&&((t.type==='grammar'&&/NGU PHAP/.test(P.norm(x.title)))||(t.type==='vocabulary'&&/TU VUNG|TU MOI/.test(P.norm(x.title)))||(t.type==='retake'&&/LAM LAI|KIEM TRA/.test(P.norm(x.title)))||(t.type==='reading'&&/DOC/.test(P.norm(x.title)))));
+     if(i<0&&arr(a.tasks).length===1&&s.tasks.length===1)i=0;
+     if(i>=0){used.add(i);return mergeTask(t,a.tasks[i])}return t;
+    });
+   }
+  }
+  // Native scheduled rows own release eligibility. A pre-created tracker column
+  // is not an assigned task. Retain already recorded historical completions.
+  const releasedVideos=new Set();
+  for(const item of practice){
+   const n=Number((txt(item.title).match(/VIDEO\s*0*(\d+)/i)||[])[1]);
+   const program=/PEPPA/i.test(item.title)?'Peppa Pig':/PHONICS/i.test(item.title)?'Phonics':'Discover English';
+   if(n)releasedVideos.add(program+'|'+n);
+  }
+  m.videos=m.videos.filter(v=>v.complete||releasedVideos.has(v.program+'|'+v.number));
+  for(const a of practice){
+   const num=Number((txt(a.title).match(/VIDEO\s*0*(\d+)/i)||[])[1]);if(!num)continue;
+   const at=P.date(a.assignedDate||a.date)?.at||P.date(a.dueDate)?.at||null;if(!at||at<cutoff||at>today)continue;
+   const program=/PEPPA/i.test(a.title)?'Peppa Pig':/PHONICS/i.test(a.title)?'Phonics':'Discover English';
+   let i=m.videos.findIndex(v=>v.number===num&&v.program===program),v=i>=0?m.videos[i]:{id:a.id,number:num,title:'Video '+num,program,complete:false,attempts:0,comment:'',links:[]};
+   const f=mergeTask(mergeTask(v,a),arr(a.tasks)[0]);v={...f,id:v.id,number:num,program,deadline:a.dueDate||v.deadline,dueAt:P.date(a.dueDate)?.at+86399999||v.dueAt,assignedAt:at};
+   if(i>=0)m.videos[i]=v;else m.videos.push(v);
+  }
+  m.videos.sort((a,b)=>b.number-a.number);
+  const active=m.sessions.filter(s=>!s.future),latest=active[0],latestVideo=m.videos[0];
+  m.weekly=[...(latest?.tasks||[]).map(t=>({...t,parent:latest.id,session:latest.number,displayTitle:t.title+' · Tiết '+latest.number})),...(latestVideo?[{...latestVideo,parent:latestVideo.id,displayTitle:latestVideo.program+' · Video '+latestVideo.number}]:[])];
+  const currentIds=new Set(m.weekly.map(t=>t.id));
+  m.older=[...active.flatMap(s=>s.tasks.map(t=>({...t,parent:s.id,displayTitle:t.title+' · Tiết '+s.number}))),...m.videos.map(v=>({...v,parent:v.id,displayTitle:v.program+' · Video '+v.number}))].filter(t=>!t.complete&&!currentIds.has(t.id));
+  m.pending=m.weekly.filter(t=>!t.complete);m.weeklyDone=m.weekly.filter(t=>t.complete);
+  m.summary.videoComplete=m.videos.filter(v=>v.complete).length;m.summary.videoTotal=m.videos.length;
+  m.summary.practiceAttempts=[...active.flatMap(s=>s.tasks),...m.videos].reduce((n,t)=>n+(t.attempts||0),0);
+  const q=m.videos.filter(v=>v.complete&&Number.isFinite(v.percentage)).map(v=>v.percentage);m.summary.videoAverage=q.length?q.reduce((a,b)=>a+b,0)/q.length:null;
+  m.future=m.sessions.filter(s=>s.future).sort((a,b)=>a.at-b.at);m.recent=active.slice(0,5);
+  m.badges=[];if(m.summary.paperStreak>=3)m.badges.push({icon:'🏅',title:'Phong độ A+',detail:m.summary.paperStreak+' buổi được chấm gần nhất đạt A+'});
+  if([...active.flatMap(s=>s.tasks),...m.videos].some(t=>t.attempts>=2))m.badges.push({icon:'🔥',title:'Chăm chỉ luyện tập',detail:'Có nhiều lượt luyện tập hoặc làm lại bài'});
+  if(m.interviews.some(i=>i.criteria.some(c=>c.title==='Phát âm'&&c.score===c.maximum))||m.videos.some(v=>v.percentage>=85))m.badges.push({icon:'🎙️',title:'Phát âm tốt',detail:'Ghi nhận từ phỏng vấn hoặc video đã chấm'});
+  if(m.videos.length&&m.videos.every(v=>v.complete))m.badges.push({icon:'🎬',title:'Hoàn thành chuỗi video',detail:'Hoàn thành tất cả video đã được giao'});
+  // Current receipts can advance this pupil's visible counters immediately.
+  m.board=(raw.periodStart===displayStart.label?arr(m.board):[]).map(b=>b.alias===m.alias?{...b,...m.summary}:b).sort((a,b)=>b.stars-a.stars||a.alias.localeCompare(b.alias));
+  m.board.forEach((b,i)=>{b.rank=i&&b.stars===m.board[i-1].stars?m.board[i-1].rank:i+1});
+  return m;
+ }
+ const api={build,mergeTask};root.KidsJourneyModel=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+(function(){var s=document.createElement("style");s.id="kids-journey-pilot-style";s.textContent="body.kids-journey-pilot{background:#f4f7fb!important;color:#14263d}\nbody.kids-journey-pilot #dashboardShell{max-width:1280px;margin:0 auto;background:none;border:0;box-shadow:none;padding:0}\nbody.kids-journey-pilot #dashboardShell>:not(#kids-journey-root):not(#titi-games):not(#pendingWorkGate){display:none!important}\n#kids-journey-root{--ink:#152b48;--muted:#62748d;--line:#e2e8f0;box-sizing:border-box;width:100%;max-width:1280px;margin:auto;padding:20px 24px 80px;font-family:inherit;line-height:1.55;color:var(--ink);text-align:left;font-size:14px}\n#kids-journey-root *{box-sizing:border-box;min-width:0}\n#kids-journey-root h1,#kids-journey-root h2,#kids-journey-root h3,#kids-journey-root p{margin:0}\n#kids-journey-root button,#kids-journey-root a{font:inherit;-webkit-tap-highlight-color:transparent}\n#kids-journey-root button{cursor:pointer;color:inherit}\n#kids-journey-root button:focus-visible,#kids-journey-root a:focus-visible,#kids-journey-root summary:focus-visible{outline:3px solid #60a5fa;outline-offset:3px}\n#kids-journey-root h2{font-size:18px;font-weight:800;line-height:1.4;letter-spacing:-.25px}\n#kids-journey-root .j-surface,#kids-journey-root .j-work-panel,#kids-journey-root .j-recent article,#kids-journey-root .j-card{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:0 4px 20px -2px rgba(15,23,42,.06)}\n#kids-journey-root .j-surface{padding:20px}\n#kids-journey-root #j-header{display:grid;grid-template-columns:.95fr 1.05fr;align-items:center;gap:22px;padding:20px 22px;border:1px solid #244b95;border-radius:22px;background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 60%,#2563eb 100%);color:#fff;margin-bottom:14px;box-shadow:0 12px 30px -12px #1e3a8a66}\n#kids-journey-root .j-brand{display:flex;align-items:center;gap:14px}\n#kids-journey-root .j-brand img{width:50px;height:50px;object-fit:contain;border-radius:12px;flex:none;border:1px solid #ffffff50;box-shadow:0 6px 16px #0002}\n#kids-journey-root .j-brand p{font-size:9px;letter-spacing:1.2px;font-weight:800;color:#fde68a;margin-bottom:5px}\n#kids-journey-root h1{font-size:24px;line-height:1.3;font-weight:750;color:#fff;letter-spacing:-.4px}\n#kids-journey-root h1 span{font-size:inherit;font-weight:inherit}\n#kids-journey-root .j-brand small{display:block;margin-top:7px;font-size:11px;color:#dbeafe}\n#kids-journey-root .j-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}\n#kids-journey-root .j-badge{display:inline-flex;align-items:center;gap:4px;border:1px solid #ffffff35;border-radius:30px;background:#ffffff16;padding:5px 9px;font-size:10px;color:#eff6ff;font-weight:650;white-space:nowrap}\n#kids-journey-root .j-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}\n#kids-journey-root .j-kpi{display:flex;flex-direction:column;align-items:flex-start;border-radius:14px;padding:10px 14px;min-height:100px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;box-shadow:inset 0 1px 0 #ffffff0a}\n#kids-journey-root .j-kpi>span{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;font-size:17px;margin-bottom:5px}\n#kids-journey-root .j-kpi>b{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.4px;color:#fff}\n#kids-journey-root .j-kpi small{font-size:10px;line-height:1.45;margin-top:5px;font-weight:500;color:rgba(255,255,255,.8)}\n#kids-journey-root .j-kpi.amber>span{background:#fbbf2426;color:#fde68a}#kids-journey-root .j-kpi.emerald>span{background:#34d39926;color:#6ee7b7}#kids-journey-root .j-kpi.blue>span{background:#60a5fa26;color:#93c5fd}#kids-journey-root .j-kpi.violet>span{background:#fb923c26;color:#fdba74}\n#kids-journey-root #j-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:4px;border:0;background:#e2e8f0;border-radius:12px;margin-bottom:18px}\n#kids-journey-root #j-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:43px;border:0;border-radius:10px;background:transparent;font-size:13px;font-weight:750;color:#475569;padding:10px 6px}\n#kids-journey-root #j-tabs button[aria-selected=true]{background:#fff;color:#1e3a8a;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.08)}\n#kids-journey-root #j-tabs button span{font-size:16px}\n#kids-journey-root .j-overline{font-size:10px;font-weight:800;letter-spacing:.8px;color:var(--muted);line-height:1.5;margin-bottom:6px}\n#kids-journey-root .j-section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:20px 0 12px}\n#kids-journey-root .j-section-title span{font-size:11px;color:var(--muted)}\n#kids-journey-root .j-week-bento{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}\n#kids-journey-root .j-week-main,#kids-journey-root .j-week-aside,#kids-journey-root .j-results-aside,#kids-journey-root .j-interviews{display:grid;gap:18px;align-content:start}\n#kids-journey-root .j-work-panel{padding:17px 18px}\n#kids-journey-root .j-work-panel h2,#kids-journey-root .j-recent-section h2{font-size:16px}\n#kids-journey-root .j-work-panel>.j-section-title{margin-top:0}\n#kids-journey-root .j-count-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}\n#kids-journey-root .j-count-tabs button{display:flex;align-items:center;gap:5px;border:1px solid #e2e8f0;border-radius:8px;padding:7px 8px;background:#f8fafc;font-size:10px;font-weight:700;color:#64748b}\n#kids-journey-root .j-count-tabs button b{min-width:18px;text-align:center;background:#e2e8f0;border-radius:5px;padding:1px 4px;font-size:10px}\n#kids-journey-root .j-count-tabs button[aria-pressed=true]{background:#eff6ff;color:#1d4ed8;border-color:#93c5fd}\n#kids-journey-root .j-count-tabs button[aria-pressed=true] b{background:#dbeafe;color:#1e40af}\n#kids-journey-root .j-week-list{display:grid;gap:10px}\n#kids-journey-root .j-week-item{padding:13px 15px;background:#f8fafc;border:0;border-radius:10px}\n#kids-journey-root .j-week-item.needs-action{border-left:4px solid #0284c7;background:#f0f9ff}\n#kids-journey-root .j-week-item h2{font-size:16px;margin-bottom:6px;font-weight:750}\n#kids-journey-root .j-week-item p{font-size:11px;color:#52657e;line-height:1.6}\n#kids-journey-root .j-week-item .j-task-actions{margin-top:11px;gap:14px}\n#kids-journey-root .j-week-item .j-task-actions a.j-primary{border-radius:10px;background:#0369a1;border-color:#0369a1;padding:9px 14px;font-size:12px}\n#kids-journey-root .j-week-item button{border:0;background:none;font-size:11px;color:#64748b;padding:7px 0}\n#kids-journey-root .j-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:18px;color:var(--muted);font-size:12px;background:#f8fafc}\n#kids-journey-root .j-empty.is-success{background:#ecfdf5;border-color:#6ee7b7;color:#047857}\n#kids-journey-root .j-next{padding:21px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#f8fbff);border-radius:17px;box-shadow:0 4px 20px -2px #1d4ed80b}\n#kids-journey-root .j-next .j-overline{color:#1d4ed8}\n#kids-journey-root .j-next h2{font-size:18px;color:#1e3a8a}\n#kids-journey-root .j-next p:not(.j-overline),#kids-journey-root .j-next small{display:block;font-size:11px;color:#52739a;margin-top:7px}\n#kids-journey-root .j-fixed-schedule{display:inline-flex;align-items:center;margin-top:12px;padding:6px 9px;border:1px solid #bfdbfe;border-radius:8px;background:#ffffffb8;color:#1e40af;font-size:11px;line-height:1.5}\n#kids-journey-root .j-calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:19px}\n#kids-journey-root .j-calendar span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:11px;color:#8294ae;height:47px;background:#ffffffb8;border:1px solid #e2e8f0;border-radius:9px}\n#kids-journey-root .j-calendar b{font-size:10px;font-weight:500}\n#kids-journey-root .j-calendar span.active{color:#1e40af;background:#dbeafe;border-color:#93c5fd;box-shadow:none;font-weight:750}\n#kids-journey-root .j-calendar span.active:nth-child(6){background:#fef3c7;border-color:#fcd34d;color:#92400e}\n#kids-journey-root .j-summary h2{font-size:16px;margin-bottom:17px}\n#kids-journey-root .j-summary .j-progress-row+.j-progress-row{margin-top:17px}\n#kids-journey-root .j-summary .j-track{height:8px;border-radius:999px;background:#e2e8f0;overflow:hidden}\n#kids-journey-root .j-summary .j-track>span{display:block;height:100%;border-radius:999px}\n#kids-journey-root .j-summary .emerald .j-track>span{background:#10b981}\n#kids-journey-root .j-summary .blue .j-track>span{background:#3b82f6}\n#kids-journey-root .j-recent-section>.j-section-title{margin-top:0}\n#kids-journey-root .j-recent{position:relative;display:grid;gap:10px;padding-left:16px}\n#kids-journey-root .j-recent::before{content:\"\";position:absolute;left:4px;top:18px;bottom:20px;width:1px;background:#cbd5e1}\n#kids-journey-root .j-recent article{position:relative;padding:11px 13px;border-radius:12px;box-shadow:0 2px 10px -4px #0f172a0d}\n#kids-journey-root .j-recent article::before{content:\"\";position:absolute;left:-16px;top:17px;width:8px;height:8px;border:2px solid #f4f7fb;border-radius:50%;background:#94a3b8}\n#kids-journey-root .j-recent article.has-notice::before{background:#f59e0b}\n#kids-journey-root .j-recent-title{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:9px;margin-bottom:0}\n#kids-journey-root .j-recent-title strong{font-size:12px;line-height:1.6}\n#kids-journey-root .j-recent-title strong>span{font-size:11px;font-weight:500;color:#62748d}\n#kids-journey-root .j-recent-title .j-card-chips{gap:5px}\n#kids-journey-root .j-recent-title .j-chip{font-size:9px;padding:3px 6px;white-space:nowrap}\n#kids-journey-root .j-recent-title button{border:0;background:none;color:#2563eb;font-size:10px;font-weight:600;padding:5px 0;white-space:nowrap}\n#kids-journey-root .j-recent article.has-notice{border-color:#fed7aa}\n#kids-journey-root .j-note{background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:7px 9px;color:#9a521c;font-size:11px;line-height:1.6;margin-top:8px}\n#kids-journey-root .j-note b{font-size:11px;font-weight:650}\n#kids-journey-root .j-plain-note{font-size:11px;color:#475569;margin-top:7px;line-height:1.6;font-style:italic}\n#kids-journey-root .j-plain-note b{font-weight:500}\n#kids-journey-root .j-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;background:#f1f5f9;color:#52657e;border:1px solid #e2e8f0;border-radius:7px;font-size:10px;font-weight:700;line-height:1.5}\n#kids-journey-root .j-chip.green{color:#047857;background:#ecfdf5;border-color:#a7f3d0}\n#kids-journey-root .j-chip.gold{color:#92400e;background:#fffbeb;border-color:#fde68a}\n#kids-journey-root .j-chip.violet{color:#6d28d9;background:#f5f3ff;border-color:#ddd6fe}\n#kids-journey-root .j-chip.notice{background:#fff7ed;border-color:#fed7aa;color:#9a521c}\n#kids-journey-root .j-card-chips,#kids-journey-root .j-detail-chips{display:flex;flex-wrap:wrap;gap:6px}\n#kids-journey-root .j-library-toolbar{padding:14px 16px}\n#kids-journey-root .j-filters,#kids-journey-root .j-status-filters{display:flex;gap:6px;flex-wrap:wrap}\n#kids-journey-root .j-filters button,#kids-journey-root .j-status-filters button{background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:11px;font-weight:650;color:var(--muted)}\n#kids-journey-root .j-filters button[aria-pressed=true]{background:#1d4ed8;color:#fff;border-color:#1d4ed8}\n#kids-journey-root .j-status-filters{border-top:1px solid #eef2f7;margin-top:11px;padding-top:11px}\n#kids-journey-root .j-status-filters button{font-size:10px;padding:6px 10px;border-radius:20px;background:#fff}\n#kids-journey-root .j-status-filters button[aria-pressed=true]{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}\n#kids-journey-root .j-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}\n#kids-journey-root .j-card{display:flex;flex-direction:column;align-items:flex-start;gap:9px;width:100%;padding:19px;text-align:left;transition:border-color .15s,box-shadow .15s}\n#kids-journey-root .j-card:hover{border-color:#93c5fd;box-shadow:0 8px 24px -5px #1d4ed818}\n#kids-journey-root .j-card.needs-action{border-top:3px solid #f59e0b}\n#kids-journey-root .j-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%}\n#kids-journey-root .j-card-overline{font-size:10px;color:var(--muted);font-weight:750;text-transform:uppercase;letter-spacing:.5px}\n#kids-journey-root .j-card strong{font-size:18px;line-height:1.4}\n#kids-journey-root .j-card-title{font-size:12px;line-height:1.7;color:#47617e;text-wrap:pretty}\n#kids-journey-root .j-card-date,#kids-journey-root .j-card-note{font-size:10px;color:var(--muted)}\n#kids-journey-root .j-card-quality{width:100%;display:grid;gap:10px;margin-top:2px}\n#kids-journey-root .j-excerpt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;width:100%;background:#f8fafc;border:1px solid #edf2f7;border-radius:9px;padding:9px 11px;font-size:11px;font-style:italic;line-height:1.8;color:#52708c}\n#kids-journey-root .j-excerpt.is-notice{background:#fff7ed;border-color:#ffedd5;color:#9a521c}\n#kids-journey-root .j-card-link{font-size:11px;font-weight:750;color:#1d4ed8;padding-top:8px;margin-top:auto;width:100%}\n#kids-journey-root .j-card-link>span{float:right}\n#kids-journey-root .j-progress-row{width:100%;--start:#3b82f6;--end:#2563eb}\n#kids-journey-root .j-progress-row>div:first-child{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:11px;line-height:1.5;margin-bottom:6px}\n#kids-journey-root .j-progress-row b{font-size:11px;white-space:nowrap;color:var(--end)}\n#kids-journey-root .j-progress-row small{font-size:10px;color:var(--muted)}\n#kids-journey-root .emerald{--start:#10b981;--end:#059669}\n#kids-journey-root .blue{--start:#3b82f6;--end:#2563eb}\n#kids-journey-root .violet{--start:#8b5cf6;--end:#6d28d9}\n#kids-journey-root .amber{--start:#f59e0b;--end:#d97706}\n#kids-journey-root .rose{--start:#fb7185;--end:#e11d48}\n#kids-journey-root .j-track{display:block;width:100%;height:8px;background:#e9eef5;border-radius:20px;overflow:hidden}\n#kids-journey-root .j-track>span{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--start),var(--end))}\n#kids-journey-root .j-subtabs{display:inline-flex;gap:4px;padding:5px;background:#e2e8f0;border-radius:12px;margin:0 0 18px;max-width:100%}\n#kids-journey-root .j-subtabs button{font-size:12px;font-weight:750;color:#52657e;border:0;background:transparent;padding:10px 16px;border-radius:8px}\n#kids-journey-root .j-subtabs button[aria-selected=true]{color:#fff;background:#1d4ed8;box-shadow:0 3px 9px #1d4ed830}\n#kids-journey-root .j-results-bento{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}\n#kids-journey-root .j-certificate{padding:22px;background:linear-gradient(160deg,#f0fdfa 0%,#fff 45%)}\n#kids-journey-root .j-certificate>.j-overline{color:#047857;margin-bottom:17px}\n#kids-journey-root .j-interview-top{display:grid;grid-template-columns:130px 1fr;gap:18px;align-items:center}\n#kids-journey-root .j-score-ring{height:130px;width:130px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(from -90deg,#10b981 0%,#3b82f6 var(--score),#dbeafe var(--score),#dbeafe 100%);box-shadow:0 3px 15px #10b98116}\n#kids-journey-root .j-score-ring>div{width:109px;height:109px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}\n#kids-journey-root .j-score-ring strong{font-size:34px;line-height:1.2;color:#0f766e;letter-spacing:-1px}\n#kids-journey-root .j-score-ring strong span{font-size:19px;color:#7691a4;letter-spacing:0}\n#kids-journey-root .j-score-ring small{font-size:9px;color:var(--muted);margin-top:6px}\n#kids-journey-root .j-interview-top h2{font-size:17px}\n#kids-journey-root .j-interview-date{color:var(--muted);font-size:11px;margin:8px 0 12px}\n#kids-journey-root .j-interview-top .j-task-actions a{font-size:10px;padding:9px 10px}\n#kids-journey-root .j-skills{display:grid;gap:17px;margin:24px 0}\n#kids-journey-root .j-certificate blockquote{border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;padding:14px 16px;margin:0;font-size:11px;line-height:1.9;color:#35664d}\n#kids-journey-root .j-certificate blockquote>b{display:block;color:#166534;margin-bottom:7px;font-size:12px}\n#kids-journey-root .j-chart h2{font-size:17px}\n#kids-journey-root .j-score-chart{display:block;width:100%;height:auto;max-height:185px;margin:9px 0 4px;overflow:visible}\n#kids-journey-root .j-score-chart text{font-family:inherit;font-size:13px;fill:#173b68;font-weight:800}\n#kids-journey-root .j-score-chart .j-chart-label{font-size:11px;fill:#52657e;font-weight:650}\n#kids-journey-root .j-score-chart .j-chart-date{font-size:9px;fill:#8091a8;font-weight:500}\n#kids-journey-root .j-test-list{list-style:none;margin:10px 0;padding:0;display:grid;gap:7px}\n#kids-journey-root .j-test-list li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;background:#f8fafc;border:1px solid #e8eef6;border-radius:8px;font-size:11px}\n#kids-journey-root .j-test-list li strong{font-size:11px}\n#kids-journey-root .j-test-list small{font-size:9px;color:var(--muted);display:block}\n#kids-journey-root .j-test-list li>b{color:#1d4ed8;white-space:nowrap}\n#kids-journey-root .j-test-list li>b span{color:#64748b;font-size:10px}\n#kids-journey-root .j-retry-list p{font-size:10px;padding:9px 11px;background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;border-radius:8px}\n#kids-journey-root .j-video-chart{background:linear-gradient(135deg,#fff,#eff6ff)}\n#kids-journey-root .j-race-banner{text-align:center;padding:6px 0}\n#kids-journey-root .j-race-banner h2{font-size:23px}\n#kids-journey-root .j-race-banner p:not(.j-overline){color:var(--muted);font-size:11px;margin-top:5px}\n#kids-journey-root .j-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:12px;max-width:850px;margin:22px auto}\n#kids-journey-root .j-podium article{display:flex;flex-direction:column;align-items:center;text-align:center;border:1px solid #cbd5e1;border-radius:17px;padding:20px 12px;background:linear-gradient(145deg,#f8fafc,#e2e8f0);box-shadow:0 5px 15px #0f172a08}\n#kids-journey-root .j-podium article.place-1{padding-top:33px;padding-bottom:30px;border-color:#fbbf24;background:linear-gradient(145deg,#fffbeb,#fef3c7);box-shadow:0 7px 20px #f59e0b1c}\n#kids-journey-root .j-podium article.place-3{border-color:#fdba74;background:linear-gradient(145deg,#fff7ed,#ffedd5)}\n#kids-journey-root .j-podium article>span{font-size:30px}\n#kids-journey-root .j-podium small,#kids-journey-root .j-podium p{font-size:10px;color:var(--muted);margin-top:4px}\n#kids-journey-root .j-podium h3{font-size:20px;margin-top:4px}\n#kids-journey-root .j-podium strong{font-size:23px;margin-top:10px;color:#1e40af}\n#kids-journey-root .j-podium .place-1 strong{color:#a16207}#kids-journey-root .j-podium .place-3 strong{color:#9a3412}\n#kids-journey-root .j-my-place{display:flex;align-items:center;justify-content:space-between;gap:20px;border:1px solid #93c5fd;border-radius:14px;padding:18px 22px;margin-bottom:18px;background:linear-gradient(110deg,#dbeafe,#eff6ff)}\n#kids-journey-root .j-my-place h2{color:#1e40af;font-size:23px}\n#kids-journey-root .j-my-place>p{font-size:12px;color:#335f94;max-width:50%}\n#kids-journey-root .j-table-scroll{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 4px 20px -2px #0f172a0f}\n#kids-journey-root table{width:100%;min-width:680px;border-collapse:collapse;font-size:11px;text-align:left}\n#kids-journey-root caption{font-weight:800;text-align:left;padding:17px;font-size:14px}\n#kids-journey-root th,#kids-journey-root td{padding:12px;border-top:1px solid #eef2f7;vertical-align:middle}\n#kids-journey-root thead{background:#f1f5f9;font-size:10px;color:var(--muted)}\n#kids-journey-root tbody th small{display:block;font-weight:400;font-size:9px;color:var(--muted)}\n#kids-journey-root .is-self{background:#eff6ff}\n#kids-journey-root .j-rank{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:#e2e8f0;color:#475569;font-weight:800}\n#kids-journey-root .is-self .j-rank{background:#2563eb;color:#fff}\n#kids-journey-root .j-rank-track{display:block;background:#e2e8f0;height:5px;border-radius:6px;margin-top:5px;width:95px}\n#kids-journey-root .j-rank-track>span{display:block;background:linear-gradient(90deg,#60a5fa,#8b5cf6);height:100%;border-radius:6px}\n#kids-journey-root .j-footnote{font-size:10px;color:var(--muted);margin:11px 0 0;line-height:1.7}\n#kids-journey-root .j-footer{font-size:10px;color:#94a3b8;text-align:center;margin-top:25px;padding-top:18px}\n#kids-journey-root dialog{border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);max-width:800px;width:calc(100% - 32px);max-height:88vh;padding:28px;margin:auto;box-shadow:0 20px 70px #0f172a30;overflow:auto;overscroll-behavior:contain}\n#kids-journey-root dialog::backdrop{background:#0f172a70;backdrop-filter:blur(3px)}\n#kids-journey-root .j-modal-close{position:sticky;float:right;top:0;right:0;width:32px;height:32px;border:0;border-radius:50%;background:#f1f5f9;color:#475569;font-size:22px;z-index:2}\n#kids-journey-root #j-modal-title{font-size:22px;padding-right:26px;margin-bottom:16px}\n#kids-journey-root .j-love-note{border:1px solid var(--line);border-radius:10px;padding:14px 17px;margin:16px 0;background:#f8fafc}\n#kids-journey-root .j-love-note.has-notice{background:#fff7ed;border-color:#fed7aa}\n#kids-journey-root .j-love-note h3{font-size:14px}\n#kids-journey-root .j-love-note p{font-size:13px;line-height:1.8;margin-top:6px}\n#kids-journey-root .j-task-detail{border-top:1px solid var(--line);padding:19px 0;margin-top:16px}\n#kids-journey-root .j-task-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}\n#kids-journey-root .j-task-heading h3{font-size:16px;max-width:75%}\n#kids-journey-root .j-task-status{font-size:12px;color:#64748b;margin:8px 0}\n#kids-journey-root .j-persistence{font-size:12px;color:#6d28d9;margin:7px 0}\n#kids-journey-root .j-teacher-comment{font-size:13px;line-height:1.9;color:#475569;padding:10px 0}\n#kids-journey-root .j-teacher-comment p{margin:10px 0;overflow-wrap:anywhere;white-space:pre-wrap}\n#kids-journey-root .j-task-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}\n#kids-journey-root .j-task-actions a{font-size:12px;font-weight:700;color:#334155;border:1px solid var(--line);border-radius:9px;background:#fff;padding:10px 14px;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}\n#kids-journey-root .j-task-actions a.j-primary{color:#fff;background:#1d4ed8;border-color:#1d4ed8;box-shadow:0 3px 8px #1d4ed81a}\n#kids-journey-root .j-all-evidence{font-size:12px;color:var(--muted);margin-top:14px}\n#kids-journey-root .j-all-evidence summary{cursor:pointer}\n#kids-journey-root .j-all-evidence a{display:block;color:#1d4ed8;margin:6px 0}\n@media(max-width:1100px){\n #kids-journey-root #j-header{grid-template-columns:1fr;gap:19px}\n #kids-journey-root .j-kpi{min-height:78px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:10px 14px}\n #kids-journey-root .j-kpi>span{grid-row:span 2;margin:0;align-self:center}\n #kids-journey-root .j-kpi>b{font-size:22px}\n #kids-journey-root .j-kpi small{grid-column:2;margin-top:2px;font-size:10px}\n #kids-journey-root .j-badges{margin-top:12px}\n #kids-journey-root .j-interview-top{grid-template-columns:100px 1fr;gap:13px}\n #kids-journey-root .j-score-ring{width:100px;height:100px}\n #kids-journey-root .j-score-ring>div{width:82px;height:82px}\n #kids-journey-root .j-score-ring strong{font-size:29px}\n #kids-journey-root .j-score-ring small{font-size:8px}\n}\n@media(max-width:760px){\n #kids-journey-root{padding:12px 12px 85px}\n #kids-journey-root #j-header{padding:18px;border-radius:18px;margin-bottom:12px;gap:16px}\n #kids-journey-root .j-brand{gap:11px}\n #kids-journey-root .j-brand img{width:46px;height:46px;border-radius:10px}\n #kids-journey-root .j-brand p{font-size:7px;letter-spacing:.7px}\n #kids-journey-root h1{font-size:22px}\n #kids-journey-root h1 span{font-size:inherit}\n #kids-journey-root .j-brand small{font-size:9px;margin-top:5px}\n #kids-journey-root .j-badges{gap:5px;margin-top:11px}\n #kids-journey-root .j-badge{font-size:8px;padding:4px 7px}\n #kids-journey-root .j-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}\n #kids-journey-root .j-kpi{padding:10px;min-height:74px;gap:2px 7px}\n #kids-journey-root .j-kpi>span{width:25px;height:25px;font-size:15px}\n #kids-journey-root .j-kpi>b{font-size:22px}\n #kids-journey-root .j-kpi small{font-size:10px}\n #kids-journey-root #j-tabs{padding:4px;gap:3px;margin-bottom:15px;border-radius:11px}\n #kids-journey-root #j-tabs button{font-size:10px;gap:4px;min-height:46px;padding:6px 4px;flex-direction:column;line-height:1.35}\n #kids-journey-root #j-tabs button span{font-size:14px}\n #kids-journey-root .j-week-bento,#kids-journey-root .j-results-bento{grid-template-columns:1fr;gap:14px}\n #kids-journey-root .j-week-main{display:contents}\n #kids-journey-root .j-work-panel{order:0;padding:15px}\n #kids-journey-root .j-week-aside{order:1;gap:14px}\n #kids-journey-root .j-recent-section{order:2}\n #kids-journey-root .j-section-title h2{font-size:16px}\n #kids-journey-root .j-count-tabs{gap:5px;margin:11px 0}\n #kids-journey-root .j-count-tabs button{font-size:9px;padding:6px;gap:4px}\n #kids-journey-root .j-count-tabs button b{font-size:9px;min-width:16px}\n #kids-journey-root .j-week-item{padding:14px}\n #kids-journey-root .j-week-item h2{font-size:16px}\n #kids-journey-root .j-week-item p{font-size:10px}\n #kids-journey-root .j-week-item .j-task-actions a{font-size:11px}\n #kids-journey-root .j-next,#kids-journey-root .j-surface{padding:17px}\n #kids-journey-root .j-next h2{font-size:17px}\n #kids-journey-root .j-calendar{margin-top:15px;gap:5px}\n #kids-journey-root .j-calendar span{height:43px;font-size:10px}\n #kids-journey-root .j-calendar b{font-size:9px}\n #kids-journey-root .j-recent-title{grid-template-columns:minmax(0,1fr) auto;gap:6px}\n #kids-journey-root .j-recent-title>strong{grid-column:1/-1}\n #kids-journey-root .j-fixed-schedule{font-size:10px}\n #kids-journey-root .j-grid{grid-template-columns:1fr}\n #kids-journey-root .j-library-toolbar{padding:12px}\n #kids-journey-root .j-filters button{font-size:10px;padding:7px 9px}\n #kids-journey-root .j-card{padding:17px}\n #kids-journey-root .j-card-top{gap:6px}\n #kids-journey-root .j-card-top .j-chip{font-size:9px;padding:4px 6px}\n #kids-journey-root .j-subtabs{display:flex;gap:3px;margin-bottom:14px;padding:4px}\n #kids-journey-root .j-subtabs button{flex:1;font-size:10px;padding:10px 7px}\n #kids-journey-root .j-interview-top{grid-template-columns:104px 1fr;gap:12px}\n #kids-journey-root .j-score-ring{height:104px;width:104px}\n #kids-journey-root .j-score-ring>div{width:86px;height:86px}\n #kids-journey-root .j-interview-top h2{font-size:15px}\n #kids-journey-root .j-interview-top .j-task-actions a{font-size:9px;padding:8px}\n #kids-journey-root .j-skills{gap:16px;margin:23px 0}\n #kids-journey-root .j-progress-row>div:first-child,#kids-journey-root .j-progress-row b{font-size:10px}\n #kids-journey-root .j-certificate blockquote{font-size:11px;padding:12px}\n #kids-journey-root .j-podium{gap:6px;margin:18px 0}\n #kids-journey-root .j-podium article{padding:15px 6px;border-radius:12px}\n #kids-journey-root .j-podium article.place-1{padding:27px 6px 23px}\n #kids-journey-root .j-podium article>span{font-size:24px}\n #kids-journey-root .j-podium h3{font-size:15px}\n #kids-journey-root .j-podium p{font-size:8px}\n #kids-journey-root .j-podium strong{font-size:18px}\n #kids-journey-root .j-my-place{display:block;padding:16px}\n #kids-journey-root .j-my-place>p{max-width:none;margin-top:7px;font-size:11px}\n #kids-journey-root .j-race-banner h2{font-size:18px}\n #kids-journey-root dialog{padding:22px 18px}\n #kids-journey-root .j-task-heading{flex-wrap:wrap}\n #kids-journey-root .j-task-heading h3{max-width:100%}\n}\n@media(prefers-reduced-motion:reduce){#kids-journey-root *{transition:none!important;scroll-behavior:auto!important}}\n\n.hd-demo-bar{max-width:1232px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:12px 0;color:#64748b;font-size:12px}.hd-demo-bar b{color:#1e3a8a;font-size:11px;letter-spacing:.5px}.hd-demo-bar a{margin-left:auto;color:#1d4ed8;text-decoration:none;font-weight:600}.hd-demo-bar+div #kids-journey-root{padding-top:0}\n#kids-journey-root .hd-title{display:flex;justify-content:space-between;align-items:end;margin:26px 0 20px}#kids-journey-root .hd-title h2{font-size:27px;margin:5px 0;color:#102a4a}#kids-journey-root .hd-title p{color:#62748d;font-size:14px}#kids-journey-root .hd-overline{font-size:10px;letter-spacing:1.15px;color:#64849b;font-weight:800}\n#kids-journey-root .hd-toolbar{display:flex;justify-content:space-between;gap:16px;align-items:center;padding-bottom:20px;border-bottom:1px solid #dae4ed;margin-bottom:24px;flex-wrap:wrap}#kids-journey-root .hd-toolbar .j-filters,#kids-journey-root .hd-toolbar .j-status-filters{display:flex;gap:6px;flex-wrap:wrap}#kids-journey-root .hd-toolbar button{border:1px solid #dce5ee;background:white;border-radius:9px;padding:8px 13px;font-size:12px;font-weight:650}#kids-journey-root .hd-toolbar button[aria-pressed=true]{background:#14365c;color:white;border-color:#14365c}#kids-journey-root .hd-toolbar .j-status-filters button[aria-pressed=true]{background:#e4edf5;color:#173b5e;border-color:#d2e0ed}\n#kids-journey-root .hd-section-title{display:flex;gap:12px;align-items:center;margin:0 0 14px}#kids-journey-root .hd-section-title>span{display:grid;place-items:center;font-size:12px;font-weight:800;width:34px;height:34px;border-radius:11px;background:#dbeaf3;color:#285677}#kids-journey-root .hd-section-title h2{font-size:18px}#kids-journey-root .hd-section-title p{font-size:12px;color:#708297;margin-top:1px}\n#kids-journey-root .hd-lesson{border:1px solid #d9e4ed;border-radius:17px;background:white;overflow:hidden;margin-bottom:17px;box-shadow:0 5px 18px #18384a04}#kids-journey-root .hd-lesson-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 22px;background:linear-gradient(100deg,#f2f7fc,#fafcfe);border-bottom:1px solid #e3ebf1}#kids-journey-root .hd-lesson-head h2{font-size:20px;margin:3px 0}#kids-journey-root .hd-lesson-head h2 span{font-size:13px;color:#667e94;font-weight:500}#kids-journey-root .hd-lesson-head p{font-size:11px;font-weight:650;color:#47677f}#kids-journey-root .hd-detail{font-size:11px;border:0;background:none;color:#366a92;white-space:nowrap}\n#kids-journey-root .hd-columns{display:grid;grid-template-columns:.9fr 1.1fr}#kids-journey-root .hd-paper{padding:20px 22px;background:#fffcf6}#kids-journey-root .hd-web{padding:20px 22px;border-left:1px solid #e7edf0}#kids-journey-root .hd-kind{display:flex;gap:10px;align-items:center;margin-bottom:16px}#kids-journey-root .hd-kind-icon{width:35px;height:35px;background:#fff0d2;border-radius:11px;display:grid;place-items:center;font-size:19px;flex-shrink:0}#kids-journey-root .hd-web .hd-kind-icon{background:#e9f1ff}#kids-journey-root .hd-kind h3{font-size:15px;line-height:1.4}#kids-journey-root .hd-kind small{font-size:10px;color:#738395}#kids-journey-root .hd-kind>.j-chip{margin-left:auto;font-size:10px}\n#kids-journey-root .hd-paper-copy{font-size:13px;color:#3e5266;line-height:1.7}#kids-journey-root .hd-paper-copy p+p{margin-top:9px}#kids-journey-root .hd-paper-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #eee5d6;padding-top:13px;margin-top:18px}#kids-journey-root .hd-paper-bottom span{font-size:11px;color:#8b6b40}#kids-journey-root .hd-paper-bottom button{border:1px solid #dbc6a0;background:#fff8eb;border-radius:8px;padding:7px 11px;color:#86602b;font-size:11px;font-weight:700}#kids-journey-root .hd-remembered{font-size:12px;color:#8b704c;font-style:italic}#kids-journey-root .hd-paper.is-remembered{background:#fffdf8}#kids-journey-root .hd-empty{font-size:12px;color:#75879a}\n#kids-journey-root .hd-web-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #edf1f6}#kids-journey-root .hd-web-row:first-child{padding-top:0}#kids-journey-root .hd-web-row:last-child{border:0}#kids-journey-root .hd-web-row h4{font-size:14px;margin:0 0 4px}#kids-journey-root .hd-web-status{font-size:10px;color:#9a6438}#kids-journey-root .hd-web-status.is-done{color:#28846e}#kids-journey-root .hd-quality{font-size:10px;color:#617b8c;display:inline-block;margin-top:4px}#kids-journey-root .hd-quality b{color:#237d73}#kids-journey-root .hd-primary,#kids-journey-root .hd-secondary{font-size:11px;border:1px solid #d6e2ed;border-radius:9px;white-space:nowrap;padding:8px 12px;background:white;color:#244a6b;font-weight:650}#kids-journey-root .hd-primary{background:#15395e;color:white;border-color:#15395e}#kids-journey-root .hd-web-deadline{font-size:10px;color:#7a8a9a;padding-top:12px;margin-top:4px}\n#kids-journey-root .hd-more{margin:16px 0}#kids-journey-root .hd-more>summary{cursor:pointer;list-style:none;text-align:center;color:#3c6786;font-weight:600;font-size:12px;padding:10px;background:#eaf1f6;border-radius:10px}#kids-journey-root .hd-more[open]>summary{margin-bottom:14px}#kids-journey-root .hd-video-heading{margin-top:30px}#kids-journey-root .hd-video-heading>span{background:#eae9fb;color:#625397}#kids-journey-root .hd-videos{display:grid;grid-template-columns:1fr 1fr;gap:12px}#kids-journey-root .hd-video{display:flex;align-items:center;gap:13px;border:1px solid #dbe5ed;border-radius:14px;background:white;padding:18px}#kids-journey-root .hd-video-icon{font-size:27px;background:#eeeefd;width:54px;height:64px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}#kids-journey-root .hd-video-info{flex:1}#kids-journey-root .hd-video h3{font-size:14px;line-height:1.4;margin:4px 0}#kids-journey-root .hd-video-info p{font-size:10px;color:#62798b}#kids-journey-root #j-detail .hd-paper{border-radius:12px;margin-bottom:24px}\n#kids-journey-root .hd-folded{margin-bottom:9px;border-radius:13px;box-shadow:none}#kids-journey-root .hd-folded>.hd-lesson-head{list-style:none;cursor:pointer;background:white;border:0;padding:18px 20px;gap:15px}#kids-journey-root .hd-folded>.hd-lesson-head::-webkit-details-marker{display:none}#kids-journey-root .hd-folded[open]>.hd-lesson-head{background:#f1f6fb;border-bottom:1px solid #e2eaf1}#kids-journey-root .hd-row-icon{display:grid;place-items:center;flex-shrink:0;width:35px;height:40px;border-radius:9px;background:#edf3f8;font-size:19px}#kids-journey-root .hd-row-copy{flex:1}#kids-journey-root .hd-row-copy h3{font-size:14px;line-height:1.5}#kids-journey-root .hd-row-copy p{font-weight:400;font-size:11px;margin-top:5px;color:#7a8d9d}#kids-journey-root .hd-chevron{font-size:22px;color:#52718d;transition:transform .15s}#kids-journey-root details[open]>.hd-lesson-head .hd-chevron{transform:rotate(180deg)}#kids-journey-root .hd-book{margin-bottom:24px}\n@media(max-width:700px){.hd-demo-bar{padding:12px 16px;gap:8px;flex-wrap:wrap}.hd-demo-bar>span{display:none}.hd-demo-bar a{font-size:10px}#kids-journey-root .hd-title h2{font-size:23px}#kids-journey-root .hd-title p{font-size:12px}#kids-journey-root .hd-toolbar{gap:12px}#kids-journey-root .hd-toolbar button{padding:7px 9px;font-size:11px}#kids-journey-root .hd-columns{grid-template-columns:1fr}#kids-journey-root .hd-web{border-left:0;border-top:1px solid #e7edf0}#kids-journey-root .hd-lesson-head{padding:15px 16px;align-items:start}#kids-journey-root .hd-lesson-head h2 span{display:block;font-size:11px;margin-top:3px}#kids-journey-root .hd-lesson-head p{font-size:10px}#kids-journey-root .hd-paper,#kids-journey-root .hd-web{padding:17px 16px}#kids-journey-root .hd-videos{grid-template-columns:1fr}#kids-journey-root .hd-video{padding:15px 13px}#kids-journey-root .hd-video-icon{width:40px;height:56px;font-size:23px}#kids-journey-root .hd-video h3{font-size:13px}#kids-journey-root .hd-video .hd-secondary{font-size:10px;padding:7px 8px}#kids-journey-root .hd-folded>.hd-lesson-head{display:grid;grid-template-columns:1fr auto;padding:15px;gap:8px}#kids-journey-root .hd-row-icon{display:none}#kids-journey-root .hd-row-copy{grid-column:1;grid-row:1}#kids-journey-root .hd-chevron{grid-column:2;grid-row:1}#kids-journey-root .hd-folded>.hd-lesson-head>.j-chip{grid-column:1;justify-self:start;font-size:10px}#kids-journey-root .hd-row-copy h3{font-size:12px}}\n#kids-journey-root .sh-task{padding:16px 18px;border-radius:12px;background:#f0f9ff;border-left:4px solid #0284c7;margin:10px 0;color:#29435b;min-width:0;overflow-wrap:anywhere}\n#kids-journey-root .sh-paper{background:#fffbf2;border-left-color:#f59e0b}\n#kids-journey-root .sh-task header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px}\n#kids-journey-root .sh-kind{font-size:10px;font-weight:800;letter-spacing:.4px;color:#24628d}\n#kids-journey-root .sh-paper .sh-kind{color:#98601b}\n#kids-journey-root .sh-task h3{font-size:14px;margin:0 0 9px;line-height:1.5}\n#kids-journey-root .sh-task ul{margin:0;padding-left:18px;font-size:13px;line-height:1.9}\n#kids-journey-root .highlight-yellow{background:#fef3c7;color:#92400e;padding:2px 4px;border-radius:4px;font-weight:700;box-decoration-break:clone;-webkit-box-decoration-break:clone}\n#kids-journey-root .sh-deadline{font-size:11px;color:#766852;margin:10px 0}\n#kids-journey-root .sh-overdue{background:#fee2e2;color:#b91c1c;font-size:10px;font-weight:700;padding:4px 8px;border-radius:99px}\n#kids-journey-root .sh-check{display:flex;align-items:start;gap:8px;font-size:12px;line-height:1.6;cursor:pointer;padding-top:10px;border-top:1px solid #f4dfb2}\n#kids-journey-root .sh-check input{accent-color:#ba7618;width:17px;height:17px;flex-shrink:0;margin-top:1px}\n#kids-journey-root .sh-compact{border:1px dashed #f59e0b;margin:0;padding:16px}\n#kids-journey-root .sh-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;line-height:1.7}\n#kids-journey-root .sh-actions button{border:0;background:none;color:#245d86;font-size:11px;cursor:pointer;padding:8px 0}\n#kids-journey-root .sh-confirmed{font-size:12px;color:#168369}\n@media(max-width:700px){#kids-journey-root .sh-task{padding:14px}#kids-journey-root .sh-task ul{font-size:12px}#kids-journey-root .sh-actions>span{width:100%}}\n\n.hw-widget{font-family:inherit;color:#29435b;font-size:13px;min-width:0;overflow-wrap:anywhere}.hw-widget *{box-sizing:border-box}.hw-widget .hw-counts{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}.hw-widget .hw-counts button{font:inherit;font-size:11px;padding:8px 9px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#506176;cursor:pointer}.hw-widget .hw-counts button[aria-pressed=true]{background:#eff6ff;border-color:#b8d1eb;color:#1e3a8a}.hw-widget .hw-counts b{background:#e2e8f0;border-radius:4px;padding:2px 5px}.hw-widget .hw-deadline{padding:12px 14px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:9px;color:#92400e;font-size:12px;line-height:1.8;margin-bottom:16px}.hw-widget .hw-late{display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:99px;padding:1px 7px;font-size:10px;margin-left:7px}.hw-widget h3{font-size:14px;margin:0 0 10px;color:#17395e}.hw-widget .hw-web-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #e8eef4}.hw-widget .hw-web-item:last-child{border:0}.hw-widget h4{font-size:13px;margin:0 0 5px;line-height:1.5}.hw-widget .hw-web-item p{font-size:11px;line-height:1.7;margin:0}.hw-widget .hw-submitted{color:#16836b}.hw-widget .hw-pending{color:#a34a39}.hw-widget .hw-cta{color:white;background:#1e3a8a;border-radius:9px;padding:9px 13px;font-weight:700;font-size:11px;text-decoration:none;white-space:nowrap}.hw-widget .hw-detail{border:0;background:none;color:#235c87;padding:8px 0;font-size:11px;cursor:pointer;white-space:nowrap}.hw-widget .hw-paper{padding:16px;border:1px dashed #f59e0b;border-radius:12px;background:#fffdf6;margin-top:16px}.hw-widget .hw-paper-source{color:#8d7853;font-size:10px;margin:0 0 10px}.hw-widget ul{padding-left:18px;margin:0;line-height:1.95;font-size:12px}.hw-widget .hw-highlight{background:#fef08a;color:#854d0e;padding:2px 4px;border-radius:4px;font-weight:700;box-decoration-break:clone;-webkit-box-decoration-break:clone}.hw-widget .hw-check{display:flex;align-items:start;gap:9px;line-height:1.7;margin-top:14px;padding-top:12px;border-top:1px solid #f4e5c4;cursor:pointer;font-size:12px}.hw-widget .hw-check input{accent-color:#b77b19;flex-shrink:0;width:17px;height:17px;margin:1px 0 0}.hw-widget .hw-success{background:#ecfdf5;color:#047857;border-radius:11px;padding:15px;line-height:1.8;font-size:13px}.hw-widget .hw-success button{display:block;border:0;background:none;color:#186d60;font-size:11px;cursor:pointer;padding:7px 0 0}.hw-widget .hw-due{font-size:11px;color:#94652d;line-height:1.8;margin:10px 0}.hw-widget .hw-empty{color:#6b7e92;font-size:12px}.hw-widget .hw-paper-compact{margin:0}#kids-journey-root .hw-widget .hw-paper h3{font-size:13px}@media(max-width:700px){.hw-widget .hw-web-item{flex-wrap:wrap;gap:5px}.hw-widget .hw-web-item>div{width:100%}.hw-widget .hw-counts button{font-size:10px}.hw-widget .hw-paper{padding:13px}.hw-widget .hw-deadline{font-size:11px}}\n.hw-widget .hw-prepared{font-size:11px;line-height:1.6;color:#64748b;margin:8px 0 0}\n#kids-journey-root .hw-bag-badge{margin:13px 0 0;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.65;font-weight:600;overflow-wrap:anywhere}#kids-journey-root .hw-bag-badge.needs-packing{background:#fffbeb;color:#a16207;border:1px solid #fde68a}#kids-journey-root .hw-bag-badge.is-ready{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}\n.hw-widget .hw-task{display:block;padding:16px;margin:10px 0;border:1px solid #e2e8f0;border-radius:12px;background:#fff;min-width:0}.hw-widget .hw-task h3{font-size:12px;line-height:1.6;color:#1e3a5f;margin:0}.hw-widget .hw-task-title{font-size:14px;line-height:1.6;margin:6px 0;color:#163b60}.hw-widget .hw-topic,.hw-widget .hw-reason{font-size:11px;color:#64748b;line-height:1.8;margin:6px 0}.hw-widget .hw-task .hw-state{font-size:12px;line-height:1.8;margin:10px 0}.hw-widget .hw-task.is-overdue{border-left:4px solid #ef6b4d;background:#fffafa}.hw-widget .hw-task.is-overdue .hw-state{display:inline-block;background:#fef2f2;color:#dc2626;padding:4px 7px;border-radius:6px}.hw-widget .hw-paper{border-style:dashed;border-color:#f59e0b;background:#fffdf6}.hw-widget .hw-self-study{border-color:#c7d2fe;background:#f7f7ff}.hw-widget .hw-self-badge{display:inline-block;font-size:10px;font-weight:800;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:4px 8px;margin-bottom:8px}.hw-widget .hw-overdue-alert{border:1px solid #fed7aa;background:#fff7ed;padding:13px;border-radius:11px;margin:10px 0 15px;color:#9a451c;font-size:12px;line-height:1.8}.hw-widget .hw-overdue-alert .hw-cta{display:inline-block;margin-top:9px}.hw-widget .hw-counts .has-overdue{border-color:#f4a58d;background:#fff7ed;color:#ac3e20}.hw-widget .hw-counts button{position:relative}.hw-widget .hw-alert-dot{display:inline-block;width:6px;height:6px;margin-right:5px;background:#ef4444;border-radius:50%;animation:hw-overdue-pulse 1.8s ease-in-out infinite}.hw-widget .hw-counts button[aria-selected=true]{background:#eaf2fb;border-color:#acc9e5;color:#1e3a8a;box-shadow:0 2px 5px #16365c0a}.hw-widget .hw-task>.hw-detail{display:inline-block;margin-left:10px}.hw-widget .hw-task ul{margin-top:9px}@keyframes hw-overdue-pulse{50%{opacity:.45}}@media(prefers-reduced-motion:reduce){.hw-widget .hw-alert-dot{animation:none}}@media(max-width:700px){.hw-widget .hw-task-list{padding-bottom:70px}.hw-widget .hw-task{padding:13px}.hw-widget .hw-cta{display:inline-flex;align-items:center;min-height:40px}.hw-widget .hw-counts button{min-height:42px}}\n/* A permanent route back to paper instructions after a personal checklist tick. */\n#kids-journey-root .hw-review-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 14px}\n#kids-journey-root .hw-review-paper{font:inherit;font-size:12px;font-weight:700;border:1px solid #d5c8a9;border-radius:9px;padding:10px 13px;color:#775317;background:#fffcf2;cursor:pointer;min-height:42px}\n#kids-journey-root .hw-review-bar small{font-size:11px;color:#718096}\n#kids-journey-root .hw-review-paper:focus-visible{outline:3px solid #38a8dd;outline-offset:3px}\n/* Clearer reading hierarchy in the weekly work panel only. */\n#kids-journey-root .j-work-panel>.j-section-title h2{font-size:21px;line-height:1.5;font-weight:800;color:#173b58}\n#kids-journey-root .hw-widget{font-size:15px;color:#24445d}\n#kids-journey-root .hw-widget .hw-counts{gap:8px}\n#kids-journey-root .hw-widget .hw-counts button{font-size:13px;font-weight:650;line-height:1.6;min-height:44px;padding:10px 12px;color:#3b536b}\n#kids-journey-root .hw-widget .hw-counts button[aria-selected=true]{font-weight:800;color:#123e73;border-color:#89b4d9;background:#e9f3fc}\n#kids-journey-root .hw-widget .hw-counts b{font-size:15px;padding:2px 6px}\n#kids-journey-root .hw-widget .hw-deadline{font-size:13px;padding:14px 16px;color:#884315}\n#kids-journey-root .hw-widget .hw-deadline strong{font-weight:800}\n#kids-journey-root .hw-widget .hw-task{padding:20px}\n#kids-journey-root .hw-widget .hw-task h3,#kids-journey-root .hw-widget .hw-paper h3{font-size:16px;font-weight:800;color:#153b5c;line-height:1.65}\n#kids-journey-root .hw-widget .hw-task-title{font-size:16px;font-weight:750}\n#kids-journey-root .hw-widget .hw-topic{font-size:13px;font-weight:600;color:#47637a}\n#kids-journey-root .hw-widget .hw-paper-source{font-size:12px;color:#735a32;line-height:1.8}\n#kids-journey-root .hw-widget .hw-task ul{font-size:15px;line-height:1.95;color:#29465c;padding-left:20px}\n#kids-journey-root .hw-widget .hw-task li+li{margin-top:6px}\n#kids-journey-root .hw-widget .hw-task .hw-state{font-size:13px;font-weight:650}\n#kids-journey-root .hw-widget .hw-due{font-size:13px;font-weight:650;color:#89541f}\n#kids-journey-root .hw-widget .hw-check{font-size:14px;font-weight:650;line-height:1.8;color:#24445c;gap:11px;padding-top:15px}\n#kids-journey-root .hw-widget .hw-check input{width:20px;height:20px;margin-top:3px}\n#kids-journey-root .hw-widget .hw-cta,#kids-journey-root .hw-widget .hw-detail{font-size:13px}\n#kids-journey-root .hw-review-paper{font-size:13px}\n#kids-journey-root .hw-review-bar small{font-size:12px;color:#61748a}\n@media(max-width:650px){\n #kids-journey-root .j-work-panel>.j-section-title h2{font-size:19px}\n #kids-journey-root .hw-widget .hw-counts button{font-size:12px;padding:9px 11px}\n #kids-journey-root .hw-widget .hw-task{padding:16px}\n #kids-journey-root .hw-widget .hw-task h3,#kids-journey-root .hw-widget .hw-paper h3{font-size:15px}\n #kids-journey-root .hw-widget .hw-task ul{font-size:14px}\n #kids-journey-root .hw-widget .hw-check{font-size:14px}\n}\n\n/* Bean pilot only: native readers, receipts, dialogs and Game behavior unchanged. */\n#kids-journey-root{padding-bottom:110px}\n#kids-journey-root .ka-library{--ka-navy:#153858;--ka-line:#dce6ed;color:var(--ka-navy)}\n#kids-journey-root .ka-heading{margin:4px 0 20px}\n#kids-journey-root .ka-heading h2{font-size:23px;margin:0 0 6px}\n#kids-journey-root .ka-heading p{color:#64748b;margin:0;font-size:14px}\n#kids-journey-root .ka-group-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}\n#kids-journey-root .ka-group-tabs button{font:inherit;font-size:13px;font-weight:700;border:1px solid #d6e3ee;border-radius:12px;background:#fff;color:#36526c;padding:12px 14px;cursor:pointer;text-align:left;line-height:1.45}\n#kids-journey-root .ka-group-tabs button[aria-selected=true]{color:#fff;background:#163955;border-color:#163955;box-shadow:0 4px 12px #1639551c}\n#kids-journey-root .ka-group-tabs .ka-video{color:#65438e;border-color:#e6dbf3;background:#faf7ff}\n#kids-journey-root .ka-group-tabs .ka-video[aria-selected=true]{background:#67479a;border-color:#67479a;color:#fff}\n#kids-journey-root .ka-group-tabs .ka-test{background:#fffbeb;color:#865b18;border-color:#f4e5bc}\n#kids-journey-root .ka-group-tabs .ka-test[aria-selected=true]{background:#8a611c;color:#fff;border-color:#8a611c}\n#kids-journey-root .ka-filters{display:flex;gap:12px;padding:14px 16px;background:#edf3f7;border-radius:14px;margin-bottom:22px}\n#kids-journey-root .ka-filters label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;min-width:140px}\n#kids-journey-root .ka-search{flex:1}\n#kids-journey-root .ka-filters input,#kids-journey-root .ka-filters select{min-height:42px;border:1px solid #cddce7;border-radius:9px;padding:9px 12px;background:#fff;font:inherit;font-size:14px;color:#17344f;min-width:0;width:100%;box-sizing:border-box}\n#kids-journey-root .ka-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}\n#kids-journey-root .ka-section-heading h3{font-size:17px;margin:0}\n#kids-journey-root .ka-section-heading>span{font-size:12px;white-space:nowrap;color:#64748b}\n#kids-journey-root .ka-row{background:#fff;border:1px solid var(--ka-line);border-radius:14px;margin:0 0 10px;overflow:hidden}\n#kids-journey-root .ka-row-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}\n#kids-journey-root .ka-row-copy strong{font-size:14px;line-height:1.55;overflow-wrap:anywhere}\n#kids-journey-root .ka-book{font-size:10px;color:#5d7b93;text-transform:uppercase;font-weight:800;letter-spacing:.7px}\n#kids-journey-root .ka-row-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:43%}\n#kids-journey-root .ka-row-badges .j-chip{font-size:11px;padding:5px 8px;line-height:1.4}\n#kids-journey-root .ka-chevron{font-size:19px;color:#7f96a6;transition:transform .15s}\n#kids-journey-root .ka-paper{border-left:3px solid #f0b64c;background:#fffbef;border-radius:8px;padding:14px 16px;margin-bottom:20px}\n#kids-journey-root .ka-paper h3{margin:0 0 8px;font-size:15px}\n#kids-journey-root .ka-paper p{margin:7px 0;font-size:14px;line-height:1.8}\n#kids-journey-root .ka-paper small{color:#82622b;font-size:12px}\n#kids-journey-root .ka-series-progress{padding:14px 16px;background:#f1ecfa;border:1px solid #e3d9f1;border-radius:12px;font-size:13px;color:#5a3b85;line-height:1.8;margin:0 0 14px}\n#kids-journey-root .ka-meta{font-size:13px;color:#60768a}\n#kids-journey-root .ka-link,#kids-journey-root .ka-more{font:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #c9d9e5;border-radius:9px;padding:10px 14px;color:#264d6a;background:#fff;min-height:40px}\n#kids-journey-root .ka-history{margin-top:12px;align-self:flex-start}\n#kids-journey-root .ka-more{display:block;margin:16px auto 0;padding:11px 24px}\n#kids-journey-root .ka-video-body>.ka-link{margin:10px 0 0 8px}\n#kids-journey-root .ka-library :is(button,input,select,summary):focus-visible{outline:3px solid #38a8dd;outline-offset:3px}\nbody.kids-journey-pilot #titi-games:not(.titi-compact){width:240px;max-width:calc(100vw - 24px)}\nbody.kids-journey-pilot #titi-games:not(.titi-compact) .titi-games-launcher{width:100%;height:116px;border-radius:18px}\nbody.kids-journey-pilot #titi-games:not(.titi-compact) .titi-welcome-scene{width:108px}\nbody.kids-journey-pilot #titi-games:not(.titi-compact) .titi-teacher-walk{width:82px;height:110px;left:12px;bottom:4px}\nbody.kids-journey-pilot #titi-games:not(.titi-compact) .titi-invitation{left:112px;right:10px;top:12px;font-size:12px}\nbody.kids-journey-pilot #titi-games:not(.titi-compact) .titi-learn-cta{left:112px;right:10px;bottom:12px;font-size:12px;padding:8px}\n@media(max-width:650px){\n #kids-journey-root .ka-group-tabs{gap:7px;display:grid;grid-template-columns:1fr}\n #kids-journey-root .ka-group-tabs button{padding:10px 12px;font-size:12px}\n #kids-journey-root .ka-filters{padding:12px;gap:10px;flex-direction:column}\n #kids-journey-root .ka-row-copy{flex-basis:calc(100% - 30px)}\n #kids-journey-root .ka-row-badges{order:3;max-width:100%;justify-content:flex-start}\n #kids-journey-root .ka-section-heading h3{font-size:15px}\n #kids-journey-root .ka-video-body>.ka-link{margin-left:0}\n #kids-journey-root .j-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}\n}\n/* Expanded archive cards use the native task renderer inside three clear groups. */\n#kids-journey-root .ka-row{border-radius:20px;margin-bottom:14px;box-shadow:0 3px 12px #15385804;transition:border-color .2s,box-shadow .2s}\n#kids-journey-root .ka-row:hover{border-color:#b8ccdc;box-shadow:0 6px 18px #1538580b}\n#kids-journey-root .ka-lesson-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px}\n#kids-journey-root .ka-book{background:#eaf2fa;border:1px solid #dce9f4;color:#315f82;border-radius:7px;padding:5px 8px;font-size:10px;letter-spacing:.65px}\n#kids-journey-root .ka-session{font-size:12px;color:#6b7f91;line-height:1.6}\n#kids-journey-root .ka-row-copy .ka-lesson-title{font-size:16px;font-weight:800;line-height:1.65;color:#173b58}\n#kids-journey-root .ka-row-badges{gap:7px;max-width:39%}\n#kids-journey-root .ka-row-badges .j-chip{padding:7px 10px;border-radius:9px;font-size:11px;border:1px solid transparent}\n#kids-journey-root .ka-row-badges .j-chip.blue{color:#1d5f9b;background:#eff6ff;border-color:#d6e7fc}\n#kids-journey-root .ka-row-badges .j-chip.green{color:#087967;background:#eafaf4;border-color:#cceee1}\n#kids-journey-root .ka-row-badges .j-chip.notice{color:#98601d;background:#fff6e6;border-color:#f2dfbd}\n#kids-journey-root .ka-row-badges .j-chip.gold{color:#9d7110;background:#fff9df;border-color:#f3e9b1}\n#kids-journey-root .ka-chevron{display:grid;place-items:center;flex-shrink:0;width:30px;height:30px;border:1px solid #dce6ee;background:#f5f8fb;border-radius:50%;font-size:10px;color:#59768f}\n#kids-journey-root .ka-detail-block{background:#fff;border:1px solid #e1e9f0;border-radius:15px;padding:20px;margin:0 0 16px}\n#kids-journey-root .ka-detail-block:last-child{margin-bottom:0}\n#kids-journey-root .ka-block-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}\n#kids-journey-root .ka-detail-block h3{margin:0 0 12px;font-size:16px;line-height:1.6}\n#kids-journey-root .ka-block-heading h3{margin:0}\n#kids-journey-root .ka-web-details{border-top:3px solid #79add7}\n#kids-journey-root .ka-web-details .j-task-detail{margin-top:12px;padding:18px;background:#fbfdff;border:1px solid #e2ebf3;border-radius:12px}\n#kids-journey-root .ka-web-details .j-task-detail:first-of-type{margin-top:0}\n#kids-journey-root .ka-web-details .j-task-heading h3{font-size:14px;margin:0}\n#kids-journey-root .ka-web-details .j-task-status{font-size:12px;line-height:1.8;color:#426780}\n#kids-journey-root .ka-web-details .j-teacher-comment{font-size:13px;line-height:1.9}\n#kids-journey-root .ka-web-details .j-task-actions a{font-size:12px;min-height:38px;padding:9px 12px;border-radius:8px;text-decoration:none}\n#kids-journey-root .ka-paper{border-color:#f0dfb5;border-left:4px solid #edbb55;background:#fffcf3}\n#kids-journey-root .ka-paper .hw-highlight{background:#fef08a;color:#854d0e;border-radius:4px;padding:1px 4px}\n#kids-journey-root .ka-paper p{font-size:14px;line-height:1.95}\n#kids-journey-root .ka-session-feedback{background:#f7f5ef;border-color:#e8e3d6}\n#kids-journey-root .ka-session-feedback blockquote{margin:0;padding:1px 0 1px 14px;border-left:3px solid #dbc68b;color:#5c6370;font-size:14px;line-height:1.9;white-space:pre-line}\n#kids-journey-root .ka-session-feedback p{font-size:13px;line-height:1.95;color:#586778}\n#kids-journey-root .ka-row-progress{max-width:340px;width:100%;margin-top:8px}\n#kids-journey-root .ka-row-progress .j-progress-row{margin:0}\n#kids-journey-root .ka-row-progress .j-progress-row>div:first-child{font-size:11px;margin-bottom:6px}\n#kids-journey-root .ka-row-progress .j-track{height:6px}\n#kids-journey-root .ka-row-video .ka-book{background:#f3edfb;border-color:#e7daf7;color:#78529b}\n#kids-journey-root .ka-series-progress .j-progress-row{margin:10px 0 0}\n#kids-journey-root .ka-series-progress .j-track{height:7px}\n#kids-journey-root .ka-native-status{font-size:13px;color:#547484;line-height:1.8}\n#kids-journey-root .ka-file-link{display:inline-flex;align-items:center;text-decoration:none;margin:10px 8px 0 0}\n#kids-journey-root .ka-submit-actions{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:16px}\n#kids-journey-root .ka-submit-actions .ka-file-link,#kids-journey-root .ka-submit-actions>.ka-link{margin:0}\n#kids-journey-root .ka-submit-actions .j-primary{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 14px;border-radius:9px;font-size:13px;text-decoration:none}\n#kids-journey-root .ka-interview-skills{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}\n@media(max-width:650px){\n #kids-journey-root .ka-row-copy .ka-lesson-title{font-size:15px}\n #kids-journey-root .ka-row-copy{flex-basis:calc(100% - 44px)}\n #kids-journey-root .ka-row-badges{max-width:100%;gap:6px}\n #kids-journey-root .ka-row-badges .j-chip{padding:6px 8px}\n #kids-journey-root .ka-detail-block{padding:16px 14px}\n #kids-journey-root .ka-web-details .j-task-detail{padding:14px 12px}\n #kids-journey-root .ka-interview-skills{grid-template-columns:1fr}\n}\n/* Archive rows now open the shared floating dialog; no expandable list bodies. */\n#kids-journey-root button.ka-row{display:block;width:100%;padding:0;font:inherit;text-align:left;color:inherit;cursor:pointer}\n#kids-journey-root .ka-row-header{display:flex;align-items:center;gap:18px;padding:24px;min-height:110px;box-sizing:border-box}\n#kids-journey-root .ka-row-header .ka-row-copy{display:flex;flex:1;min-width:0}\n#kids-journey-root dialog.ka-detail-modal{box-sizing:border-box;width:min(900px,calc(100vw - 36px));max-width:calc(100vw - 36px);max-height:calc(100dvh - 40px);padding:0;border:1px solid #d9e3ec;border-radius:23px;background:#fff;box-shadow:0 28px 100px #0f172a50;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}\n#kids-journey-root dialog.ka-detail-modal::backdrop{background:rgba(0,0,0,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}\n#kids-journey-root .ka-detail-modal>.j-modal-close{position:sticky;top:14px;right:14px;float:right;margin:14px 14px -48px 0;width:36px;height:36px;cursor:pointer;z-index:5}\n#kids-journey-root .ka-modal-header{padding:28px 70px 22px 26px;border-bottom:1px solid #e0e9f1;background:#f8fbfe}\n#kids-journey-root .ka-modal-header h2{font-size:22px;line-height:1.55;margin:6px 0 0;color:#173b58}\n#kids-journey-root .ka-modal-body{padding:22px;background:#f5f8fb}\n#kids-journey-root .ka-modal-footer{padding:16px 24px;text-align:right;background:#fff;border-top:1px solid #dfe7ef}\n#kids-journey-root .ka-modal-footer .j-modal-close{position:static;float:none;width:auto;height:auto;border-radius:10px;padding:11px 20px;background:#173b58;color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}\n#kids-journey-root .ka-detail-modal[open]{animation:ka-modal-enter .2s ease-out}\n@keyframes ka-modal-enter{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}\n#kids-journey-root .hw-summary-alert{margin:0 0 18px;padding:17px;border-left:4px solid #e87645}\n#kids-journey-root .hw-summary-alert strong{display:block;font-size:14px;line-height:1.85}\n#kids-journey-root .ku-updates{border:1px solid #cddfed;border-radius:17px;background:#f6fbff;padding:17px;margin-bottom:18px}\n#kids-journey-root .ku-updates header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}\n#kids-journey-root .ku-updates h2{margin:0;font-size:17px;line-height:1.6;color:#214967}\n#kids-journey-root .ku-dot{display:inline-block;width:8px;height:8px;background:#ef6357;border-radius:50%;margin-right:8px;box-shadow:0 0 0 4px #ffe7e4}\n#kids-journey-root .ku-updates header button{border:0;background:transparent;color:#577185;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;min-height:36px}\n#kids-journey-root .ku-item{display:flex;flex-direction:column;gap:5px;width:100%;padding:12px 14px;background:#fff;border:1px solid #dce8f2;border-radius:10px;margin-top:8px;text-align:left;font:inherit;cursor:pointer}\n#kids-journey-root .ku-item strong{font-size:13px;color:#2a526d;line-height:1.7}\n#kids-journey-root .ku-item span{font-size:12px;color:#5c7487;line-height:1.7}\n#kids-journey-root .ku-weekend{background:#fff9ef;border-color:#f5dba4;animation:ku-soft-pulse 2.4s ease-in-out infinite}\n@keyframes ku-soft-pulse{50%{box-shadow:0 0 0 3px #f9d68c25}}\n@media(max-width:650px){\n #kids-journey-root .ka-row-header{flex-wrap:wrap;gap:12px;padding:18px;align-items:flex-start;min-height:134px}\n #kids-journey-root .ka-row-header .ka-row-copy{flex-basis:calc(100% - 44px)}\n #kids-journey-root dialog.ka-detail-modal{width:calc(100vw - 18px);max-width:calc(100vw - 18px);max-height:calc(100dvh - 22px);border-radius:17px}\n #kids-journey-root .ka-modal-header{padding:22px 52px 18px 16px}\n #kids-journey-root .ka-modal-header h2{font-size:18px}\n #kids-journey-root .ka-modal-body{padding:12px}\n #kids-journey-root .ku-updates{padding:13px}\n}\n@media(prefers-reduced-motion:reduce){#kids-journey-root .ka-detail-modal[open],#kids-journey-root .ku-weekend{animation:none}}\n";document.head.appendChild(s);})();
+/* Presentation adapter: released native assignments + canonical task results only. */
+(function(root){
+ 'use strict';
+ const P=root.KidsJourneyParser||(typeof require==='function'?require('./parser.js'):null);
+ const list=v=>Array.isArray(v)?v:[],text=v=>v==null?'':String(v).trim();
+ const E=v=>text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const memory=new Map();
+ function getDone(key,storage){try{const saved=storage?.getItem(key);return saved==='1'?true:saved==='0'?false:memory.get(key)===true}catch(_){return memory.get(key)===true}}
+ function setPaperDone(key,done,storage){memory.set(key,done);try{storage?.setItem(key,done?'1':'0')}catch(_){} }
+ function safeURL(value){try{const u=new URL(value);return u.protocol==='https:'?u.href:''}catch(_){return ''}}
+ function pageHTML(value){
+  // Escape first; highlight page expressions, never Unit identifiers or arbitrary HTML.
+  return E(value).replace(/((?:trang|tr\.|pages?|pp\.)\s*\d+(?:\s*(?:[-–—]|đến(?:\s+hết)?\s+trang)\s*\d+)?)/gi,'<mark class="highlight-yellow">$1</mark>');
+ }
+ function parseScheduleHomework(rawSessionData){
+  const raw=rawSessionData||{},a=raw.nativeAssignment;
+  // A calendar row alone never manufactures assigned homework.
+  if(!a||raw.released!==true)return {paperItems:[],webItems:[],deadline:null};
+  const date=P.date(a.dueDate),deadline=date?{label:date.label,at:date.at+86399999}:null;
+  const paperItems=text(a.paperHomework).split(/[\n;]+/).map(text).filter(Boolean).map((line,index)=>({id:a.id+':paper:'+index,text:line}));
+  const webItems=list(raw.canonicalTasks).map(t=>({...t,deadline:t.deadline||a.dueDate||'',learningUrl:safeURL(t.learningUrl)}));
+  return {paperItems,webItems,deadline};
+ }
+ function nextSession(schedule,currentTime){
+  if(!Number.isFinite(currentTime))return null;
+  return list(schedule).map(s=>{const d=P.date(s.date),m=text(s.startTime).match(/^(\d{1,2}):(\d{2})$/);return {...s,startAt:d&&m&&+m[1]<24&&+m[2]<60?d.at+(+m[1]*60+ +m[2])*60000:null}})
+   .filter(s=>s.startAt!==null&&s.startAt>currentTime).sort((a,b)=>a.startAt-b.startAt)[0]||null;
+ }
+ function buildPlan({model,assignments,schedule,currentTime,studentId,storage,paperKey}){
+  if(!Number.isFinite(currentTime))throw new TypeError('Server reference time is required');
+  const day=P.day(currentTime),weekday=new Date(day+25200000).getUTCDay(),weekStart=day-((weekday+6)%7)*86400000,weekEnd=weekStart+7*86400000;
+  const tasks=[],seen=new Set();
+  for(const s of model.sessions.filter(s=>!s.future&&s.at<=day)){
+   const candidates=list(assignments).filter(a=>Number(a.sessionNumber)===s.number&&P.date(a.lessonDate||a.assignedDate)?.label===s.date);
+   if(candidates.length!==1)continue;
+   const a=candidates[0];if(seen.has(a.id))continue;seen.add(a.id);
+   const parsed=parseScheduleHomework({nativeAssignment:a,canonicalTasks:s.tasks,released:true});
+   const assignedAt=P.date(a.assignedDate||a.lessonDate)?.at,common={parent:s.id,session:s.number,assignedAt,deadline:parsed.deadline?.label||'',dueAt:parsed.deadline?.at??null};
+   if(parsed.paperItems.length){
+    // The attendance grade in s.paper is not proof for homework assigned AFTER
+    // that lesson. Only the exact native assignment's paperGrade owns this state.
+    const storageKey=typeof paperKey==='function'?paperKey(s,a):studentId+'_'+s.number+'_'+s.date+'_paperDone',nativeChecked=a.paperGrade==='A+';
+    tasks.push({...common,id:a.id+':paper',kind:'paper',displayTitle:'Bài tập sách giấy · '+a.program,paperItems:parsed.paperItems,storageKey,nativeChecked,localDone:getDone(storageKey,storage),complete:nativeChecked});
+   }
+   for(const t of parsed.webItems)tasks.push({...common,...t,parent:s.id,kind:'web',displayTitle:t.title+' · '+a.program,complete:t.complete===true,dueAt:P.date(t.deadline)?.at+86399999||common.dueAt});
+  }
+  for(const v of model.videos)tasks.push({...v,kind:'video',parent:v.id,displayTitle:v.program+' · Video '+v.number});
+  const weekly=t=>[t.dueAt,t.assignedAt].some(at=>Number.isFinite(at)&&at>=weekStart&&at<weekEnd);
+  const entries=tasks.map(t=>({...t,overdue:!t.complete&&Number.isFinite(t.dueAt)&&t.dueAt<currentTime,weekly:weekly(t)}));
+  const next=nextSession(schedule,currentTime);
+  return {entries,pending:entries.filter(t=>t.weekly&&!t.complete),older:entries.filter(t=>!t.weekly&&!t.complete),done:entries.filter(t=>t.weekly&&t.complete),next,
+   paperForNext:next?entries.filter(t=>t.kind==='paper'&&t.weekly&&t.assignedAt<next.startAt).sort((a,b)=>b.assignedAt-a.assignedAt)[0]||null:null};
+ }
+ function taskHTML(t,{compact=false,learningURL=v=>v}={}){
+  const label=t.kind==='paper'?'📖 SÁCH GIẤY':t.kind==='video'?'🎬 VIDEO TỰ LUYỆN':'💻 TRÊN WEB';
+  const url=t.learningUrl?safeURL(learningURL(t.learningUrl)):'';
+  return `<article class="sh-task sh-${t.kind}${compact?' sh-compact':''}" data-schedule-task="${E(t.id)}"><header><span class="sh-kind">${compact?'📝 BÀI TẬP SÁCH GIẤY · TIẾT '+t.session:label}</span>${t.overdue?'<span class="sh-overdue">Quá hạn</span>':''}</header>${!compact?`<h3>${E(t.displayTitle)}</h3>`:''}${list(t.paperItems).length?`<ul>${t.paperItems.map(p=>'<li>'+pageHTML(p.text)+'</li>').join('')}</ul>`:''}<p class="sh-deadline">${t.deadline?'⏰ Hạn nộp: '+E(t.deadline):'Theo hướng dẫn của cô'}${compact?' · Bài giao từ tiết '+t.session:''}</p>${t.kind==='paper'?t.nativeChecked?'<p class="sh-confirmed">Cô đã kiểm tra tại lớp</p>':`<label class="sh-check"><input type="checkbox" data-paper-done="${E(t.storageKey)}" ${t.localDone?'checked':''}> <span>Con đã làm xong & cất vào balo</span></label>`:`<div class="sh-actions"><span>${t.complete?'✅ Đã hoàn thành':'— Chưa nộp bài'}${t.submittedAt?' · '+E(t.submittedAt):''}</span>${!t.complete&&url?`<a class="j-primary" href="${E(url)}">Làm bài ↗</a>`:''}<button data-open="${E(t.parent)}">${t.complete?'Xem kết quả':'Xem chi tiết'} ↗</button></div>`}</article>`;
+ }
+ function renderHomeworkUI(containerId,homeworkData,options={}){
+  const tasks=Array.isArray(homeworkData)?homeworkData:homeworkData?.entries||[];
+  const html=tasks.map(t=>taskHTML(t,options)).join('');
+  if(containerId){const el=root.document?.getElementById(containerId);if(el){el.hidden=!tasks.length;el.innerHTML=html}}
+  return html;
+ }
+ const api={parseScheduleHomework,renderHomeworkUI,buildPlan,nextSession,setPaperDone,pageHTML};
+ root.ScheduleHomeworkUI=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+/* Display naming and grouping only. Native rows retain all receipt and mark fields. */
+(function(root){
+ 'use strict';
+ const list=v=>Array.isArray(v)?v:[],text=v=>v==null?'':String(v).trim();
+ const norm=v=>text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toUpperCase();
+ function name(value){
+  const raw=text(value);if(!raw)return 'Theo nguồn học tập';
+  const n=norm(raw).replace(/^OXFORD\s+/,''),m=n.match(/^DISCOVER\s*(\d+)$/);
+  if(m)return 'Discover '+m[1];
+  if(n==='DE'||n==='DISCOVER ENGLISH')return 'Discover English';
+  if(/^(PEPPA(?: PIG)?)$/.test(n))return 'Peppa Pig';
+  if(n==='PHONICS')return 'Phonics';
+  return raw;
+ }
+ function label(type,program){
+  const titles={course:'Bài tập trên lớp',web:'Bài tập trên Web',paper:'Bài tập Sách giấy',classVideo:'Video buổi học',video:'Video tự luyện',test:'Kiểm tra định kỳ'};
+  return (titles[type]||type)+' ('+name(program)+')';
+ }
+ function units(value){
+  const found=new Set();
+  for(const m of text(value).matchAll(/\bUNIT\s*(\d+(?:[._]\d+)?)(?:\s*([+–-])\s*(\d+(?:[._]\d+)?))?/gi)){
+   const first=m[1].replace('_','.'),last=m[3]?.replace('_','.');found.add(first);
+   if(last){found.add(last);if(m[2]!=='+'&&Number.isInteger(+first)&&Number.isInteger(+last)&&+last>+first&&+last-+first<=30)for(let n=+first+1;n<+last;n++)found.add(String(n))}
+  }
+  return [...found].sort((a,b)=>Number(a)-Number(b));
+ }
+ function videoMetadata(v,practice){
+  const rows=list(practice).filter(r=>{
+   const n=Number((text(r.title).match(/VIDEO\s*0*(\d+)/i)||[])[1]);
+   const family=/PEPPA/i.test(r.title)?'Peppa Pig':/PHONICS/i.test(r.title)?'Phonics':'Discover English';
+   return n===v.number&&name(family)===name(v.program);
+  });
+  const row=rows.length===1?rows[0]:null;
+  const suffix=row?text(row.title).replace(/^.*?VIDEO\s*0*\d+\s*[:–-]?\s*/i,''):'';
+  return {topic:text(row?.topic||row?.lessonTitle)||suffix||(!/^Video\s*\d+$/i.test(v.title)?text(v.title):''),program:name(v.program)};
+ }
+ function groupByBookAndProgram(studentData,context){
+  const data=studentData||{},ctx=context||{},groups=new Map();
+  function add(type,book,item){
+   const program=name(book),key=type+'|'+norm(program);
+   if(!groups.has(key))groups.set(key,{key,type,program,label:label(type==='course'?'course':type==='video'?'video':'test',program),items:[]});
+   groups.get(key).items.push(item);
+  }
+  list(data.sessions).filter(s=>!s.future&&s.released!==false).forEach(s=>add('course',s.program,{...s,_units:units(s.title),_book:name(s.program)}));
+  list(data.videos).forEach(v=>{const meta=videoMetadata(v,ctx.practice);add('video',v.program,{...v,_topic:meta.topic,_book:meta.program,_units:units(meta.topic)})});
+  for(const [kind,rows]of [['written',data.tests],['interview',data.interviews]])for(const t of list(rows)){
+   const matches=list(ctx.tests).filter(r=>r.date===t.date&&(kind==='interview'?r.assessmentType==='speaking-interview':r.assessmentType==='written-test'));
+   const programs=[...new Set(matches.map(r=>name(r.program)).filter(v=>v!=='Theo nguồn học tập'))];
+   const sessions=list(data.sessions).filter(s=>s.date===t.date).map(s=>name(s.program)),unique=[...new Set(sessions)];
+   const program=t.program|| (programs.length===1?programs[0]:unique.length===1?unique[0]:'Theo nguồn kiểm tra');
+   const source=matches.length===1?matches[0]:null;
+   add('test',program,{...t,_kind:kind,_book:name(program),_units:units(t.title),_teacherComment:source?text(source.teacherComment||source.generalComment):'',
+    _retakeUrl:source?.retake?.available&&source.retake.canRetake?text(source.retake.learningUrl):'',_resultUrl:text(source?.resultUrl)});
+  }
+  return [...groups.values()].sort((a,b)=>({course:0,video:1,test:2}[a.type]-{course:0,video:1,test:2}[b.type])||a.program.localeCompare(b.program,'vi',{numeric:true}));
+ }
+ const api={name,label,units,videoMetadata,groupByBookAndProgram,norm};root.HomeworkArchive=api;root.groupByBookAndProgram=groupByBookAndProgram;
+ if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+/* Local notification history only; never classifies receipts or releases lessons. */
+(function(root){
+ 'use strict';const memory=new Map();
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const hash=v=>{let n=2166136261;for(const c of String(v)){n^=c.charCodeAt(0);n=Math.imul(n,16777619)}return(n>>>0).toString(36)};
+ function advance(previous,records,{weekend=false}={}){
+  const prev=previous&&previous.version===1?previous:{version:1,initialized:false,seen:{},events:[]};
+  const next={version:1,initialized:true,seen:{...prev.seen},events:[...(prev.events||[])]};
+  for(const r of records||[]){
+   const had=Object.prototype.hasOwnProperty.call(prev.seen||{},r.id),old=prev.seen?.[r.id]||{},signals={...old};
+   for(const [k,v]of Object.entries(r.signals||{}))if(v!==null&&v!==undefined&&v!=='')signals[k]=hash(v);
+   const teacherOnly=s=>JSON.stringify(Object.fromEntries(Object.entries(s).filter(([k])=>k!=='$released')));
+   const changed=had&&teacherOnly(old)!==teacherOnly(signals),releaseKind=['course','practice'].includes(r.kind);
+   const released=releaseKind&&!old.$released&&(prev.initialized||r.explicitNew===true);
+   if(releaseKind)signals.$released=hash(r.kind);
+   const sig=JSON.stringify(signals);
+   const newResult=prev.initialized&&!had&&r.kind==='result'&&Object.keys(signals).length>0;
+   if(changed||released||newResult){
+    const key=r.id+'|'+sig;
+    if(!next.events.some(e=>e.key===key))next.events.unshift({key,detailId:r.detailId,label:r.label,
+     title:changed||newResult?'🔴 Có điểm / nhận xét mới':r.kind==='practice'?'🎬 Có bài tự luyện mới':'📘 Có bài học mới',
+     weekend:released&&r.kind==='practice'&&weekend&&!r.complete});
+   }
+   next.seen[r.id]=signals;
+  }
+  next.events=next.events.slice(0,8);return next;
+ }
+ function render(input){
+  const container=root.document?.getElementById('bean-updates');if(!container)return;
+  const key='kids_journey_updates_v1_'+hash(input.studentKey),storage=()=>{try{return root.localStorage}catch(_){return null}};
+  let prior=memory.get(key);try{const s=storage()?.getItem(key);if(s)prior=JSON.parse(s)}catch(_){}
+  const day=new Date((input.now??Date.now())+25200000).getUTCDay();
+  let ledger=advance(prior,input.records,{weekend:day===6||day===0});
+  function save(){memory.set(key,ledger);try{storage()?.setItem(key,JSON.stringify(ledger))}catch(_){}}
+  function draw(){
+   container.hidden=!ledger.events.length;
+   container.innerHTML=ledger.events.length?'<section class="ku-updates" aria-label="Thông báo cập nhật"><header><h2><span class="ku-dot" aria-hidden="true"></span>Cập nhật dành cho con</h2><button type="button" data-updates-clear>Đã xem</button></header>'+ledger.events.map(e=>'<button type="button" class="ku-item '+(e.weekend?'ku-weekend':'')+'" data-update-key="'+esc(e.key)+'" data-open="'+esc(e.detailId)+'"><strong>'+esc(e.weekend?'🔥 [MỚI] Có bài tự luyện mới chờ con khám phá!':e.title)+'</strong><span>'+esc(e.label)+' ↗</span></button>').join('')+'</section>':'';
+  }
+  container.onclick=event=>{const b=event.target.closest('button');if(!b)return;if(b.hasAttribute('data-updates-clear'))ledger.events=[];else if(b.dataset.updateKey)ledger.events=ledger.events.filter(e=>e.key!==b.dataset.updateKey);else return;save();draw()};
+  save();draw();
+ }
+ const api={advance,render};root.BeanHomeworkUpdates=api;if(typeof module==='object'&&module.exports)module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
+
+/* Client-only preparation planner. Receipt/completion flags come from native readers. */
+(function(root){
+ 'use strict';
+ const memory=new Map(),instances=new WeakMap(),mounted=new Map();
+ const list=v=>Array.isArray(v)?v:[],text=v=>v==null?'':String(v).trim();
+ const esc=v=>text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ function at(value,endOfDay){
+  if(value&&typeof value.getTime==='function')return Number.isFinite(value.getTime())?value.getTime():null;
+  if(typeof value==='number')return Number.isFinite(value)?value:null;
+  const m=text(value).match(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if(!m)return null;
+  const d=+m[1],mo=+m[2],y=+m[3],date=new Date(Date.UTC(y,mo-1,d));
+  if(date.getUTCDate()!==d||date.getUTCMonth()!==mo-1||m[4]&&(+m[4]>23||+m[5]>59))return null;
+  return date.getTime()-25200000+(m[4]?(+m[4]*60+ +m[5])*60000:endOfDay?86399999:0);
+ }
+ function saved(key,data){
+  if(data.paperChecks&&Object.prototype.hasOwnProperty.call(data.paperChecks,key))return data.paperChecks[key]===true;
+  try{const value=(data.storage||root.localStorage)?.getItem(key);if(value==='1'||value==='0')return value==='1'}catch(_){}
+  return memory.has(key)?memory.get(key):data.storageKey===key&&data.paperDone===true;
+ }
+ function buildHomeworkState(studentData,now=new Date()){
+  const data=studentData||{},clock=at(now),next=data.nextSession||{},defaultDeadline=at(next.startAt)??at(next.date+(next.time?' '+next.time:''),!next.time);
+  const tasks=new Map(),classId=text(data.classId||'class').toLowerCase().replace(/\s/g,''),paperText=Array.isArray(data.paperHomework)?data.paperHomework.join('\n'):text(data.paperHomework);
+  function add(raw,kind,index,history){
+   if(!raw||raw.released===false&&raw.isSubmitted!==true&&raw.paperConfirmed!==true)return;
+   if(kind!=='paper'&&typeof raw.isSubmitted!=='boolean')return;
+   const id=text(raw.id)||kind+':'+text(raw.parent||raw.lessonNo||'')+':'+index;
+   const key=raw.storageKey||data.storageKey||'hw_paper_done_'+classId+'_lesson'+text(raw.lessonNo||next.lessonNo||'unknown');
+   const local=kind==='paper'?saved(key,data):false,confirmed=kind==='paper'&&raw.paperConfirmed===true;
+   const complete=kind==='paper'?local||confirmed:raw.isSubmitted===true;
+   const assignedAt=at(raw.assignedAt??raw.assignedDate);
+   if(!complete&&clock!==null&&assignedAt!==null&&assignedAt>clock)return;
+   const explicitDeadline=at(raw.deadlineAt??raw.dueAt)??at(raw.deadline||raw.dueDate,true);
+   const deadlineAt=explicitDeadline??(!history&&!raw.historyCandidate&&kind!=='selfStudy'?defaultDeadline:null);
+   const task={...raw,id,kind,storageKey:key,localDone:local,paperConfirmed:confirmed,complete,history:history===true||raw.historyCandidate===true,deadlineAt,assignedAt,
+    title:text(raw.title)||(kind==='paper'?'Bài tập Sách giấy':'Bài tập'),paperItems:kind==='paper'?list(raw.paperItems).map(text).filter(Boolean):[],
+    category:complete?'done':history||raw.nativeMissing===true||raw.teacherNeedsWork===true||clock!==null&&deadlineAt!==null&&clock>deadlineAt?'overdue':'todo'};
+   const previous=tasks.get(id);
+   if(previous){
+    // A duplicate optional/missing record cannot erase an independently confirmed positive.
+    if(previous.complete&&!task.complete)return;
+    tasks.set(id,{...previous,...task,kind:previous.kind,history:previous.history&&task.history});
+   }else tasks.set(id,task);
+  }
+  list(data.webHomework).forEach((t,i)=>add(t,'web',i,false));
+  const paperItems=paperText.split(/[\n;]+/).map(text).filter(Boolean);
+  if(paperItems.length)add({id:data.paperId||'paper:'+classId+':'+text(next.lessonNo),title:'Bài tập Sách giấy',paperItems,storageKey:data.storageKey,bookName:data.paperBook,topic:data.paperTopic,
+   paperConfirmed:data.paperConfirmed===true,teacherNeedsWork:data.paperNeedsWork===true,lessonNo:data.paperLessonNo,sourceLabel:data.paperSourceLabel,deadlineAt:data.paperDeadlineAt??defaultDeadline,deadlineLabel:data.deadlineLabel},'paper',0,false);
+  list(data.selfStudyTasks).forEach((t,i)=>add(t,'selfStudy',i,false));
+  list(data.missingTasks||data.olderHomework).forEach((t,i)=>add(t,t.kind==='paper'?'paper':t.kind==='selfStudy'?'selfStudy':'web',i,true));
+  const rows=[...tasks.values()],todoList=rows.filter(t=>t.category==='todo'),overdueList=rows.filter(t=>t.category==='overdue'),doneList=rows.filter(t=>t.category==='done');
+  todoList.sort((a,b)=>(b.kind==='selfStudy')-(a.kind==='selfStudy')||(a.deadlineAt??Infinity)-(b.deadlineAt??Infinity));
+  overdueList.sort((a,b)=>Number(a.history)-Number(b.history)||(a.deadlineAt??Infinity)-(b.deadlineAt??Infinity));
+  return {tasks:rows,todoList,overdueList,doneList,nextSession:next,clock,paperTask:rows.find(t=>t.id===(data.paperId||'paper:'+classId+':'+text(next.lessonNo)))||null};
+ }
+ function renderHomeworkSection(sessionData){
+  const data={...(sessionData||{}),paperChecks:{...(sessionData?.paperChecks||{})}},slot=data.containerId||'bean-preclass-homework',container=root.document?.getElementById(slot),bag=root.document?.getElementById(data.bagBadgeId||'bean-preclass-bag-badge');
+  if(!container)return null;
+  const previous=mounted.get(slot)||instances.get(container);if(previous)previous.dispose();
+  let selected=previous?.selected()||'todo',state,timer=null;
+  const clock=()=>data.now===undefined?new Date():data.now;
+  const dateLabel=value=>{const n=at(value);return n===null?'Theo hướng dẫn':new Date(n).toLocaleString('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})};
+  const pages=value=>esc(value).replace(/((?:(?:từ\s+)?trang|tr\.|pages?|pp\.)\s*\d+(?:\s*(?:[-–—]|đến(?:\s+hết)?\s+trang)\s*\d+)?)/gi,'<mark class="hw-highlight">$1</mark>');
+  const link=value=>{try{const u=new URL(value);return u.protocol==='https:'?u.href:''}catch(_){return ''}};
+  function card(t){
+   const overdue=t.category==='overdue',paper=t.kind==='paper',self=t.kind==='selfStudy';
+   const label=t.complete?(paper?'✅ Con đã chuẩn bị sách · '+(t.paperConfirmed?'Cô đã kiểm tra A+':'Chờ cô kiểm tra'):'✅ Đã nộp bài'):overdue?(paper?'⛔ Quá hạn chuẩn bị sách':self?'⛔ Quá hạn tự luyện':'⛔ Quá hạn • Chưa nộp bài'):'⏳ Chưa nộp bài';
+   const href=link(t.link||t.learningUrl),source=t.sourceLabel||[t.lessonNo?'Tiết '+t.lessonNo:'',t.lessonDate||''].filter(Boolean).join(' · ');
+   let html='<article class="hw-task '+(paper?'hw-paper':self?'hw-self-study':'hw-web-item')+(overdue?' is-overdue':'')+'"><div class="hw-task-head">';
+   if(self&&t.category==='todo'&&!t.history&&t.assignedAt!==null&&new Date(t.assignedAt+25200000).getUTCDay()===6)html+='<span class="hw-self-badge">🔥 Bài mới Thứ 7</span>';
+   const program=root.HomeworkArchive?.name(t.bookName||t.program||data.paperBook)||text(t.bookName||t.program||data.paperBook)||'Theo nguồn học tập';
+   const heading=self?'🎬 Video tự luyện ('+program+')':paper?'📖 Bài tập trên lớp ('+program+') · Sách giấy':'💻 Bài tập trên lớp ('+program+') · Trên Web';
+   html+='<h3>'+esc(heading)+'</h3></div>';
+   if(!paper)html+='<h4 class="hw-task-title">'+esc(t.title)+'</h4>';
+   if(t.topic)html+='<p class="hw-topic">'+esc(t.topic)+'</p>';
+   if(source)html+='<p class="hw-paper-source">'+esc(source)+'</p>';
+   if(t.reason)html+='<p class="hw-reason">'+esc(t.reason)+'</p>';
+   if(paper)html+='<ul>'+t.paperItems.map(p=>'<li>'+pages(p)+'</li>').join('')+'</ul>';
+   html+='<p class="hw-state '+(overdue?'hw-pending':t.complete?'hw-submitted':'')+'">'+esc(label)+(t.submittedAt?' · '+esc(t.submittedAt):'')+'</p>';
+   if(t.deadlineAt!==null)html+='<p class="hw-due">⏰ '+esc(t.deadlineLabel||'Hạn hoàn thành: '+dateLabel(t.deadlineAt))+'</p>';
+   if(paper)html+='<label class="hw-check"><input type="checkbox" data-hw-paper="'+esc(t.storageKey)+'" '+(t.localDone?'checked':'')+'><span>Con đã làm xong & cất sách vào balo đi học</span></label>';
+   else if(href)html+='<a class="hw-cta" href="'+esc(href)+'">'+(t.complete?'Mở bài / Nộp lại ↗':t.history?'Nộp bù ↗':overdue?'Làm bù ngay ↗':self?'Nộp video ↗':'Mở bài / Nộp bài ↗')+'</a>';
+   if(t.detailId)html+='<button class="hw-detail" type="button" data-open="'+esc(t.detailId)+'">'+(t.complete?'Xem kết quả ↗':'Xem chi tiết ↗')+'</button>';
+   return html+'</article>';
+  }
+  function draw(){
+   if(timer!==null){root.clearTimeout?.(timer);timer=null}
+   state=buildHomeworkState(data,clock());
+   const x=state.todoList.length,y=state.overdueList.length,z=state.doneList.length;
+   const rows=selected==='overdue'?state.overdueList:selected==='done'?state.doneList:state.todoList;
+   let html='<div class="hw-widget">';
+   if(y)html+='<aside class="hw-overdue-alert hw-summary-alert" role="alert"><strong>🚨 CẦN LƯU Ý: Con đang có '+y+' bài quá hạn / thiếu cần hoàn thành gấp!</strong><button type="button" class="hw-cta" data-hw-jump="overdue">Bấm để xem danh sách →</button></aside>';
+   html+='<div class="hw-counts" role="tablist" aria-label="Phân loại bài tập">';
+   for(const [id,label,n] of [['todo','📌 Cần làm tuần này',x],['overdue','🚨 Cần làm bù / Quá hạn',y],['done','✅ Đã hoàn thành',z]]){
+    html+='<button type="button" role="tab" id="hw-tab-'+id+'" aria-controls="hw-subtab-panel" tabindex="'+(selected===id?'0':'-1')+'" data-hw-filter="'+id+'" aria-selected="'+(selected===id)+'" aria-pressed="'+(selected===id)+'" class="'+(id==='overdue'&&y?'has-overdue':'')+'">'+(id==='overdue'&&y?'<span class="hw-alert-dot" aria-hidden="true"></span>':'')+label+': <b>'+n+'</b></button>';
+   }
+   html+='</div>';
+   if(data.nextSession?.date)html+='<div class="hw-deadline">⏰ Hạn chuẩn bị sách và bài web: <strong>'+esc(data.deadlineLabel||'Trước '+(data.nextSession.time||'giờ vào lớp')+' '+data.nextSession.date+' (Tiết '+data.nextSession.lessonNo+')')+'</strong></div>';
+   if(state.paperTask)html+='<div class="hw-review-bar"><button type="button" class="hw-review-paper" data-hw-review-paper>📖 Xem lại bài tập sách giấy ↗</button><small>Vẫn xem và bỏ tích được nếu con chọn nhầm.</small></div>';
+   html+='<div id="hw-subtab-panel" role="tabpanel" aria-labelledby="hw-tab-'+selected+'" class="hw-task-list" aria-live="polite">';
+   if(rows.length)html+=rows.map(card).join('');
+   else if(selected==='todo'&&!y)html+='<div class="hw-success">🎉 Tuyệt vời! Con đã hoàn thành trọn vẹn tất cả bài tập tuần này và không còn bài tồn đọng. Tiếp tục giữ phong độ nhé!</div>';
+   else if(selected!=='todo')html+='<p class="hw-empty">'+(selected==='done'?'Chưa có bài hoàn thành trong nhóm này.':'Không có bài quá hạn hoặc còn thiếu.')+'</p>';
+   container.innerHTML=html+'</div></div>';
+   if(bag){const p=state.paperTask,book=root.HomeworkArchive?.name(p?.bookName||data.paperBook)||text(p?.bookName||data.paperBook)||'Theo nguồn học tập';bag.hidden=!p;bag.innerHTML=p?'<p class="hw-bag-badge '+(p.localDone?'is-ready':'needs-packing')+'" role="status">'+esc('🎒 Balo đi học ('+book+'): '+(p.localDone?'Đã chuẩn bị sách vở sẵn sàng ✅':'Cần hoàn thiện Sách giấy trước '+(data.nextSession?.time||'giờ học')+' 👈'))+'</p>':''}
+   // One local deadline timer; it never sends a request or checks a server version.
+   if(typeof root.setTimeout==='function'&&data.now===undefined&&state.clock!==null){
+    const crossing=state.todoList.filter(t=>t.deadlineAt!==null).map(t=>t.deadlineAt+1).filter(n=>n>state.clock).sort((a,b)=>a-b)[0];
+    if(crossing)timer=root.setTimeout(()=>{if(container.isConnected!==false)draw()},Math.min(2147483647,Math.max(1,crossing-state.clock)));
+   }
+  }
+  container.onclick=event=>{const b=event.target.closest('button');if(!b)return;if(b.hasAttribute?.('data-hw-review-paper')){selected=state.paperTask?.category||'todo';draw();container.querySelector?.('[data-hw-paper]')?.focus?.();return}const target=b.dataset.hwFilter||b.dataset.hwJump;if(target){selected=target;draw();container.querySelector?.('[data-hw-filter="'+selected+'"]')?.focus?.({preventScroll:true})}};
+  container.onkeydown=event=>{const b=event.target.closest('[data-hw-filter]');if(!b||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const tabs=['todo','overdue','done'],i=tabs.indexOf(selected);selected=event.key==='Home'?'todo':event.key==='End'?'done':tabs[(i+(event.key==='ArrowRight'?1:2))%3];draw();container.querySelector?.('[data-hw-filter="'+selected+'"]')?.focus?.()};
+  container.onchange=event=>{
+   if(!event.target.matches('[data-hw-paper]'))return;
+   const key=event.target.dataset?.hwPaper||state.paperTask?.storageKey;if(!key)return;
+   const done=event.target.checked;memory.set(key,done);data.paperChecks={...data.paperChecks,[key]:done};
+   try{(data.storage||root.localStorage)?.setItem(key,done?'1':'0')}catch(_){}
+   if(typeof data.onPaperChange==='function')data.onPaperChange(key,done);
+   draw();
+  };
+  const controller={selected:()=>selected,openPending:()=>{selected=state.todoList.length?'todo':state.overdueList.length?'overdue':'todo';draw()},dispose:()=>{if(timer!==null)root.clearTimeout?.(timer)},getState:()=>state,getCounts:()=>({pendingWebCount:state.todoList.filter(t=>t.kind!=='paper').length,pendingPaperCount:state.todoList.filter(t=>t.kind==='paper').length,totalPending:state.todoList.length,overdue:state.overdueList.length,done:state.doneList.length})};
+  instances.set(container,controller);mounted.set(slot,controller);draw();return controller;
+ }
+ function initHomeworkWidget(sessionData){return renderHomeworkSection(sessionData)}
+ // The native reminder retains its own count and gate. Its existing opener
+ // navigates to the unfinished list even after a parent browsed completed work.
+ root.document?.addEventListener?.('click',event=>{if(event.target.closest?.('#pendingWorkGateOpen'))mounted.get('bean-preclass-homework')?.openPending()});
+ root.buildHomeworkState=buildHomeworkState;root.renderHomeworkSection=renderHomeworkSection;root.initHomeworkWidget=initHomeworkWidget;
+ if(typeof module==='object'&&module.exports){module.exports=initHomeworkWidget;module.exports.buildHomeworkState=buildHomeworkState;module.exports.renderHomeworkSection=renderHomeworkSection;}
+})(typeof window!=='undefined'?window:globalThis);
+
+/* Presentation-only KIDS journey. Mounted solely through the verified pilot hook. */
+(function(root){
+ 'use strict';
+ const E=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const fmt=v=>Number.isFinite(v)?v.toLocaleString('vi-VN',{maximumFractionDigits:1}):'—',title=v=>String(v||'').toLocaleLowerCase('vi-VN').replace(/(^|\s)\p{L}/gu,c=>c.toLocaleUpperCase('vi-VN'));
+ let host=null,model=null,tab='week',filter='all',libraryState='all',weekFilter='pending',journeyTab='self',modalId=null,lastInput=null;
+ const tabs=[['week','📅','Kế hoạch & Lịch học'],['library','🎬','Bài tập & Video'],['journey','🏆','Kết quả & Xếp hạng']];
+ const weekday=value=>{const d=root.KidsJourneyParser.date(value);return d?['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'][new Date(d.at+25200000).getUTCDay()]+', '+d.label:value;};
+ const attention=s=>/^(B|F)$/.test(s.paper?.grade||'')||s.stars<0||/CAN|CHU Y|TAP TRUNG|NOI CHUYEN|TRU.*SAO/.test(root.KidsJourneyParser.norm(s.teacherNote));
+ const weeklyItem=t=>{const url=learningURL(t.learningUrl);return `<article class="j-week-item ${t.complete?'is-complete':'needs-action'}"><div class="j-work-copy"><h2>${E(t.displayTitle)}</h2><p>${t.deadline?'⏰ Hạn nộp: '+E(weekday(t.deadline))+' · ':''}${E(t.complete?status(t):'Chưa nộp bài')}${Number.isFinite(t.percentage)?' · Chất lượng '+fmt(t.percentage)+'%':''}</p></div><div class="j-task-actions">${!t.complete&&url?`<a class="j-primary" href="${E(url)}">🚀 Nộp bài ngay</a>`:''}<button data-open="${E(t.parent)}">${t.complete?'Xem kết quả & nhận xét':'Xem chi tiết'} ↗</button></div></article>`;};
+ function status(t){return t.complete?(t.supplemented?'✅ Đã hoàn thành · Nộp bổ sung':t.comment?'✅ Đã hoàn thành · Có nhận xét của GV':'✅ Đã hoàn thành'):'Chưa hoàn thành'}
+ const chip=(label,cls='')=>`<span class="j-chip ${cls}">${E(label)}</span>`;
+ function paper(p,verbose){if(!p?.grade)return '';return chip('Sách giấy: '+p.grade+(verbose&&p.grade==='A+'?' · Hoàn thành xuất sắc':''),/^(B|F)$/.test(p.grade)?'notice':'green');}
+ function badgeHTML(){return model.badges.map(b=>`<span class="j-badge" title="${E(b.detail)}"><span>${b.icon}</span>${E(b.title)}</span>`).join('')}
+ function region(id,html){const el=host.querySelector('#'+id);if(el&&el.innerHTML!==html)el.innerHTML=html;}
+ const percentage=v=>Number.isFinite(v)?Math.max(0,Math.min(100,v)):0;
+ const tone=v=>v>=85?'emerald':v>=70?'blue':v>=50?'amber':'rose';
+ const complete=item=>Array.isArray(item.tasks)?!item.tasks.length||item.tasks.every(t=>t.complete):!!item.complete;
+ function bar(label,value,detail,color){
+  if(!Number.isFinite(value))return `<div class="j-progress-row"><div><span>${E(label)}</span><small>Chưa có điểm</small></div></div>`;
+  return `<div class="j-progress-row ${color||tone(value)}"><div><span>${E(label)}</span><b>${E(detail||fmt(value)+'%')}</b></div><div class="j-track" role="progressbar" aria-label="${E(label)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percentage(value)}"><span style="width:${percentage(value)}%"></span></div></div>`;
+ }
+ function headerHTML(){
+  const s=model.summary,kpis=[['amber','⭐',fmt(s.stars),'Sao tích lũy'],['emerald','🏆',s.paperAPlus+'/'+s.paperGraded,'Buổi sách giấy A+'],['blue','🎬',s.videoComplete+'/'+s.videoTotal,'Video hoàn thành'+(Number.isFinite(s.videoAverage)?' · TB '+fmt(s.videoAverage)+'%':'')],['violet','🔥',s.practiceAttempts,'Lượt luyện tập']];
+  return `<div class="j-identity"><div class="j-brand"><img src="${E(lastInput.dashboard.logoUrl||document.getElementById('brandLogo')?.src||'')}" alt="Ms. Trang Trieu Education"><div><p>MS. TRANG TRIEU EDUCATION</p><h1>${E(model.alias)} <span>· ${E(title(model.fullName))}</span></h1><small>${E(model.className)} · Hành trình từ ${E(model.periodStart)}</small></div></div><div class="j-badges">${badgeHTML()}</div></div><div class="j-kpis" aria-label="Tổng quan kết quả">${kpis.map(([color,icon,value,label])=>`<article class="j-kpi ${color}"><span aria-hidden="true">${icon}</span><b>${E(value)}</b><small>${E(label)}</small></article>`).join('')}</div>`;
+ }
+ function card(item,kind){
+  const video=kind==='video',done=complete(item),tasks=video?[item]:item.tasks,comment=(video?item.comment:item.teacherNote||item.tasks.find(t=>t.comment)?.comment)||'',review=comment.replace(/^\s*Chất lượng[^\n]*\n?/i,'').trim();
+  const quality=tasks.filter(t=>Number.isFinite(t.percentage)),attempts=Math.max(0,...tasks.map(t=>t.attempts||0));
+  return `<button type="button" class="j-card ${done?'is-done':'needs-action'} ${!video&&attention(item)?'has-notice':''}" data-open="${E(item.id)}"><span class="j-card-top"><span class="j-card-overline">${E(item.program)}</span>${chip(done?'✅ Đã hoàn thành':'📌 Cần làm',done?'green':'notice')}</span><strong>${E(video?'Video '+item.number:'Tiết '+item.number+' · '+item.date)}</strong><span class="j-card-title">${E(video?(item.title==='Video '+item.number?'Luyện nói & thuyết trình':item.title):item.title||'Nội dung buổi học')}</span>${video&&item.deadline?`<span class="j-card-date">Hạn hoàn thành · ${E(item.deadline)}</span>`:''}<span class="j-card-chips">${!video?paper(item.paper)+(Number.isFinite(item.stars)?chip('⭐ '+(item.stars>=0?'+':'')+fmt(item.stars)+' Sao','gold'):'')+item.tasks.filter(t=>!Number.isFinite(t.percentage)).map(t=>chip(t.title+' · '+(t.complete?'Đã hoàn thành':'Cần làm'),t.complete?'green':'notice')).join(''):''}${attempts>1?chip('🔥 Luyện '+attempts+' lần','violet'):''}${!video&&attention(item)?chip('💬 Lưu ý của cô','notice'):''}</span>${quality.length?`<span class="j-card-quality">${quality.map(t=>bar(video?'Chất lượng':t.title,t.percentage,fmt(t.percentage)+'%')).join('')}</span>`:''}${review?`<span class="j-excerpt ${!video&&attention(item)?'is-notice':''}">💬 ${E(review)}</span>`:`<span class="j-card-note">${done?'Đã ghi nhận bài làm của con.':'Mở bài để hoàn thành và gửi kết quả.'}</span>`}<span class="j-card-link">Xem ${video?'bài tập & nhận xét':'chi tiết buổi học'} <span aria-hidden="true">↗</span></span></button>`;
+ }
+ function weekHTML(){
+  const plan=homeworkDemoPlan_(),next=plan.next?{number:plan.next.sessionNumber,date:plan.next.date,program:plan.next.program,title:plan.next.topic}:null,items=weekFilter==='older'?plan.older:weekFilter==='done'?plan.done:plan.pending;
+  const labels={pending:'📌 Cần làm tuần này',older:'⏳ Cần bổ sung',done:'✅ Đã hoàn thành'},counts={pending:plan.pending.length,older:plan.older.length,done:plan.done.length};
+  const days=new Map();model.sessions.filter(s=>!s.future).slice(0,12).forEach(s=>{const d=new Date(s.at+25200000).getUTCDay();days.set(d,(days.get(d)||0)+1)});const regular=new Set([...days].filter(([d,n])=>n>=2).map(([d])=>d));
+  const slots=new Map();(Array.isArray(lastInput.dashboard.schedule)?lastInput.dashboard.schedule:[]).map(s=>({...s,day:root.KidsJourneyParser.date(s.date)})).filter(s=>s.day&&/^\d{1,2}:\d{2}$/.test(s.startTime||'')).sort((a,b)=>b.day.at-a.day.at).forEach(s=>{const d=new Date(s.day.at+25200000).getUTCDay();if(regular.has(d)&&!slots.has(d))slots.set(d,s.startTime);});
+  const fixedSchedule=[1,2,3,4,5,6,0].filter(d=>slots.has(d)).map(d=>(d===0?'Chủ Nhật':'Thứ '+(d+1))+' ('+slots.get(d)+')').join(' & ');
+  const weeklyVideos=model.weekly.filter(t=>!t.session),weeklyVideoDone=weeklyVideos.filter(t=>t.complete).length,s=model.summary,lastTest=model.tests[model.tests.length-1];
+  return `<div class="j-week-bento"><div class="j-week-main"><div id="bean-updates"></div><section class="j-work-panel"><div class="j-section-title"><h2>📌 Việc cần hoàn thành tuần này</h2></div><div id="bean-preclass-homework"></div></section><section class="j-recent-section"><div class="j-section-title"><h2>📋 Nhật ký buổi học gần đây</h2></div><div class="j-recent">${model.recent.slice(0,4).map(s=>`<article class="${attention(s)?'has-notice':''}"><div class="j-recent-title"><strong>Tiết ${s.number} <span>· ${E(weekday(s.date))}</span></strong><div class="j-card-chips">${chip(root.HomeworkArchive.name(s.program),'blue')}${paper(s.paper)}${Number.isFinite(s.stars)?chip('⭐ '+fmt(s.stars)+' Sao','gold'):''}</div><button data-open="${E(s.id)}" aria-label="Xem Tiết ${s.number}">Xem buổi học ↗</button></div>${s.teacherNote?`<p class="${attention(s)?'j-note':'j-plain-note'}"><b>${attention(s)?'💬 Lời cô dặn:':'💬 Nhận xét:'}</b> “${E(s.teacherNote)}”</p>`:''}</article>`).join('')}</div><button class="ka-link ka-history" data-archive-history>Xem toàn bộ lịch sử các tiết →</button></section></div><aside class="j-week-aside" aria-label="Lịch học và tiến độ">
+  <section class="j-next"><div><p class="j-overline">📅 BUỔI HỌC KẾ TIẾP</p><h2>${next?'Tiết '+next.number+' · '+E(weekday(next.date)):'Chưa có buổi học kế tiếp'}</h2><p>${E(next?.program||model.className)}${next?.title?' · '+E(next.title):''}</p>${fixedSchedule?`<div class="j-fixed-schedule">⏰ Lịch cố định: ${E(fixedSchedule)}</div>`:''}${model.future[1]?`<small>Tiếp theo: ${E(weekday(model.future[1].date))} · Tiết ${model.future[1].number}</small>`:''}</div><div class="j-calendar" aria-label="Lịch học cố định của lớp">${['T2','T3','T4','T5','T6','T7','CN'].map((d,i)=>`<span class="${regular.has((i+1)%7)?'active':''}" aria-label="${d}${regular.has((i+1)%7)?' · Có lịch học'+(slots.has((i+1)%7)?' lúc '+slots.get((i+1)%7):''):' · Không có lịch cố định'}">${d}<b>${slots.get((i+1)%7)||'—'}</b></span>`).join('')}</div><div id="bean-preclass-bag-badge"></div></section>
+  <section class="j-summary j-surface"><p class="j-overline">🎯 TIẾN ĐỘ HỌC TẬP</p><h2>Tóm tắt từ ${E(model.periodStart)}</h2>${weeklyVideos.length?bar('Video tuần này',weeklyVideoDone/weeklyVideos.length*100,weeklyVideoDone+'/'+weeklyVideos.length+' hoàn thành','blue'):''}${s.paperGraded?bar('Tỷ lệ sách giấy A+',s.paperAPlus/s.paperGraded*100,s.paperAPlus+'/'+s.paperGraded+' buổi ('+fmt(s.paperAPlus/s.paperGraded*100)+'%)','emerald'):''}${lastTest?bar('Kiểm tra gần nhất · '+lastTest.title,lastTest.percentage,lastTest.score+'/'+lastTest.maximum+' câu ('+fmt(lastTest.percentage)+'%)','blue'):''}</section></aside></div>`;
+ }
+ let homeworkPlanModel_=null,homeworkPlanCache_=null;
+ function homeworkDemoPlan_(){
+  if(homeworkPlanModel_===model&&homeworkPlanCache_)return homeworkPlanCache_;
+  let storage;try{storage=root.localStorage}catch(_){}
+  const currentTime=Number(lastInput.serverNow)||lastInput.profile.kidsJourneyV1.sourceAt,upcoming=root.ScheduleHomeworkUI.nextSession(lastInput.dashboard.schedule,currentTime),released=model.sessions.find(s=>!s.future&&homeworkDemoNative_(s));
+  homeworkPlanModel_=model;return homeworkPlanCache_=root.ScheduleHomeworkUI.buildPlan({model,assignments:lastInput.profile.assignments,schedule:lastInput.dashboard.schedule,currentTime,studentId:model.className+'_'+model.alias,storage,paperKey:s=>s.id===released?.id&&upcoming?'hw_paper_done_'+model.className.toLowerCase().replace(/\s/g,'')+'_lesson'+upcoming.sessionNumber:model.className+'_'+model.alias+'_'+s.number+'_'+s.date+'_paperDone'});
+ }
+ function homeworkDemoNative_(s){
+  const rows=(lastInput.profile.assignments||[]).filter(a=>Number(a.sessionNumber)===s.number&&root.KidsJourneyParser.date(a.lessonDate||a.assignedDate)?.label===s.date);
+  return rows.length===1?rows[0]:null;
+ }
+function homeworkPreclassInput_(){
+ const P=root.KidsJourneyParser,schedule=Array.isArray(lastInput.dashboard.schedule)?lastInput.dashboard.schedule:[];
+ const released=model.sessions.filter(s=>!s.future),latest=released.find(s=>homeworkDemoNative_(s));
+ const classId=model.className.toLowerCase().replace(/\s/g,'');
+ function targetFor(a){
+  const day=P.date(a.lessonDate||a.assignedDate);if(!day)return null;
+  const own=schedule.find(r=>Number(r.sessionNumber)===Number(a.sessionNumber)&&P.date(r.date)?.label===day.label);
+  const time=String(own?.endTime||own?.startTime||'').match(/^(\d{1,2}):(\d{2})$/);
+  const after=time?day.at+(+time[1]*60+ +time[2])*60000:day.at+86399999;
+  return root.ScheduleHomeworkUI.nextSession(schedule,after);
+ }
+ function sourceDeadline(a){const d=P.date(a.dueDate);return d?d.at+86399999:null}
+ function url(value){return value?learningURL(value):''}
+ const a=latest?homeworkDemoNative_(latest):null,next=a?targetFor(a):null;
+ const webHomework=[],missingTasks=[];
+ for(const s of released){
+  const native=homeworkDemoNative_(s),target=native?targetFor(native):null,deadlineAt=target?.startAt??sourceDeadline(native||s);
+  for(const t of s.tasks)webHomework.push({...t,id:s.id+':'+t.id,isSubmitted:t.complete===true,link:url(t.learningUrl),detailId:s.id,bookName:native?.program||s.program,topic:native?.title||s.title,
+   lessonNo:s.number,lessonDate:s.date,assignedAt:s.at,deadlineAt,sourceDeadline:native?.dueDate||s.dueDate,historyCandidate:s!==latest,nativeMissing:deadlineAt===null&&model.older.some(x=>x.id===t.id),
+   sourceLabel:(native?.program||s.program)+' · Tiết '+s.number+' · '+s.date,
+   reason:s!==latest&&!t.complete?'Bài chưa hoàn thành từ buổi học Tiết '+s.number+' ('+s.date+').':''});
+  // Historical paper marks stay in the native lesson history. A B/F mark or
+  // an empty grade does not independently establish a missing submission.
+ }
+ const currentVideos=new Set(model.weekly.filter(t=>!t.session).map(t=>t.id));
+ const selfStudyTasks=model.videos.map(v=>{const meta=root.HomeworkArchive.videoMetadata(v,lastInput.practice);return {...v,isSubmitted:v.complete===true,link:url(v.learningUrl),detailId:v.id,deadlineAt:v.dueAt,bookName:v.program,
+  sourceLabel:v.program+' · Video '+v.number,historyCandidate:!currentVideos.has(v.id),title:'Bài '+v.number+(meta.topic?': '+meta.topic:''),
+  reason:!v.complete&&!currentVideos.has(v.id)?'Bài tự luyện từ đợt trước chưa hoàn thành.':''}});
+ return {containerId:'bean-preclass-homework',bagBadgeId:'bean-preclass-bag-badge',studentId:model.alias,classId,
+  nextSession:next?{lessonNo:next.sessionNumber,date:weekday(next.date),time:next.startTime,startAt:next.startAt}:null,
+  storageKey:a?'hw_paper_done_'+classId+'_lesson'+(next?.sessionNumber||latest.number):'',
+  paperId:a?a.id+':paper':'',paperHomework:a?.paperHomework||'',paperBook:a?.program,paperTopic:a?.title,paperDeadlineAt:next?.startAt??(a?sourceDeadline(a):null),paperConfirmed:a?.paperGrade==='A+',paperNeedsWork:['B','F'].includes(a?.paperGrade),
+  paperLessonNo:latest?.number,paperSourceLabel:a?'Bài giao từ Tiết '+latest.number+' · '+a.program:'',
+  webHomework,selfStudyTasks,missingTasks,
+  onPaperChange:(key,done)=>{let storage;try{storage=root.localStorage}catch(_){}root.ScheduleHomeworkUI.setPaperDone(key,done,storage);homeworkPlanCache_=null;}};
+}
+
+ let archiveGroup_=null,archiveUnit_='all',archiveQuery_='',archiveLimit_=8,archiveModel_=null,archiveGroupsCache_=null;
+function homeworkArchiveGroups_(){
+ if(archiveModel_===model&&archiveGroupsCache_)return archiveGroupsCache_;
+ archiveModel_=model;
+ const sessions=model.sessions.map(s=>{const a=homeworkDemoNative_(s);return {...s,program:a?.program||s.program,released:!!a||s.tasks.some(t=>t.complete)||!!s.paper?.grade||!!s.teacherNote||Number.isFinite(s.stars)}});
+ return archiveGroupsCache_=root.HomeworkArchive.groupByBookAndProgram({...model,sessions},{tests:lastInput.profile.tests,practice:lastInput.practice});
+}
+function archivePaperHTML_(s){
+ const a=homeworkDemoNative_(s);
+ const pages=v=>E(v).replace(/((?:(?:từ\s+)?trang|tr\.|pages?|pp\.)\s*\d+(?:\s*(?:[-–—]|đến(?:\s+hết)?\s+trang)\s*\d+)?)/gi,'<mark class="hw-highlight">$1</mark>');
+ return '<section class="ka-detail-block ka-paper"><div class="ka-block-heading"><h3>📖 '+E(root.HomeworkArchive.label('paper',a?.program||s.program))+'</h3>'+paper(s.paper,true)+'</div>'+(a?.paperHomework?a.paperHomework.split(/[\n;]+/).filter(Boolean).map(p=>'<p>'+pages(p)+'</p>').join(''):'<p class="ka-meta">Chưa có nội dung sách giấy được ghi nhận cho buổi này.</p>')+(a?.dueDate?'<small>Hạn nộp theo bài giao: '+E(a.dueDate)+'</small>':'')+'</section>';
+}
+function archiveCourseBody_(s){
+ // Reuse the complete native task sections: status, marks, timestamps,
+ // submitted-file selection/history, feedback and entry grants stay native.
+ const native=detailHTML(s),tasks=native.match(/<section class="j-task-detail">[\s\S]*?<\/section>/g)||[];
+ const web=s.tasks.length?(tasks.length===s.tasks.length?tasks.join(''):native).replaceAll('🔗 Xem bài quay của con','Xem lại bài làm ↗'):'<p class="ka-meta">Buổi này không có bài Web được giao trong hồ sơ.</p>';
+ return '<div class="ka-course-details"><section class="ka-detail-block ka-web-details"><div class="ka-block-heading"><h3>💻 '+E(root.HomeworkArchive.label('web',s.program))+'</h3>'+chip(s.tasks.filter(t=>t.complete).length+'/'+s.tasks.length+' bài đã hoàn thành','blue')+'</div>'+web+'</section>'+archivePaperHTML_(s)+'<section class="ka-detail-block ka-session-feedback"><h3>💬 Lời cô dặn & nhận xét buổi học</h3><blockquote>'+(s.teacherNote?E(s.teacherNote):'Chưa có nhận xét riêng cho buổi học này.')+'</blockquote></section></div>';
+}
+function archiveVideoBody_(v){
+  const file=[...(v.latestLinks||[]),...(v.links||[])].find(x=>/^https:\/\//.test(x));
+  const submit=v.learningUrl?learningURL(v.learningUrl):'';
+  return '<div class="ka-video-body"><section class="ka-detail-block ka-video-score"><h3>🎬 Bài tự luyện của con</h3><p class="ka-native-status">'+E(status(v))+(v.submittedAt?' · '+E(v.submittedAt):'')+'</p>'+bar('Chất lượng bài tự luyện',v.percentage,fmt(v.percentage)+'%','violet')+'<div class="ka-submit-actions">'+(submit?'<a class="j-primary" href="'+E(submit)+'">Mở bài / Nộp video ↗</a>':'')+(file?'<a class="ka-link ka-file-link" href="'+E(file)+'" target="_blank" rel="noopener noreferrer">Xem lại video của con ↗</a>':'')+'<button class="ka-link" data-open="'+E(v.id)+'">Xem toàn bộ bài & nhận xét ↗</button></div></section><section class="ka-detail-block ka-session-feedback"><h3>💬 Nhận xét của giáo viên</h3>'+commentsHTML(v.comment,v.complete)+'</section></div>';
+ }
+function archiveBody_(t,type){
+  if(type==='course')return archiveCourseBody_(t);
+  if(type==='video')return archiveVideoBody_(t);
+  if(t._kind==='interview')return '<section class="ka-detail-block"><h3>🎙️ Phỏng vấn Nói 1-1 cùng Giáo viên</h3>'+bar('Kết quả phỏng vấn',t.percentage,t.score+'/'+t.maximum+' · '+fmt(t.percentage)+'%')+'<div class="ka-interview-skills">'+t.criteria.map(c=>bar(c.title,c.maximum?c.score/c.maximum*100:null,fmt(c.score)+' / '+c.maximum)).join('')+'</div>'+(/^https:\/\//.test(t.videoUrl||t.resultUrl||'')?'<a class="ka-link ka-file-link" href="'+E(t.videoUrl||t.resultUrl)+'" target="_blank" rel="noopener noreferrer">Xem video phỏng vấn ↗</a>':'')+'</section>'+(t.comment?'<section class="ka-detail-block ka-session-feedback"><h3>💬 Nhận xét của giáo viên</h3>'+commentsHTML(t.comment,true)+'</section>':'');
+  const retake=t._retakeUrl?learningURL(t._retakeUrl):'';
+  return '<section class="ka-detail-block"><h3>📝 Kết quả kiểm tra</h3>'+bar(t.title,t.percentage,t.score+'/'+t.maximum+' câu · '+fmt(t.percentage)+'%')+'<div class="ka-submit-actions">'+(retake?'<a class="j-primary" href="'+E(retake)+'">Làm lại bài kiểm tra / Nộp bài ↗</a>':'')+(/^https:\/\//.test(t._resultUrl||'')?'<a class="ka-link ka-file-link" href="'+E(t._resultUrl)+'" target="_blank" rel="noopener noreferrer">Xem kết quả bài kiểm tra ↗</a>':'')+'</div></section>'+(t._teacherComment?'<section class="ka-detail-block ka-session-feedback"><h3>💬 Nhận xét của giáo viên</h3>'+commentsHTML(t._teacherComment,true)+'</section>':'');
+ }
+function homeworkUpdatesInput_(){
+ const A=root.HomeworkArchive,records=[];
+ for(const s of model.sessions.filter(s=>!s.future)){
+  const a=homeworkDemoNative_(s),label='Tiết '+s.number+' · '+A.name(a?.program||s.program)+' · '+s.date;
+  if(!a&&!s.tasks.length&&!s.paper?.grade&&!s.teacherNote&&!Number.isFinite(s.stars))continue;
+  records.push({id:'session:'+s.id,kind:a?'course':'result',detailId:s.id,label,signals:{paper:s.paper?.grade,comment:s.teacherNote}});
+  for(const t of s.tasks)records.push({id:'task:'+s.id+':'+t.id,kind:'result',detailId:s.id,label:t.title+' · '+label,signals:{score:Number.isFinite(t.percentage)?t.percentage:null,comment:t.comment}});
+ }
+ for(const v of model.videos){
+  const rows=(lastInput.practice||[]).filter(r=>Number((String(r.title||'').match(/VIDEO\s*0*(\d+)/i)||[])[1])===v.number&&A.name(/PEPPA/i.test(r.title)?'Peppa Pig':/PHONICS/i.test(r.title)?'Phonics':'Discover English')===A.name(v.program));
+  const reference=Number(lastInput.serverNow)||lastInput.profile.kidsJourneyV1.sourceAt;
+  records.push({id:'video:'+v.id,kind:rows.length===1?'practice':'result',detailId:v.id,label:'Video tự luyện ('+A.name(v.program)+') · Bài '+v.number,explicitNew:rows.length===1&&rows[0].isNew===true&&Number.isFinite(v.assignedAt)&&reference>=v.assignedAt&&reference-v.assignedAt<=3*86400000,complete:v.complete,signals:{score:Number.isFinite(v.percentage)?v.percentage:null,comment:v.comment}});
+ }
+ return {studentKey:model.className+'|'+model.fullName+'|'+model.alias,records};
+}
+
+function libraryHTML(){
+ const A=root.HomeworkArchive,groups=homeworkArchiveGroups_();
+ let group=groups.find(g=>g.key===archiveGroup_)||groups[0];
+ if(!group)return '<p class="j-empty">Chưa có dữ liệu bài tập trong giai đoạn này.</p>';
+ archiveGroup_=group.key;
+ const availableUnits=[...new Set(group.items.flatMap(t=>t._units))].sort((a,b)=>Number(a)-Number(b));
+ const filtered=group.items.filter(t=>(archiveUnit_==='all'||t._units.includes(archiveUnit_))&&(!archiveQuery_||A.norm([t.title,t._topic,t.date,t.number&&'Bài '+t.number,t.teacherNote,t._book].join(' ')).includes(A.norm(archiveQuery_))));
+ const shown=filtered.slice(0,archiveLimit_);
+ 
+ 
+ function row(t){
+  const id=group.key+'::'+t.id;
+  let title='',meta='',badges='',progress='';
+  if(group.type==='course'){
+   meta='Tiết '+t.number+' · '+weekday(t.date);title=t.title||'Nội dung buổi học';
+   badges=(t.tasks.length?chip('💻 Web: '+t.tasks.filter(x=>x.complete).length+'/'+t.tasks.length,'blue'):'')+paper(t.paper)+(Number.isFinite(t.stars)?chip('⭐ '+fmt(t.stars)+' Sao','gold'):'');
+  }else if(group.type==='video'){
+   meta='Bài '+t.number+(t.deadline?' · Hạn '+t.deadline:'');title=t._topic||t.title||'Video tự luyện';
+   badges=chip(t.complete?'Đã nộp bài':'Cần làm',t.complete?'green':'notice')+(Number.isFinite(t.percentage)?chip(fmt(t.percentage)+'%','violet'):'');
+   progress=bar('Chất lượng',t.percentage,fmt(t.percentage)+'%','violet');
+  }else{
+   meta=t.date;title=t._kind==='interview'?'Phỏng vấn Nói 1-1':t.title;
+   badges=chip(t.score+'/'+t.maximum+(Number.isFinite(t.percentage)?' · '+fmt(t.percentage)+'%':''),'blue');
+   progress=bar('Kết quả',t.percentage,fmt(t.percentage)+'%');
+  }
+  return '<button type="button" class="ka-row ka-row-'+group.type+'" data-archive-detail="'+E(id)+'" aria-haspopup="dialog"><span class="ka-row-header"><span class="ka-row-copy"><span class="ka-lesson-meta"><span class="ka-book">'+E(group.program)+'</span><span class="ka-session">'+E(meta)+'</span></span><strong class="ka-lesson-title">'+E(title)+'</strong>'+(progress?'<span class="ka-row-progress">'+progress+'</span>':'')+'</span><span class="ka-row-badges">'+badges+'</span><span class="ka-chevron" aria-hidden="true">↗</span></span></button>';
+ }
+ let html='<section class="ka-library"><div class="ka-heading"><h2>Kho bài tập của '+E(model.alias)+'</h2><p>Chọn sách hoặc chuỗi tự luyện để xem lại.</p></div><div class="ka-group-tabs" role="tablist" aria-label="Bài tập theo sách và chuỗi">';
+ html+=groups.map(g=>'<button type="button" role="tab" data-archive-group="'+E(g.key)+'" aria-controls="ka-archive-panel" tabindex="'+(group.key===g.key?'0':'-1')+'" aria-selected="'+(group.key===g.key)+'" class="ka-'+g.type+'">'+(g.type==='course'?'📚 ':g.type==='video'?'🎬 ':'📝 ')+E(g.label)+'</button>').join('')+'</div><section id="ka-archive-panel" role="tabpanel" aria-label="'+E(group.label)+'">';
+ html+='<div class="ka-filters"><label>Unit<select data-archive-unit><option value="all">Tất cả Unit</option>'+availableUnits.map(n=>'<option value="'+E(n)+'" '+(archiveUnit_===n?'selected':'')+'>Unit '+E(n)+'</option>').join('')+'</select></label><label class="ka-search">Tìm nhanh<input type="search" data-archive-search value="'+E(archiveQuery_)+'" placeholder="Tên bài, Unit hoặc ngày học"></label></div><div class="ka-section-heading"><h3>'+E(group.label)+'</h3><span>'+filtered.length+' '+(group.type==='course'?'tiết':'bài')+'</span></div>';
+ if(group.type==='video'){
+  const done=group.items.filter(v=>v.complete).length,scores=group.items.filter(v=>v.complete&&Number.isFinite(v.percentage)).map(v=>v.percentage);
+  html+='<div class="ka-series-progress">Tiến độ chuỗi '+E(group.program)+': <b>Hoàn thành '+done+'/'+group.items.length+' bài</b>'+(scores.length?' · Điểm TB: <b>'+fmt(scores.reduce((a,b)=>a+b,0)/scores.length)+'%</b>':'')+bar('Tiến độ hoàn thành chuỗi',group.items.length?done/group.items.length*100:null,done+'/'+group.items.length,'violet')+'</div>';
+ }
+ html+='<div class="ka-rows">'+(shown.map(row).join('')||'<p class="j-empty">Không có bài trong bộ lọc này.</p>')+'</div>';
+ if(filtered.length>shown.length)html+='<button type="button" class="ka-more" data-archive-more>Xem thêm '+(group.type==='course'?'các tiết trước':'các bài trước')+' ▾</button>';
+ return html+'</section></section>';
+}
+document.addEventListener('click',event=>{
+ const b=event.target.closest('[data-archive-group],[data-archive-more],[data-archive-history],[data-archive-detail]');if(!b||!host||!host.contains(b))return;
+ if(b.dataset.archiveDetail){showDetail(b.dataset.archiveDetail);return}
+ if(b.hasAttribute('data-archive-history')){tab='library';archiveGroup_=homeworkArchiveGroups_().find(g=>g.type==='course')?.key;archiveLimit_=8;archiveUnit_='all';archiveQuery_=''}
+ else if(b.hasAttribute('data-archive-more'))archiveLimit_+=8;
+ else{archiveGroup_=b.dataset.archiveGroup;archiveLimit_=8;archiveUnit_='all'}
+ paint();
+});
+document.addEventListener('change',event=>{const el=event.target;if(!el.matches('[data-archive-unit]')||!host||!host.contains(el))return;archiveUnit_=el.value;archiveLimit_=8;paint()});
+document.addEventListener('input',event=>{const el=event.target;if(!el.matches('[data-archive-search]')||!host||!host.contains(el))return;const start=el.selectionStart,end=el.selectionEnd;archiveQuery_=el.value;archiveLimit_=8;paint();const input=host.querySelector('[data-archive-search]');input?.focus();try{input?.setSelectionRange(start,end)}catch(_){}});
+document.addEventListener('keydown',event=>{const el=event.target;if(!el.matches('[data-archive-group]')||!host||!host.contains(el)||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const groups=homeworkArchiveGroups_(),i=groups.findIndex(g=>g.key===archiveGroup_),n=event.key==='Home'?0:event.key==='End'?groups.length-1:(i+(event.key==='ArrowRight'?1:groups.length-1))%groups.length;archiveGroup_=groups[n].key;archiveLimit_=8;archiveUnit_='all';paint();host.querySelector('[data-archive-group][aria-selected="true"]')?.focus()});
+
+ function chart(rows,label){
+  if(!rows.length)return '<p class="j-empty">Chưa có điểm trong giai đoạn này.</p>';
+  const width=440,step=380/rows.length,colors={emerald:'#10b981',blue:'#3b82f6',amber:'#f59e0b',rose:'#f43f5e'};
+  return `<svg class="j-score-chart" viewBox="0 0 ${width} 170" role="img" aria-label="${E(label)}"><line x1="20" x2="420" y1="125" y2="125" stroke="#dbe4ef"/>${rows.map((t,i)=>{const x=30+step*(i+.5),h=percentage(t.percentage)*.9,w=Math.min(54,step*.52);return `<g><title>${E(t.title+' · '+(t.date||'')+' · '+fmt(t.percentage)+'%')}</title><rect x="${x-w/2}" y="${125-h}" width="${w}" height="${h}" rx="7" fill="${colors[tone(t.percentage)]}"/><text x="${x}" y="${116-h}" text-anchor="middle">${fmt(t.percentage)}%</text><text class="j-chart-label" x="${x}" y="147" text-anchor="middle">${E(t.title)}</text>${t.date?`<text class="j-chart-date" x="${x}" y="163" text-anchor="middle">${E(t.date.slice(0,5))}</text>`:''}</g>`}).join('')}</svg>`;
+ }
+ function writtenChart(){
+  const tests=model.tests,retry=model.sessions.filter(s=>!s.future).flatMap(s=>s.tasks).filter(t=>t.type==='retake'&&t.attempts>1);
+  return `${chart(tests,'Điểm kiểm tra giấy của '+model.alias)}<ul class="j-test-list">${tests.map(t=>`<li><div><strong>${E(t.title)}</strong><small>${E(t.date)}</small></div><b>${t.score}/${t.maximum} <span>· ${fmt(t.percentage)}%</span></b></li>`).join('')}</ul><div class="j-retry-list">${retry.map(t=>`<p>🔁 Đã làm lại trên web <b>${t.attempts} lần</b>${Number.isFinite(t.score)&&t.maximum?' · '+t.score+'/'+t.maximum+' — '+fmt(t.score/t.maximum*100)+'%':''}</p>`).join('')}</div>`;
+ }
+ function progressHTML(){
+  const scored=model.videos.filter(v=>v.complete&&Number.isFinite(v.percentage)).slice(0,5).reverse(),english={'Phát âm':'Pronunciation','Ngữ pháp':'Grammar','Từ vựng':'Vocabulary','Độ trôi chảy':'Fluency'};
+  return `<div class="j-results-bento"><div class="j-interviews">${model.interviews.map(i=>`<article class="j-certificate j-surface"><p class="j-overline">🎙️ PHỎNG VẤN NÓI 1-1</p><div class="j-interview-top"><div class="j-score-ring" role="img" aria-label="Điểm phỏng vấn ${i.score}/${i.maximum} · ${fmt(i.percentage)}%" style="--score:${percentage(i.percentage)}%"><div><strong>${i.score}<span>/${i.maximum}</span></strong><small>${fmt(i.percentage)}% Hoàn thành</small></div></div><div><h2>Phỏng vấn Nói 1-1 cùng Giáo viên</h2><p class="j-interview-date">${E(i.date)}</p>${/^https:\/\//.test(i.videoUrl||i.resultUrl||'')?`<div class="j-task-actions"><a class="j-primary" href="${E(i.videoUrl||i.resultUrl)}" target="_blank" rel="noopener noreferrer">🎬 Xem video phỏng vấn của con</a></div>`:''}</div></div><div class="j-skills">${i.criteria.map((c,n)=>bar(['🌟','🧩','📘','💬'][n%4]+' '+c.title+' ('+(english[c.title]||c.title)+')',c.maximum?c.score/c.maximum*100:null,fmt(c.score)+' / '+c.maximum,['emerald','blue','violet','amber'][n%4])).join('')}</div>${i.comment?`<blockquote><b>💬 Nhận xét của Cô:</b><p>${E(i.comment)}</p></blockquote>`:''}</article>`).join('')||'<section class="j-surface"><h2>🎙️ Phỏng vấn Nói 1-1</h2><p class="j-empty">Chưa có kết quả phỏng vấn trong giai đoạn này.</p></section>'}</div><div class="j-results-aside"><section class="j-chart j-surface"><p class="j-overline">📝 KIỂM TRA GIẤY ĐỊNH KỲ</p><h2>Kết quả & Tiến bộ</h2>${writtenChart()}</section><section class="j-chart j-video-chart j-surface"><p class="j-overline">📈 PHONG ĐỘ LUYỆN TẬP</p><h2>Chất lượng Video tự luyện</h2>${chart(scored.map(v=>({title:'Video '+v.number,date:v.deadline,percentage:v.percentage})),'Chất lượng các video tự luyện gần nhất của '+model.alias)}<p class="j-footnote">Chỉ hiển thị video đã có điểm nhận xét trong hành trình từ ${E(model.periodStart)}.</p></section></div></div>`;
+ }
+ function raceHTML(){
+  const board=model.board||[],me=board.find(x=>x.alias===model.alias),top=[board[1],board[0],board[2]].filter(Boolean),best=Math.max(1,...board.map(b=>b.stars));
+  return `<section class="j-race-banner"><p class="j-overline">🏆 BẢNG XẾP HẠNG LỚP</p><h2>Mỗi nỗ lực đều được ghi nhận</h2><p>Sao tích lũy từ ${E(model.periodStart)}.</p></section><div class="j-podium">${top.map(b=>`<article class="place-${b===board[0]?1:b===board[1]?2:3}"><span>${b===board[0]?'🏆':b===board[1]?'🥈':'🥉'}</span><small>HẠNG ${b.rank}</small><h3>${E(b.alias)}</h3><p>${E(title(b.fullName))}</p><strong>⭐ ${fmt(b.stars)}</strong></article>`).join('')}</div><article class="j-my-place"><div><p class="j-overline">📍 VỊ TRÍ CỦA ${E(model.alias)}</p><h2>${me?'Hạng '+me.rank+' / '+board.length+' bạn':'Chưa có thứ hạng'}</h2></div><p>${me?'⭐ '+fmt(me.stars)+' Sao · ':''}Duy trì luyện tập đều đặn để tiến bộ mỗi tuần.</p></article><div class="j-table-scroll"><table><caption>Bảng xếp hạng · ${E(model.className)}</caption><thead><tr><th>Hạng</th><th>Học sinh</th><th>⭐ Sao tích lũy</th><th>🏆 Sách giấy A+</th><th>🎬 Video hoàn thành</th><th>📝 Kiểm tra TB</th></tr></thead><tbody>${board.map(b=>`<tr class="${b.alias===model.alias?'is-self':''}"><td><span class="j-rank">${b.rank}</span></td><th scope="row">${E(b.alias)}<small>${E(title(b.fullName))}</small></th><td><b>${fmt(b.stars)}</b><span class="j-rank-track" aria-label="${fmt(b.stars)} Sao"><span style="width:${percentage(b.stars/best*100)}%"></span></span></td><td>${b.paperAPlus}/${b.paperGraded} buổi</td><td>${b.videoComplete}/${b.videoTotal} bài</td><td>${Number.isFinite(b.testAverage)?fmt(b.testAverage)+'%':'—'}</td></tr>`).join('')}</tbody></table></div><p class="j-footnote">Xếp hạng theo tổng sao tích lũy; cùng số sao, cùng hạng. Chỉ tính buổi đã diễn ra và điểm đã có. Bài chưa chấm không bị coi là điểm 0.</p>`;
+ }
+ function journeyHTML(){return `<div class="j-subtabs" role="tablist" aria-label="Hành trình của con và cả lớp"><button role="tab" aria-selected="${journeyTab==='self'}" data-journey="self">📊 Tiến bộ học tập</button><button role="tab" aria-selected="${journeyTab==='class'}" data-journey="class">🏆 Bảng xếp hạng lớp</button></div>${journeyTab==='self'?progressHTML():raceHTML()}`;}
+ function learningURL(value){
+  try{const lesson=new URL(value,location.href);if(lesson.origin!==location.origin)return lesson.protocol==='https:'?lesson.href:'';
+   const u=new URL('/student-learning/kids-ta-entry/',location.origin);u.search=new URLSearchParams({lesson:lesson.href,mtt_name:model.alias,mtt_class:model.className,mtt_english:model.alias});
+   return root.LessonDashboardEntry?.link(u.href,location.hash)||u.href;
+  }catch(_){return ''}
+ }
+ function commentsHTML(comment,complete){
+  const clean=String(comment||'').replace(/^\s*Chất lượng[^\n]*\n?/i,'').trim();
+  return clean?clean.split(/\n+/).filter(Boolean).map(line=>{const i=line.indexOf(':');return `<p>${i>0&&i<100?'<b>'+E(line.slice(0,i+1))+'</b>'+E(line.slice(i+1)):E(line)}</p>`}).join(''):complete?'<p>Đã ghi nhận bài nộp.</p>':'<p>Chưa có nhận xét của giáo viên.</p>';
+ }
+ function detailHTML(item){
+  const tasks=item.tasks||[item];
+  return `<p class="j-overline">${E(item.program||model.className)}${item.date?' · '+E(item.date):''}</p><h2 id="j-modal-title">${E(item.tasks?'Tiết '+item.number+' · '+(item.title||'Buổi học của con'):item.program+' · Video '+item.number)}</h2><div class="j-detail-chips">${paper(item.paper,true)}${item.stars!==undefined&&item.stars!==null?chip('⭐ +'+fmt(item.stars)+' Sao','gold'):''}</div>${item.teacherNote?`<section class="j-love-note ${attention(item)?'has-notice':''}"><h3>${attention(item)?'💬 Lưu ý từ GV':'Nhận xét trên lớp'}</h3><p>${E(item.teacherNote)}</p></section>`:''}${item.paper?.grade==='B'?'<p class="j-note">Sách giấy B · Cần lưu ý hoàn thiện thêm bài tập.</p>':''}
+  ${tasks.map(t=>{const url=learningURL(t.learningUrl);return `<section class="j-task-detail"><div class="j-task-heading"><h3>${E(item.tasks?t.title:"Nhận xét của giáo viên")}</h3>${Number.isFinite(t.percentage)?chip('Chất lượng '+fmt(t.percentage)+'%','green'):''}</div><p class="j-task-status">${E(status(t))}${t.submittedAt?' · '+E(t.submittedAt):''}</p>${t.attempts>1?`<p class="j-persistence">🔥 ${t.attempts} lượt luyện tập</p>`:''}<div class="j-teacher-comment">${commentsHTML(t.comment,t.complete)}</div><div class="j-task-actions">${url?`<a class="j-primary" href="${E(url)}">${t.type==='retake'?'Làm lại bài kiểm tra':'🔗 Mở bài / Nộp bài'}</a>`:''}${(t.latestLinks?.length?t.latestLinks:t.links?.slice(-1)||[]).map((u,i)=>`<a href="${E(u)}" target="_blank" rel="noopener noreferrer">🔗 Xem bài quay của con${i?' '+(i+1):''}</a>`).join('')}</div>${(t.links||[]).length>1?`<details class="j-all-evidence"><summary>Xem tất cả bài con đã gửi (${t.links.length} tệp) ↓</summary>${t.links.map((u,i)=>`<a href="${E(u)}" target="_blank" rel="noopener noreferrer">Bài con đã gửi · Tệp ${i+1} ↗</a>`).join('')}</details>`:''}</section>`}).join('')}`;
+ }
+ function showDetail(id){
+ let item,type;
+ for(const g of homeworkArchiveGroups_()){
+  const found=g.items.find(t=>g.key+'::'+t.id===id);
+  if(found){item=found;type=g.type;break}
+ }
+ if(!item){item=model.sessions.find(s=>s.id===id);if(item)type='course';else{item=model.videos.find(v=>v.id===id);type='video'}}
+ if(!item)return;
+ modalId=id;
+ const dialog=host.querySelector('#j-detail'),content=dialog.querySelector('#j-detail-content'),book=root.HomeworkArchive.name(item._book||item.program);
+ const heading=type==='course'?'Chi tiết Tiết '+item.number+' · '+book:type==='video'?'Bài '+item.number+' · '+book:(item._kind==='interview'?'Phỏng vấn Nói 1-1':item.title)+' · '+book;
+ const html='<header class="ka-modal-header"><p class="j-overline">'+E(book)+(item.date?' · '+E(weekday(item.date)):'')+'</p><h2 id="j-modal-title">'+E(heading)+'</h2></header><div class="ka-modal-body">'+archiveBody_(item,type)+'</div><footer class="ka-modal-footer"><button type="button" class="j-modal-close">Đóng · Quay lại</button></footer>';
+ if(content.innerHTML!==html)content.innerHTML=html;
+ dialog.classList?.add('ka-detail-modal');
+ if(!dialog.open){if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','')}
+}
+
+ function paint(){
+  if(!model||!host)return;
+  region('j-header',headerHTML());
+  region('j-tabs',tabs.map(([key,icon,label])=>`<button role="tab" data-tab="${key}" aria-controls="j-panel" aria-selected="${tab===key}" tabindex="${tab===key?'0':'-1'}"><span>${icon}</span>${label}</button>`).join(''));
+  host.querySelector('#j-panel').setAttribute('aria-label',tabs.find(x=>x[0]===tab)[2]);
+  region('j-panel',tab==='week'?weekHTML():tab==='library'?libraryHTML():journeyHTML());
+  if(tab==='week'){root.initHomeworkWidget(homeworkPreclassInput_());root.BeanHomeworkUpdates?.render(homeworkUpdatesInput_());}
+  if(modalId&&host.querySelector('#j-detail').open)showDetail(modalId);
+ }
+ function mount(){
+  if(host)return;host=document.createElement('main');host.id='kids-journey-root';
+  host.innerHTML='<header id="j-header"></header><nav id="j-tabs" role="tablist" aria-label="Hồ sơ học tập"></nav><section id="j-panel" role="tabpanel"></section><footer class="j-footer">Ms. Trang Trieu Education</footer><dialog id="j-detail" aria-labelledby="j-modal-title"><button type="button" class="j-modal-close" aria-label="Đóng chi tiết">×</button><div id="j-detail-content"></div></dialog>';
+  document.getElementById('dashboardShell').prepend(host);document.body.classList.add('kids-journey-pilot');
+  document.getElementById('pendingWorkGateOpen')?.addEventListener('click',()=>{if(!model||!host)return;tab='week';weekFilter='pending';paint();host.querySelector('[data-count="pending"]')?.focus({preventScroll:true});});
+  host.addEventListener('click',event=>{
+   const button=event.target.closest('button');if(!button)return;
+   if(button.dataset.tab){tab=button.dataset.tab;paint();host.querySelector(`[data-tab="${tab}"]`).focus({preventScroll:true});}
+   else if(button.dataset.filter){filter=button.dataset.filter;paint()}
+   else if(button.dataset.state){libraryState=button.dataset.state;paint()}
+   else if(button.dataset.journey){journeyTab=button.dataset.journey;paint()}
+   else if(button.dataset.open)showDetail(button.dataset.open);
+   else if(button.hasAttribute('data-refresh'))document.getElementById('refreshBtn')?.click();
+   else if(button.classList.contains('j-modal-close')){host.querySelector('#j-detail').close();modalId=null;}
+   else if(button.dataset.count){weekFilter=button.dataset.count;paint();host.querySelector(`[data-count="${weekFilter}"]`).focus({preventScroll:true});}
+  });
+  host.querySelector('#j-tabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();let i=tabs.findIndex(x=>x[0]===tab);i=e.key==='Home'?0:e.key==='End'?2:(i+(e.key==='ArrowRight'?1:2))%3;tab=tabs[i][0];paint();host.querySelector(`[data-tab="${tab}"]`).focus()});
+  const dialog=host.querySelector('#j-detail');dialog.addEventListener('click',e=>{if(e.target===dialog){dialog.close();modalId=null}});dialog.addEventListener('close',()=>modalId=null);
+ }
+ function update(input){
+  if(input.profile?.classNumber!==21||input.profile?.englishName!=='BEAN'||!input.profile.kidsJourneyV1)return false;
+  lastInput={...input,dashboard:{...input.dashboard,logoUrl:document.getElementById('brandLogo')?.src||'https://mstrangtrieueducation-droid.github.io/assets/brand-4522e70bbb8e7a81.jpg'}};model=root.KidsJourneyModel.build(input.profile.kidsJourneyV1,input);mount();paint();return true;
+ }
+ function disable(){if(host){host.remove();host=null;}model=null;modalId=null;document.body.classList.remove('kids-journey-pilot');}
+ root.KidsJourneyPilot={update,disable};root.addEventListener('hashchange',disable);root.dispatchEvent(new Event('titi-dashboard-ready'));
+})(window);
