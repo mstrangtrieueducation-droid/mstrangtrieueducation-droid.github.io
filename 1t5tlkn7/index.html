@@ -6,7 +6,7 @@
 
 
 
-<head>
+<head><script id="native-tracker-feedback-view">(function(root){'use strict';const fields=['submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','score','maximum','scoreLabel','teacherComment','comment'];root.NativeTrackerFeedbackView={capture:function(value){if(!value)return null;if(!value.nativeTrackerOriginV1&&value.submitted===true&&!value.directFormEvidence){value.nativeTrackerOriginV1={};fields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(value,k))value.nativeTrackerOriginV1[k]=value[k]});}return value.nativeTrackerOriginV1||null;},restore:function(value,native){if(!native)return;fields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(native,k))value[k]=native[k]});}};})(globalThis);</script>
 <script data-core-profile-policy="2">/* CONFIRMED_PROFILE_CLIENT_V2: validated profile fallback, scoped by token hash. */
 (function(root){'use strict';
  var names=['KidsPreparedSnapshotClient','IeltsPublicSnapshotClient','FighterSnapshotClient','TaSnapshotClient'];
@@ -24589,7 +24589,7 @@ ScienceStageContract.lessons=[
 
 
 
-        ['submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','canViewSubmission'].forEach(k=>delete result[k]);
+        ['nativeTrackerOriginV1','submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','canViewSubmission'].forEach(k=>delete result[k]);
 
 
 
@@ -25083,6 +25083,7 @@ ScienceStageContract.lessons=[
 
 
           const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
+const nativeTrackerFeedback=root.NativeTrackerFeedbackView.capture(feedback);
 
 
 
@@ -25127,6 +25128,7 @@ ScienceStageContract.lessons=[
 
 
           receive(feedback,found);
+root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
 
 
 
