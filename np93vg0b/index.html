@@ -6824,7 +6824,7 @@ root.Ielts51Grouped={install,sync,protect};
 (function(root){'use strict';
 
 
-let writing=null,getStudent=()=>null;
+let writing=null,getStudent=()=>null,getNativeSelfStudyResults=()=>[];
 
 
 const norm=v=>String(v||'').normalize('NFC').trim().toLocaleLowerCase('vi');
@@ -6833,9 +6833,9 @@ const norm=v=>String(v||'').normalize('NFC').trim().toLocaleLowerCase('vi');
 function setWriting(data,student){if(!data||!student||norm(data.studentName||data.parentName)!==norm(student.name))return false;writing=data;return true;}
 
 
-function read(item,record){item=item||{};record=record||{};const d=record.directDeadline||item.directDeadline||{},invalid=item.trackerStatus==='invalid',submitted=!invalid&&(record.submitted===true||item.submitted===true||d.complete===true);return {submitted,invalid:false,nativeState:invalid?'needs':submitted?'done':d.missing===true||record.statusType==='missing'||record.trackerOriginV1?.statusType==='missing'?'overdue':'needs',confirmed:true,label:invalid?'— Chưa nộp bài':submitted?(record.late===true||d.late===true?'⚠️ ĐÃ NỘP MUỘN':'✅ ĐÃ NỘP'):record.homeworkStatus||d.label||'— Chưa nộp bài',late:record.late===true||d.late===true,submittedAt:record.submittedAt||record.lastSubmittedAt||item.directSubmission?.latestSubmittedAt||null};}
+function read(item,record){item=item||{};record=record||{};const d=record.directDeadline||item.directDeadline||{},invalid=item.trackerStatus==='invalid',nativeResults=root.IeltsSelfStudyIdentity?.applies(item)?getNativeSelfStudyResults(item):[],submitted=!invalid&&(record.submitted===true||item.submitted===true||d.complete===true||nativeResults.length>0);return {submitted,invalid:false,nativeState:invalid?'needs':submitted?'done':d.missing===true||record.statusType==='missing'||record.trackerOriginV1?.statusType==='missing'?'overdue':'needs',confirmed:true,label:invalid?'— Chưa nộp bài':submitted?(record.late===true||d.late===true?'⚠️ ĐÃ NỘP MUỘN':'✅ ĐÃ NỘP'):record.homeworkStatus||d.label||'— Chưa nộp bài',late:record.late===true||d.late===true,submittedAt:record.submittedAt||record.lastSubmittedAt||item.directSubmission?.latestSubmittedAt||nativeResults.find(r=>r.submittedAt)?.submittedAt||null};}
 
-root.IeltsSubmissionStatus={read,setWriting,configure:fn=>{getStudent=fn;writing=null;}};
+root.IeltsSubmissionStatus={read,setWriting,configure:(fn,nativeResults)=>{getStudent=fn;getNativeSelfStudyResults=nativeResults||(()=>[]);writing=null;}};
 
 
 })(globalThis);
@@ -6904,7 +6904,7 @@ let evidenceIdentity='',evidenceBusy=false,evidenceNext=0;
 }
 
 
-function install(o){opts=o;root.IeltsSubmissionStatus.configure(()=>opts.getState().student);o.status();ready=load().then(p=>{cache=p;return p;});ready.catch(()=>{});const request=o.access.request;
+function install(o){opts=o;root.IeltsSubmissionStatus.configure(()=>opts.getState().student,item=>{const number=String(opts.getState().dashboard?.className||'').match(/^IELTS\s+(\d+)/)?.[1],reader=root['ielts'+number+'SelfStudyForAssignmentV17_'];return typeof reader==='function'?reader(item):[];});o.status();ready=load().then(p=>{cache=p;return p;});ready.catch(()=>{});const request=o.access.request;
 
 
  o.access.request=async function(action,force,extra){if(['writing','classwork_index','classwork_review','classwork_source','writing_assessment','writing_assessment_source'].includes(action)){
