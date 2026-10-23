@@ -12991,6 +12991,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
+    function paperHomeworkIsAssignedV1_(value){const s=String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();return Boolean(s)&&!(/^(?:con |cac con )?(?:khong co|khong giao|khong can lam|khong phai lam|no) bai tap(?: sach)? giay(?: |$)/.test(s)||/^no (?:paper )?homework$/.test(s));}
     function renderPaperHomeworkReminder() {
 
 
@@ -13011,7 +13012,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-      if (!app.child || !reminder) {
+      if (!app.child || !reminder || !paperHomeworkIsAssignedV1_(reminder.paperHomework)) {
 
 
 
@@ -24226,1204 +24227,308 @@ ScienceStageContract.lessons=[
 
 
 (function(root){
-
-
-
   'use strict';
-
-
-
   function createKidsReceiptProjector(matching,config){
-
-
-
     const list=v=>Array.isArray(v)?v:[],key=matching.normalizeKey_,known=new Map();
-
-
-
     const familyLabels={'Science G1':'SCIENCE G1 & G2','Science K':'SCIENCE K','Discover 1':'DISCOVER 1','Discover 2':'DISCOVER 2','Discover English':'DISCOVER ENGLISH','Family and Friends 1':'FF1','Family and Friends 2':'FF2','Phonics':'PHONICS 1–4'};
-
-
-
     function urlKey(value){try{let u=new URL(value);if(['/student-learning/','/kids-learning/'].includes(u.pathname))u=new URL(u.searchParams.get('lesson'));return u.origin+u.pathname.replace(/\/+$/,'')+'/';}catch(_){return '';}}
-
-
-
     list(config.urls).forEach(row=>known.set(urlKey(row.url),list(row.mappings).map(m=>({family:familyLabels[m.formFamily]||m.family||m.formFamily,code:m.code}))));
-
-
-
     function isRetake(assignment,task){return Boolean(assignment.isRetake||assignment.retakeTracking&&assignment.retakeTracking.tracked||task.isRetake||/lam lai|kiem tra lai|retake|redo/.test(matching.normalizeSearchText_([task.title,task.name].join(' '))));}
-
-
-
     function mappings(assignment,task,count){
-
-
-
       const science=root.ScienceStageContract&&root.ScienceStageContract.mappings(assignment,task,root.ScienceStageContract.lessons);
-
-
-
       if(science)return science;
-
-
-
       const mapped=known.get(urlKey(task.url||task.learningUrl||task.taskUrl));
-
-
-
       if(mapped&&mapped.length)return mapped.map(m=>({...m,exact:true}));
-
-
-
       // KIDS_RECEIPT_PROGRAM_METADATA_V1: Schedule may abbreviate the program
-
-
-
       // while its book line preserves the level. Use that explicit metadata,
-
-
-
       // never a lesson title, a pupil's tracker receipt, or a guessed level.
-
-
-
       const declared=key(assignment.program||'').replace(/^OXFORD(?=PHONICS|DISCOVER)/,'');
-
-
-
       let program=declared;
-
-
-
       const genericFamilies={PHONICS:/^PHONICS[1-4]$/,DISCOVER:/^DISCOVER[1-4]$/,FAMILYANDFRIENDS:/^FAMILYANDFRIENDS[12]$/,CRITICAL:/^CRITICAL(?:THINKING)?(?:SCIENCE)?[1-3]$/};
-
-
-
       const generic=genericFamilies[declared];
-
-
-
       if(generic){
-
-
-
         const books=[...new Set(String(assignment.lessonSummary||'').split(/\r?\n/).map(line=>{
-
-
-
           const match=matching.normalizeSearchText_(line).match(/^sach\s+(.+)$/);
-
-
-
           return match?key(match[1]).replace(/^OXFORD(?=PHONICS|DISCOVER)/,''):'';
-
-
-
         }).filter(book=>generic.test(book)))];
-
-
-
         if(books.length===1)program=books[0];
-
-
-
       }
-
-
-
       const retake=isRetake(assignment,task);
-
-
-
       const families=retake?['KIDS_RETAKE']:list(config.rules).filter(rule=>new RegExp(rule.programPattern).test(program)).flatMap(rule=>rule.families);
-
-
-
       if(!families.length)return [];
-
-
-
       const discoverEnglish=/^(?:DE|DISCOVERENGLISH)$/.test(program);
-
-
-
       const scheduledPractice=assignment.kind==='self-practice'&&/^(?:DE|DISCOVERENGLISH|PEPPA|PEPPAPIG|PHONICSVIDEO|SCIENCE(?:K|G[12]))$/.test(program);
-
-
-
       const proposedNumber=Number(assignment.number||assignment.practiceNumber||(scheduledPractice?assignment.sessionNumber:0)||0);
-
-
-
       const number=scheduledPractice&&(!Number.isInteger(proposedNumber)||proposedNumber<1||proposedNumber>999)?0:proposedNumber;
-
-
-
       const keys=list(task.sourceKeys).concat(task.sourceCode||task.code||[],list(assignment.sourceKeys),
-
-
-
         matching.assignmentSourceKeys_(assignment.id,[task],''),
-
-
-
         retake?[]:matching.practiceNumberKeys_(program,number),
-
-
-
         retake?[]:matching.lessonSubmissionKeys_(program,assignment.sessionNumber));
-
-
-
       // Combined program tabs must not match another level through a generic
-
-
-
       // lesson number. Exact recorded URL codes take priority above this lane.
-
-
-
       const strong=[...new Set(keys.map(key).filter(k=>k.length>=4&&!/^(?:TIET|BUOI|LESSON|VIDEO)\d+$/.test(k)))];
-
-
-
       // Self-practice schedules carry their numbered video in sessionNumber.
-
-
-
       // Only native family codes can verify absence; an opaque page/assignment
-
-
-
       // identifier is not a submission code for a newly published video.
-
-
-
       if(scheduledPractice){
-
-
-
         // DE_PRACTICE_NATIVE_CODE_V1: new videos must not depend on a frozen URL
-
-
-
         // inventory. Schedule's video number is the producer's DE code, not
-
-
-
         // an opaque page ID, lesson date, or a classroom session number.
-
-
-
         if(discoverEnglish){
-
-
-
           if(!number)return [];
-
-
-
           const codes=[...new Set(['DE'+String(number).padStart(2,'0'),'DE'+String(number)])];
-
-
-
           return families.flatMap(family=>codes.map(code=>({family,code,exact:true,taskType:''})));
-
-
-
         }
-
-
-
         const native=program==='PHONICSVIDEO'?/^PHONICSVIDEO\d{1,3}$/:/^SCIENCE(?:K|G[12])$/.test(program)?new RegExp('^'+program+'\\d{1,3}$'):/^PEPPA\d{1,3}$/;
-
-
-
         return families.flatMap(family=>strong.filter(code=>native.test(code)).map(code=>({family,code,exact:true,taskType:''})));
-
-
-
       }
-
-
-
       return families.flatMap(family=>strong.map(code=>({family,code,exact:false,taskType:count>1?matching.homeworkTaskType_([task.title,task.instructions].join(' ')):''})));
-
-
-
     }
-
-
-
     function matches(receipt,map){
-
-
-
       // Preserve the explicit reading subtype carried by the original Form code.
-
-
-
       // Only trust originalCode when it exactly expands the canonical Discover code.
-
-
-
       const typeCode=/^D[12]TIET[1-9][0-9]{0,2}$/.test(key(receipt.code))&&key(receipt.originalCode)===key(receipt.code)+'DOC'?receipt.originalCode:receipt.code;
-
-
-
       return receipt.family===map.family&&
-
-
-
       (map.exact?key(receipt.code)===key(map.code):matching.sourceKeyMatches_(receipt.code,map.code))&&
-
-
-
       (!map.taskType||matching.homeworkTaskType_(typeCode)===map.taskType);}
-
-
-
     function peersFor(assignment,maps,assignments){
-
-
-
       return assignments.filter(other=>list(other.tasks).some(task=>mappings(other,task,list(other.tasks).filter(t=>t.requiresSubmission!==false).length)
-
-
-
         .some(candidate=>maps.some(map=>candidate.family===map.family&&(matches({family:map.family,code:map.code},candidate)||matches({family:candidate.family,code:candidate.code},map))))));
-
-
-
     }
-
-
-
     function currentAuthority(value,payload){
-
-
-
       const a=payload&&payload.assignmentAuthority;
-
-
-
       if(!(a&&a.schema===1&&a.className===value.className&&a.complete===true&&a.freshRead===true&&Number.isFinite(a.verifiedAt)&&a.verifiedAt>0&&Array.isArray(a.assignments)&&Array.isArray(a.schedule)))return null;
-
-
-
       if(!Object.prototype.hasOwnProperty.call(a,'scopeStartAt'))return a;
-
-
-
       if(typeof a.scopeStartAt!=='number'||!root.DirectSubmissionDeadlinePolicy.time(a.scopeStartAt))return null;
-
-
-
       // A reminder read is authoritative only inside its explicit rolling horizon.
-
-
-
       // Retain older/undated academic history; a reused ID cannot overwrite it.
-
-
-
       const start=a.scopeStartAt,assigned=root.DirectSubmissionAssignmentWindow.assignedAt;
-
-
-
       const date=row=>root.DirectSubmissionDeadlinePolicy.time(row&&row.date);
-
-
-
       const retained=(rows,time)=>list(rows).filter(row=>!time(row)||time(row)<start);
-
-
-
       const oldAssignments=retained(list(value.profile.assignments).concat(list(value.dashboard.assignments)),assigned);
-
-
-
       const oldSchedule=retained(value.dashboard.schedule,date);
-
-
-
       return Object.assign({},a,{
-
-
-
         assignments:a.assignments.filter(row=>row&&assigned(row)>=start&&!oldAssignments.some(old=>old&&old.id&&old.id===row.id)),
-
-
-
         schedule:a.schedule.filter(row=>row&&date(row)>=start&&!oldSchedule.some(old=>old&&old.lessonKey&&old.lessonKey===row.lessonKey))
-
-
-
       });
-
-
-
     }
-
-
-
     function mergeAuthority(profile,authority){
-
-
-
       const rows=list(profile.assignments),beforeRows=rows.slice(),current=new WeakMap();
-
-
-
       if(!authority)return {rows,current};
-
-
-
       function resetReceipt(value){
-
-
-
         const result=Object.assign({},value),automatic=list(value&&value.submissionAttempts).some(a=>a&&a.receiptId&&a.score!==undefined);
-
-
-
         ['nativeTrackerOriginV1','submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','canViewSubmission'].forEach(k=>delete result[k]);
-
-
-
         if(automatic)['score','maximum','scoreLabel'].forEach(k=>delete result[k]);return result;
-
-
-
       }
-
-
-
       function sameScope(prior,old,publicRow,task){
-
-
-
         if(!prior||!old)return false;
-
-
-
         const before=mappings(prior,old,list(prior.tasks).length),after=mappings(publicRow,task,list(publicRow.tasks).length);
-
-
-
         const identity=rows=>rows.map(m=>m.family+'|'+key(m.code)+'|'+String(m.taskType||'')).sort().join('\n');
-
-
-
         if(identity(before)!==identity(after))return false;
-
-
-
         if(!before.length&&urlKey(old.url||old.learningUrl||old.taskUrl)!==urlKey(task.url||task.learningUrl||task.taskUrl))return false;
-
-
-
         const a=root.DirectSubmissionAssignmentWindow.windowFor(prior,peersFor(prior,before,beforeRows)),b=root.DirectSubmissionAssignmentWindow.windowFor(publicRow,peersFor(publicRow,after,authority.assignments));
-
-
-
         if(!a.known||!b.known||a.start!==b.start)return false;
-
-
-
         if(a.end===b.end)return true;
-
-
-
         // A newly published repeat closes an older open interval without changing
-
-
-
         // its source. Retain a proven older upload only while all retained dated
-
-
-
         // evidence still belongs to that interval; never copy it to the new start.
-
-
-
         const feedback=old.feedback||{},evidence=list(feedback.submissionAttempts).concat([feedback]).filter(r=>r&&r.contentStatus!=='empty'&&(r.receiptId||root.DirectSubmissionHistory.fileKey(r.viewUrl||r.submissionUrl)||list(r.links).some(link=>root.DirectSubmissionHistory.fileKey(link&&link.url))));
-
-
-
         return evidence.length>0&&evidence.every(r=>{const time=root.DirectSubmissionDeadlinePolicy.receiptTime(r);return time&&time>=b.start&&(!b.end||time<b.end);});
-
-
-
       }
-
-
-
       const privateKeys=['submitted','submittedAt','lastSubmittedAt','submissionAttempts','state','stateLabel','isLate','isOverdue','score','scoreLabel','maximum','grade','paperGrade','teacherComment','comment','stars','feedback'];
-
-
-
       list(authority.assignments).forEach(publicRow=>{
-
-
-
         if(!publicRow||!publicRow.id||list(authority.assignments).filter(a=>a&&a.id===publicRow.id).length!==1)return;
-
-
-
         const matches=rows.filter(a=>a&&a.id===publicRow.id);if(matches.length>1)return;
-
-
-
         const prior=matches[0],merged=Object.assign({},prior||{},publicRow);
-
-
-
         if(prior)privateKeys.forEach(k=>{if(Object.prototype.hasOwnProperty.call(prior,k))merged[k]=prior[k];});
-
-
-
         let changed=false;
-
-
-
         merged.tasks=list(publicRow.tasks).map(task=>{
-
-
-
           let candidates=list(prior&&prior.tasks).filter(t=>task.id&&t.id===task.id);
-
-
-
           if(candidates.length!==1||!sameScope(prior,candidates[0],publicRow,task)){const url=urlKey(task.url||task.learningUrl||task.taskUrl);if(url){const alternate=list(prior&&prior.tasks).filter(t=>urlKey(t.url||t.learningUrl||t.taskUrl)===url&&sameScope(prior,t,publicRow,task));if(alternate.length===1)candidates=alternate;}}
-
-
-
           const old=candidates.length===1?candidates[0]:null,result=Object.assign({},old||{},task);
-
-
-
           const same=sameScope(prior,old,publicRow,task);if(prior&&!same)changed=true;
-
-
-
           result.feedback=old&&old.feedback?(same?Object.assign({},old.feedback):resetReceipt(old.feedback)):{};return result;
-
-
-
         });
-
-
-
         if(changed){const cleaned=resetReceipt(merged);Object.keys(merged).forEach(k=>delete merged[k]);Object.assign(merged,cleaned);}
-
-
-
         if(prior)rows[rows.indexOf(prior)]=merged;else rows.push(merged);current.set(merged,publicRow);
-
-
-
       });profile.assignments=rows;return {rows,current};
-
-
-
     }
-
-
-
     function proofFor(payload,maps,window){
-
-
-
       if(!maps.length||!window||!window.known)return null;
-
-
-
       const families=[...new Set(maps.map(m=>m.family))];
-
-
-
       // KIDS_NATIVE_ABSENCE_SCOPE_V1: a source read cannot certify absence for
-
-
-
       // an opaque URL/assignment ID that is not a producer's assignment code.
-
-
-
       const nativeCodes={
-
-
-
         'DISCOVER ENGLISH':/^DE\d{1,3}$/,'PEPPA PIG':/^PEPPA\d{1,3}$/,
-
-
-
         'PHONICS VIDEO':/^PHONICSVIDEO\d{1,3}$/,'PHONICS 1–4':/^OP[1-4]L\d{1,3}$/,
-
-
-
         'FF1':/^FF1TIET\d{1,3}$/,'FF2':/^FF2TIET\d{1,3}$/,
-
-
-
         'DISCOVER 1':/^D1TIET\d{1,3}(?:NGUPHAP|TUVUNG)?$/,
-
-
-
         'DISCOVER 2':/^D2TIET\d{1,3}(?:NGUPHAP|TUVUNG)?$/,
-
-
-
         'SCIENCE K':/^SCIENCEK\d{1,3}$/,
-
-
-
         'SCIENCE G1 & G2':/^SCIENCEG[123]\d{1,3}(?:TT|QA)?$/,
-
-
-
         'SCIENCE G3':/^SCIENCEG3\d{1,3}(?:TT|QA)?$/,
-
-
-
         'CRITICAL 1–3':/^(?:CRITICAL)?C[1-3]L\d{1,3}$/,
-
-
-
         'KIDS_RETAKE':/^(?:D[1-4]WT\d{1,3}|SCIENCEG3\d{1,3}LS)$/
-
-
-
       };
-
-
-
       if(families.some(family=>!nativeCodes[family]||!maps.some(m=>m.family===family&&nativeCodes[family].test(key(m.code)))))return null;
-
-
-
       function irrelevant(issue,family){
-
-
-
         const ms=typeof issue.submittedAtMs==='number'?root.DirectSubmissionDeadlinePolicy.time(issue.submittedAtMs):0;
-
-
-
         if(ms&&(ms<window.start||window.end&&ms>=window.end))return true;
-
-
-
         const code=key(issue.code);
-
-
-
         return Boolean(code&&issue.codeKnown===true&&!maps.some(map=>matches({family,code:issue.code},map)));
-
-
-
       }
-
-
-
       const coverage=families.map(family=>list(payload.coverage).filter(c=>c.family===family));
-
-
-
       if(coverage.some((rows,index)=>!rows.length||rows.some(c=>{
-
-
-
         if(c.freshRead!==true||!Number.isFinite(Number(c.verifiedAt))||Number(c.verifiedAt)<=0)return true;
-
-
-
         if(Number(c.coverageStartAt)>window.start)return true;
-
-
-
         if(c.complete===true)return false;
-
-
-
         return !(c.issuesSchema===1&&c.structurallyComplete===true&&Array.isArray(c.issues)&&c.issues.length>0&&c.issues.every(issue=>issue&&irrelevant(issue,families[index])));
-
-
-
       })))return null;
-
-
-
       return {schema:1,complete:true,freshRead:true,verifiedAt:Math.min(...coverage.flat().map(c=>Number(c.verifiedAt)))};
-
-
-
     }
-
-
-
     function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,sourceAttempt:r.attempt||index+1,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),family:r.family,part:r.part,contentStatus:r.contentStatus,sourceStatus:r.sourceStatus,evidenceUrls:r.evidenceUrls,links:r.links,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
-
-
-
     function receive(target,found){
-
-
-
       if(!found.length)return;
-
-
-
       const sorted=found.slice().sort((a,b)=>root.DirectSubmissionDeadlinePolicy.receiptTime(a)-root.DirectSubmissionDeadlinePolicy.receiptTime(b)),last=sorted[sorted.length-1];
-
-
-
       const priorContent=target.hasContent===true||Boolean(root.DirectSubmissionHistory.fileKey(target.viewUrl||target.submissionUrl))||list(target.submissionAttempts).some(a=>a&&a.contentStatus!=='empty'&&a.contentStatus!=='unconfirmed'&&(a.receiptId||root.DirectSubmissionHistory.fileKey(a.viewUrl)||list(a.links).some(link=>root.DirectSubmissionHistory.fileKey(link&&link.url))));
-
-
-
       const history=root.DirectSubmissionHistory.merge(target.submissionAttempts,attempts(sorted));
-
-
-
       target.submitted=true;target.submittedAt=target.submittedAt||sorted[0].submittedAt;target.lastSubmittedAt=last.submittedAt;
-
-
-
       target.submissionAttempts=history;target.isOverdue=false;
-
-
-
       if(last.sourceStatus)target.sourceStatus=last.sourceStatus;else delete target.sourceStatus;
       target.receiptReceived=true;target.hasContent=priorContent||found.some(r=>r.contentStatus!=='empty'&&r.contentStatus!=='unconfirmed');target.contentMissing=!target.hasContent;target.submitted=target.hasContent;
-
-
-
       if(last.viewUrl){try{const url=new URL(last.viewUrl);if(url.protocol==='https:'&&!url.username&&!url.password)target.viewUrl=url.href;}catch(_){} }
-
-
-
       target.state=target.teacherComment||target.comment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';
-
-
-
       target.stateLabel=target.teacherComment||target.comment?'Cô đã nhận xét':target.contentMissing?'Đã nộp nhưng không có link, video hoặc tệp bài làm':'Đã nộp bài';
-
-
-
       if(last.scoreSource==='automatic-score-source'&&Number.isFinite(last.score)){
-
-
-
         target.score=last.score;if(Number.isFinite(last.maximum))target.maximum=last.maximum;
-
-
-
         target.scoreLabel=String(last.score)+(Number.isFinite(last.maximum)?'/'+last.maximum:'');
-
-
-
       }
-
-
-
     }
-
-
-
     return function projectKidsSubmissions(value,payload,ticket,guard){
-
-
-
       if(!value||!value.profile||!payload)return value;
-
-
-
       if(root.ScienceStageContract){
-
-
-
         value.profile.assignments=root.ScienceStageContract.expand(value.profile.assignments,root.ScienceStageContract.lessons);
-
-
-
         if(value.dashboard)value.dashboard.assignments=root.ScienceStageContract.expand(value.dashboard.assignments,root.ScienceStageContract.lessons);
-
-
-
         if(payload.assignmentAuthority)payload=Object.assign({},payload,{assignmentAuthority:Object.assign({},payload.assignmentAuthority,{assignments:root.ScienceStageContract.expand(payload.assignmentAuthority.assignments,root.ScienceStageContract.lessons)})});
-
-
-
       }
-
-
-
       const profile=value.profile,receipts=list(payload.receipts).filter(r=>r&&r.contentStatus!=='empty'||r&&r.contentEvidenceSchema===2&&r.missingContentVerified===true),authority=ticket&&guard.isCurrent(ticket)?currentAuthority(value,payload):null;
-
-
-
       // Preserve the existing verified-empty contract independently from receipt authority.
-
-
-
       profile.unassignedEmptyReceipts=[];
-
-
-
       if(ticket&&guard.isCurrent(ticket)&&payload.receiptEvidenceSchema===2&&payload.className===value.className){
-
-
-
         const seen=new Set();
-
-
-
         profile.unassignedEmptyReceipts=list(payload.unassignedReceipts).filter(r=>{
-
-
-
           if(!r||r.contentEvidenceSchema!==2||r.contentStatus!=='empty'||r.missingContentVerified!==true||r.unassigned!==true||r.received!==true||typeof r.id!=='string'||seen.has(r.id)||typeof r.code!=='string'||!r.code.trim()||typeof r.submittedAt!=='string'||!root.DirectSubmissionDeadlinePolicy.receiptTime(r))return false;
-
-
-
           if(!list(payload.coverage).some(c=>c.family===r.family&&c.freshRead===true&&Number.isFinite(c.verifiedAt)&&c.verifiedAt>0))return false;
-
-
-
           seen.add(r.id);return true;
-
-
-
         }).map(r=>({id:r.id,code:r.code.slice(0,180),submittedAt:r.submittedAt,family:r.family}));
-
-
-
       }
-
-
-
       if(authority){
-
-
-
         const start=authority.scopeStartAt;
-
-
-
         if(typeof start==='number'){
-
-
-
           const preserve=(rows,time)=>list(rows).filter(row=>!time(row)||time(row)<start);
-
-
-
           value.dashboard.schedule=preserve(value.dashboard.schedule,row=>root.DirectSubmissionDeadlinePolicy.time(row&&row.date)).concat(authority.schedule);
-
-
-
           value.dashboard.assignments=preserve(value.dashboard.assignments,root.DirectSubmissionAssignmentWindow.assignedAt).concat(authority.assignments);
-
-
-
         }else{value.dashboard.schedule=authority.schedule;value.dashboard.assignments=authority.assignments;}
-
-
-
         if(typeof authority.joinDate==='string')profile.joinDate=authority.joinDate;
-
-
-
       }
-
-
-
       const reconciled=mergeAuthority(profile,authority),assignments=reconciled.rows,checks=[];
-
-
-
       assignments.forEach(assignment=>{
-
-
-
         if(!assignment||assignment.isAssessmentLesson)return;
-
-
-
         const active=Boolean(reconciled.current.get(assignment)),tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false),receivedTiming=new Map();
-
-
-
         const mode=assignment.webActivityMode||(assignment.optionalWebPractice?'self-directed':'required');
-
-
-
         tasks.forEach(task=>{
-
-
-
           if(!task)return;const maps=mappings(assignment,task,required.length);
-
-
-
           const peers=peersFor(assignment,maps,active?list(authority.assignments):assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
-
-
-
           const accepts=receipt=>maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers);
-
-
-
           let found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&accepts(receipt));
-
-
-
           const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
 const nativeTrackerFeedback=root.NativeTrackerFeedbackView.capture(feedback);
-
-
-
           if(maps.length){
-
-
-
             found=root.DirectFormReceiptAuthority.reconcile(feedback,payload._receiptIdentity,assignment,maps.map(m=>m.family+'|'+key(m.code)+'|'+String(m.taskType||'')).sort(),found,accepts);
-
-
-
             if(isRetake(assignment,task)||task.recordType==='automatic-score'){
-
-
-
               ['score','maximum','scoreLabel','resultLabel'].forEach(k=>delete feedback[k]);
-
-
-
             }
-
-
-
           }
-
-
-
           if(maps.length){feedback.directReceiptResolution=proof&&ticket?'verified':active?'source-unavailable':authority?'not-current':'authority-unavailable';}
-
-
-
           // Reminder exclusions are policy/context, never a submission verdict.
-
-
-
           const assignedAt=root.DirectSubmissionAssignmentWindow.assignedAt(assignment);
-
-
-
           feedback.directReceiptExclusion=!active&&authority&&assignedAt>0&&assignedAt<root.DirectSubmissionDeadlinePolicy.cutover?'before-policy-cutoff':!active&&authority&&typeof authority.scopeStartAt==='number'&&assignedAt>0&&assignedAt<authority.scopeStartAt?'outside-authority-horizon':!active&&authority?'not-in-current-authority':'';
-
-
-
           receive(feedback,found);
 root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
-
-
-
           const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'&&r.contentStatus!=='unconfirmed'),{verified:Boolean(proof),complete:true});
-
-
-
           const eligible=deadline.pending;feedback.directReceiptDeadline=deadline;
-
-
-
           if(found.length){
-
-
-
             const hasNewContent=found.some(r=>r.contentStatus!=='empty'&&r.contentStatus!=='unconfirmed');
-
-
-
             if(hasNewContent||!feedback.hasContent||!deadline.eligible)feedback.isLate=Boolean(deadline.late);
-
-
-
             receivedTiming.set(task,Object.assign({},deadline,{late:Boolean(feedback.isLate)}));if(feedback.isLate)feedback.stateLabel='Đã nộp · Muộn';
-
-
-
           }
-
-
-
           if(ticket&&proof){guard.authorize(ticket,task,proof,{complete:true});guard.authorize(ticket,feedback,proof,{complete:true});if(guard.can(feedback)&&!feedback.submitted)feedback.isOverdue=Boolean(deadline.missing);}
-
-
-
           // Already-assigned required work contributes to the unfinished aggregate.
-
-
-
           // Its due date controls late status, not whether a fresh reminder may appear.
-
-
-
           if(active&&mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
-
-
-
         });
-
-
-
         if(required.some(task=>mappings(assignment,task,required.length).length)){root.DirectFormReceiptAuthority.clear(assignment);assignment.directFormSource=true;}
-
-
-
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
-
-
-
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
-
-
-
         if(required.length&&required.every(task=>guard.can(task))&&ticket)guard.authorize(ticket,assignment,{schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0},{complete:true});
-
-
-
         assignment.directReceiptCurrent=active;
-
-
-
         if(required.length===1){assignment.directReceiptResolution=required[0].feedback.directReceiptResolution;assignment.directReceiptDeadline=required[0].feedback.directReceiptDeadline;assignment.directReceiptExclusion=required[0].feedback.directReceiptExclusion;}
-
-
-
         if(required.some(t=>t.feedback&&t.feedback.contentMissing)){assignment.submitted=false;assignment.contentMissing=true;}else if(complete){assignment.contentMissing=false;}
-
-
-
         if(assignment.kind==='self-practice'&&required.length===1&&(required[0].feedback.receiptReceived||required[0].feedback.submitted)){const maps=mappings(assignment,required[0],1),peers=peersFor(assignment,maps,assignments);receive(assignment,list(required[0].feedback.directFormEvidence&&required[0].feedback.directFormEvidence.receipts).filter(r=>maps.some(m=>matches(r,m))&&root.DirectSubmissionAssignmentWindow.contains(r,assignment,peers)));}
-
-
-
         // Only a complete set of source-confirmed task receipts replaces the
-
-
-
         // assignment timing. Paper/teacher-only and unknown-source work stay intact.
-
-
-
         if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
-
-
-
       });
-
-
-
       // The practice view also merges legacy tracker/prepared rows. Remove
-
-
-
       // that second receipt fallback, without losing its independent comments.
-
-
-
       [profile.selfPractice,profile.preparedPracticeRows].forEach(rows=>list(rows).forEach(row=>{
-
-
-
         if(!row)return;
-
-
-
         const id=String(row.scheduleAssignmentId||row.id||'');
-
-
-
         const candidates=assignments.filter(a=>a.kind==='self-practice'&&a.directFormSource&&id&&a.id===id);
-
-
-
         if(candidates.length===1){
-
-
-
           const current=candidates[0];root.DirectFormReceiptAuthority.copy(row,current);
-
-
-
           if(Array.isArray(row.tasks))row.tasks=current.tasks;
-
-
-
           if(ticket&&guard.can(current))guard.transfer(current,row);
-
-
-
         }else if(mappings(row,{url:row.learningUrl||row.url||row.taskUrl||''},1).length){
-
-
-
-          root.DirectFormReceiptAuthority.clear(row);row.directFormSource=true;
-
-
-
+          const native=root.NativeTrackerFeedbackView.capture(row);root.DirectFormReceiptAuthority.clear(row);root.NativeTrackerFeedbackView.restore(row,native);row.directFormSource=true;
         }
-
-
-
       }));
-
-
-
       list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
-
-
-
         const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;
-
-
-
         const assignment=assignments.find(a=>a.id===retake.assignmentId);if(!assignment)return;
-
-
-
         // KIDS_RETAKE_RESULT_VERIFICATION_V1: a verified absence belongs to
-
-
-
         // the same retake in Results as in Lessons, even without a receipt.
-
-
-
         const candidates=list(assignment.tasks).filter(t=>isRetake(assignment,t)&&t.feedback);
-
-
-
         const exact=candidates.filter(t=>urlKey(t.url||t.learningUrl||t.taskUrl)===urlKey(retake.learningUrl)&&urlKey(retake.learningUrl));
-
-
-
         const task=exact.length===1?exact[0]:candidates.length===1?candidates[0]:null;if(!task)return;
-
-
-
         const feedback=task.feedback;
-
-
-
         if(feedback.directFormEvidence){
-
-
-
           root.DirectFormReceiptAuthority.clear(retake);
-
-
-
           ['score','maximum','scoreLabel','resultLabel'].forEach(k=>delete retake[k]);
-
-
-
         }
-
-
-
         ['directReceiptResolution','directReceiptDeadline','directReceiptExclusion'].forEach(k=>{if(Object.prototype.hasOwnProperty.call(feedback,k))retake[k]=feedback[k];});
-
-
-
         if(ticket&&guard.can(task))guard.transfer(task,retake);
-
-
-
         if(!feedback.submitted)return;
-
-
-
+        retake.submitted=true;retake.completed=true;retake.receiptReceived=true;retake.contentMissing=false;
         retake.submittedAt=feedback.submittedAt;retake.attempts=list(feedback.submissionAttempts).slice();retake.declaredAttemptCount=retake.attempts.length;
-
-
-
         if(Number.isFinite(feedback.score)){retake.score=feedback.score;retake.maximum=feedback.maximum;retake.scoreLabel=feedback.scoreLabel;}
-
-
-
       });
-
-
-
       // The original summary counts online assignments, never paper marks.
-
-
-
       // Rebuild its existing reminders only when every relevant task was read.
-
-
-
       if(ticket&&authority&&checks.length){
-
-
-
         const missing=assignments.filter(a=>reconciled.current.has(a)&&!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).pending&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)));
-
-
-
         if(!missing.length&&!checks.every(Boolean))return value;
-
-
-
         profile.submissionPendingIncomplete=!checks.every(Boolean);
-
-
-
         profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
-
-
-
         profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Đã nộp nhưng không có link, video hoặc tệp bài làm.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
-
-
-
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
-
-
-
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
-
-
-
       }
-
-
-
       return value;
-
-
-
     };
-
-
-
   }
-
-
-
   root.createKidsReceiptProjector=createKidsReceiptProjector;
-
-
-
   if(typeof module==='object'&&module.exports)module.exports={createKidsReceiptProjector};
-
-
-
 })(typeof globalThis==='object'?globalThis:this);
 
 
