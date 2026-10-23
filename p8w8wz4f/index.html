@@ -102,46 +102,59 @@ root.FighterSubmissionEvidence={received};
  if(typeof module==='object'&&module.exports)module.exports=root.DashboardCardBoundary;
 })(typeof globalThis==='object'?globalThis:this);
 </script>
-<script id="shared-submission-status-v1">/* Presentation only: never mutates receipt evidence, grading or reminder totals. */
-(function(root){
- 'use strict';
- function time(value,endOfDay){
-  if(typeof value==='number')return Number.isFinite(value)&&value>0?value:0;
-  if(!value)return 0;
-  const text=String(value).trim(),m=text.match(/(?:^|\s)(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,·T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
-  if(m){const day=+m[1],month=+m[2],year=+m[3],h=m[4]===undefined?(endOfDay?23:0):+m[4],min=m[5]===undefined?(endOfDay?59:0):+m[5],sec=m[6]===undefined?(endOfDay&&m[4]===undefined?59:0):+m[6];
-   const check=new Date(Date.UTC(year,month-1,day));if(check.getUTCDate()!==day||check.getUTCMonth()!==month-1||h>23||min>59||sec>59)return 0;
-   return Date.UTC(year,month-1,day,h-7,min,sec,endOfDay&&m[4]===undefined?999:0);
-  }
-  if(!/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(text))return 0;
-  const iso=/^\d{4}-\d{2}-\d{2}$/.test(text)?text+(endOfDay?'T23:59:59.999+07:00':'T00:00:00+07:00'):/[zZ]$|[+-]\d\d:\d\d$/.test(text)?text:text+'+07:00';
-  return Date.parse(iso)||0;
- }
- function renderSubmissionStatus(data,deadline,options){
-  data=data||{};options=options||{};
-  const direct=data.directSubmission||{},policy=data.directReceiptDeadline||data.directDeadline||{};
-  const rows=[].concat(data.submissionAttempts||[],direct.receipts||[]).filter(r=>r&&r.contentStatus!=='empty'&&r.contentMissing!==true);
-  const at=Math.max(time(options.submittedAt,false),time(data.submittedAtMs,false),time(data.submittedAt,false),time(data.lastSubmittedAt,false),...rows.map(r=>time(r.submittedAtMs||r.submittedAt,false)));
-  const missing=data.contentMissing===true||data.hasContent===false||['empty','unconfirmed','unavailable','unknown'].includes(data.contentStatus)||['unconfirmed','unavailable'].includes(data.evidenceStatus);
-  // Manual tracking is an independent authoritative decision; it has no Form timestamp.
-  const manual=data.submissionAuthority==='manual-tracker'||data.submissionManualAuthority===true||!!data.manualSubmissionVerification;
-  const manualComplete=manual&&data.completed===true&&(!data.manualSubmissionVerification||data.manualSubmissionVerification.complete===true&&data.manualSubmissionVerification.decisionKnown===true);
-  const legacyComplete=data.completed===true&&(data.tracked===true||['done','late'].includes(data.state)||['done','late'].includes(data.statusType));
-  const received=manualComplete||rows.length>0||((data.contentMissing!==true&&data.hasContent!==false&&data.contentStatus!=='empty')&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true))||!missing&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
-  const due=time(deadline||data.dueDate||data.deadline||policy.dueDate||policy.dueAt||policy.deadline,false);
-  const dateOnly=deadline||data.dueDate||data.deadline||policy.dueDate;
-  const cutoff=dateOnly?time(dateOnly,true):due;
-  const overdue=cutoff>0?(options.now||Date.now())>cutoff:data.isOverdue===true||policy.missing===true;
-  if(!received)return overdue?'⛔ Quá hạn · Chưa nộp bài':'— Chưa nộp bài';
-  const statusKey=String(data.status||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-  const late=data.isLate===true||data.state==='late'||data.statusType==='late'||/^(nop muon|lam muon)(?: |$)/.test(statusKey)||policy.late===true||(cutoff>0&&at>cutoff);
-  const stamp=at?new Date(at).toLocaleString('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';
-  const count=Number(options.count)||rows.length;
-  return (manualComplete?'✅ ĐÃ HOÀN THÀNH':late?'⚠️ ĐÃ NỘP MUỘN':'✅ ĐÃ NỘP')+(stamp?' · '+stamp:'')+(count>1?' · '+count+' lần':'');
- }
- root.SharedSubmissionStatus={render:renderSubmissionStatus,time};
- if(typeof module==='object'&&module.exports)module.exports=root.SharedSubmissionStatus;
-})(typeof window==='object'?window:globalThis);
+<script id="shared-submission-status-v1">
+// submission-source-status-v1
+/* Presentation only: never mutates receipt evidence, grading or reminder totals. */
+(function(root){
+ 'use strict';
+ function time(value,endOfDay){
+  if(typeof value==='number')return Number.isFinite(value)&&value>0?value:0;
+  if(!value)return 0;
+  const text=String(value).trim(),m=text.match(/(?:^|\s)(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,·T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m){const day=+m[1],month=+m[2],year=+m[3],h=m[4]===undefined?(endOfDay?23:0):+m[4],min=m[5]===undefined?(endOfDay?59:0):+m[5],sec=m[6]===undefined?(endOfDay&&m[4]===undefined?59:0):+m[6];
+   const check=new Date(Date.UTC(year,month-1,day));if(check.getUTCDate()!==day||check.getUTCMonth()!==month-1||h>23||min>59||sec>59)return 0;
+   return Date.UTC(year,month-1,day,h-7,min,sec,endOfDay&&m[4]===undefined?999:0);
+  }
+  if(!/^\d{4}-\d{2}-\d{2}(?:T|$)/.test(text))return 0;
+  const iso=/^\d{4}-\d{2}-\d{2}$/.test(text)?text+(endOfDay?'T23:59:59.999+07:00':'T00:00:00+07:00'):/[zZ]$|[+-]\d\d:\d\d$/.test(text)?text:text+'+07:00';
+  return Date.parse(iso)||0;
+ }
+ function renderSubmissionStatus(data,deadline,options){
+  data=data||{};options=options||{};
+  const direct=data.directSubmission||{},policy=data.directReceiptDeadline||data.directDeadline||{};
+  const rows=[].concat(data.submissionAttempts||[],direct.receipts||[]).filter(r=>r&&r.contentStatus!=='empty'&&r.contentMissing!==true);
+  const at=Math.max(time(options.submittedAt,false),time(data.submittedAtMs,false),time(data.submittedAt,false),time(data.lastSubmittedAt,false),...rows.map(r=>time(r.submittedAtMs||r.submittedAt,false)));
+  const missing=data.contentMissing===true||data.hasContent===false||['empty','unconfirmed','unavailable','unknown'].includes(data.contentStatus)||['unconfirmed','unavailable'].includes(data.evidenceStatus);
+  // Manual tracking is an independent authoritative decision; it has no Form timestamp.
+  const manual=data.submissionAuthority==='manual-tracker'||data.submissionManualAuthority===true||!!data.manualSubmissionVerification;
+  const manualComplete=manual&&data.completed===true&&(!data.manualSubmissionVerification||data.manualSubmissionVerification.complete===true&&data.manualSubmissionVerification.decisionKnown===true);
+  const legacyComplete=data.completed===true&&(data.tracked===true||['done','late'].includes(data.state)||['done','late'].includes(data.statusType));
+  const received=manualComplete||rows.length>0||((data.contentMissing!==true&&data.hasContent!==false&&data.contentStatus!=='empty')&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true))||!missing&&(legacyComplete||options.received===true||data.submitted===true||data.receiptReceived===true||data.submissionReceived===true||(data.tracked===true&&['done','late'].includes(data.state))||at>0||rows.length>0||policy.complete===true);
+  const due=time(deadline||data.dueDate||data.deadline||policy.dueDate||policy.dueAt||policy.deadline,false);
+  const dateOnly=deadline||data.dueDate||data.deadline||policy.dueDate;
+  const cutoff=dateOnly?time(dateOnly,true):due;
+  const overdue=cutoff>0?(options.now||Date.now())>cutoff:data.isOverdue===true||policy.missing===true;
+  // The Form acknowledgement survives missing/locked/invalid attachments.
+  const allAttempts=[].concat(data.submissionAttempts||[],direct.receipts||[]).filter(Boolean).sort((a,b)=>time(a.submittedAtMs||a.submittedAt,false)-time(b.submittedAtMs||b.submittedAt,false));
+  const lastAttempt=allAttempts[allAttempts.length-1],source=lastAttempt&&lastAttempt.sourceStatus||data.sourceStatus;
+  const ack=allAttempts.some(r=>r.receiptId||r.id&&r.received===true)||data.receiptReceived===true;
+  if(!manualComplete&&ack&&(source&&source.schema===1||data.contentMissing===true)){
+   const labels={missing:'ĐÃ NỘP — Chưa có link',access:'ĐÃ NỘP — Link cần mở quyền xem',invalid:'ĐÃ NỘP — Link không hợp lệ',valid:'ĐÃ NỘP — Link hợp lệ',pending:'ĐÃ NỘP — Chờ kiểm tra link'};
+   const state=source&&source.state||'missing',label=labels[state]||labels.pending;
+   const ackAt=Math.max(at,...allAttempts.map(r=>time(r.submittedAtMs||r.submittedAt,false)));
+   const stamp=ackAt?new Date(ackAt).toLocaleString('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';
+   return label+(stamp?' · '+stamp:'')+(allAttempts.length>1?' · '+allAttempts.length+' lần':'');
+  }
+  if(!received)return overdue?'⛔ Quá hạn · Chưa nộp bài':'— Chưa nộp bài';
+  const statusKey=String(data.status||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  const late=data.isLate===true||data.state==='late'||data.statusType==='late'||/^(nop muon|lam muon)(?: |$)/.test(statusKey)||policy.late===true||(cutoff>0&&at>cutoff);
+  const stamp=at?new Date(at).toLocaleString('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';
+  const count=Number(options.count)||rows.length;
+  return (manualComplete?'✅ ĐÃ HOÀN THÀNH':late?'⚠️ ĐÃ NỘP MUỘN':'✅ ĐÃ NỘP')+(stamp?' · '+stamp:'')+(count>1?' · '+count+' lần':'');
+ }
+ root.SharedSubmissionStatus={render:renderSubmissionStatus,time};
+ if(typeof module==='object'&&module.exports)module.exports=root.SharedSubmissionStatus;
+})(typeof window==='object'?window:globalThis);
 </script>
 <link rel="stylesheet" href="/vanlang-on-thi-lop-6/game-kit/teacher-brand.css?v=titi-human-1">
 <link rel="preload" as="image" href="/vanlang-on-thi-lop-6/game-kit/art/teacher-titi-v1/welcome.webp">

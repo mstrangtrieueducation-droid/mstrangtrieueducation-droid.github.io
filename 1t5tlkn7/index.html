@@ -98,7 +98,9 @@
  if(typeof module==='object'&&module.exports)module.exports=root.DashboardCardBoundary;
 })(typeof globalThis==='object'?globalThis:this);
 </script>
-<script id="shared-submission-status-v1">/* Presentation only: never mutates receipt evidence, grading or reminder totals. */
+<script id="shared-submission-status-v1">
+// submission-source-status-v1
+/* Presentation only: never mutates receipt evidence, grading or reminder totals. */
 (function(root){
  'use strict';
  function time(value,endOfDay){
@@ -128,6 +130,17 @@
   const dateOnly=deadline||data.dueDate||data.deadline||policy.dueDate;
   const cutoff=dateOnly?time(dateOnly,true):due;
   const overdue=cutoff>0?(options.now||Date.now())>cutoff:data.isOverdue===true||policy.missing===true;
+  // The Form acknowledgement survives missing/locked/invalid attachments.
+  const allAttempts=[].concat(data.submissionAttempts||[],direct.receipts||[]).filter(Boolean).sort((a,b)=>time(a.submittedAtMs||a.submittedAt,false)-time(b.submittedAtMs||b.submittedAt,false));
+  const lastAttempt=allAttempts[allAttempts.length-1],source=lastAttempt&&lastAttempt.sourceStatus||data.sourceStatus;
+  const ack=allAttempts.some(r=>r.receiptId||r.id&&r.received===true)||data.receiptReceived===true;
+  if(!manualComplete&&ack&&(source&&source.schema===1||data.contentMissing===true)){
+   const labels={missing:'ĐÃ NỘP — Chưa có link',access:'ĐÃ NỘP — Link cần mở quyền xem',invalid:'ĐÃ NỘP — Link không hợp lệ',valid:'ĐÃ NỘP — Link hợp lệ',pending:'ĐÃ NỘP — Chờ kiểm tra link'};
+   const state=source&&source.state||'missing',label=labels[state]||labels.pending;
+   const ackAt=Math.max(at,...allAttempts.map(r=>time(r.submittedAtMs||r.submittedAt,false)));
+   const stamp=ackAt?new Date(ackAt).toLocaleString('vi-VN',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';
+   return label+(stamp?' · '+stamp:'')+(allAttempts.length>1?' · '+allAttempts.length+' lần':'');
+  }
   if(!received)return overdue?'⛔ Quá hạn · Chưa nộp bài':'— Chưa nộp bài';
   const statusKey=String(data.status||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   const late=data.isLate===true||data.state==='late'||data.statusType==='late'||/^(nop muon|lam muon)(?: |$)/.test(statusKey)||policy.late===true||(cutoff>0&&at>cutoff);
@@ -24852,7 +24865,7 @@ ScienceStageContract.lessons=[
 
 
 
-    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,sourceAttempt:r.attempt||index+1,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),family:r.family,part:r.part,contentStatus:r.contentStatus,evidenceUrls:r.evidenceUrls,links:r.links,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
+    function attempts(found){return found.map((r,index)=>({receiptId:r.id,attempt:index+1,sourceAttempt:r.attempt||index+1,submittedAt:r.submittedAt,submittedAtMs:root.DirectSubmissionDeadlinePolicy.receiptTime(r),family:r.family,part:r.part,contentStatus:r.contentStatus,sourceStatus:r.sourceStatus,evidenceUrls:r.evidenceUrls,links:r.links,...(r.scoreSource==='automatic-score-source'&&Number.isFinite(r.score)?{score:r.score,maximum:r.maximum,scoreLabel:String(r.score)+(Number.isFinite(r.maximum)?'/'+r.maximum:'')}:{}),...(r.viewUrl?{viewUrl:r.viewUrl}:{})}));}
 
 
 
@@ -24868,7 +24881,7 @@ ScienceStageContract.lessons=[
 
 
 
-      const priorContent=target.hasContent===true||Boolean(root.DirectSubmissionHistory.fileKey(target.viewUrl||target.submissionUrl))||list(target.submissionAttempts).some(a=>a&&a.contentStatus!=='empty'&&(a.receiptId||root.DirectSubmissionHistory.fileKey(a.viewUrl)||list(a.links).some(link=>root.DirectSubmissionHistory.fileKey(link&&link.url))));
+      const priorContent=target.hasContent===true||Boolean(root.DirectSubmissionHistory.fileKey(target.viewUrl||target.submissionUrl))||list(target.submissionAttempts).some(a=>a&&a.contentStatus!=='empty'&&a.contentStatus!=='unconfirmed'&&(a.receiptId||root.DirectSubmissionHistory.fileKey(a.viewUrl)||list(a.links).some(link=>root.DirectSubmissionHistory.fileKey(link&&link.url))));
 
 
 
@@ -24884,7 +24897,8 @@ ScienceStageContract.lessons=[
 
 
 
-      target.receiptReceived=true;target.hasContent=priorContent||found.some(r=>r.contentStatus!=='empty');target.contentMissing=!target.hasContent;target.submitted=target.hasContent;
+      if(last.sourceStatus)target.sourceStatus=last.sourceStatus;else delete target.sourceStatus;
+      target.receiptReceived=true;target.hasContent=priorContent||found.some(r=>r.contentStatus!=='empty'&&r.contentStatus!=='unconfirmed');target.contentMissing=!target.hasContent;target.submitted=target.hasContent;
 
 
 
@@ -25116,7 +25130,7 @@ ScienceStageContract.lessons=[
 
 
 
-          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'),{verified:Boolean(proof),complete:true});
+          const deadline=root.DirectSubmissionDeadlinePolicy.evaluate(assignment,found.filter(r=>r.contentStatus!=='empty'&&r.contentStatus!=='unconfirmed'),{verified:Boolean(proof),complete:true});
 
 
 
@@ -25128,7 +25142,7 @@ ScienceStageContract.lessons=[
 
 
 
-            const hasNewContent=found.some(r=>r.contentStatus!=='empty');
+            const hasNewContent=found.some(r=>r.contentStatus!=='empty'&&r.contentStatus!=='unconfirmed');
 
 
 
