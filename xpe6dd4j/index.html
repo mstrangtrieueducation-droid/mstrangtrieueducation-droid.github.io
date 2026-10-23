@@ -10474,7 +10474,10 @@ const ieltsWritingReviews_ = (() => {
     // Remove details from already-rendered inactive panels as soon as a closure arrives.
     document.querySelectorAll('.wr-assignment[data-wr-assignment]').forEach(node => {
       const assignment = ieltsWritingAssignments_.all().find(item => item.assignmentCode === node.dataset.wrAssignment);
-      if (assignment && writingBlockedByPolicy(assignment.assignmentCode)) node.outerHTML = groupHtml(assignment);
+      if (assignment && (hasLoaded || writingBlockedByPolicy(assignment.assignmentCode))) {
+        const html = groupHtml(assignment);
+        if (node.outerHTML !== html) node.outerHTML = html;
+      }
     });
     if (state.active === 'writing') renderSkill('writing');
     if (state.active === 'overview') renderOverview();
@@ -10650,6 +10653,8 @@ const ieltsWritingReviews_ = (() => {
     // Establish the identity before the hybrid fragment starts loading. A later
     // first refresh must not clear the just-created private result cache.
     if (!current()) return legacyHtml;
+    // Grouped detail views render outside parentRender_; reuse the guarded reader.
+    if (window.Ielts46Master) refresh();
     const assignment = ieltsWritingAssignments_.forItem(item);
     const hybrid = assignment?.preferredReviewDelivery === "native" ? null : ieltsHybridReviews_.fragment(item,legacyHtml,assignment && (writingBlockedByPolicy(assignment.assignmentCode) || writingBlockedByNotebook(assignment)));
     if (hybrid !== null) return hybrid;
