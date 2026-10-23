@@ -24509,17 +24509,6 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         retake.submittedAt=feedback.submittedAt;retake.attempts=list(feedback.submissionAttempts).slice();retake.declaredAttemptCount=retake.attempts.length;
         if(Number.isFinite(feedback.score)){retake.score=feedback.score;retake.maximum=feedback.maximum;retake.scoreLabel=feedback.scoreLabel;}
       });
-      // The original summary counts online assignments, never paper marks.
-      // Rebuild its existing reminders only when every relevant task was read.
-      if(ticket&&authority&&checks.length){
-        const missing=assignments.filter(a=>reconciled.current.has(a)&&!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).pending&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)));
-        if(!missing.length&&!checks.every(Boolean))return value;
-        profile.submissionPendingIncomplete=!checks.every(Boolean);
-        profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
-        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Đã nộp nhưng không có link, video hoặc tệp bài làm.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
-        const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
-        guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
-      }
       // Existing reminders consume the same native task results as the cards.
       // A positive task can resolve an old reminder even while other sources
       // are unavailable; no new absence or homework is inferred here.
@@ -24544,6 +24533,17 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         }
       }
 
+      // The original summary counts online assignments, never paper marks.
+      // Rebuild its existing reminders only when every relevant task was read.
+      if(ticket&&authority&&checks.length){
+        const missing=assignments.filter(a=>reconciled.current.has(a)&&!a.isAssessmentLesson&&root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).pending&&(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))==='required'&&list(a.tasks).some(t=>t.requiresSubmission!==false&&(t.url||t.learningUrl)&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)));
+        if(!missing.length&&!checks.every(Boolean))return value;
+        profile.submissionPendingIncomplete=!checks.every(Boolean);
+        profile.summary=Object.assign({},profile.summary,{needsCompletionCount:missing.length,needsAttention:missing.length>0});
+        profile.privateReminders=missing.slice(0,8).map(a=>{const overdue=root.DirectSubmissionDeadlinePolicy.evaluate(a,[],{verified:true}).missing;const tasks=list(a.tasks).filter(t=>t.requiresSubmission!==false&&guard.can(t)&&!(t.feedback&&t.feedback.submitted)&&(t.url||t.learningUrl));const actions=tasks.map(t=>({taskId:t.id||'',title:t.title||'Bài tập',learningUrl:t.url||t.learningUrl}));return {type:overdue?'overdue':'pending',assignmentId:a.id,lessonKey:a.lessonKey||'',taskId:tasks[0]&&tasks[0].id||'',targetTab:a.kind==='self-practice'?'practice':'lessons',title:a.title,message:tasks.some(t=>t.feedback&&t.feedback.contentMissing)?'Đã nộp nhưng không có link, video hoặc tệp bài làm.':overdue?'Bài chưa nộp và đã quá hạn.':actions.length>1?'Còn '+actions.length+' phần bài chưa nộp.':'Bài chưa nộp.',actionUrl:actions[0]&&actions[0].learningUrl||'',actions};});
+        const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
+        guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
+      }
       return value;
     };
   }
