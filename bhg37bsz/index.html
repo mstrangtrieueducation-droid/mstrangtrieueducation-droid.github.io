@@ -2326,16 +2326,9 @@
     // Evidence adapters must explicitly confirm absence; unavailable sources are never a failed submission.
     var submitted = value.submitted === true ? true : value.submitted === false && value.confirmed === true ? false : null;
     if (submitted === null && item.submitted === true) submitted = true;
-    return { invalid:value.invalid===true, submitted: submitted, confirmed: submitted !== null, submittedAt: value.submittedAt || null, late: value.late === true, label: value.label || null };
+    return { nativeState:value.nativeState, invalid:value.invalid===true, submitted: submitted, confirmed: submitted !== null, submittedAt: value.submittedAt || null, late: value.late === true, label: value.label || null };
   }
-  function stateFor(status, dueAt, now) {
-    if (status.invalid===true) return 'invalid';
-    if (status.submitted === true) return 'done';
-    if (!status.confirmed) return 'unknown';
-    if (dueAt !== null && dueAt < now) return 'overdue';
-    if (dueAt !== null && dueAt - now <= DAY) return 'dueSoon';
-    return 'needs';
-  }
+  function stateFor(status, dueAt, now) { return status.nativeState || (status.invalid===true?'invalid':status.submitted===true?'done':'needs'); }
   function orderTasks(a, b) {
     var rank = { overdue: 0, dueSoon: 1, needs: 2, unknown: 3, done: 4 };
     return rank[a.status] - rank[b.status] || (a.dueAt === null ? Infinity : a.dueAt) - (b.dueAt === null ? Infinity : b.dueAt) || a.id.localeCompare(b.id);
@@ -2719,7 +2712,7 @@ root.Ielts47Grouped={install,sync,protect};
 let writing=null,getStudent=()=>null;
 const norm=v=>String(v||'').normalize('NFC').trim().toLocaleLowerCase('vi');
 function setWriting(data,student){if(!data||!student||norm(data.studentName||data.parentName)!==norm(student.name))return false;writing=data;return true;}
-function read(item,record){item=item||{};record=record||{};const d=record.directDeadline||item.directDeadline||{},invalid=item.trackerStatus==='invalid',submitted=!invalid&&(record.submitted===true||item.submitted===true||d.complete===true);return {submitted,invalid,confirmed:true,label:invalid?'⚠️ Cần bổ sung / Chưa hợp lệ':submitted?(record.late===true||d.late===true?'⚠️ ĐÃ NỘP MUỘN':'✅ ĐÃ NỘP'):record.homeworkStatus||d.label||'— Chưa nộp bài',late:record.late===true||d.late===true,submittedAt:record.submittedAt||record.lastSubmittedAt||item.directSubmission?.latestSubmittedAt||null};}
+function read(item,record){item=item||{};record=record||{};const d=record.directDeadline||item.directDeadline||{},invalid=item.trackerStatus==='invalid',submitted=!invalid&&(record.submitted===true||item.submitted===true||d.complete===true);return {submitted,invalid,nativeState:invalid?'invalid':submitted?'done':d.missing===true||record.statusType==='missing'||record.trackerOriginV1?.statusType==='missing'?'overdue':'needs',confirmed:true,label:invalid?'⚠️ Cần bổ sung / Chưa hợp lệ':submitted?(record.late===true||d.late===true?'⚠️ ĐÃ NỘP MUỘN':'✅ ĐÃ NỘP'):record.homeworkStatus||d.label||'— Chưa nộp bài',late:record.late===true||d.late===true,submittedAt:record.submittedAt||record.lastSubmittedAt||item.directSubmission?.latestSubmittedAt||null};}
 root.IeltsSubmissionStatus={read,setWriting,configure:fn=>{getStudent=fn;writing=null;}};
 })(globalThis);
 ;
