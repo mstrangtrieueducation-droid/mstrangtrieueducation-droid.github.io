@@ -9191,7 +9191,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 })(window);
 
 
-</script><script id="kids-journey-bean-pilot" src="/student-learning/kids-journey/pilot.bfae09bfcfac.js" defer></script></head>
+</script><script id="kids-journey-bean-pilot" src="/student-learning/kids-journey/pilot.6ee417dfa432.js" defer></script></head>
 
 
 
@@ -29310,9 +29310,18 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if(location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(kidsApi.parent.alias)!==matchKey('BEAN')||matchKey(app.childAlias)!==matchKey('BEAN')||!app.child||!app.child.kidsJourneyV1){window.KidsJourneyPilot.disable();return;}
       try{
         const ready=window.KidsJourneyPilot.update({profile:app.child,dashboard:app.data||{},practice:practiceRows(),serverNow:Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt)});
-        if(ready){hidePendingWorkGate();document.documentElement.dataset.kidsJourneyPilot='bean21';}
+        if(ready){document.documentElement.dataset.kidsJourneyPilot='bean21';}
       }catch(error){console.warn('KIDS_JOURNEY_PILOT_LOCAL_RENDER');}
     });
+    let kidsJourneyFocusPending_=false,kidsJourneyFocusAt_=-Infinity;
+    window.addEventListener('focus',function(){
+      if(document.hidden||location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(kidsApi.parent.alias)!==matchKey('BEAN')||!app.child||!app.child.kidsJourneyV1)return;
+      const client=window.__kidsPreparedPreview,now=performance.now();
+      if(!client||kidsJourneyFocusPending_||now-kidsJourneyFocusAt_<5000)return;
+      kidsJourneyFocusAt_=now;kidsJourneyFocusPending_=true;
+      Promise.resolve(client.request('bootstrap',true)).then(function(){return window.__kidsPreparedApply?window.__kidsPreparedApply():false;}).catch(function(){}).finally(function(){kidsJourneyFocusPending_=false;});
+    });
+    /* KIDS_JOURNEY_BEAN_PILOT_V1_END */
 </script>
 
 
