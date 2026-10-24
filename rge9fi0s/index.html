@@ -9204,7 +9204,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 })(window);
 
 
-</script><script id="kids-journey-bean-pilot" src="/student-learning/kids-journey/pilot.ba3c11b5a499.js" defer></script></head>
+</script><script id="kids-journey-bean-pilot" src="/student-learning/kids-journey/pilot.f9bf928915a1.js" defer></script></head>
 
 
 
@@ -28448,19 +28448,19 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
   
-    /* KIDS_JOURNEY_BEAN_PILOT_V1: only Bean; existing renderers/listeners stay intact. */
+    /* KIDS_JOURNEY_BEAN_PILOT_V1: KIDS 21; verified parent identity and native listeners stay intact. */
     const kidsJourneyPilotHash_=location.hash;
     window.addEventListener('titi-dashboard-ready',function(){
       if(!window.KidsJourneyPilot)return;
-      if(location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(kidsApi.parent.alias)!==matchKey('BEAN')||matchKey(app.childAlias)!==matchKey('BEAN')||!app.child||!app.child.kidsJourneyV1){window.KidsJourneyPilot.disable();return;}
+      if(location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||!app.child||!app.child.kidsJourneyV1||!matchKey(kidsApi.parent.alias)||matchKey(app.childAlias)!==matchKey(kidsApi.parent.alias)||matchKey(app.child.englishName)!==matchKey(kidsApi.parent.alias)||Number(app.child.classNumber)!==21||matchKey(app.child.kidsJourneyV1.alias)!==matchKey(kidsApi.parent.alias)){window.KidsJourneyPilot.disable();return;}
       try{
         const ready=window.KidsJourneyPilot.update({profile:app.child,dashboard:app.data||{},practice:practiceRows(),serverNow:Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt)});
-        if(ready){document.documentElement.dataset.kidsJourneyPilot='bean21';}
+        if(ready){document.documentElement.dataset.kidsJourneyPilot='kids21';}
       }catch(error){console.warn('KIDS_JOURNEY_PILOT_LOCAL_RENDER');}
     });
     let kidsJourneyFocusPending_=false,kidsJourneyFocusAt_=-Infinity;
     window.addEventListener('focus',function(){
-      if(document.hidden||location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(kidsApi.parent.alias)!==matchKey('BEAN')||!app.child||!app.child.kidsJourneyV1)return;
+      if(document.hidden||location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||!app.child||!app.child.kidsJourneyV1||!matchKey(kidsApi.parent.alias)||matchKey(app.childAlias)!==matchKey(kidsApi.parent.alias)||matchKey(app.child.englishName)!==matchKey(kidsApi.parent.alias)||Number(app.child.classNumber)!==21||matchKey(app.child.kidsJourneyV1.alias)!==matchKey(kidsApi.parent.alias))return;
       const client=window.__kidsPreparedPreview,now=performance.now();
       if(!client||kidsJourneyFocusPending_||now-kidsJourneyFocusAt_<5000)return;
       kidsJourneyFocusAt_=now;kidsJourneyFocusPending_=true;
