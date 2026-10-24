@@ -8656,7 +8656,7 @@ function kidsFeedbackCollapsibleMarkup(value, escape) {
 
 
 
-<script id="kids-ta-dashboard-entry" src="/student-learning/kids-ta-entry/access.eab18d492b95.js" defer></script><script src="/student-learning/kids-ta-entry/dashboard.d322e344da4b.js" defer></script><style id="kids-feedback-quality-v1">
+<script id="kids-ta-dashboard-entry" src="/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js" defer></script><script src="/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js" defer></script><style id="kids-feedback-quality-v1">
 
 
 
@@ -16761,78 +16761,67 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-/* Same-origin handoff of an already received listening result. No submissions. */
-
-
-
-(function(root){
-
-
-
- 'use strict';
-
-
-
- const normalized=v=>String(v||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
-
-
-
- const key=(p,code)=>'science-g3-dashboard-receipt-v1:'+encodeURIComponent(p.className+'|'+normalized(p.name)+'|'+code);
-
-
-
- function valid(r,p,code){
-
-
-
-  return !!(p&&r&&r.schema===1&&r.source==='parent-dashboard'&&r.code===code+'-LS'&&r.className===p.className&&normalized(r.name)===normalized(p.name)&&
-
-
-
-   typeof r.score==='number'&&Number.isFinite(r.score)&&r.score>=0&&r.total===30&&r.score<=r.total&&typeof r.submittedAt==='string'&&r.submittedAt.trim());
-
-
-
- }
-
-
-
- function read(storage,p,code){try{const r=JSON.parse(storage.getItem(key(p,code)));return valid(r,p,code)?r:null;}catch{return null;}}
-
-
-
- function write(storage,p,code,feedback){
-
-
-
-  if(!p||!feedback||feedback.contentMissing||!feedback.submittedAt||feedback.score===null||feedback.score===undefined||feedback.score==='')return false;
-
-
-
-  const r={schema:1,source:'parent-dashboard',name:p.name,className:p.className,code:code+'-LS',score:Number(feedback.score),total:Number(feedback.maximum),submittedAt:String(feedback.submittedAt)};
-
-
-
-  if(!valid(r,p,code))return false;
-
-
-
-  try{storage.setItem(key(p,code),JSON.stringify(r));return true;}catch{return false;}
-
-
-
- }
-
-
-
- const api={key,valid,read,write};root.ScienceResume=api;
-
-
-
- if(typeof module==='object'&&module.exports)module.exports=api;
-
-
-
+/* Handoff of an already received listening result. No submissions or draft sync. */
+(function(root){
+ 'use strict';
+ const normalized=v=>String(v||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+ const key=(p,code)=>'science-g3-dashboard-receipt-v1:'+encodeURIComponent(p.className+'|'+normalized(p.name)+'|'+code);
+ const memory=new Map(),memoryLimit=128;
+ const clone=r=>({schema:r.schema,source:r.source,name:r.name,className:r.className,code:r.code,score:r.score,total:r.total,submittedAt:r.submittedAt});
+ function valid(r,p,code){
+  return !!(p&&r&&r.schema===1&&r.source==='parent-dashboard'&&r.code===code+'-LS'&&r.className===p.className&&normalized(r.name)===normalized(p.name)&&
+   typeof r.score==='number'&&Number.isFinite(r.score)&&r.score>=0&&r.total===30&&r.score<=r.total&&typeof r.submittedAt==='string'&&r.submittedAt.trim());
+ }
+ function remember(p,code,r){
+  if(!valid(r,p,code))return null;
+  const k=key(p,code),saved=clone(r);memory.delete(k);memory.set(k,saved);
+  while(memory.size>memoryLimit)memory.delete(memory.keys().next().value);
+  return clone(saved);
+ }
+ function read(storage,p,code){
+  try{const r=memory.get(key(p,code));if(valid(r,p,code))return clone(r);}catch(_){}
+  try{const r=JSON.parse(storage.getItem(key(p,code)));return valid(r,p,code)?remember(p,code,r):null;}catch(_){return null;}
+ }
+ function write(storage,p,code,feedback){
+  if(!p||!feedback||feedback.contentMissing||!feedback.submittedAt||feedback.score===null||feedback.score===undefined||feedback.score==='')return false;
+  const r={schema:1,source:'parent-dashboard',name:p.name,className:p.className,code:code+'-LS',score:Number(feedback.score),total:Number(feedback.maximum),submittedAt:String(feedback.submittedAt)};
+  if(!remember(p,code,r))return false;
+  try{storage.setItem(key(p,code),JSON.stringify(r));}catch(_){}
+  return true;
+ }
+ function forEntry(value,registry){
+  try{
+   const u=new URL(value,root.location.href);
+   if(u.origin!==root.location.origin||!['/student-learning/','/student-learning/kids-ta-entry/'].includes(u.pathname))return null;
+   const target=new URL(u.searchParams.get('lesson'));
+   if(target.origin!==u.origin)return null;
+   const matches=(Array.isArray(registry)?registry:[]).filter(item=>{try{const known=new URL(item.url);return known.origin===target.origin&&known.pathname===target.pathname;}catch(_){return false;}});
+   if(matches.length!==1)return null;
+   const p={name:u.searchParams.get('mtt_english')||u.searchParams.get('mtt_name'),className:u.searchParams.get('mtt_class')},code=matches[0].code;
+   if(!p.name||!p.className)return null;
+   const r=memory.get(key(p,code));return valid(r,p,code)?clone(r):null;
+  }catch(_){return null;}
+ }
+ function fromEntry(rootWindow,p,code){
+  try{
+   const actual=new URL(rootWindow.location.href);let cursor=rootWindow;
+   for(let depth=0;depth<3;depth++){
+    const ancestor=cursor.parent;if(!ancestor||ancestor===cursor)break;
+    const u=new URL(ancestor.location.href);if(u.origin!==actual.origin)break;
+    if(u.pathname==='/student-learning/kids-ta-entry/'){
+     const target=new URL(u.searchParams.get('lesson'));
+     if(target.origin===actual.origin&&target.pathname===actual.pathname&&ancestor.LessonDashboardEntry&&typeof ancestor.LessonDashboardEntry.getScienceReceipt==='function'){
+      const r=ancestor.LessonDashboardEntry.getScienceReceipt(ancestor.location.href);
+      if(valid(r,p,code))return remember(p,code,r);
+     }
+    }
+    cursor=ancestor;
+   }
+  }catch(_){}
+  return null;
+ }
+ const api={key,valid,read,write,forEntry,fromEntry};root.ScienceResume=api;
+ if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
 
 
@@ -17010,7 +16999,10 @@ function sciencePracticeCardV1_(item,isNewPractice){try{
 
 
 
-    if(target.origin===known.origin&&target.pathname===known.pathname&&p.name&&p.className)ScienceResume.write(localStorage,p,id.known.code,feedback);
+    if(target.origin===known.origin&&target.pathname===known.pathname&&p.name&&p.className){
+     let storage=null;try{storage=localStorage}catch(_){}
+     ScienceResume.write(storage,p,id.known.code,feedback);
+    }
 
 
 
