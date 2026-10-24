@@ -16992,7 +16992,8 @@ function sciencePracticeCardV1_(item,isNewPractice){try{
 
 
 
-   if(u.origin===location.origin&&u.pathname==='/student-learning/'&&id&&id.stage==='listen'){
+   if(u.origin===location.origin&&['/student-learning/','/student-learning/kids-ta-entry/'].includes(u.pathname)&&id&&id.stage==='listen'){
+    const target=new URL(u.searchParams.get('lesson')),known=new URL(id.known.url);
 
 
 
@@ -17000,7 +17001,7 @@ function sciencePracticeCardV1_(item,isNewPractice){try{
 
 
 
-    if(p.name&&p.className)ScienceResume.write(localStorage,p,id.known.code,feedback);
+    if(target.origin===known.origin&&target.pathname===known.pathname&&p.name&&p.className)ScienceResume.write(localStorage,p,id.known.code,feedback);
 
 
 
