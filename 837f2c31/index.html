@@ -4982,9 +4982,6 @@ function model(student,publicData,selfResults,now){
    whose original schedule description is no longer in the lesson catalog. */
 for(const u of units)for(const c of u.components){
  const state=c.nativeReceiptState;if(!state)continue;
- if(!c.tasks?.some(t=>t.state===state)){
-  c.tasks=c.tasks||[];c.tasks.push({task:{title:c.label,instructions:'',url:''},state,trackerDeadline:c.dueDate});
- }
  if(c.status==='todo'&&state.completed===true&&FighterSubmissionEvidence.received(state)){
   c.status='done';c.statusText=state.status;c.times=[...new Set([state.submittedAt,...c.times].filter(Boolean))];c.attempts=Math.max(c.attempts||0,state.submissionAttempts?.length||0);
  }
@@ -5708,7 +5705,7 @@ function unitLearningAction(u){const tasks=u.components.flatMap(c=>c.tasks||[]).
 
 
 
-function links(c){const seen=new Set(),out=[];for(const entry of c.tasks||[]){if(entry.state){const actions=typeof submittedFileActions_==='function'?submittedFileActions_(entry.state):[];for(const a of actions)if(!seen.has(a)){seen.add(a);out.push(a);}}}return out.join('');}
+function links(c){const seen=new Set(),out=[];for(const entry of [...(c.tasks||[]),...(c.nativeReceiptState?[{state:c.nativeReceiptState}]:[])]){if(entry.state){const actions=typeof submittedFileActions_==='function'?submittedFileActions_(entry.state):[];for(const a of actions)if(!seen.has(a)){seen.add(a);out.push(a);}}}return out.join('');}
 
 
 
