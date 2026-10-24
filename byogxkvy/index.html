@@ -12523,26 +12523,29 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-      try { kidsProgramPilotSync_(); } catch (_) { window.KidsProgramPilot?.disable(); }
+      try { kidsJourneyNativeSync_(); } catch (_) { window.KidsJourneyPilot?.disable(); }
       return failures.length === 0;
 
 
 
     }
-/* NATIVE_KIDS_PROGRAM_PILOT_V1: presentation cohort; native readers own every state. */
-var kidsProgramPilotParentHash_=location.hash;
-function kidsProgramPilotSync_(){
- const api=window.KidsProgramPilot;if(!api)return;
+/* NATIVE_KIDS_JOURNEY_STANDARD_V1: same approved KIDS 21 UI; native KIDS 8 data. */
+var kidsJourneyNativeHash_=location.hash;
+function kidsJourneyNativeSync_(){
+ const api=window.KidsJourneyPilot;if(!api)return;
  const alias=text(kidsApi.parent.alias).toUpperCase();
- if(location.hash!==kidsProgramPilotParentHash_||CLASS_NUMBER!==8||!kidsApi.parent.authorized||kidsApi.parent.revoked||alias!=='TEST K8'||!app.child||Number(app.child.classNumber)!==8||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){api.disable();return;}
- const upcoming=scheduleRows().filter(row=>row._end>=new Date());
- api.update({authorized:true,revoked:false,classNumber:CLASS_NUMBER,className:CLASS_NAME,alias,label:kidsApi.parent.label||alias,parentHash:location.hash,
-  profile:app.child,practice:practiceRows(),upcoming,
-  status:statusMeta,lessonHTML:a=>sessionCard(scheduleRows().find(s=>s.lessonKey===a.lessonKey)||a,false),practiceHTML:a=>practiceCard(a,false),
-  resultsHTML:$('#profilePanel').innerHTML,competitionHTML:$('#competitionPanel').innerHTML});
+ if(location.hash!==kidsJourneyNativeHash_||CLASS_NUMBER!==8||!kidsApi.parent.authorized||kidsApi.parent.revoked||alias!=='TEST K8'||!app.child||Number(app.child.classNumber)!==8||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){api.disable();return;}
+ const sourceAt=Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt);
+ const label=text(kidsApi.parent.label||app.data?.studentAliases?.[0]?.label||alias).replace(/\s*\([^)]*\)\s*$/,'');
+ const profile={...app.child,kidsJourneyV1:{classNumber:8,className:CLASS_NAME,alias,fullName:label,sourceAt}};
+ const ready=api.update({profile,dashboard:app.data||{},practice:practiceRows(),serverNow:sourceAt,
+  nativeProgram:{sessions:sessions(),upcoming:scheduleRows().filter(row=>row._end>=new Date()),schedule:scheduleRows(),status:statusMeta,
+   files:f=>submissionEvidenceActionsHtml_(f,f.viewUrl||'')+submissionHistoryHtml(f.submissionAttempts,f.viewUrl||'',{compact:true,showSingle:true,fallbackScore:f.score,fallbackMaximum:f.maximum}),
+   resultsHTML:$('#profilePanel').innerHTML,competitionHTML:$('#competitionPanel').innerHTML}});
+ if(ready)renderPendingWorkBanner();
 }
-window.addEventListener('kids-program-pilot-ready',kidsProgramPilotSync_);
-/* NATIVE_KIDS_PROGRAM_PILOT_V1_END */
+window.addEventListener('titi-dashboard-ready',kidsJourneyNativeSync_);
+/* NATIVE_KIDS_JOURNEY_STANDARD_V1_END */
 
 
 
@@ -12575,7 +12578,8 @@ window.addEventListener('kids-program-pilot-ready',kidsProgramPilotSync_);
 
 
 
-      const reminders = arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
+      const canonical = window.KidsJourneyPilot?.pendingEntries?.();
+      const reminders = Array.isArray(canonical) ? canonical : arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
 
 
 
@@ -12583,7 +12587,7 @@ window.addEventListener('kids-program-pilot-ready',kidsProgramPilotSync_);
 
 
 
-      const summaryCount = Number(pick(summary, ['needsCompletionCount'], NaN));
+      const summaryCount = Array.isArray(canonical) ? canonical.length : Number(pick(summary, ['needsCompletionCount'], NaN));
 
 
 
@@ -28468,7 +28472,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
 
-<script id="native-kids-program-pilot" src="/student-learning/kids-journey/native-program.66a7ff50b2f4.js" defer></script>
+<script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.01af3f6ea5eb.js" defer></script>
 </body>
 
 
