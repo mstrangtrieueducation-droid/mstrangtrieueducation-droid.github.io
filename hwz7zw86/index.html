@@ -9844,6 +9844,17 @@ function taskBinding(a,t,state,byKey,student,publicData){
 }
 
 function dateTime(v){const m=text(v).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?Date.UTC(Number(m[3]),Number(m[2])-1,Number(m[1])):0;}
+/* Same code binding and history selector as the native self-study renderer.
+   This only carries its result/file history into the compact view. */
+function nativeSelfStudyResult(assignment,items){
+ const canonical=typeof root.selfStudyCanonicalCodeUiV4_==='function'?root.selfStudyCanonicalCodeUiV4_:value=>text(value).toUpperCase();
+ const code=canonical(assignment.sourceCode||assignment.code||'');
+ if(!code)return null;
+ const matches=(items||[]).filter(row=>canonical(row&&row.code||'')===code);
+ if(typeof root.fighterSubmissionSelectSelfStudyResult_!=='function')return matches[0]||null;
+ return matches.reduce((previous,row)=>root.fighterSubmissionSelectSelfStudyResult_(previous,row),null);
+}
+
 function model(student,publicData,selfResults,now){
 
 
@@ -9883,7 +9894,7 @@ function model(student,publicData,selfResults,now){
     else {u.guidance=u.guidance||[];u.guidance.push(t);}
    });
   }else{
-   const u=attach(id,a,assigned);let c=u.components[0];if(!c){c=cell('','',{column:-1,role:id.program.key==='shadow'?'shadow':'listening',label:id.program.key==='shadow'?'🎙️ Bài đọc Shadowing':'🎧 Luyện nghe',dueDate:a.dueDate});u.components.push(c);}c.tasks=[{task:{title:a.topic,instructions:a.instructions,url:a.url},state:(selfResults||[]).find(r=>text(r.code).toUpperCase()===text(a.sourceCode||a.code).toUpperCase())||a}];const live=c.tasks[0].state;if(c.status==='todo'&&FighterSubmissionEvidence.received(live)){c.status='done';c.statusText=live.isLate?'Đã nộp muộn':'Đã hoàn thành';c.late=Boolean(live.isLate);if(live.submittedAt)c.times=[live.submittedAt,...c.times];if(!Number.isFinite(c.score)&&Number.isFinite(live.total)){c.score=live.total;c.maximum=live.maximum||live.maxScore||null;}if(Number.isFinite(live.listening))c.listening={score:live.listening,maximum:c.maximum===50?40:25};if(Number.isFinite(live.paraphrase))c.paraphrase={score:live.paraphrase,maximum:10};}
+   const u=attach(id,a,assigned);let c=u.components[0];if(!c){c=cell('','',{column:-1,role:id.program.key==='shadow'?'shadow':'listening',label:id.program.key==='shadow'?'🎙️ Bài đọc Shadowing':'🎧 Luyện nghe',dueDate:a.dueDate});u.components.push(c);}c.tasks=[{task:{title:a.topic,instructions:a.instructions,url:a.url},state:nativeSelfStudyResult(a,selfResults)||a}];const live=c.tasks[0].state;if(c.status==='todo'&&FighterSubmissionEvidence.received(live)){c.status='done';c.statusText=live.isLate?'Đã nộp muộn':'Đã hoàn thành';c.late=Boolean(live.isLate);if(live.submittedAt)c.times=[live.submittedAt,...c.times];if(!Number.isFinite(c.score)&&Number.isFinite(live.total)){c.score=live.total;c.maximum=live.maximum||live.maxScore||null;}if(Number.isFinite(live.listening))c.listening={score:live.listening,maximum:c.maximum===50?40:25};if(Number.isFinite(live.paraphrase))c.paraphrase={score:live.paraphrase,maximum:10};}
   }
  }
  /* Reuse the native receipt projection for real tracker columns, including those
@@ -11231,7 +11242,7 @@ function mount(){
 
 
 
- const pendingBase=fighterRenderPendingHomeworkV15_;fighterRenderPendingHomeworkV15_=function(){const result=pendingBase.apply(this,arguments);renderPendingAlert();return result;};
+ const pendingBase=fighterRenderPendingHomeworkV15_;fighterRenderPendingHomeworkV15_=function(){const result=pendingBase.apply(this,arguments);if(current)render();else renderPendingAlert();return result;};
 
  const originalClear=fighterParentClear_;fighterParentClear_=function(){current=null;closeDetail();for(const id of ['f5-student','f5-alert','f5-list','f5-metrics','f5-ranking'])update(q('#'+id),'');return originalClear.apply(this,arguments);};
 
