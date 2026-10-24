@@ -12523,11 +12523,27 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
+      try { kidsProgramPilotSync_(); } catch (_) { window.KidsProgramPilot?.disable(); }
       return failures.length === 0;
 
 
 
     }
+/* NATIVE_KIDS_PROGRAM_PILOT_V1: presentation cohort; native readers own every state. */
+var kidsProgramPilotParentHash_=location.hash;
+function kidsProgramPilotSync_(){
+ const api=window.KidsProgramPilot;if(!api)return;
+ const alias=text(kidsApi.parent.alias).toUpperCase();
+ if(location.hash!==kidsProgramPilotParentHash_||CLASS_NUMBER!==8||!kidsApi.parent.authorized||kidsApi.parent.revoked||alias!=='TEST K8'||!app.child||Number(app.child.classNumber)!==8||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){api.disable();return;}
+ const upcoming=scheduleRows().filter(row=>row._end>=new Date());
+ api.update({authorized:true,revoked:false,classNumber:CLASS_NUMBER,className:CLASS_NAME,alias,label:kidsApi.parent.label||alias,parentHash:location.hash,
+  profile:app.child,practice:practiceRows(),upcoming,
+  status:statusMeta,lessonHTML:a=>sessionCard(scheduleRows().find(s=>s.lessonKey===a.lessonKey)||a,false),practiceHTML:a=>practiceCard(a,false),
+  resultsHTML:$('#profilePanel').innerHTML,competitionHTML:$('#competitionPanel').innerHTML});
+}
+window.addEventListener('kids-program-pilot-ready',kidsProgramPilotSync_);
+/* NATIVE_KIDS_PROGRAM_PILOT_V1_END */
+
 
 
 
@@ -28452,6 +28468,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
 
+<script id="native-kids-program-pilot" src="/student-learning/kids-journey/native-program.0dfa915f5835.js" defer></script>
 </body>
 
 
