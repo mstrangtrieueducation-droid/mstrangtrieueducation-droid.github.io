@@ -6755,7 +6755,7 @@ function taskBinding(a,t,state,byKey,student,publicData){
  }
  const target=unit(t.title,parent.program),key=target?parent.program.key+'-'+(target.level?'l'+target.level+'-':'')+'u'+target.value:parent.key;
  // A task may prepare the NEXT Unit. Bind it to that native tracker column when present.
- const id=target&&byKey.has(key)?{...parent,key,unit:target}:parent;
+ const id=target?{...parent,key,unit:target}:parent;
  return {id,role:roleOf(t,parent.program)};
 }
 
@@ -6783,7 +6783,7 @@ function model(student,publicData,selfResults,now){
 
 
 
- const course=student.fighterCourse||{schema:1,scores:(student.scoreDetails||[]).map(s=>({...s,score10:s.score})),units:[]},units=JSON.parse(JSON.stringify(course.units)),byKey=new Map(units.map(u=>[u.key,u])),today=now||Date.now(),joined=dateTime(student.joinDate),definitions=[...(publicData.assignments||[]),...(publicData.selfStudyAssignments||[])];
+ const course=student.fighterCourse||{schema:1,scores:(student.scoreDetails||[]).map(s=>({...s,score10:s.score})),units:[]},units=JSON.parse(JSON.stringify(course.units)),byKey=new Map(units.map(u=>[u.key,u])),nativeKeys=new Set(byKey.keys()),today=now||Date.now(),joined=dateTime(student.joinDate),definitions=[...(publicData.assignments||[]),...(publicData.selfStudyAssignments||[])];
 
 
 
@@ -6804,7 +6804,14 @@ function model(student,publicData,selfResults,now){
   if(Array.isArray(a.tasks)){
    a.tasks.forEach((t,i)=>{
     const state=record?.tasks?.[i],binding=taskBinding(a,t,state,byKey,student,publicData);if(!binding)return;
-    const u=attach(binding.id,a,assigned),role=binding.role,c=binding.column?u.components.find(c=>c.column===binding.column):u.components.find(c=>c.role===role);
+    const u=attach(binding.id,a,assigned);
+    // An explicitly assigned next-Unit resource without a native tracker column
+    // remains visible under its own Unit, without borrowing the previous Unit's
+    // completion, receipt, deadline or homework count.
+    if(binding.id.key!==id.key&&!nativeKeys.has(binding.id.key)&&!state?.tracked&&!state?.completed&&!state?.submitted){
+     u.guidance=u.guidance||[];u.guidance.push(t);u.guidanceHeading='Bài chuẩn bị theo buổi học';u.explicitNextUnitGuidance=true;return;
+    }
+    const role=binding.role,c=binding.column?u.components.find(c=>c.column===binding.column):u.components.find(c=>c.role===role);
     if(c){const nativeDeadline=c.column>0&&c.dueDate&&(binding.column||unit(t.title,binding.id.program)||a.tasks.length===1||binding.id.program.key==='pt');c.tasks=c.tasks||[];c.tasks.push({task:t,state,...(nativeDeadline?{trackerDeadline:c.dueDate}:{})});if(c.status==='todo'&&FighterSubmissionEvidence.received(state)){c.status='done';c.statusText=state.status||'Đã hoàn thành';c.score=Number.isFinite(state.score)?state.score:c.score;c.times=[state.submittedAt,...c.times].filter(Boolean);c.late=Boolean(state.isLate)||c.late;}if(!c.dueDate)c.dueDate=a.dueDate||'';}
     else if(t.url||state?.tracked||state?.submitted){const v=cell('',state?.comment||'',{column:-1,role,label:t.title,dueDate:a.dueDate||''});v.tasks=[{task:t,state}];if(FighterSubmissionEvidence.received(state)){v.status='done';v.statusText=state.status||'Đã hoàn thành';v.score=Number.isFinite(state.score)?state.score:null;v.times=state.submittedAt?[state.submittedAt]:[];v.late=Boolean(state.isLate);}u.components.push(v);}
     else {u.guidance=u.guidance||[];u.guidance.push(t);}
@@ -6846,7 +6853,7 @@ const kept=units.filter(u=>{if(!u.components.length)return false;const latestDue
 
 
 
- return {schema:1,scores:course.scores,units:kept.filter(u=>u.components.length)};
+ return {schema:1,scores:course.scores,units:kept.filter(u=>u.components.length),guidanceUnits:units.filter(u=>u.explicitNextUnitGuidance&&u.guidance?.length&&!u.components.length&&liveKeys.has(u.key))};
 
 
 
@@ -7510,6 +7517,7 @@ function taskRequirement(u,t,entry){return '<div class="f5-task-requirement"><st
 
 
 
+function guidanceCard(u){const info=FighterTaskDeadlineView.describe(u,u.guidance[0]);return '<article class="f5-unit" data-f5-key="'+E(u.key)+'"><div class="f5-unit-top"><span class="f5-eyebrow">'+E(displayProgram(u.program))+'</span><span class="f5-status">Bài chuẩn bị</span></div><h3><button type="button" data-f5-open="'+E(u.key)+'">'+E(displayProgram(u.title))+'</button></h3><p class="f5-dates">'+(u.assignedAt?'Ngày giao '+new Date(u.assignedAt).toLocaleDateString('vi-VN',{timeZone:'UTC'})+' · ':'')+(info.dueDate?'Hạn '+E(info.dueDate):'Theo hướng dẫn')+'</p><div class="f5-unit-footer"><span>Thông tin theo buổi giao bài</span><button type="button" class="f5-open" data-f5-open="'+E(u.key)+'">Xem yêu cầu →</button></div></article>';}
 function card(u){const warning=u.warnings?.[0],last=u.components.filter(c=>c.times.length).flatMap(c=>c.times).at(-1),shadow=u.components.find(c=>c.role==='shadow');return '<article class="f5-unit '+u.status+'" data-f5-key="'+E(u.key)+'"><div class="f5-unit-top"><span class="f5-eyebrow">'+E(displayProgram(u.program))+'</span><span class="f5-status '+u.status+'">'+E(unitStatus(u))+'</span></div><h3><button type="button" data-f5-open="'+E(u.key)+'">'+E(displayProgram(u.title))+'</button></h3><p class="f5-dates">'+(u.assignedAt?'Ngày giao '+new Date(u.assignedAt).toLocaleDateString('vi-VN',{timeZone:'UTC'})+' · ':'')+deadlineSummary(u)+'</p>'+(warning?'<p class="f5-warning">⚠️ Cô nhắn: '+E(warning)+'</p>':'')+'<div class="f5-chips">'+u.components.map(badge).join('')+'</div><div class="f5-unit-footer"><span>'+(shadow?'Số lượt: '+(shadow.attempts||shadow.tasks?.[0]?.state?.submissionAttempts?.length||0):u.components.filter(c=>c.status==='done').length+'/'+u.components.length+' phần hoàn thành')+'</span><button type="button" class="f5-open" data-f5-open="'+E(u.key)+'">'+(u.status==='done'?'Điểm & nhận xét':'Xem yêu cầu')+' →</button>'+'</div></article>';}
 
 
@@ -7570,7 +7578,7 @@ function review(c){const comment=c.comment||'';if(!comment)return '';const excer
 
 
 
-function detail(u){u=FighterResourceActions.view(u);return '<header class="f5-modal-head"><div><span class="f5-eyebrow">'+E(displayProgram(u.program))+'</span><h2 id="f5-modal-title">'+E(displayProgram(u.title))+'</h2><p>'+'Mỗi đầu mục có hạn riêng theo buổi giao bài.'+'</p></div><button type="button" data-f5-close aria-label="Đóng chi tiết">✕</button></header><div class="f5-modal-body">'+u.components.map((c,i)=>'<section class="f5-component" data-f5-key="component-'+E(u.key)+'-'+i+'"><div class="f5-requirements"><h3>'+E(c.label)+'</h3>'+(c.tasks||[]).map(entry=>taskRequirement(u,entry.task,entry)).join('')+(!c.tasks?.length?taskDeadline(FighterTaskDeadlineView.component(u,c)[0])+'<p>Thực hiện theo hướng dẫn trên lớp.</p>':'')+'</div><div class="f5-feedback"><span class="f5-status '+c.status+'">'+E(c.statusText)+'</span>'+(Number.isFinite(c.score)?'<p class="f5-score">'+num(c.score)+(c.maximum?'<small>/'+c.maximum+'</small>':'<small> / 10</small>')+'</p>':'')+(c.listening?'<p>Nghe: <strong>'+num(c.listening.score)+'/'+c.listening.maximum+'</strong> · Paraphrase: <strong>'+num(c.paraphrase?.score)+'/'+(c.paraphrase?.maximum||10)+'</strong></p>':'')+(c.times.length?'<p class="f5-times">'+[...new Set(c.times)].map((t,i)=>'Lượt '+(i+1)+' · '+E(t)).join('<br>')+'</p>':'')+submittedWork(c)+(c.teacherNote?'<p class="f5-warning">💬 '+E(c.teacherNote)+'</p>':'')+review(c)+(c.raw?'<details data-history-section="f5-raw-'+c.column+'"><summary>Xem ghi nhận trên bảng</summary><div class="f5-full-review">'+E(c.raw)+'</div></details>':'')+(c.tasks||[]).filter(e=>e.state?.comment&&e.state.comment!==c.comment&&e.state.comment!==c.teacherNote).map(e=>'<section class="f5-review"><h4>Nhận xét bài nộp</h4><div class="f5-full-review">'+E(e.state.comment)+'</div></section>').join('')+'</div></section>').join('')+(u.guidance?.length?'<section class="f5-guidance"><h3>Ôn tập thêm</h3>'+u.guidance.map(t=>taskRequirement(u,t)).join('')+'</section>':'')+'</div>';}
+function detail(u){u=FighterResourceActions.view(u);return '<header class="f5-modal-head"><div><span class="f5-eyebrow">'+E(displayProgram(u.program))+'</span><h2 id="f5-modal-title">'+E(displayProgram(u.title))+'</h2><p>'+'Mỗi đầu mục có hạn riêng theo buổi giao bài.'+'</p></div><button type="button" data-f5-close aria-label="Đóng chi tiết">✕</button></header><div class="f5-modal-body">'+u.components.map((c,i)=>'<section class="f5-component" data-f5-key="component-'+E(u.key)+'-'+i+'"><div class="f5-requirements"><h3>'+E(c.label)+'</h3>'+(c.tasks||[]).map(entry=>taskRequirement(u,entry.task,entry)).join('')+(!c.tasks?.length?taskDeadline(FighterTaskDeadlineView.component(u,c)[0])+'<p>Thực hiện theo hướng dẫn trên lớp.</p>':'')+'</div><div class="f5-feedback"><span class="f5-status '+c.status+'">'+E(c.statusText)+'</span>'+(Number.isFinite(c.score)?'<p class="f5-score">'+num(c.score)+(c.maximum?'<small>/'+c.maximum+'</small>':'<small> / 10</small>')+'</p>':'')+(c.listening?'<p>Nghe: <strong>'+num(c.listening.score)+'/'+c.listening.maximum+'</strong> · Paraphrase: <strong>'+num(c.paraphrase?.score)+'/'+(c.paraphrase?.maximum||10)+'</strong></p>':'')+(c.times.length?'<p class="f5-times">'+[...new Set(c.times)].map((t,i)=>'Lượt '+(i+1)+' · '+E(t)).join('<br>')+'</p>':'')+submittedWork(c)+(c.teacherNote?'<p class="f5-warning">💬 '+E(c.teacherNote)+'</p>':'')+review(c)+(c.raw?'<details data-history-section="f5-raw-'+c.column+'"><summary>Xem ghi nhận trên bảng</summary><div class="f5-full-review">'+E(c.raw)+'</div></details>':'')+(c.tasks||[]).filter(e=>e.state?.comment&&e.state.comment!==c.comment&&e.state.comment!==c.teacherNote).map(e=>'<section class="f5-review"><h4>Nhận xét bài nộp</h4><div class="f5-full-review">'+E(e.state.comment)+'</div></section>').join('')+'</div></section>').join('')+(u.guidance?.length?'<section class="f5-guidance"><h3>'+E(u.guidanceHeading||'Ôn tập thêm')+'</h3>'+u.guidance.map(t=>taskRequirement(u,t)).join('')+'</section>':'')+'</div>';}
 
 
 
@@ -7582,7 +7590,7 @@ function detail(u){u=FighterResourceActions.view(u);return '<header class="f5-mo
 
 
 
-function showDetail(k){const u=current?.units.find(x=>x.key===k);if(!u)return;returnFocus=document.activeElement;dialogKey=k;dialogSignature='';refreshDialog();q('#f5-modal').showModal();q('[data-f5-close]').focus({preventScroll:true});}
+function showDetail(k){const u=[...(current?.units||[]),...(current?.guidanceUnits||[])].find(x=>x.key===k);if(!u)return;returnFocus=document.activeElement;dialogKey=k;dialogSignature='';refreshDialog();q('#f5-modal').showModal();q('[data-f5-close]').focus({preventScroll:true});}
 
 
 
@@ -7594,7 +7602,7 @@ function showDetail(k){const u=current?.units.find(x=>x.key===k);if(!u)return;re
 
 
 
-function refreshDialog(){if(!dialogKey)return;const u=current?.units.find(x=>x.key===dialogKey);if(!u)return;const h=detail(u);if(h===dialogSignature)return;dialogSignature=h;const modal=q('#f5-modal'),top=modal.scrollTop;update(modal,h);modal.scrollTop=top;}
+function refreshDialog(){if(!dialogKey)return;const u=[...(current?.units||[]),...(current?.guidanceUnits||[])].find(x=>x.key===dialogKey);if(!u)return;const h=detail(u);if(h===dialogSignature)return;dialogSignature=h;const modal=q('#f5-modal'),top=modal.scrollTop;update(modal,h);modal.scrollTop=top;}
 
 
 
@@ -7942,7 +7950,7 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- const units=activeUnits();update(q('#f5-list'),units.map(card).join('')||'<p class="empty">Không có bài trong nhóm này.</p>');update(q('#f5-list-count'),'<strong>'+units.reduce((n,u)=>n+u.viewRows.length,0)+' đầu mục · '+units.length+' Unit/bài</strong> · Các phần cùng Unit được gom trong một thẻ.');planner();results();refreshDialog();
+ const units=activeUnits();update(q('#f5-list'),units.map(card).join('')||'<p class="empty">Không có bài trong nhóm này.</p>');update(q('#f5-list-count'),'<strong>'+units.reduce((n,u)=>n+u.viewRows.length,0)+' đầu mục · '+units.length+' Unit/bài</strong> · Các phần cùng Unit được gom trong một thẻ.');const guides=sorted((current.guidanceUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-guidance-list'),guides.length?'<h3>Bài chuẩn bị theo buổi học</h3>'+guides.map(guidanceCard).join(''):'');planner();results();refreshDialog();
 
 
 
@@ -8050,7 +8058,7 @@ function mount(){
 
 
 
- const work=document.createElement('section');work.id='f5-work';work.hidden=true;work.innerHTML='<div class="f5-section-heading"><span class="f5-eyebrow">Học có định hướng</span><h2>Bài tập theo chương trình</h2></div><div id="f5-programs" class="f5-pills"></div><div id="f5-statuses" class="f5-pills f5-status-filters"></div><p id="f5-list-count"></p><div id="f5-list"></div>';main.append(work);
+ const work=document.createElement('section');work.id='f5-work';work.hidden=true;work.innerHTML='<div class="f5-section-heading"><span class="f5-eyebrow">Học có định hướng</span><h2>Bài tập theo chương trình</h2></div><div id="f5-programs" class="f5-pills"></div><div id="f5-statuses" class="f5-pills f5-status-filters"></div><p id="f5-list-count"></p><div id="f5-list"></div><section id="f5-guidance-list" aria-label="Bài chuẩn bị theo buổi học"></section>';main.append(work);
 
 
 
