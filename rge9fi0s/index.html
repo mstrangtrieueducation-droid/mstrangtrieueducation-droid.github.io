@@ -9204,7 +9204,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 })(window);
 
 
-</script><script id="kids-journey-bean-pilot" src="/student-learning/kids-journey/pilot.f9bf928915a1.js" defer></script></head>
+</script><script id="kids-journey-bean-pilot" src="/student-learning/kids-journey/pilot.aaf3f7d01f3c.js" defer></script></head>
 
 
 
@@ -12567,7 +12567,8 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-      const reminders = arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
+      const canonical = window.KidsJourneyPilot?.pendingEntries?.();
+      const reminders = Array.isArray(canonical) ? canonical : arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
 
 
 
@@ -12575,7 +12576,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-      const summaryCount = Number(pick(summary, ['needsCompletionCount'], NaN));
+      const summaryCount = Array.isArray(canonical) ? canonical.length : Number(pick(summary, ['needsCompletionCount'], NaN));
 
 
 
@@ -28456,7 +28457,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
       if(location.hash!==kidsJourneyPilotHash_||CLASS_NUMBER!==21||!kidsApi.parent.authorized||kidsApi.parent.revoked||!app.child||!app.child.kidsJourneyV1||!matchKey(kidsApi.parent.alias)||matchKey(app.childAlias)!==matchKey(kidsApi.parent.alias)||matchKey(app.child.englishName)!==matchKey(kidsApi.parent.alias)||Number(app.child.classNumber)!==21||matchKey(app.child.kidsJourneyV1.alias)!==matchKey(kidsApi.parent.alias)){window.KidsJourneyPilot.disable();return;}
       try{
         const ready=window.KidsJourneyPilot.update({profile:app.child,dashboard:app.data||{},practice:practiceRows(),serverNow:Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt)});
-        if(ready){document.documentElement.dataset.kidsJourneyPilot='kids21';}
+        if(ready){renderPendingWorkBanner();document.documentElement.dataset.kidsJourneyPilot='kids21';}
       }catch(error){console.warn('KIDS_JOURNEY_PILOT_LOCAL_RENDER');}
     });
     let kidsJourneyFocusPending_=false,kidsJourneyFocusAt_=-Infinity;
