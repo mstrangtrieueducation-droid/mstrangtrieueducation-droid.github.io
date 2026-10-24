@@ -12523,11 +12523,31 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
+      try { kidsJourneyNativeSync_(); } catch (_) { window.KidsJourneyPilot?.disable(); }
       return failures.length === 0;
 
 
 
     }
+/* NATIVE_KIDS_JOURNEY_STANDARD_V1: approved KIDS 21 UI; native trial data. */
+var kidsJourneyNativeHash_=location.hash;
+function kidsJourneyNativeSync_(){
+ const api=window.KidsJourneyPilot;if(!api)return;
+ const alias=text(kidsApi.parent.alias).toUpperCase();
+ if(location.hash!==kidsJourneyNativeHash_||CLASS_NUMBER!==27||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(alias)!==matchKey('TEST K27')||!app.child||Number(app.child.classNumber)!==27||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){api.disable();return;}
+ const sourceAt=Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt);
+ const matches=(app.data?.studentAliases||[]).filter(row=>matchKey(row.alias)===matchKey(alias));
+ const label=text(kidsApi.parent.label||(matches.length===1?matches[0].label:'')||alias).replace(/\s*\([^)]*\)\s*$/,'');
+ const profile={...app.child,kidsJourneyV1:{classNumber:27,className:CLASS_NAME,alias,fullName:label,sourceAt}};
+ const ready=api.update({profile,dashboard:app.data||{},practice:practiceRows(),serverNow:sourceAt,
+  nativeProgram:{sessions:sessions(),upcoming:scheduleRows().filter(row=>Number(row._end)>=sourceAt),schedule:scheduleRows(),status:statusMeta,
+   files:f=>submissionEvidenceActionsHtml_(f,f.viewUrl||'')+submissionHistoryHtml(f.submissionAttempts,f.viewUrl||'',{compact:true,showSingle:true,fallbackScore:f.score,fallbackMaximum:f.maximum}),
+   resultsHTML:$('#profilePanel').innerHTML,competitionHTML:$('#competitionPanel').innerHTML}});
+ if(ready)renderPendingWorkBanner();
+}
+window.addEventListener('titi-dashboard-ready',kidsJourneyNativeSync_);
+/* NATIVE_KIDS_JOURNEY_STANDARD_V1_END */
+
 
 
 
@@ -12559,7 +12579,8 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-      const reminders = arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
+      const canonical = window.KidsJourneyPilot?.pendingEntries?.();
+      const reminders = Array.isArray(canonical) ? canonical : arr(pick(profile, ['privateReminders', 'reminders', 'alerts'], []));
 
 
 
@@ -12567,7 +12588,7 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
 
-      const summaryCount = Number(pick(summary, ['needsCompletionCount'], NaN));
+      const summaryCount = Array.isArray(canonical) ? canonical.length : Number(pick(summary, ['needsCompletionCount'], NaN));
 
 
 
@@ -28452,6 +28473,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
 
+<script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.ea834b05aa67.js" defer></script>
 </body>
 
 
