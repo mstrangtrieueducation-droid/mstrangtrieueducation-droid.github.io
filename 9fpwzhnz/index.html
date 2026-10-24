@@ -12540,7 +12540,7 @@ function kidsJourneyNativeSync_(){
  const label=text(kidsApi.parent.label||(matches.length===1?matches[0].label:'')||alias).replace(/\s*\([^)]*\)\s*$/,'');
  const profile={...app.child,kidsJourneyV1:{classNumber:29,className:CLASS_NAME,alias,fullName:label,sourceAt}};
  const ready=api.update({profile,dashboard:app.data||{},practice:practiceRows(),serverNow:sourceAt,
-  nativeProgram:{sessions:sessions(),upcoming:scheduleRows().filter(row=>Number(row._end)>=sourceAt),schedule:scheduleRows(),status:statusMeta,
+  nativeProgram:{sessions:sessions(),upcoming:scheduleRows().filter(row=>Number(row._end)>=sourceAt),schedule:scheduleRows(),status:statusMeta,isRetake:homeworkTaskIsRetake,
    files:f=>submissionEvidenceActionsHtml_(f,f.viewUrl||'')+submissionHistoryHtml(f.submissionAttempts,f.viewUrl||'',{compact:true,showSingle:true,fallbackScore:f.score,fallbackMaximum:f.maximum}),
    resultsHTML:$('#profilePanel').innerHTML,competitionHTML:$('#competitionPanel').innerHTML}});
  if(ready)renderPendingWorkBanner();
@@ -28473,7 +28473,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
 
-<script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.e36831f3e336.js" defer></script>
+<script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.6dfd53f843d6.js" defer></script>
 </body>
 
 
