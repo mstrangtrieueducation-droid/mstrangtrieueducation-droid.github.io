@@ -12529,12 +12529,12 @@ function kidsFeedbackDetailMarkup(value,escape) {
 
 
     }
-/* NATIVE_KIDS_JOURNEY_STANDARD_V1: approved KIDS 21 UI; native trial data. */
+/* NATIVE_KIDS_JOURNEY_STANDARD_V1: approved KIDS UI; all authorized class pupils. */
 var kidsJourneyNativeHash_=location.hash,kidsJourneyNativeMounted_=false;
 function kidsJourneyNativeSync_(){
  const api=window.TrialKidsJourneyPilot;if(!api)return;
  const alias=text(kidsApi.parent.alias).toUpperCase();
- if(location.hash!==kidsJourneyNativeHash_||CLASS_NUMBER!==8||!kidsApi.parent.authorized||kidsApi.parent.revoked||matchKey(alias)!==matchKey('TEST K8')||!app.child||Number(app.child.classNumber)!==8||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){if(kidsJourneyNativeMounted_){api.disable();kidsJourneyNativeMounted_=false;}return;}
+ if(location.hash!==kidsJourneyNativeHash_||CLASS_NUMBER!==8||!kidsApi.parent.authorized||kidsApi.parent.revoked||!matchKey(alias)||!app.child||Number(app.child.classNumber)!==8||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){if(kidsJourneyNativeMounted_){api.disable();kidsJourneyNativeMounted_=false;}return;}
  const sourceAt=Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt);
  const matches=(app.data?.studentAliases||[]).filter(row=>matchKey(row.alias)===matchKey(alias));
  const label=text(kidsApi.parent.label||(matches.length===1?matches[0].label:'')||alias).replace(/\s*\([^)]*\)\s*$/,'');
