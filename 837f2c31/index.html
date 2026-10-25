@@ -5372,14 +5372,27 @@ root.FighterResultProgramPolicy={available};
 (function(root){
  'use strict';
  function build(model,nativeEntries){
-  const P=root.FighterCourseParser,rows=[],used=new Set(),today=bangkokTodaySerial(new Date());
+  const P=root.FighterCourseParser,rows=[],manualRows=[],used=new Set(),today=bangkokTodaySerial(new Date());
   const key=e=>e.kind+'|'+e.id+'|'+(e.part||'');
+  // Manual verification is an existing source authority, not a Form receipt.
+  // A blank teacher cell cannot become missing homework or a reminder.
+  const manualTask=t=>Boolean(t&&(t.manualSubmissionKind||t.manualSubmissionVerification||t.submissionAuthority==='manual-tracker'||t.submissionManualAuthority===true));
+  const manualComponent=c=>Boolean(c.tasks?.length)&&c.tasks.every(({task,state})=>manualTask(state)||manualTask(task));
+  const manualEntry=e=>{
+   if(e.kind==='self-study')return false;
+   const a=(dashboard.assignments||[]).find(a=>String(a.id||a.sourceCode||'')===e.id);
+   return manualTask(a?.tasks?.[Number(e.part)]);
+  };
   function matches(u,c,e){
    if(e.kind==='self-study')return (u.assignments||[]).some(a=>selfStudyCanonicalCodeUiV4_(a.sourceCode||a.code||'')===e.id);
    return (u.assignments||[]).some(a=>String(a.id||a.sourceCode||'')===e.id&&(c.tasks||[]).some(t=>a.tasks?.[Number(e.part)]===t.task));
   }
   for(const u of model.units||[])for(const [index,c]of u.components.entries()){
    const entries=nativeEntries.filter(e=>matches(u,c,e));entries.forEach(e=>used.add(key(e)));
+   if(manualComponent(c)){
+    manualRows.push({key:u.key+'|'+index,unit:u,component:c,index});
+    continue;
+   }
    // A link in descriptive guidance alone is not evidence of missing homework.
    // Tracker-bound components and native pending entries are the authoritative scope.
    if(c.status==='todo'&&!(c.column>0)&&!entries.length)continue;
@@ -5389,7 +5402,7 @@ root.FighterResultProgramPolicy={available};
    rows.push({key:u.key+'|'+index,unit:u,component:c,index,status:state,dueDate:due,entry:{...(entries[0]||{kind:'course',id:u.key,part:String(index),label:u.title+' · '+c.label}),status:state,unitKey:u.key}});
   }
   // Keep any native pending task whose presentation binding is not yet available.
-  for(const e of nativeEntries)if(!used.has(key(e))){
+  for(const e of nativeEntries)if(!used.has(key(e))&&!manualEntry(e)){
    const a=e.kind==='self-study'?(dashboard.selfStudyAssignments||[]).find(a=>selfStudyCanonicalCodeUiV4_(a.sourceCode||a.code||'')===e.id):(dashboard.assignments||[]).find(a=>String(a.id||a.sourceCode||'')===e.id);
    if(!a)continue;
    const t=e.kind==='self-study'?{title:a.topic,url:a.url,instructions:a.instructions}:a.tasks?.[Number(e.part)];if(!t)continue;
@@ -5399,14 +5412,26 @@ root.FighterResultProgramPolicy={available};
    rows.push({key:key(e),unit:u,component:c,index:0,status:state,dueDate:due,entry:{...e,status:state,unitKey:u.key}});
   }
   const buckets={todo:[],overdue:[],fix:[],done:[]};rows.forEach(r=>buckets[r.status].push(r));
-  return {rows,buckets,pending:[...buckets.todo,...buckets.overdue].map(r=>r.entry)};
+  return {rows,manualRows,buckets,pending:[...buckets.todo,...buckets.overdue].map(r=>r.entry)};
  }
  function units(groups,state,program){
   const rows=groups.rows.filter(r=>(!program||program==='all'||r.unit.programKey===program)&&(state==='all'||state==='missing'&&['todo','overdue'].includes(r.status)||r.status===state));
   const byKey=new Map();for(const r of rows){if(!byKey.has(r.unit.key))byKey.set(r.unit.key,{...r.unit,components:[],viewRows:[]});const u=byKey.get(r.unit.key);u.components.push(r.component);u.viewRows.push(r);}
   return [...byKey.values()].map(u=>({...u,status:u.viewRows.some(r=>r.status==='overdue')?'overdue':u.viewRows.some(r=>r.status==='todo')?'todo':u.viewRows.some(r=>r.status==='fix')?'fix':'done'}));
  }
- root.FighterHomeworkGroups={build,units};
+ function manualUnits(groups,program){
+  const byKey=new Map();
+  for(const r of groups.manualRows||[]){
+   if(program&&program!=='all'&&r.unit.programKey!==program)continue;
+   const key=r.unit.key+'|manual';
+   if(!byKey.has(key))byKey.set(key,{...r.unit,key,status:'manual',components:[],warnings:[]});
+   const c=r.component,label=c.tasks?.[0]?.task?.title||c.label;
+   byKey.get(key).components.push({...c,label,...(c.status==='todo'?{status:'manual',statusText:'Chờ cô ghi nhận'}:{})});
+   if(c.status==='fix'&&c.teacherNote)byKey.get(key).warnings.push(c.teacherNote);
+  }
+  return [...byKey.values()];
+ }
+ root.FighterHomeworkGroups={build,units,manualUnits};
 })(globalThis);
 </script>
 <script id="fighter-course-study-hub-client">/* Fighter presentation adapter: consume prepared packets; retain native receipt ownership. */
@@ -5637,7 +5662,7 @@ function badge(c){const late=c.status==='done'&&c.late;let label=c.statusText;if
 
 
 
-function unitStatus(u){return u.status==='done'?'Đã nộp':u.status==='fix'?'Cần bổ sung':u.status==='overdue'?'Quá hạn':'Cần làm';}
+function unitStatus(u){return u.status==='manual'?'Cô ghi nhận trên lớp':u.status==='done'?'Đã nộp':u.status==='fix'?'Cần bổ sung':u.status==='overdue'?'Quá hạn':'Cần làm';}
 
 
 
@@ -5687,7 +5712,7 @@ function activeUnits(){return current?sorted(FighterHomeworkGroups.units(current
 
 function taskDeadline(info){const source=info.session?'Giao ở '+info.session+(info.lessonDate?' · '+info.lessonDate:''):info.origin==='tracker'?'Theo bảng theo dõi lớp':'';return '<div class="f5-task-deadline '+(info.dueDate?'':'is-undated')+'" data-f5-due="'+E(info.dueDate)+'" data-f5-assignment="'+E(info.assignmentId)+'"><strong>🗓️ '+(info.dueDate?'Hạn '+E(info.dueDate):'Theo hướng dẫn')+'</strong>'+(source?'<small>'+E(source)+'</small>':'')+'</div>';}
 
-function deadlineSummary(u){const due=FighterTaskDeadlineView.nearest(u);return due?'Hạn gần nhất '+E(due):u.status==='done'?'Hạn từng đầu mục trong chi tiết':'Theo hướng dẫn từng đầu mục';}
+function deadlineSummary(u){if(u.status==='manual')return 'Cô ghi nhận trực tiếp';const due=FighterTaskDeadlineView.nearest(u);return due?'Hạn gần nhất '+E(due):u.status==='done'?'Hạn từng đầu mục trong chi tiết':'Theo hướng dẫn từng đầu mục';}
 
 function taskRequirement(u,t,entry){return '<div class="f5-task-requirement"><strong>'+E(t.title)+'</strong>'+taskDeadline(entry?FighterTaskDeadlineView.describeEntry(u,entry):FighterTaskDeadlineView.describe(u,t))+'<p>'+E(t.instructions||'Hoàn thành theo hướng dẫn trong bài học.')+'</p>'+learningAction(t)+'</div>';}
 
@@ -5706,6 +5731,7 @@ function card(u){const warning=u.warnings?.[0],last=u.components.filter(c=>c.tim
 
 
 
+function manualCard(u){return '<article class="f5-unit manual" data-f5-key="'+E(u.key)+'"><div class="f5-unit-top"><span class="f5-eyebrow">'+E(displayProgram(u.program))+'</span><span class="f5-status manual">Cô ghi nhận trên lớp</span></div><h3><button type="button" data-f5-open="'+E(u.key)+'">'+E(displayProgram(u.title))+'</button></h3><div class="f5-chips">'+u.components.map(badge).join('')+'</div><div class="f5-unit-footer"><span>Không tính vào bài cần nộp</span><button type="button" class="f5-open" data-f5-open="'+E(u.key)+'">Xem ghi nhận →</button></div></article>';}
 function learningHref(t){if(!t?.url)return '';try{const href=parentLearningUrl_(typeof canonicalTaskUrl==='function'?canonicalTaskUrl(t.url):t.url);return new URL(href,location.href).protocol==='https:'?href:'';}catch{return '';}}
 
 
@@ -5766,7 +5792,7 @@ function detail(u){u=FighterResourceActions.view(u);return '<header class="f5-mo
 
 
 
-function showDetail(k){const u=[...(current?.units||[]),...(current?.guidanceUnits||[])].find(x=>x.key===k);if(!u)return;returnFocus=document.activeElement;dialogKey=k;dialogSignature='';refreshDialog();q('#f5-modal').showModal();q('[data-f5-close]').focus({preventScroll:true});}
+function showDetail(k){const u=[...(current?.manualUnits||[]),...(current?.units||[]),...(current?.guidanceUnits||[])].find(x=>x.key===k);if(!u)return;returnFocus=document.activeElement;dialogKey=k;dialogSignature='';refreshDialog();q('#f5-modal').showModal();q('[data-f5-close]').focus({preventScroll:true});}
 
 
 
@@ -5778,7 +5804,7 @@ function showDetail(k){const u=[...(current?.units||[]),...(current?.guidanceUni
 
 
 
-function refreshDialog(){if(!dialogKey)return;const u=[...(current?.units||[]),...(current?.guidanceUnits||[])].find(x=>x.key===dialogKey);if(!u)return;const h=detail(u);if(h===dialogSignature)return;dialogSignature=h;const modal=q('#f5-modal'),top=modal.scrollTop;update(modal,h);modal.scrollTop=top;}
+function refreshDialog(){if(!dialogKey)return;const u=[...(current?.manualUnits||[]),...(current?.units||[]),...(current?.guidanceUnits||[])].find(x=>x.key===dialogKey);if(!u)return;const h=detail(u);if(h===dialogSignature)return;dialogSignature=h;const modal=q('#f5-modal'),top=modal.scrollTop;update(modal,h);modal.scrollTop=top;}
 
 
 
@@ -5967,6 +5993,9 @@ function results(){if(!current)return;const available=FighterResultProgramPolicy
 
 
  const ranking=dashboard?.classSummary?.fighterCourse;if(!ranking?.roster?.length){update(q('#f5-ranking'),'<p class="empty">Chưa có bảng tổng hợp mới.</p>');return;}
+ // Display-only progress uses the same canonical task rows as cards and reminders.
+ // The published academic scores and ranks remain exactly as supplied by the source.
+ const roster=ranking.roster.map(r=>{const pupil=dashboard.students?.find(s=>s.name===r.name);if(!pupil)return r;const model=P.model(pupil,dashboard,[]),groups=FighterHomeworkGroups.build(model,fighterNativePendingEntriesV15_(pupil)),rows=groups.rows,done=rows.filter(x=>x.status==='done');return {...r,total:rows.length,completed:done.length,onTime:done.filter(x=>x.component.timingKnown&&!x.component.late).length,submitted:rows.filter(x=>x.component.timingKnown&&(x.status==='done'||x.component.times?.length)).length};});
 
 
 
@@ -5978,7 +6007,7 @@ function results(){if(!current)return;const available=FighterResultProgramPolicy
 
 
 
- const own=ranking.roster.find(r=>r.name===activeStudentName_),leaders=ranking.roster.filter(r=>r.rank).slice(0,3);update(q('#f5-ranking'),'<p class="f5-muted">Chương trình đã học: '+E(available.programs.map(([key,name])=>displayProgram(name)).join(' · '))+'</p><div class="f5-podium">'+leaders.map((r,i)=>'<article><span>'+['🥇','🥈','🥉'][i]+' Hạng '+r.rank+'</span><h3>'+E(displayName(r.name))+'</h3><p>'+E(r.englishName)+'</p><strong>'+num(r.average)+'<small> / 10</small></strong></article>').join('')+'</div>'+(own?'<div class="f5-standing"><strong>📍 Vị trí hiện tại của con: '+(own.rank?'Hạng '+own.rank:'Chưa có điểm')+'</strong><p>Điểm TB '+num(own.average)+' / 10 · Hoàn thành '+own.completed+'/'+own.total+' đầu việc.</p><p>'+(current.units.some(u=>u.status!=='done')?'Con ưu tiên hoàn thành '+current.homeworkGroups.pending.length+' đầu mục cần làm hoặc quá hạn để củng cố kiến thức.':'Con duy trì việc nộp đủ bài và ôn các Unit có điểm cần cải thiện nhé.')+'</p></div>':'')+'<div class="f5-formula"><strong>Cách tính điểm xếp hạng</strong><p>'+E(available.keys.has('listening')?ranking.formula:String(ranking.formula||'').replace(' và từng bài Listening đã có điểm',''))+'</p></div><div class="f5-table-wrap"><table><thead><tr><th>Hạng</th><th>Học viên</th><th>Điểm TB tích lũy</th><th>Tiến độ bài tập</th><th>Đúng hạn / đã nộp</th></tr></thead><tbody>'+ranking.roster.map(r=>'<tr class="'+(r.name===activeStudentName_?'is-own':'')+'"><td>'+E(r.rank?'#'+r.rank:'—')+'</td><td><strong>'+E(displayName(r.name))+'</strong>'+(r.name===activeStudentName_?' <b>(Con)</b>':'')+'<br><small>'+E(r.englishName)+'</small></td><td>'+num(r.average)+' / 10<br><small>'+r.scoreCount+' bài có điểm</small></td><td>'+r.completed+'/'+r.total+' bài'+(r.total?' ('+Math.round(r.completed*100/r.total)+'%)':'')+'</td><td>'+r.onTime+'/'+r.submitted+'</td></tr>').join('')+'</tbody></table></div>');
+ const own=roster.find(r=>r.name===activeStudentName_),leaders=roster.filter(r=>r.rank).slice(0,3);update(q('#f5-ranking'),'<p class="f5-muted">Chương trình đã học: '+E(available.programs.map(([key,name])=>displayProgram(name)).join(' · '))+'</p><div class="f5-podium">'+leaders.map((r,i)=>'<article><span>'+['🥇','🥈','🥉'][i]+' Hạng '+r.rank+'</span><h3>'+E(displayName(r.name))+'</h3><p>'+E(r.englishName)+'</p><strong>'+num(r.average)+'<small> / 10</small></strong></article>').join('')+'</div>'+(own?'<div class="f5-standing"><strong>📍 Vị trí hiện tại của con: '+(own.rank?'Hạng '+own.rank:'Chưa có điểm')+'</strong><p>Điểm TB '+num(own.average)+' / 10 · Hoàn thành '+own.completed+'/'+own.total+' đầu việc.</p><p>'+(current.homeworkGroups.pending.length>0?'Con ưu tiên hoàn thành '+current.homeworkGroups.pending.length+' đầu mục cần làm hoặc quá hạn để củng cố kiến thức.':'Con duy trì việc nộp đủ bài và ôn các Unit có điểm cần cải thiện nhé.')+'</p></div>':'')+'<div class="f5-formula"><strong>Cách tính điểm xếp hạng</strong><p>'+E(available.keys.has('listening')?ranking.formula:String(ranking.formula||'').replace(' và từng bài Listening đã có điểm',''))+'</p></div><div class="f5-table-wrap"><table><thead><tr><th>Hạng</th><th>Học viên</th><th>Điểm TB tích lũy</th><th>Tiến độ bài tập</th><th>Đúng hạn / đã nộp</th></tr></thead><tbody>'+roster.map(r=>'<tr class="'+(r.name===activeStudentName_?'is-own':'')+'"><td>'+E(r.rank?'#'+r.rank:'—')+'</td><td><strong>'+E(displayName(r.name))+'</strong>'+(r.name===activeStudentName_?' <b>(Con)</b>':'')+'<br><small>'+E(r.englishName)+'</small></td><td>'+num(r.average)+' / 10<br><small>'+r.scoreCount+' bài có điểm</small></td><td>'+r.completed+'/'+r.total+' bài'+(r.total?' ('+Math.round(r.completed*100/r.total)+'%)':'')+'</td><td>'+r.onTime+'/'+r.submitted+'</td></tr>').join('')+'</tbody></table></div>');
 
 
 
@@ -6026,7 +6055,7 @@ function planner(){if(!current)return;const b=buckets(current.units);update(q('#
 
 
 
- update(q('#f5-week'),Array.from({length:7},(_,i)=>{const at=monday+i*86400000,classes=events.filter(e=>P.dateTime(e.date)===at&&!isCancelledScheduleMoment(at,e.startTime)),hasExact=events.some(e=>P.dateTime(e.date)===at),recurring=hasExact?[]:rules.filter(r=>r.weekday===new Date(at).getUTCDay()&&P.dateTime(r.startDate)<=at&&(!r.endDate||P.dateTime(r.endDate)>=at)&&!isCancelledScheduleMoment(at,r.startTime)),due=current.units.filter(u=>FighterTaskDeadlineView.pending(u).some(d=>P.dateTime(d.dueDate)===at));return '<article class="f5-day '+(at===serial?'today':'')+'"><b>'+['T2','T3','T4','T5','T6','T7','CN'][i]+'</b><span>'+new Date(at).getUTCDate()+'/'+(new Date(at).getUTCMonth()+1)+'</span>'+[...classes,...recurring].map(e=>'<small>📍 '+E(e.program||e.period||'Học trên lớp')+'<br>'+E(e.startTime)+'–'+E(e.endTime)+'</small>').join('')+due.map(u=>'<button type="button" data-f5-open="'+E(u.key)+'">⏳ '+E(displayProgram(u.title))+'</button>').join('')+'</article>';}).join(''));
+ update(q('#f5-week'),Array.from({length:7},(_,i)=>{const at=monday+i*86400000,classes=events.filter(e=>P.dateTime(e.date)===at&&!isCancelledScheduleMoment(at,e.startTime)),hasExact=events.some(e=>P.dateTime(e.date)===at),recurring=hasExact?[]:rules.filter(r=>r.weekday===new Date(at).getUTCDay()&&P.dateTime(r.startDate)<=at&&(!r.endDate||P.dateTime(r.endDate)>=at)&&!isCancelledScheduleMoment(at,r.startTime)),due=FighterHomeworkGroups.units(current.homeworkGroups,'missing','all').filter(u=>FighterTaskDeadlineView.pending(u).some(d=>P.dateTime(d.dueDate)===at));return '<article class="f5-day '+(at===serial?'today':'')+'"><b>'+['T2','T3','T4','T5','T6','T7','CN'][i]+'</b><span>'+new Date(at).getUTCDate()+'/'+(new Date(at).getUTCMonth()+1)+'</span>'+[...classes,...recurring].map(e=>'<small>📍 '+E(e.program||e.period||'Học trên lớp')+'<br>'+E(e.startTime)+'–'+E(e.endTime)+'</small>').join('')+due.map(u=>'<button type="button" data-f5-open="'+E(u.key)+'">⏳ '+E(displayProgram(u.title))+'</button>').join('')+'</article>';}).join(''));
 
 
 
@@ -6064,7 +6093,7 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- current=P.model(student,dashboard,fighterPendingSelfStudyItemsV15_||[]);current.homeworkGroups=FighterHomeworkGroups.build(current,fighterNativePendingEntriesV15_(student));for(const r of current.homeworkGroups.rows)if(!current.units.some(u=>u.key===r.unit.key))current.units.push(r.unit);const b=buckets(current.units,programFilter),missing=b.todo.length+b.overdue.length;
+ current=P.model(student,dashboard,fighterPendingSelfStudyItemsV15_||[]);current.homeworkGroups=FighterHomeworkGroups.build(current,fighterNativePendingEntriesV15_(student));current.manualUnits=FighterHomeworkGroups.manualUnits(current.homeworkGroups,'all');for(const r of current.homeworkGroups.rows)if(!current.units.some(u=>u.key===r.unit.key))current.units.push(r.unit);const b=buckets(current.units,programFilter),missing=b.todo.length+b.overdue.length;
 
 
 
@@ -6126,7 +6155,7 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- const units=activeUnits();update(q('#f5-list'),units.map(card).join('')||'<p class="empty">Không có bài trong nhóm này.</p>');update(q('#f5-list-count'),'<strong>'+units.reduce((n,u)=>n+u.viewRows.length,0)+' đầu mục · '+units.length+' Unit/bài</strong> · Các phần cùng Unit được gom trong một thẻ.');const guides=sorted((current.guidanceUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-guidance-list'),guides.length?'<h3>Bài chuẩn bị theo buổi học</h3>'+guides.map(guidanceCard).join(''):'');planner();results();refreshDialog();
+ const units=activeUnits();update(q('#f5-list'),units.map(card).join('')||'<p class="empty">Không có bài trong nhóm này.</p>');update(q('#f5-list-count'),'<strong>'+units.reduce((n,u)=>n+u.viewRows.length,0)+' đầu mục · '+units.length+' Unit/bài</strong> · Các phần cùng Unit được gom trong một thẻ.');const guides=sorted((current.guidanceUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-guidance-list'),guides.length?'<h3>Bài chuẩn bị theo buổi học</h3>'+guides.map(guidanceCard).join(''):'');const manual=sorted((current.manualUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-manual-list'),manual.length?'<details><summary>Ghi nhận trực tiếp của cô · '+manual.length+' Unit/bài (không tính bài cần nộp)</summary><div>'+manual.map(manualCard).join('')+'</div></details>':'');planner();results();refreshDialog();
 
 
 
@@ -6234,7 +6263,7 @@ function mount(){
 
 
 
- const work=document.createElement('section');work.id='f5-work';work.hidden=true;work.innerHTML='<div class="f5-section-heading"><span class="f5-eyebrow">Học có định hướng</span><h2>Bài tập theo chương trình</h2></div><div id="f5-programs" class="f5-pills"></div><div id="f5-statuses" class="f5-pills f5-status-filters"></div><p id="f5-list-count"></p><div id="f5-list"></div><section id="f5-guidance-list" aria-label="Bài chuẩn bị theo buổi học"></section>';main.append(work);
+ const work=document.createElement('section');work.id='f5-work';work.hidden=true;work.innerHTML='<div class="f5-section-heading"><span class="f5-eyebrow">Học có định hướng</span><h2>Bài tập theo chương trình</h2></div><div id="f5-programs" class="f5-pills"></div><div id="f5-statuses" class="f5-pills f5-status-filters"></div><p id="f5-list-count"></p><div id="f5-list"></div><section id="f5-guidance-list" aria-label="Bài chuẩn bị theo buổi học"></section><section id="f5-manual-list" aria-label="Ghi nhận trực tiếp của cô"></section>';main.append(work);
 
 
 
