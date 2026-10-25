@@ -7258,7 +7258,94 @@ root.FighterResultProgramPolicy={available};
  root.FighterHomeworkGroups={build,units,manualUnits};
 })(globalThis);
 </script>
-<script id="fighter-course-study-hub-client">/* Fighter presentation adapter: consume prepared packets; retain native receipt ownership. */
+<script id="dashboard-native-updates">/* Presentation-only notices from an already-authorized native dashboard model. */
+(function(root){
+ 'use strict';
+ const memory=new Map(),prefix='mtt_native_updates_v1_',recentWindow=72*3600000;
+ let activeKey='',currentInput=null,ledger=null;
+ const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const hash=v=>{let n=2166136261;for(const c of String(v)){n^=c.charCodeAt(0);n=Math.imul(n,16777619)}return(n>>>0).toString(36)};
+ const nonempty=v=>v!==undefined&&v!==null&&v!=='';
+ function read(key){if(memory.has(key))return memory.get(key);try{const raw=root.localStorage.getItem(key);if(raw){const value=JSON.parse(raw);if(value?.version===1)return value;}}catch(_){}return null;}
+ function save(key,value){memory.set(key,value);try{root.localStorage.setItem(key,JSON.stringify(value));}catch(_){}}
+ function compare(previous,records,now){
+  const prior=previous?.version===1?previous:{version:1,initialized:false,seen:{},events:[]};
+  const next={version:1,initialized:true,seen:{...prior.seen},events:[...prior.events]},fresh=[];
+  const ordered=[...records].filter(r=>r&&r.id).sort((a,b)=>(b.at||0)-(a.at||0));
+  for(const r of ordered){
+   const id=String(r.id),old=prior.seen[id],signals={receipt:r.receipt?hash(r.receipt):old?.signals?.receipt||'',score:nonempty(r.score)?r.score:old?.signals?.score??'',feedback:r.feedback?hash(r.feedback):old?.signals?.feedback||'',revision:r.revision===true||old?.signals?.revision===true},sig=JSON.stringify(signals);
+   const recent=Number.isFinite(r.at)&&r.at>0&&r.at<=now&&now-r.at<=recentWindow;
+   let type='';
+   if(!old){
+    if(r.kind==='result'&&prior.initialized&&nonempty(signals.score))type='result';
+    else if(r.kind==='task'&&r.released!==false&&(recent||prior.initialized&&!r.at)&&r.status!=='done')type='task';
+    else if(r.kind==='task'&&prior.initialized&&r.status==='done'&&nonempty(signals.score))type='result';
+   }
+   else if(old.sig!==sig){
+    if(nonempty(signals.score)&&signals.score!==old.signals?.score||nonempty(signals.feedback)&&signals.feedback!==old.signals?.feedback)type='result';
+    else if(nonempty(signals.receipt)&&signals.receipt!==old.signals?.receipt&&Number(r.receiptAt)>0&&now-Number(r.receiptAt)<=recentWindow)type='receipt';
+    else if(signals.revision&&!old.signals?.revision)type='revision';
+   }
+   if(type){
+    const eventId=hash(id+'|'+type+'|'+sig),event={eventId,recordId:id,type,title:type==='task'?'Bài tập mới':type==='result'?'Có điểm hoặc nhận xét mới':type==='receipt'?'Đã ghi nhận bài nộp':'Có yêu cầu bổ sung',label:String(r.label||''),at:now,unread:true};
+    if(!next.events.some(e=>e.eventId===eventId)&&!fresh.some(e=>e.eventId===eventId))fresh.push(event);
+   }
+   next.seen[id]={sig,signals,at:Number(r.at)||now};
+  }
+  // The bell is a compact view, not an archive of all homework history.
+  next.events=[...fresh,...next.events].slice(0,20);
+  const kept=Object.entries(next.seen).sort((a,b)=>(b[1].at||0)-(a[1].at||0)).slice(0,500);
+  next.seen=Object.fromEntries(kept);
+  return next;
+ }
+ function mount(){
+  if(root.document.getElementById('mtt-native-bell'))return;
+  const style=root.document.createElement('style');style.id='mtt-native-bell-style';style.textContent=`
+  #mtt-native-bell{position:fixed;left:20px;bottom:20px;z-index:10050;font-family:inherit;color:#142b46}
+  #mtt-native-bell[hidden]{display:none!important}
+  body.fighter-pending-work-locked #mtt-native-bell,body.ielts-pending-work-locked #mtt-native-bell{display:none!important}
+  #mtt-native-bell *{box-sizing:border-box}
+  #mtt-native-bell .nub-trigger{position:relative;display:grid;place-items:center;width:62px;height:62px;border:2px solid #f8edce;border-radius:50%;background:linear-gradient(145deg,#22476f 0%,#102e50 54%,#071b36 100%);box-shadow:0 9px 19px #071b3645,inset 2px 2px 4px #ffffff3a,inset -4px -5px 7px #0005;cursor:pointer;transition:transform .18s,box-shadow .18s}
+  #mtt-native-bell .nub-trigger:hover{transform:translateY(-2px);box-shadow:0 13px 24px #071b3655,inset 2px 2px 4px #ffffff45,inset -4px -5px 7px #0005}
+  #mtt-native-bell .nub-trigger:focus-visible,#mtt-native-bell button:focus-visible{outline:3px solid #e6b85a;outline-offset:3px}
+  #mtt-native-bell .nub-icon{width:39px;height:39px;filter:drop-shadow(0 3px 2px #0005);transform-origin:50% 18%}
+  #mtt-native-bell .nub-trigger.has-unread .nub-icon{animation:nub-ring 7s ease-in-out infinite}
+  #mtt-native-bell .nub-count{position:absolute;right:-3px;top:-4px;min-width:21px;height:21px;padding:0 5px;display:grid;place-items:center;border:2px solid #fff;border-radius:99px;background:#ae3841;color:white;font:700 11px/1 system-ui,sans-serif;box-shadow:0 2px 6px #0003}
+  #mtt-native-bell .nub-panel{position:absolute;left:0;bottom:76px;width:min(370px,calc(100vw - 28px));max-height:min(440px,70dvh);overflow:auto;border:1px solid #d7dfeb;border-radius:18px;background:#fff;box-shadow:0 19px 50px #091d3542,0 2px 8px #091d351c}
+  #mtt-native-bell .nub-panel[hidden]{display:none!important}
+  #mtt-native-bell .nub-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:17px 18px 14px;background:linear-gradient(120deg,#102e50,#193f66);color:#fff}
+  #mtt-native-bell .nub-head strong{display:block;font-size:17px;line-height:1.4}
+  #mtt-native-bell .nub-head small{display:block;margin-top:3px;color:#d6e4f1;font-size:11px}
+  #mtt-native-bell .nub-close{width:28px;height:28px;border:1px solid #ffffff44;border-radius:8px;background:#ffffff18;color:#fff;font-size:18px;cursor:pointer}
+  #mtt-native-bell .nub-list{padding:5px 10px 10px}
+  #mtt-native-bell .nub-item{display:flex;align-items:flex-start;gap:11px;width:100%;padding:12px 9px;border:0;border-bottom:1px solid #e7edf3;background:#fff;text-align:left;color:#193654;cursor:pointer;font:inherit}
+  #mtt-native-bell .nub-item:hover{background:#f5f8fb}
+  #mtt-native-bell .nub-symbol{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid #d8e3ee;border-radius:10px;color:#234c73;background:linear-gradient(145deg,#fff,#eaf1f8);box-shadow:0 2px 5px #19365414}
+  #mtt-native-bell .nub-symbol[data-type="result"]{color:#9a6a1e;border-color:#e7d7ac;background:linear-gradient(145deg,#fffcf3,#f8eccc)}
+  #mtt-native-bell .nub-symbol[data-type="receipt"]{color:#24745d;border-color:#cfe7dc;background:linear-gradient(145deg,#fafffc,#e6f5ed)}
+  #mtt-native-bell .nub-symbol[data-type="revision"]{color:#985c31;border-color:#efddc7;background:linear-gradient(145deg,#fffaf5,#faebd9)}
+  #mtt-native-bell .nub-symbol svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  #mtt-native-bell .nub-copy{min-width:0;display:block;flex:1}
+  #mtt-native-bell .nub-copy strong{display:block;font-size:13px;line-height:1.35}
+  #mtt-native-bell .nub-copy>span{display:block;margin-top:4px;color:#5b7189;font-size:12px;line-height:1.45}
+  #mtt-native-bell .nub-item i{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:#bd9141;vertical-align:1px}
+  #mtt-native-bell .nub-empty{margin:0;padding:22px 17px;color:#5b7189;font-size:13px}
+  @keyframes nub-ring{0%,89%,100%{transform:rotate(0)}91%{transform:rotate(10deg)}93%{transform:rotate(-8deg)}95%{transform:rotate(5deg)}97%{transform:rotate(-3deg)}}
+  @media(max-width:600px){#mtt-native-bell{left:12px;bottom:14px}#mtt-native-bell .nub-trigger{width:56px;height:56px}#mtt-native-bell .nub-icon{width:35px;height:35px}#mtt-native-bell .nub-panel{bottom:68px}}
+  @media(prefers-reduced-motion:reduce){#mtt-native-bell .nub-icon{animation:none!important}}
+  `;root.document.head.append(style);
+  const host=root.document.createElement('div');host.id='mtt-native-bell';host.hidden=true;host.innerHTML='<button type="button" class="nub-trigger" data-nub-open aria-haspopup="dialog" aria-expanded="false" aria-controls="nub-panel" aria-label="Thông báo"><svg class="nub-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><defs><linearGradient id="nub-gold" x1="11" y1="9" x2="35" y2="37" gradientUnits="userSpaceOnUse"><stop stop-color="#fff7dc"/><stop offset=".28" stop-color="#f5d98c"/><stop offset=".68" stop-color="#d9a746"/><stop offset="1" stop-color="#a86a28"/></linearGradient><linearGradient id="nub-rim" x1="8" y1="31" x2="40" y2="38" gradientUnits="userSpaceOnUse"><stop stop-color="#fff1c0"/><stop offset=".52" stop-color="#d9a245"/><stop offset="1" stop-color="#9b6327"/></linearGradient></defs><ellipse cx="24" cy="42" rx="13" ry="2" fill="#020b18" opacity=".35"/><path d="M20 10a4 4 0 0 1 8 0" stroke="#ffedb3" stroke-width="3" stroke-linecap="round"/><circle cx="24" cy="38" r="5" fill="#dba64b" stroke="#925a21"/><path d="M13 23c0-8 4-12 11-12s11 4 11 12c0 5 1 8 4 11H9c3-3 4-6 4-11Z" fill="url(#nub-gold)" stroke="#9b662e" stroke-width="1.2"/><path d="M10 32c8 2 20 2 28 0l2 3c1 3-31 5-32 0l2-3Z" fill="url(#nub-rim)" stroke="#95652d"/><path d="M18 21c0-3 1-5 3-6" stroke="#fffbe9" stroke-width="3" stroke-linecap="round" opacity=".8"/><path d="M13 34c7 2 15 2 22 0" stroke="#fff2cb" stroke-width="1.5" stroke-linecap="round" opacity=".65"/></svg><b class="nub-count" hidden></b></button><aside id="nub-panel" class="nub-panel" role="dialog" aria-label="Thông báo học tập" hidden></aside>';root.document.body.append(host);
+  host.addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;if(button.matches('[data-nub-open]')){const panel=host.querySelector('.nub-panel');panel.hidden=!panel.hidden;if(!panel.hidden){ledger.events.forEach(x=>x.unread=false);save(activeKey,ledger);draw();host.querySelector('.nub-close')?.focus({preventScroll:true});}else draw();return;}if(button.matches('.nub-close')){host.querySelector('.nub-panel').hidden=true;draw();host.querySelector('[data-nub-open]').focus({preventScroll:true});return;}if(button.dataset.nubRecord){const item=ledger.events.find(x=>x.eventId===button.dataset.nubRecord);host.querySelector('.nub-panel').hidden=true;draw();if(item)currentInput?.onSelect?.(item);}});
+  root.document.addEventListener('click',e=>{if(!host.contains(e.target)&&!host.querySelector('.nub-panel').hidden){host.querySelector('.nub-panel').hidden=true;draw();}});
+  root.document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!host.querySelector('.nub-panel').hidden){host.querySelector('.nub-panel').hidden=true;draw();}});
+ }
+ function icon(type){const paths={task:'<path d="M5 6.5h6.5c1.5 0 2.5.5 3.5 1.5 1-1 2-1.5 3.5-1.5H21v13h-6.5c-1.5 0-2.5.5-3.5 1.5-1-1-2-1.5-3.5-1.5H5z"/><path d="M13 8v13"/>',receipt:'<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',result:'<path d="m12 3 2.5 5.5 6 .7-4.4 4.2 1.2 6-5.3-2.9-5.3 2.9 1.2-6L3.5 9.2l6-.7z"/>',revision:'<path d="M4 20h16M7 16.5 16.8 6.7l2.5 2.5L9.5 19H7z"/><path d="m16.8 6.7 1.2-1.2a1.8 1.8 0 0 1 2.5 2.5l-1.2 1.2"/>'};return '<span class="nub-symbol" data-type="'+type+'" aria-hidden="true"><svg viewBox="0 0 24 24">'+(paths[type]||paths.task)+'</svg></span>';}
+ function draw(){const host=root.document.getElementById('mtt-native-bell');if(!host||!ledger)return;host.hidden=false;const button=host.querySelector('.nub-trigger'),badge=host.querySelector('.nub-count'),panel=host.querySelector('.nub-panel'),unread=ledger.events.filter(e=>e.unread).length;button.classList.toggle('has-unread',unread>0);button.setAttribute('aria-label',unread?'Thông báo, '+unread+' cập nhật mới':'Thông báo');button.setAttribute('aria-expanded',String(!panel.hidden));badge.hidden=!unread;badge.textContent=unread>9?'9+':String(unread);panel.innerHTML='<div class="nub-head"><div><strong>Thông báo học tập</strong><small>Cập nhật từ hồ sơ của con</small></div><button type="button" class="nub-close" aria-label="Đóng thông báo">×</button></div><div class="nub-list">'+(ledger.events.length?ledger.events.map(e=>'<button type="button" class="nub-item" data-nub-record="'+escape(e.eventId)+'">'+icon(e.type)+'<span class="nub-copy"><strong>'+(e.unread?'<i aria-hidden="true"></i>':'')+escape(e.title)+'</strong><span>'+escape(e.label)+' ↗</span></span></button>').join(''):'<p class="nub-empty">Chưa có cập nhật mới.</p>')+'</div>';}
+ function render(input){if(!input?.profileKey||!Array.isArray(input.records))return;mount();const key=prefix+hash(input.profileKey);activeKey=key;currentInput=input;ledger=compare(read(key),input.records,Date.now());save(key,ledger);draw();}
+ function hide(){currentInput=null;ledger=null;activeKey='';const host=root.document.getElementById('mtt-native-bell');if(host){host.hidden=true;host.querySelector('.nub-panel').hidden=true;}}
+ root.NativeUpdatesBell={render,hide,compare};
+})(globalThis);
+</script><script id="fighter-course-study-hub-client">/* Fighter presentation adapter: consume prepared packets; retain native receipt ownership. */
 
 
 
@@ -7367,6 +7454,33 @@ const statusNames={todo:'⏳ Cần làm',overdue:'⏰ Quá hạn',fix:'📝 Cầ
 
 
 let current=null,view='plan',programFilter='all',status='missing',resultView='personal',scoreProgram='all',dialogKey=null,dialogSignature='',returnFocus=null;
+let noticeTargets=new Map();
+
+function renderNativeNotices(student){
+ if(!root.NativeUpdatesBell||fighterPendingSelfStudyLoadedV15_!==true)return;
+ const gate=document.getElementById('fighter-pending-work-gate');
+ if(document.body.classList.contains('fighter-pending-work-locked')||(gate&&!gate.hidden)){root.NativeUpdatesBell.hide();return;}
+ const now=Date.now(),records=[];noticeTargets=new Map();
+ for(const r of current.homeworkGroups.rows){
+  const at=Number(r.unit.assignedAt)||0;if(at>now)continue;
+  // The existing homework projection already supplies release scope and status.
+  if(at&&at<now-90*86400000&&r.status==='done')continue;
+  const c=r.component,id='task:'+r.key,score=Number.isFinite(c.score)?c.score:null;
+  records.push({id,kind:'task',status:r.status,released:true,at,label:[displayProgram(r.unit.title),c.label].filter(Boolean).join(' · '),receipt:c.status==='done'?'done|'+(c.times||[]).join('|'):'',receiptAt:Math.max(0,...(c.times||[]).map(t=>P.dateTime(t)||0)),score,feedback:[c.teacherNote,c.comment].filter(Boolean).join('|'),revision:r.status==='fix'});
+  noticeTargets.set(id,{unitKey:r.unit.key,type:'task'});
+ }
+ for(const [index,s]of (current.scores||[]).entries()){
+  const score=Number.isFinite(s.score10)?s.score10:Number.isFinite(s.score)?s.score:null;if(score===null)continue;
+  const id='score:'+(s.key||[s.program,s.label,index].join('|'));
+  records.push({id,kind:'result',at:P.dateTime(s.date||s.lessonDate||'')||0,label:[s.program,s.label].filter(Boolean).join(' · '),score,feedback:[s.comment,s.teacherNote].filter(Boolean).join('|')});
+  noticeTargets.set(id,{type:'result'});
+ }
+ root.NativeUpdatesBell.render({profileKey:[dashboard.className,student.name,location.hash].join('|'),records,onSelect:event=>{
+  const target=noticeTargets.get(event.recordId);if(!target)return;
+  if(target.type==='result'){resultView='personal';activate('results');render();return;}
+  status='all';programFilter='all';activate('work');render();showDetail(target.unitKey);
+ }});
+}
 
 
 
@@ -7967,7 +8081,7 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- update(q('#f5-statuses'),Object.entries(statusNames).map(([s,t])=>[s,t,b[s].length]).map(([s,t,n])=>'<button type="button" data-f5-status="'+s+'" aria-pressed="'+(status===s)+'">'+t+' ('+n+')</button>').join(''));
+ update(q('#f5-statuses'),'<button type="button" data-f5-status="all" aria-pressed="'+(status==='all')+'">📚 Tất cả ('+(b.todo.length+b.overdue.length+b.fix.length+b.done.length)+')</button>'+Object.entries(statusNames).map(([s,t])=>[s,t,b[s].length]).map(([s,t,n])=>'<button type="button" data-f5-status="'+s+'" aria-pressed="'+(status===s)+'">'+t+' ('+n+')</button>').join(''));
 
 
 
@@ -7979,7 +8093,7 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- const units=activeUnits();update(q('#f5-list'),units.map(card).join('')||'<p class="empty">Không có bài trong nhóm này.</p>');update(q('#f5-list-count'),'<strong>'+units.reduce((n,u)=>n+u.viewRows.length,0)+' đầu mục · '+units.length+' Unit/bài</strong> · Các phần cùng Unit được gom trong một thẻ.');const guides=sorted((current.guidanceUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-guidance-list'),guides.length?'<h3>Bài chuẩn bị theo buổi học</h3>'+guides.map(guidanceCard).join(''):'');const manual=sorted((current.manualUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-manual-list'),manual.length?'<details><summary>Ghi nhận trực tiếp của cô · '+manual.length+' Unit/bài (không tính bài cần nộp)</summary><div>'+manual.map(manualCard).join('')+'</div></details>':'');planner();results();refreshDialog();
+ const units=activeUnits();update(q('#f5-list'),units.map(card).join('')||'<p class="empty">Không có bài trong nhóm này.</p>');update(q('#f5-list-count'),'<strong>'+units.reduce((n,u)=>n+u.viewRows.length,0)+' đầu mục · '+units.length+' Unit/bài</strong> · Các phần cùng Unit được gom trong một thẻ.');const guides=sorted((current.guidanceUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-guidance-list'),guides.length?'<h3>Bài chuẩn bị theo buổi học</h3>'+guides.map(guidanceCard).join(''):'');const manual=sorted((current.manualUnits||[]).filter(u=>programFilter==='all'||u.programKey===programFilter));update(q('#f5-manual-list'),manual.length?'<details><summary>Ghi nhận trực tiếp của cô · '+manual.length+' Unit/bài (không tính bài cần nộp)</summary><div>'+manual.map(manualCard).join('')+'</div></details>':'');planner();results();refreshDialog();renderNativeNotices(student);
 
 
 
@@ -8197,7 +8311,7 @@ function mount(){
 
  const pendingBase=fighterRenderPendingHomeworkV15_;fighterRenderPendingHomeworkV15_=function(){const result=pendingBase.apply(this,arguments);if(current)render();else renderPendingAlert();return result;};
 
- const originalClear=fighterParentClear_;fighterParentClear_=function(){current=null;closeDetail();for(const id of ['f5-student','f5-alert','f5-list','f5-metrics','f5-ranking'])update(q('#'+id),'');return originalClear.apply(this,arguments);};
+ const originalClear=fighterParentClear_;fighterParentClear_=function(){current=null;noticeTargets.clear();root.NativeUpdatesBell?.hide();closeDetail();for(const id of ['f5-student','f5-alert','f5-list','f5-metrics','f5-ranking'])update(q('#'+id),'');return originalClear.apply(this,arguments);};
 
 
 
