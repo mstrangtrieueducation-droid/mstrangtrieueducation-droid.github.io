@@ -20230,6 +20230,10 @@ const ieltsWritingReviews_ = (() => {
   const original=renderAllPersonal;
   renderAllPersonal=function(){const value=original.apply(this,arguments);schedule();return value;};
  }
+ if(typeof ieltsParentLock_==='function'){
+  const originalLock=ieltsParentLock_;
+  ieltsParentLock_=function(){root.NativeUpdatesBell?.hide();return originalLock.apply(this,arguments);};
+ }
  root.document.addEventListener('visibilitychange',()=>{if(!root.document.hidden)schedule();});
  const watchGate=()=>{
   const gate=root.document.getElementById('ielts-pending-work-gate');
