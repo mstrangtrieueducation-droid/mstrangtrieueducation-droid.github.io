@@ -48079,7 +48079,7 @@ ScienceStageContract.lessons=[
         }else{value.dashboard.schedule=authority.schedule;value.dashboard.assignments=authority.assignments;}
         if(typeof authority.joinDate==='string')profile.joinDate=authority.joinDate;
       }
-      const reconciled=mergeAuthority(profile,authority),assignments=reconciled.rows,checks=[];
+      const reconciled=mergeAuthority(profile,authority),assignments=reconciled.rows,checks=[],representedReceiptIds=new Set();
       assignments.forEach(assignment=>{
         if(!assignment||assignment.isAssessmentLesson)return;
         const active=Boolean(reconciled.current.get(assignment)),tasks=list(assignment.tasks),required=tasks.filter(task=>task&&task.requiresSubmission!==false),receivedTiming=new Map();
@@ -48089,6 +48089,7 @@ ScienceStageContract.lessons=[
           const peers=peersFor(assignment,maps,active?list(authority.assignments):assignments),window=root.DirectSubmissionAssignmentWindow.windowFor(assignment,peers);
           const accepts=receipt=>maps.some(map=>matches(receipt,map))&&root.DirectSubmissionAssignmentWindow.contains(receipt,assignment,peers);
           let found=receipts.filter(receipt=>receipt.id&&receipt.submittedAt&&accepts(receipt));
+          found.forEach(r=>representedReceiptIds.add(r.id));
           const feedback=task.feedback||(task.feedback={}),proof=active?proofFor(payload,maps,window):null;
 const nativeTrackerFeedback=root.NativeTrackerFeedbackView.capture(feedback);
           if(maps.length){
@@ -48127,6 +48128,14 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         // assignment timing. Paper/teacher-only and unknown-source work stay intact.
         if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
       });
+      // A native accepted receipt does not depend on Schedule being refreshed.
+      // Keep unmatched positive receipts as received work, with no invented
+      // lesson date, release, deadline, pending task or tracker mark.
+      if(ticket&&guard.isCurrent(ticket)&&payload.className===value.className){
+        const groups=new Map();
+        receipts.filter(r=>r&&r.id&&r.code&&r.family&&r.submittedAt&&!r.unassigned&&!['empty','unconfirmed'].includes(r.contentStatus)&&!representedReceiptIds.has(r.id)).forEach(r=>{const k=r.family+'|'+key(r.code);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r);});
+        profile.receivedUnassignedWork=[...groups].map(([k,found])=>{const record={id:'native-received:'+k,assignmentCode:found[0].code,program:found[0].family,title:found[0].title||found[0].code,nativeReceiptOnly:true};receive(record,found);return record;});
+      }
       // The practice view also merges legacy tracker/prepared rows. Remove
       // that second receipt fallback, without losing its independent comments.
       [profile.selfPractice,profile.preparedPracticeRows].forEach(rows=>list(rows).forEach(row=>{
@@ -56006,7 +56015,7 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
 
-<script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.6be1b3e4d8c6.js" defer></script>
+<script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.80decfd46d6d.js" defer></script>
 </body>
 
 
