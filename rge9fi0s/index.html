@@ -1948,8 +1948,74 @@
 }
 
 
-      var joined=unionNativeReceipts((sub.receipts||[]).concat(sub.emptyReceipts||[]),delta.receipts);
-      sub.receipts=joined.filter(function(r){return r.contentStatus!=='empty';});sub.emptyReceipts=joined.filter(function(r){return r.contentStatus==='empty';});
+      // NATIVE_SCIENCE_CODE_BINDING_V1
+      function kids7ParentText_(value) {
+  return String(value === null || value === undefined ? '' : value)
+    .trimStart().split(/\r?\n/)[0].normalize('NFC').replace(/\s+/g, ' ').trim();
+}
+function kids7ParentAlias_(value) {
+  return kids7ParentText_(value).toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]/g, '').toUpperCase();
+}
+function kidsPreviewProofV1_(value) {
+  return Boolean(value && value.complete === true && value.freshRead === true &&
+    Number.isFinite(value.verifiedAt) && value.verifiedAt > 0);
+}
+function kidsPreviewScienceDateV1_(text) {
+  const m=String(text||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!m)return 0;
+  const value=Date.UTC(Number(m[3]),Number(m[2])-1,Number(m[1])),d=new Date(value);
+  return d.getUTCFullYear()===Number(m[3])&&d.getUTCMonth()===Number(m[2])-1&&d.getUTCDate()===Number(m[1])?value:0;
+}
+function kidsPreviewResolveScienceV1_(value,number,bound,at) {
+  const s=value&&value.submissions,a=s&&s.assignmentAuthority,klass='KIDS '+number;
+  if(!s||s.className!==klass||!a||a.schema!==1||a.className!==klass||!kidsPreviewProofV1_(a)||!Array.isArray(a.assignments)||
+    !Array.isArray(s.unassignedReceipts)||!Array.isArray(s.receipts)||!Array.isArray(s.emptyReceipts)||!Array.isArray(s.coverage)||
+    kids7ParentAlias_(value.bootstrap&&value.bootstrap.profile&&value.bootstrap.profile.englishName)!==bound.aliasKey)return [];
+  const now=new Date(at),today=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()),cutoff=new Date(today);cutoff.setUTCMonth(cutoff.getUTCMonth()-2);
+  const join=kidsPreviewScienceDateV1_(bound.joinDate||a.joinDate||'');
+  if((bound.joinDate||a.joinDate)&&!join)return [];
+  const earliest=Math.max(cutoff.getTime(),join),resolved=[];
+  const normalize=function(text){return String(text||'').toUpperCase().replace(/[^A-Z0-9]/g,'');};
+  s.unassignedReceipts=s.unassignedReceipts.filter(function(receipt){
+    // A missing G3 stage cannot be inferred from a lesson; only the original
+    // combined G1/G2 family has a single legacy submission type.
+    const match=/^SCIENCE(\d{1,3})$/.exec(normalize(receipt.code));
+    if(receipt.family!=='SCIENCE G1 & G2'||!match||!receipt.id||receipt.received!==true||
+      ['provided','empty'].indexOf(receipt.contentStatus)<0||!Number.isFinite(receipt.submittedAtMs)||receipt.submittedAtMs<earliest)return true;
+    const episode=Number(match[1]);if(episode<1)return true;
+    const candidates=[];
+    a.assignments.forEach(function(item){
+      const grade=/^SCIENCE\s*G([12])$/i.exec(String(item.program||'').trim()),assigned=kidsPreviewScienceDateV1_(item.assignedDate||item.lessonDate);
+      if(!grade||Number(item.sessionNumber)!==episode||!assigned||assigned<earliest||assigned>today||assigned>receipt.submittedAtMs||
+        !/^KIDS\d+-/.test(item.id||'')||!String(item.id).startsWith('KIDS'+number+'-')||!Array.isArray(item.tasks)||item.tasks.length!==1||
+        !item.tasks[0].id||!/^https:\/\//.test(item.tasks[0].url||''))return;
+      const canonical='SCIENCE-G'+grade[1]+'-'+episode;
+      candidates.push({canonical:canonical,assignmentId:item.id,taskId:item.tasks[0].id,assignedDate:item.assignedDate||item.lessonDate});
+    });
+    // Repeated assignment occurrences or multiple grades remain ambiguous.
+    if(candidates.length!==1)return true;
+    const candidate=candidates[0],raw=receipt.code;
+    receipt.originalCode=raw;receipt.code=candidate.canonical;delete receipt.unassigned;
+    receipt.codeResolution={schema:1,basis:'fresh-schedule-unique-legacy-science-assignment',assignmentId:candidate.assignmentId,
+      taskId:candidate.taskId,assignedDate:candidate.assignedDate,authorityVerifiedAt:a.verifiedAt};
+    (receipt.contentStatus==='empty'?s.emptyReceipts:s.receipts).push(receipt);
+    resolved.push({code:raw,submittedAtMs:receipt.submittedAtMs,receiptId:receipt.id});return false;
+  });
+  if(!resolved.length)return [];
+  s.coverage.forEach(function(c){
+    if(c.family!=='SCIENCE G1 & G2'||c.structurallyComplete!==true||c.freshRead!==true||c.sourceFailure||!Array.isArray(c.issues))return;
+    const before=c.issues.length;c.issues=c.issues.filter(function(issue){return !(issue.reason==='CODE_UNRECOGNIZED'&&resolved.some(function(r){return r.submittedAtMs===issue.submittedAtMs&&normalize(r.code)===normalize(issue.code);}));});
+    if(before>c.issues.length&&c.issues.length===0)c.complete=true;
+  });
+  if(s.submissionVerification&&s.submissionVerification.freshRead===true&&s.coverage.length&&s.coverage.every(function(c){return c.complete===true&&c.freshRead===true&&c.structurallyComplete===true&&Array.isArray(c.issues)&&!c.issues.length&&!c.sourceFailure;}))s.submissionVerification.complete=true;
+  return resolved.map(function(r){return {receiptId:r.receiptId,basis:'fresh-schedule-unique-legacy-science-assignment'};});
+}
+      var unknown=unionNativeReceipts(sub.unassignedReceipts||[],delta.receipts.filter(function(r){return r.unassigned===true;}));
+      var joined=unionNativeReceipts((sub.receipts||[]).concat(sub.emptyReceipts||[]),delta.receipts.filter(function(r){return r.unassigned!==true;}));
+      sub.receipts=joined.filter(function(r){return r.contentStatus!=='empty';});sub.emptyReceipts=joined.filter(function(r){return r.contentStatus==='empty';});sub.unassignedReceipts=unknown;
+      kidsPreviewResolveScienceV1_({bootstrap:{profile:pupil},submissions:sub},options.classNumber,{aliasKey:kids7ParentAlias_(pupil.englishName),joinDate:pupil.joinDate||''},delta.verifiedAt);
+      // END_NATIVE_SCIENCE_CODE_BINDING_V1
       delta.receipts.forEach(function(r){if(!sub.coverage.some(function(c){return c.family===r.family;}))sub.coverage.push({schema:1,family:r.family,complete:false,freshRead:false,verifiedAt:0});});
       if(boot.preparedSource&&boot.preparedSource.generation)sub.preparedProjection={schema:1,nativeClientProjection:true};else delete sub.preparedProjection;
       boot.preparedSubmissions=sub;
