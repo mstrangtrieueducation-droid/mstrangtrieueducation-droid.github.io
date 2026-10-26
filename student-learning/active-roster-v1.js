@@ -157,7 +157,7 @@
       return value;
     }
     if (!object(value) || !own.call(value, 'wireSchema')) return value;
-    if (value.wireSchema !== 1 || Object.keys(value).filter(function(k){return k!=='nativeReceiptDelta'&&k!=='nativeScheduleDelta';}).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
+    if (value.wireSchema !== 1 || Object.keys(value).filter(function(k){return k!=='nativeReceiptDelta'&&k!=='nativeScheduleDelta'&&k!=='nativeClassResultsDelta';}).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
         !object(value.bundle) || own.call(value.bundle, 'actions') || !object(value.check) || !object(value.bootstrap) ||
         own.call(value.bootstrap, 'preparedSubmissions') || !object(value.submissions) || typeof value.embeddedSubmissions !== 'boolean') throw failure('INVALID_SNAPSHOT');
     var result = {}, bootstrap = {};
@@ -167,6 +167,7 @@
     result.actions = {check: value.check, bootstrap: bootstrap, dashboard: bootstrap.dashboard, profile: bootstrap.profile, submissions: value.submissions};
     if(value.nativeReceiptDelta)result.nativeReceiptDelta=value.nativeReceiptDelta;
     if(value.nativeScheduleDelta)result.nativeScheduleDelta=value.nativeScheduleDelta;
+    if(value.nativeClassResultsDelta)result.nativeClassResultsDelta=value.nativeClassResultsDelta;
     return result;
   }
   function validate(value, options, now) {
@@ -356,6 +357,12 @@ function studentAssignmentAllowedByJoinDate_(student, assignment) {
     }
     delete value.nativeScheduleDelta;
     // END_NATIVE_SCHEDULE_DELTA_V1
+    var classResults=value.nativeClassResultsDelta;
+    if(classResults&&classResults.schema===1&&classResults.classNumber===options.classNumber&&classResults.className===className&&Number.isSafeInteger(classResults.generatedAt)&&classResults.generatedAt>0&&classResults.generatedAt<=now+60000&&Array.isArray(classResults.rows)&&classResults.rows.length<=100){
+      actions.dashboard.competition=Object.assign({},actions.dashboard.competition,{classResults:copy(classResults)});
+      boot.dashboard.competition=actions.dashboard.competition;
+    }
+    delete value.nativeClassResultsDelta;
     if (boot.preparedHistory || sub.preparedProjection) {
       var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
       if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
@@ -399,7 +406,7 @@ function studentAssignmentAllowedByJoinDate_(student, assignment) {
       var timeout, finished = false;
       var work = new Promise(function (resolve, reject) {
         timeout = setTimeout(function () { if (finished) return; finished = true; if (active) active.abort(); reject(failure('SOURCE_UNAVAILABLE')); }, options.timeoutMs || 8000);
-        var init = {method: 'GET', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer'};
+        var init = {method: 'GET', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',headers:{Accept:'application/vnd.mtt.class-results+json'}};
         if (active) init.signal = active.signal;
         Promise.resolve().then(function () {
           if (options.onRequest) { try { options.onRequest(); } catch (_) {} }
