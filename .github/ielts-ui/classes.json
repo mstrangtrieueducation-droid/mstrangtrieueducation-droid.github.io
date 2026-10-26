@@ -56,7 +56,7 @@
       ],
       "capabilities": {
         "writing": true,
-        "classwork": true,
+        "classwork": false,
         "assessment": true
       }
     },

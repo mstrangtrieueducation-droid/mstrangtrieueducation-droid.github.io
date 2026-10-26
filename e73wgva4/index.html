@@ -8215,7 +8215,7 @@ let evidenceIdentity='',evidenceBusy=false,evidenceNext=0;
 function install(o){opts=o;root.IeltsSubmissionStatus.configure(()=>opts.getState().student,item=>{const number=String(opts.getState().dashboard?.className||'').match(/^IELTS\s+(\d+)/)?.[1],reader=root['ielts'+number+'SelfStudyForAssignmentV17_'];return typeof reader==='function'?reader(item):[];});o.status();ready=load().then(p=>{cache=p;return p;});ready.catch(()=>{});const request=o.access.request;
 
 
- o.access.request=async function(action,force,extra){if(['writing','classwork_index','classwork_review','classwork_source','writing_assessment','writing_assessment_source'].includes(action)){
+ o.access.request=async function(action,force,extra){if(['writing','writing_assessment','writing_assessment_source'].includes(action)){
 
 
   const p=cache||await ready,s=o.getState().student;if(s&&p.name!==s.name)throw Error('WRITING_CACHE_IDENTITY');let value=p.actions[key(action,extra||{})];if(!value||value.staticUnavailable)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');if(value.staticAsset){const r=await fetch('./data/writing/'+value.staticAsset,{cache:'force-cache'});if(!r.ok)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');value=await r.json();}return structuredClone(value);
