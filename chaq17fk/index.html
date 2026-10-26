@@ -999,12 +999,13 @@
     }
     // A later empty upload cannot erase the usable content of the same native
     // attempt. A separate empty attempt retains its own id and feedback.
-    if(old.contentStatus==='provided' && row.contentStatus!=='provided') {
+    if(old.contentStatus!=='empty'&&old.contentStatus!=='unconfirmed'&&['empty','unconfirmed'].includes(row.contentStatus)) {
       merged.contentStatus=old.contentStatus;
       for(const key of ['contentMissing','missingContentVerified']) delete merged[key];
       for(const key of ['viewUrl','evidenceUrls','links','canonicalPdf','components'])
         if(hasOwn(old,key)) merged[key]=copy(old[key]);
     }
+    if(row.contentStatus==='provided')for(const key of ['contentMissing','missingContentVerified'])delete merged[key];
     for(const key of ['links','evidenceUrls']) {
       const values=[...(Array.isArray(old[key])?old[key]:[]),...(Array.isArray(row[key])?row[key]:[])];
       if(values.length) merged[key]=[...new Map(values.map(v=>[typeof v==='string'?v:JSON.stringify(v),copy(v)])).values()];
@@ -1013,6 +1014,7 @@
   }
   return [...map.values()].sort((a,b)=>(Number(a.submittedAtMs)||Number(a.submittedAt)||0)-(Number(b.submittedAtMs)||Number(b.submittedAt)||0)||a.id.localeCompare(b.id));
 }
+
 
       var joined=unionNativeReceipts((sub.receipts||[]).concat(sub.emptyReceipts||[]),delta.receipts);
       sub.receipts=joined.filter(function(r){return r.contentStatus!=='empty';});sub.emptyReceipts=joined.filter(function(r){return r.contentStatus==='empty';});
