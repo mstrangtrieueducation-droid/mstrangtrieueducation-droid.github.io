@@ -3795,7 +3795,7 @@ root.FighterSubmissionEvidence={received};
 
 
 </style><style id="fighter-learning-actions">.f5-unit-footer{flex-wrap:wrap}.f5-unit-footer>.f5-learning-action{margin-left:0}.f5-learning-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#0d2c49!important;color:#fff!important;border:1px solid #0d2c49!important;border-radius:10px;padding:11px 16px;text-decoration:none;font-weight:750;min-height:44px}.f5-requirements .f5-learning-action{margin:4px 0 16px}.f5-component-links:empty{display:none}@media(max-width:600px){.f5-unit-footer>.f5-learning-action{flex:1 1 auto}.f5-requirements .f5-learning-action{width:100%}}</style><style id="fighter-submitted-work-actions">.f5-submitted-work{margin:14px 0;border:1px solid #cbd9e6;background:#fff;border-radius:10px;padding:0 12px}.f5-submitted-work>summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:750;color:#0d2c49;list-style:none}.f5-submitted-work>summary::-webkit-details-marker{display:none}.f5-submitted-work>summary:after{content:"⌄";margin-left:auto}.f5-submitted-work[open]>summary:after{content:"⌃"}.f5-submitted-work-links{display:flex;gap:9px;flex-wrap:wrap;border-top:1px solid #e4ebf2;padding:12px 0}.f5-submitted-work-links a{display:inline-flex;align-items:center;min-height:40px;text-decoration:none;max-width:100%;overflow-wrap:anywhere}.f5-view-work{min-height:44px}.f5-unit-footer{flex-wrap:wrap}@media(max-width:600px){.f5-unit-footer>.f5-view-work{flex:1 1 auto}}</style><style id="fighter-writing-test-visible-v1">
-.f5-study-hub #f5-writing-plan,.f5-study-hub #f5-writing-work{margin:20px 0 24px}
+.f5-study-hub #f5-writing-work{margin:20px 0 24px}
 .f5-study-hub .f5-writing-heading{margin:0 0 12px}
 .f5-study-hub .f5-writing-heading>span{display:block;color:#906119;font-size:11px;font-weight:800;letter-spacing:.13em}
 .f5-study-hub .f5-writing-heading h2{margin:5px 0 0;color:#102d50;font-size:21px}
@@ -8881,17 +8881,16 @@ function planner(){if(!current)return;const b=buckets(current.units);update(q('#
 
 
 function renderWritingTestsV1_(student){
- const plan=q('#f5-writing-plan'),work=q('#f5-writing-work');if(!plan||!work)return;
+ const work=q('#f5-writing-work');if(!work)return;
  // The native schedule reader releases assessmentOnly entries after the exact
  // class has ended. These are teacher-marked in-class work, not Form homework.
  const tests=(dashboard.assignments||[]).filter(a=>a.assessmentOnly).slice()
   .sort((a,b)=>(P.dateTime(b.lessonDate)||0)-(P.dateTime(a.lessonDate)||0)||String(b.session||'').localeCompare(String(a.session||'')));
- plan.hidden=work.hidden=!tests.length;if(!tests.length)return;
+ work.hidden=!tests.length||(programFilter!=='all'&&programFilter!=='dvht');if(!tests.length)return;
  const markFor=a=>student.writingTestMarks?.[a.sourceCode]||{};
  const card=a=>{const mark=markFor(a),hasScore=Number.isFinite(mark.score),feedback=String(mark.feedback||'').trim(),raw=String(mark.raw||'').trim();
   let href='';if(a.resourceUrl)try{const target=parentLearningUrl_(a.resourceUrl);if(new URL(target,location.href).protocol==='https:')href=target;}catch{}
   return '<article class="f5-writing-card" data-f5-writing="'+E(a.id)+'"><div class="f5-writing-card-head"><div><span class="f5-writing-kicker">✍️ KIỂM TRA VIẾT TẠI LỚP · '+E(a.session)+'</span><h3>'+E(a.topic||'Đoạn văn học thuật')+'</h3><p>'+E(a.lessonDate||'')+' · Đã kiểm tra tại lớp</p></div><strong class="f5-writing-mark">'+(hasScore?E(num(mark.score))+'/1':'Chờ cô ghi nhận')+'</strong></div><p class="f5-writing-instruction">Hoàn thiện phần chữa và bản viết lại trong vở; mang vở tới lớp để cô kiểm tra, chấm điểm /1.</p><p class="f5-writing-due">Hạn kiểm tra vở: '+E(a.completionDueDate||a.completionDueLabel||'Theo hướng dẫn')+'</p>'+(feedback?'<div class="f5-writing-feedback"><strong>Nhận xét của cô</strong><p>'+E(feedback).replace(/\n/g,'<br>')+'</p></div>':'')+(raw&&raw!==feedback?'<details class="f5-writing-raw"><summary>Xem ghi nhận trên bảng</summary><p>'+E(raw).replace(/\n/g,'<br>')+'</p></details>':'')+(href?'<a class="f5-writing-link" href="'+E(href)+'" target="_blank" rel="noopener">Xem bài và tài liệu →</a>':'')+'</article>';};
- update(plan,'<div class="f5-writing-heading"><span>ĐOẠN VĂN HỌC THUẬT</span><h2>Kiểm tra viết đã diễn ra</h2></div>'+card(tests[0])+(tests.length>1?'<button type="button" class="f5-writing-more" data-f5-view="work">Xem các buổi KT viết trước →</button>':''));
  update(work,'<div class="f5-writing-heading"><span>ĐOẠN VĂN HỌC THUẬT</span><h2>Kiểm tra viết tại lớp</h2><p>Điểm và nhận xét được cô ghi trực tiếp; không tính vào bài nộp qua Form.</p></div>'+tests.map(card).join(''));
 }
 
@@ -8933,9 +8932,9 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- renderPendingAlert();renderWritingTestsV1_(student);
+ renderPendingAlert();
 
- const programOrder=['vf2','ri2','dvht','listening','shadow'],programs=[...new Map(current.units.map(u=>[u.programKey,u.program])).entries()].sort(([a,an],[b,bn])=>(programOrder.indexOf(a)<0?99:programOrder.indexOf(a))-(programOrder.indexOf(b)<0?99:programOrder.indexOf(b))||an.localeCompare(bn));if(programFilter!=='all'&&!programs.some(([k])=>k===programFilter))programFilter='all';
+ const programOrder=['vf2','ri2','dvht','listening','shadow'],programs=[...new Map(current.units.map(u=>[u.programKey,u.program])).entries()].sort(([a,an],[b,bn])=>(programOrder.indexOf(a)<0?99:programOrder.indexOf(a))-(programOrder.indexOf(b)<0?99:programOrder.indexOf(b))||an.localeCompare(bn));if(programFilter!=='all'&&!programs.some(([k])=>k===programFilter))programFilter='all';renderWritingTestsV1_(student);
 
 
 
@@ -9067,7 +9066,7 @@ function mount(){
 
 
 
- const main=q('main.shell'),plan=document.createElement('section');plan.id='f5-plan';plan.innerHTML='<div class="f5-pills"><button data-f5-schedule="calendar" aria-pressed="true">Lịch học & việc cần làm</button><button data-f5-schedule="week">Kế hoạch tuần</button></div><div id="f5-week" class="f5-week"></div><div id="f5-plan-counts" class="f5-plan-counts"></div><section id="f5-priority" class="f5-priority"></section>';main.append(plan);plan.insertBefore(q('#schedule'),q('#f5-week'));q('#next-class').after(q('#f5-week'));const writingPlan=document.createElement('section');writingPlan.id='f5-writing-plan';writingPlan.hidden=true;q('#f5-week').before(writingPlan);
+ const main=q('main.shell'),plan=document.createElement('section');plan.id='f5-plan';plan.innerHTML='<div class="f5-pills"><button data-f5-schedule="calendar" aria-pressed="true">Lịch học & việc cần làm</button><button data-f5-schedule="week">Kế hoạch tuần</button></div><div id="f5-week" class="f5-week"></div><div id="f5-plan-counts" class="f5-plan-counts"></div><section id="f5-priority" class="f5-priority"></section>';main.append(plan);plan.insertBefore(q('#schedule'),q('#f5-week'));q('#next-class').after(q('#f5-week'));
 
 
 
@@ -9079,7 +9078,7 @@ function mount(){
 
 
 
- const work=document.createElement('section');work.id='f5-work';work.hidden=true;work.innerHTML='<div class="f5-section-heading"><span class="f5-eyebrow">Học có định hướng</span><h2>Bài tập theo chương trình</h2></div><section id="f5-writing-work" aria-label="Kiểm tra viết tại lớp" hidden></section><div id="f5-programs" class="f5-pills"></div><div id="f5-statuses" class="f5-pills f5-status-filters"></div><p id="f5-list-count"></p><div id="f5-list"></div><section id="f5-guidance-list" aria-label="Bài chuẩn bị theo buổi học"></section><section id="f5-manual-list" aria-label="Ghi nhận trực tiếp của cô"></section>';main.append(work);
+ const work=document.createElement('section');work.id='f5-work';work.hidden=true;work.innerHTML='<div class="f5-section-heading"><span class="f5-eyebrow">Học có định hướng</span><h2>Bài tập theo chương trình</h2></div><div id="f5-programs" class="f5-pills"></div><section id="f5-writing-work" aria-label="Đoạn văn học thuật · Kiểm tra viết tại lớp" hidden></section><div id="f5-statuses" class="f5-pills f5-status-filters"></div><p id="f5-list-count"></p><div id="f5-list"></div><section id="f5-guidance-list" aria-label="Bài chuẩn bị theo buổi học"></section><section id="f5-manual-list" aria-label="Ghi nhận trực tiếp của cô"></section>';main.append(work);
 
 
 
