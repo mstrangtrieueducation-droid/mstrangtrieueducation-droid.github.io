@@ -3092,6 +3092,13 @@ root.FighterSubmissionEvidence={received};
 .f5-study-hub .f5-writing-link,.f5-study-hub .f5-writing-more{display:inline-block;margin-top:9px;color:#0d579d;font-size:13px;font-weight:800;text-decoration:none}
 .f5-study-hub .f5-writing-link:hover,.f5-study-hub .f5-writing-more:hover{text-decoration:underline}
 .f5-study-hub .f5-writing-more{padding:0;border:0;background:transparent;cursor:pointer}
+.f5-study-hub .f5-writing-lesson{border-color:#d9e4ef;border-left-color:#547b9e;background:#fff}
+.f5-study-hub .f5-writing-lesson .f5-writing-kicker{color:#28617e}
+.f5-study-hub .f5-writing-native{margin:7px 0;color:#275b46;font-size:13px;font-weight:700}
+.f5-study-hub .f5-writing-history{margin:10px 0 0;padding:0;border:1px solid #d9e4ef;border-radius:14px;background:#f8fbfe}
+.f5-study-hub .f5-writing-history>summary{padding:15px 18px;color:#0b4778;font-weight:800;cursor:pointer}
+.f5-study-hub .f5-writing-history>div{padding:0 12px 2px}
+.f5-study-hub .f5-writing-lesson .f5-submitted-work{margin-top:10px}
 @media(max-width:600px){.f5-study-hub .f5-writing-card-head{display:block}.f5-study-hub .f5-writing-mark{display:inline-block;margin-top:9px}}
 
 </style>
@@ -6998,16 +7005,19 @@ function planner(){if(!current)return;const b=buckets(current.units);update(q('#
 
 function renderWritingTestsV1_(student){
  const work=q('#f5-writing-work');if(!work)return;
- // The native schedule reader releases assessmentOnly entries after the exact
- // class has ended. These are teacher-marked in-class work, not Form homework.
- const tests=(dashboard.assignments||[]).filter(a=>a.assessmentOnly).slice()
+ // Keep every native released academic-paragraph session in one course history.
+ // This is a lesson view, separate from the canonical homework status groups.
+ const sessions=(dashboard.assignments||[]).filter(a=>/^DVHT-(?:S\d+|KT\d+)/i.test(a.sourceCode||'')||/Đoạn văn học thuật/i.test(a.program||'')).slice()
   .sort((a,b)=>(P.dateTime(b.lessonDate)||0)-(P.dateTime(a.lessonDate)||0)||String(b.session||'').localeCompare(String(a.session||'')));
- work.hidden=!tests.length||(programFilter!=='all'&&programFilter!=='dvht');if(!tests.length)return;
+ work.hidden=!sessions.length||(programFilter!=='all'&&programFilter!=='dvht');if(!sessions.length)return;
  const markFor=a=>student.writingTestMarks?.[a.sourceCode]||{};
  const card=a=>{const mark=markFor(a),hasScore=Number.isFinite(mark.score),feedback=String(mark.feedback||'').trim(),raw=String(mark.raw||'').trim();
   let href='';if(a.resourceUrl)try{const target=parentLearningUrl_(a.resourceUrl);if(new URL(target,location.href).protocol==='https:')href=target;}catch{}
   return '<article class="f5-writing-card" data-f5-writing="'+E(a.id)+'"><div class="f5-writing-card-head"><div><span class="f5-writing-kicker">✍️ KIỂM TRA VIẾT TẠI LỚP · '+E(a.session)+'</span><h3>'+E(a.topic||'Đoạn văn học thuật')+'</h3><p>'+E(a.lessonDate||'')+' · Đã kiểm tra tại lớp</p></div><strong class="f5-writing-mark">'+(hasScore?E(num(mark.score))+'/1':'Chờ cô ghi nhận')+'</strong></div><p class="f5-writing-instruction">Hoàn thiện phần chữa và bản viết lại trong vở; mang vở tới lớp để cô kiểm tra, chấm điểm /1.</p><p class="f5-writing-due">Hạn kiểm tra vở: '+E(a.completionDueDate||a.completionDueLabel||'Theo hướng dẫn')+'</p>'+(feedback?'<div class="f5-writing-feedback"><strong>Nhận xét của cô</strong><p>'+E(feedback).replace(/\n/g,'<br>')+'</p></div>':'')+(raw&&raw!==feedback?'<details class="f5-writing-raw"><summary>Xem ghi nhận trên bảng</summary><p>'+E(raw).replace(/\n/g,'<br>')+'</p></details>':'')+(href?'<a class="f5-writing-link" href="'+E(href)+'" target="_blank" rel="noopener">Xem bài và tài liệu →</a>':'')+'</article>';};
- update(work,'<div class="f5-writing-heading"><span>ĐOẠN VĂN HỌC THUẬT</span><h2>Kiểm tra viết tại lớp</h2><p>Điểm và nhận xét được cô ghi trực tiếp; không tính vào bài nộp qua Form.</p></div>'+tests.map(card).join(''));
+ const lesson=a=>{const native=student.assignments?.find(s=>s.assignmentId===a.id),tasks=a.tasks||[],first=tasks.find(t=>learningHref(t)),href=first?learningHref(first):'',feedback=[...new Set([native?.comment,...(native?.tasks||[]).map(t=>t.comment)].map(x=>String(x||'').trim()).filter(Boolean))].join('\n'),files=[...new Set((native?.tasks||[]).flatMap(t=>typeof submittedFileActions_==='function'?submittedFileActions_(t):[]))];
+  return '<article class="f5-writing-card f5-writing-lesson" data-f5-writing="'+E(a.id)+'"><div class="f5-writing-card-head"><div><span class="f5-writing-kicker">ĐOẠN VĂN HỌC THUẬT · '+E(a.session||'Buổi học')+'</span><h3>'+E(a.topic||'Đoạn văn học thuật')+'</h3><p>'+E(a.lessonDate||'')+'</p></div></div>'+(a.lessonSummary?'<p class="f5-writing-instruction">'+E(a.lessonSummary)+'</p>':'')+(native?.status?'<p class="f5-writing-native">'+E(native.status)+(native.submittedAt?' · '+E(native.submittedAt):'')+'</p>':'')+(feedback?'<div class="f5-writing-feedback"><strong>Nhận xét của cô</strong><p>'+E(feedback).replace(/\n/g,'<br>')+'</p></div>':'')+(files.length?'<details class="f5-submitted-work"><summary>📎 Xem bài của con</summary><div class="f5-submitted-work-links">'+files.join('')+'</div></details>':'')+(href?'<a class="f5-writing-link" href="'+E(href)+'" target="_blank" rel="noopener">Xem lại bài học →</a>':'')+'</article>';};
+ const recent=sessions.slice(0,3),older=sessions.slice(3);
+ update(work,'<div class="f5-writing-heading"><span>ĐOẠN VĂN HỌC THUẬT</span><h2>Các buổi đã học và kiểm tra viết</h2><p>'+sessions.length+' buổi theo lịch và hồ sơ của con; điểm kiểm tra viết được cô ghi trực tiếp.</p></div>'+recent.map(a=>a.assessmentOnly?card(a):lesson(a)).join('')+(older.length?'<details class="f5-writing-history"><summary>Xem thêm '+older.length+' buổi Đoạn văn học thuật trước</summary><div>'+older.map(a=>a.assessmentOnly?card(a):lesson(a)).join('')+'</div></details>':''));
 }
 
 function renderPendingAlert(){const box=q('#f5-alert');if(!box)return;const entries=fighterPendingStudentV15_?fighterPendingEntriesV15_(fighterPendingStudentV15_):[],late=entries.filter(e=>e.status==='overdue').length;box.hidden=entries.length===0;update(box,'<span>⚠️ <strong>Còn '+entries.length+' đầu mục cần hoàn thành</strong> · '+(entries.length-late)+' cần làm · '+late+' quá hạn</span><button type="button" data-f5-pending>Xem bài cần nộp →</button>');}
