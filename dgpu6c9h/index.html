@@ -71,869 +71,81 @@
 
 
 (function(root){'use strict';
-
-
-
-
-
-
-
-
-
-
-
  var names=['KidsPreparedSnapshotClient','IeltsPublicSnapshotClient','FighterSnapshotClient','TaSnapshotClient'];
-
-
-
-
-
-
-
-
-
-
-
  var revoked=false,dbPromise;
-
-
-
-
-
-
-
-
-
-
-
+ // Retire only this feature's superseded snapshot store. Entry grants, family
+ // checklists and native submission history have separate storage contracts.
+ try{root.indexedDB.deleteDatabase('mtt-confirmed-profile-v2');}catch(_){}
  function copy(v){return JSON.parse(JSON.stringify(v));}
-
-
-
-
-
-
-
-
-
-
-
  function present(v){
-
-
-
-
-
-
-
-
-
-
-
   if(typeof v==='string')return v.replace(/cần đối chiếu/gi,function(s){return s[0]===s[0].toUpperCase()?'Cô sẽ kiểm tra':'cô sẽ kiểm tra';}).replace(/Đang cập nhật|Đang xác minh|Đang xác nhận|Chưa đọc đủ/gi,'— Chưa nộp bài').replace(/Hồ sơ chưa tải xong|Chưa thể kết nối hồ sơ|Chưa thể kiểm tra quyền truy cập/gi,'Hồ sơ học tập');
-
-
-
-
-
-
-
-
-
-
-
   if(v&&typeof v==='object')Object.keys(v).forEach(function(k){v[k]=present(v[k]);});return v;
-
-
-
-
-
-
-
-
-
-
-
  }
-
-
-
-
-
-
-
-
-
-
-
  function withdraw(v){
-
-
-
-
-
-
-
-
-
-
-
   if(!v||typeof v!=='object')return v;
-
-
-
-
-
-
-
-
-
-
-
   if(typeof v.complete==='boolean'&&typeof v.freshRead==='boolean'){v.complete=false;v.freshRead=false;}
-
-
-
-
-
-
-
-
-
-
-
   Object.keys(v).forEach(function(k){withdraw(v[k]);});return v;
-
-
-
-
-
-
-
-
-
-
-
  }
-
-
-
-
-
-
-
-
-
-
-
  function retain(next,old){
-
-
-
-
-
-
-
-
-
-
-
   if(!old||next.className!==old.className||next.alias&&next.alias!==old.alias||next.name&&next.name!==old.name||next.identity&&next.identity!==old.identity)return next;
-
-
-
-
-
-
-
-
-
-
-
   var a=next.actions&&next.actions.submissions,b=old.actions&&old.actions.submissions;if(!a||!b||a.className!==b.className)return next;
-
-
-
-
-
-
-
-
-
-
-
   var failed=(a.coverage||[]).filter(function(c){return !c.complete||!c.freshRead;}).map(function(c){return c.family;});if(!failed.length)return next;
-
-
-
-
-
-
-
-
-
-
-
   ['receipts','emptyReceipts'].forEach(function(k){var map={};(b[k]||[]).forEach(function(r){if(r.id&&(failed.indexOf(r.family)>=0||failed.indexOf('OPTIONAL_SOURCE')>=0))map[r.id]=copy(r);});(a[k]||[]).forEach(function(r){if(r.id)map[r.id]=r;});a[k]=Object.keys(map).map(function(k){return map[k];});});
-
-
-
-
-
-
-
-
-
-
-
   if(next.actions.bootstrap&&next.actions.bootstrap.preparedSubmissions)next.actions.bootstrap.preparedSubmissions=a;
-
-
-
-
-
-
-
-
-
-
-
   next.sourceStatus=Object.assign({},next.sourceStatus,{retainedReceiptAsOf:old.sourceStatus&&old.sourceStatus.receiptAsOf||old.capturedAt});return next;
-
-
-
-
-
-
-
-
-
-
-
  }
-
-
-
-
-
-
-
-
-
-
-
  // Availability of a validated prepared core is separate from freshness/completeness
-
-
-
-
-
-
-
-
-
-
-
  // of supplementary sources. This marker never promotes receipt verification.
-
-
-
-
-
-
-
-
-
-
-
  function available(packet){if(!packet||!packet.actions)return packet;var a=packet.actions,b=a.bootstrap;
-
-
-
-
-
-
-
-
-
-
-
   [a.dashboard,a.profile,b,b&&b.dashboard,b&&b.profile].forEach(function(v){if(v&&typeof v==='object'){
-
-
-
-
-
-
-
-
-
-
-
    v.coreAvailableForViewV2=true;
-
-
-
-
-
-
-
-
-
-
-
    if(Array.isArray(v.errors)&&v.errors.length){v.optionalSourceErrors=copy(v.errors);v.errors=[];}
-
-
-
-
-
-
-
-
-
-
-
   }});
-
-
-
-
-
-
-
-
-
-
-
   if(packet.classNumber&&b&&b.partial){b.optionalSourcesPartial=true;b.partial=false;}return packet;
-
-
-
-
-
-
-
-
-
-
-
  }
-
-
-
-
-
-
-
-
-
-
-
  function database(){if(!dbPromise)dbPromise=new Promise(function(resolve){
-
-
-
-
-
-
-
-
-
-
-
-  try{var r=root.indexedDB.open('mtt-confirmed-profile-v2',1);r.onupgradeneeded=function(){r.result.createObjectStore('profiles');};r.onsuccess=function(){resolve(r.result);};r.onerror=function(){resolve(null);};r.onblocked=function(){resolve(null);};}catch(e){resolve(null);}
-
-
-
-
-
-
-
-
-
-
-
+  try{var r=root.indexedDB.open('mtt-confirmed-profile-v3',1);r.onupgradeneeded=function(){r.result.createObjectStore('profiles');};r.onsuccess=function(){r.result.onversionchange=function(){r.result.close();};resolve(r.result);};r.onerror=function(){resolve(null);};r.onblocked=function(){resolve(null);};}catch(e){resolve(null);}
  });return dbPromise;}
-
-
-
-
-
-
-
-
-
-
-
  async function disk(key,value){try{var db=await database();if(!db)return null;return await new Promise(function(resolve){var t=db.transaction('profiles',value===undefined?'readonly':'readwrite'),s=t.objectStore('profiles'),r=value===undefined?s.get(key):value===null?s.delete(key):s.put(value,key);r.onsuccess=function(){resolve(r.result||null);};r.onerror=function(){resolve(null);};t.onabort=function(){resolve(null);};});}catch(e){return null;}}
-
-
-
-
-
-
-
-
-
-
-
  function dead(e){return /^(PARENT_LINK_REVOKED|LINK_REVOKED|TOKEN_REVOKED|PARENT_LINK_INVALID|INVALID_LINK|INVALID_TOKEN)$/.test(e&&e.code||'');}
-
-
-
-
-
-
-
-
-
-
-
  function temporary(e){return /^(SOURCE_UNAVAILABLE|DATA_UNAVAILABLE|SNAPSHOT_NOT_READY|SNAPSHOT_PREPARING|NETWORK_ERROR|HTTP_5\d\d)$/.test(e&&e.code||'')||e&&/^(TypeError|AbortError)$/.test(e.name);}
-
-
-
-
-
-
-
-
-
-
-
- function install(api,label){if(!api||!api.create||api.confirmedProfilePolicy===2)return api;
-
-
-
-
-
-
-
-
-
-
-
+ function install(api,label){if(!api||!api.create||api.confirmedProfileCacheVersion===3)return api;
   var original=api.create;api.create=function(options){
-
-
-
-
-
-
-
-
-
-
-
-   var packet=null,sequence=0,ended=false,keyPromise=Promise.resolve().then(function(){return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token));}).then(function(b){return location.pathname+'|'+label+'|'+String(options.className||options.classNumber||'')+'|'+Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');});
-
-
-
-
-
-
-
-
-
-
-
+   var packet=null,sequence=0,ended=false,showedFallback=false,handoffTimer=null,keyPromise=Promise.resolve().then(function(){return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token));}).then(function(b){return location.pathname+'|'+label+'|'+String(options.className||options.classNumber||'')+'|'+Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');});
+   function handoff(){if(!showedFallback||!packet||!current())return;clearTimeout(handoffTimer);handoffTimer=setTimeout(function(){if(!current()||!packet)return;root.dispatchEvent(new CustomEvent('mtt:confirmed-profile-fresh',{detail:{client:label,packet:copy(packet)}}));},0);}
    var loaded=options.onLoaded,opts=Object.assign({},options,{onLoaded:function(value){
-
-
-
-
-
-
-
-
-
-
-
-    available(present(retain(value,packet)));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:2,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);
-
-
-
-
-
-
-
-
-
-
-
+    available(present(retain(value,packet)));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:3,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);handoff();
    }}),client=original.call(api,opts),request=client.request;
-
-
-
-
-
-
-
-
-
-
-
    function current(){return !revoked&&!ended&&(!options.isCurrent||options.isCurrent()===true);}
-
-
-
-
-
-
-
-
-
-
-
    function revoke(){ended=true;packet=null;keyPromise.then(function(key){disk(key,null);});}
-
-
-
-
-
-
-
-
-
-
-
    root.addEventListener('mtt:profile-revoked',revoke);
-
-
-
-
-
-
-
-
-
-
-
    root.addEventListener('hashchange',function(){ended=true;packet=null;});
-
-
-
-
-
-
-
-
-
-
-
-   async function prior(){if(!current())return null;if(packet)return packet;var key=await keyPromise,record=await disk(key);if(record&&record.schema===2&&record.packet&&record.packet.actions&&current())packet=available(record.packet);return packet;}
-
-
-
-
-
-
-
-
-
-
-
+   async function prior(){if(!current())return null;if(packet)return packet;var key=await keyPromise,record=await disk(key);if(record&&record.schema===3&&record.packet&&record.packet.actions&&current())packet=available(record.packet);return packet;}
    async function fallback(action,args){
-
-
-
-
-
-
-
-
-
-
-
     var p=await prior();if(!p||!current())return null;
-
-
-
-
-
-
-
-
-
-
-
     var a={refreshDashboard:'dashboard',refreshProfile:'profile'}[action]||action,value;
-
-
-
-
-
-
-
-
-
-
-
     if(a==='history'&&args[2]&&p.historyPages){var extra=args[2];if(p.actions.bootstrap&&p.actions.bootstrap.preparedSource&&p.actions.bootstrap.preparedSource.generation===extra.generation)value=p.historyPages[String(extra.historyPage)];}
-
-
-
-
-
-
-
-
-
-
-
     else value=p.actions[a];
-
-
-
-
-
-
-
-
-
-
-
-    if(value===undefined)return null;document.documentElement.dataset.confirmedProfileFallback='true';return {value:present(withdraw(copy(value)))};
-
-
-
-
-
-
-
-
-
-
-
+    if(value===undefined)return null;showedFallback=true;document.documentElement.dataset.confirmedProfileFallback='true';return {value:present(withdraw(copy(value)))};
    }
-
-
-
-
-
-
-
-
-
-
-
    client.request=async function(action){
-
-
-
-
-
-
-
-
-
-
-
     var args=Array.prototype.slice.call(arguments),last=await prior(),work=Promise.resolve().then(function(){return request.apply(client,args);});
-
-
-
-
-
-
-
-
-
-
-
     var settle=work.then(function(value){if(!current())return {ok:false,error:Object.assign(Error('SESSION_ENDED'),{code:'SESSION_ENDED'})};return {ok:true,value:present(value)};},function(error){if(dead(error))revoke();return {ok:false,error:error};});
-
-
-
-
-
-
-
-
-
-
-
     var timer,result;
-
-
-
-
-
-
-
-
-
-
-
     if(last){result=await Promise.race([settle,new Promise(function(resolve){timer=setTimeout(function(){resolve(null);},650);})]);clearTimeout(timer);if(!result){var saved=await fallback(action,args);if(saved)return saved.value;result=await settle;}}
-
-
-
-
-
-
-
-
-
-
-
     else result=await settle;
-
-
-
-
-
-
-
-
-
-
-
     if(result.ok)return result.value;
-
-
-
-
-
-
-
-
-
-
-
     if(dead(result.error)){revoke();throw result.error;}
-
-
-
-
-
-
-
-
-
-
-
     if(temporary(result.error)){var saved=await fallback(action,args);if(saved)return saved.value;}
-
-
-
-
-
-
-
-
-
-
-
     throw result.error;
-
-
-
-
-
-
-
-
-
-
-
    };
-
-
-
-
-
-
-
-
-
-
-
    if(client.response)client.response=function(action,force,extra){return client.request(action,force,extra).then(function(data){return {ok:true,status:200,json:function(){return Promise.resolve({ok:true,data:data});}};},function(e){if(!dead(e))throw e;return {ok:true,status:200,json:function(){return Promise.resolve({ok:false,revoked:true,code:'PARENT_LINK_REVOKED'});}};});};
-
-
-
-
-
-
-
-
-
-
-
    return client;
-
-
-
-
-
-
-
-
-
-
-
-  };api.confirmedProfilePolicy=2;return api;
-
-
-
-
-
-
-
-
-
-
-
+  };api.confirmedProfilePolicy=2;api.confirmedProfileHandoff=1;api.confirmedProfileCacheVersion=3;return api;
  }
-
-
-
-
-
-
-
-
-
-
-
  names.forEach(function(name){var value=root[name];Object.defineProperty(root,name,{configurable:true,enumerable:true,get:function(){return value;},set:function(v){value=install(v,name);}});if(value)root[name]=value;});
-
-
-
-
-
-
-
-
-
-
-
  root.addEventListener('mtt:profile-revoked',function(){revoked=true;});
-
-
-
-
-
-
-
-
-
-
-
  root.ConfirmedProfilePolicyV2={present:present,withdraw:withdraw,retain:retain};
-
-
-
-
-
-
-
-
-
-
-
 })(typeof window!=='undefined'?window:globalThis);
 
 
@@ -1730,7 +942,7 @@ root.FighterSubmissionEvidence={received};
 
 
 
-<script src="/student-learning/active-roster-v1.js?v=20261023-core-profile-v2" data-class-key="fighter-7" data-access="https://fighter-parent-snapshots.trangtrieu-chv-pt.workers.dev"></script>
+<script src="/student-learning/active-roster-v1.js?v=20261026-live-cache-v3" data-class-key="fighter-7" data-access="https://fighter-parent-snapshots.trangtrieu-chv-pt.workers.dev"></script>
 
 
 
@@ -6870,7 +6082,14 @@ submittedFileActions_=function(state,fallbackType){
 
 
 
-function fighterSubmissionSelectSelfStudyResult_(previous,current){if(!previous)return current;const empty=item=>Boolean(item&&(item.contentStatus==="empty"||item.contentMissing===true));const selected=!empty(previous)&&empty(current)?previous:current;const attempts=item=>Array.isArray(item.submissionAttempts)&&item.submissionAttempts.length?item.submissionAttempts:[item];return Object.assign({},selected,{submissionAttempts:DirectSubmissionHistory.merge(attempts(previous),attempts(current))})}function fighterEmptySubmissionMarkup_(state){if(!state)return"";const empty=(state.submissionAttempts||[]).filter(r=>r.contentStatus==="empty");if(!state.contentMissing&&!empty.length)return"";const current=state.contentMissing?"<strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p>":"";const history=empty.map(r=>"<p>Lần "+esc(r.attempt||r.sourceAttempt||"")+" · "+esc(r.submittedAt||"")+" · Lượt gửi trống, không có video/tệp.</p>").join("");return'<div class="direct-empty-submission" style="'+(state.contentMissing?"border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px":"color:#64748b")+'">'+current+history+"</div>"}function fighterSubmissionReadLabel_(){return SharedSubmissionStatus.render(null);}function fighterSubmissionReadLabel_BeforeStatus_(){return ""}let fighterParentPackage_=null,fighterParentLoading_=null,fighterParentGeneration_=0,fighterParentPainted_=false;function fighterParentIdentity_(){const binding=fighterApi.parent.binding;const label=binding?String(binding.displayName||[binding.studentName,binding.englishName].filter(Boolean).join(" · ")):"";const status=fighterApi.parent.status,checking=!label&&status==="pending";$("#parentOpeningName").textContent=label||(status==="revoked"?"Hồ sơ không còn hoạt động":status==="unavailable"?"Hồ sơ học tập":"");$("#parentOpeningEyebrow").textContent=status==="revoked"||status==="unavailable"?"Trạng thái hồ sơ":"Đang mở hồ sơ của";$("#parentOpeningSkeleton").hidden=!checking;$("#parentOpeningIdentity").dataset.state=label?"authorized":status;$("#parentOpeningIdentity").setAttribute("aria-busy",String(checking));if(label&&document.documentElement.dataset.parentIdentityReadyMs===void 0)document.documentElement.dataset.parentIdentityReadyMs=String(Math.round(performance.now()));const pending=$("#parentPendingIdentity");if(pending){pending.textContent=label?"Hồ sơ của "+label:"";pending.hidden=!label}}function fighterParentGate_(message,retry){if(fighterParentPainted_&&fighterApi.parent.authorized&&!fighterApi.parent.revoked)return;fighterParentIdentity_();document.body.classList.add("f9-portal-locked");document.body.classList.remove("f9-portal-ready");$("#student-gateway").hidden=false;$("#loading").hidden=true;$("#student-switch").hidden=true;$("#parentOpeningMessage").textContent=message||(fighterApi.parent.revoked?"Hồ sơ không còn hoạt động":fighterApi.parent.status==="unavailable"?"Chưa thể kiểm tra hồ sơ. Bố mẹ bấm tải lại nhé.":"Đang kiểm tra và mở hồ sơ của con…");$("#parentOpeningRetry").hidden=fighterApi.parent.revoked||!(retry||fighterApi.parent.status==="unavailable");if(typeof fighterClearPendingHomeworkV15_==="function")fighterClearPendingHomeworkV15_()}function fighterParentClear_(){fighterParentGeneration_+=1;fighterParentPackage_=null;fighterParentLoading_=null;fighterParentPainted_=false;delete document.documentElement.dataset.parentLastOpenMs;dashboard=null;studentDirectory_=[];studentDirectoryReady_=false;studentDataReady_=false;studentDataLoading_=false;studentDirectoryLoading_=false;studentProfileRequestV1_+=1;selfStudyResultRequestV1_+=1;fighterBootRequestV1_+=1;f9PortalSelectedStudentV2_=null;f9PortalSelfStudyItemsV2_=[];fighterPendingStudentV15_=null;fighterPendingSelfStudyItemsV15_=[];activeStudentName_="";newsState_={};[typeof fighterProfileLoadV2_!=="undefined"?fighterProfileLoadV2_:null,typeof fighterDirectoryLoadV2_!=="undefined"?fighterDirectoryLoadV2_:null].filter(Boolean).forEach(state=>{state.terminal=true;["watchdog","retryTimer"].forEach(key=>{if(state[key])clearTimeout(state[key]);state[key]=null})});["student-profile","assignment-list","self-study-list","leaderboard","improvement-highlights","schedule-periods","schedule-location","assessment-reminders","next-class","updated","news-banner"].forEach(id=>{const node=$("#"+id);if(node)node.innerHTML=""});$("#student-input").innerHTML=""}function fighterApplyEnrollmentCutoffV29_(bundle,binding){if(!bundle||!bundle.profile||!bundle.profile.student)return bundle;function fighterEnrollmentDateV29_(value){const text=String(value==null?"":value).trim();let match,year,month,day;match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3])}else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);if(year<100)year+=2e3}const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);return year>=2e3&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0}const list=value=>Array.isArray(value)?value:[];const directory=binding&&binding.directory||{},rows=list(directory.students).concat(list(directory.all));const live=rows.find(row=>row&&(row.name===binding.studentName||row.studentName===binding.studentName||row.alias===bundle.profile.student.alias))||rows[0]||{};const student=bundle.profile.student,joinDate=live.joinDate||student.joinDate;const joined=fighterEnrollmentDateV29_(joinDate);if(!joined)return bundle;student.joinDate=joinDate;const itemDate=(item,selfStudy)=>{if(!item)return 0;const fields=selfStudy?["releaseDate","assignedDate","lessonDate","date","dateLabel","startDate"]:["lessonDate","assignedDate","releaseDate","date","dateLabel","startDate"];for(const field of fields){const serial=fighterEnrollmentDateV29_(item[field]);if(serial)return serial}return 0};const eligible=(item,selfStudy)=>{const serial=itemDate(item,selfStudy);return Boolean(serial&&serial>=joined)};const scheduleEligible=item=>{if(item&&item.weekday!=null&&item.startTime){const end=fighterEnrollmentDateV29_(item.endDate);return!end||end>=joined}return eligible(item,false)};const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||"").trim();const publicData=bundle.publicData||{},full=bundle.fullDashboard||{};function parentEnrollmentScoresV1_(family,student2,model,definitions2,joined2,dateOf){var list2=function(v){return Array.isArray(v)?v:[]};var normalize=function(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d")};var code=function(v){return normalize(v).replace(/^direct[-_:]/,"").replace(/[-_:](?:redo|retake)$/,"").replace(/[^a-z0-9]/g,"")};var keys=function(row){return["key","id","sourceCode","assignmentCode","assignmentId","scheduleAssignmentId"].map(function(k){return code(row&&row[k])}).filter(Boolean)};var dated=function(row){if(!row)return 0;var fields=["lessonDate","assignedDate","releaseDate","date","dateLabel","startDate"];for(var i=0;i<fields.length;i++){var n=dateOf(row[fields[i]]);if(n)return n}return 0};var index={};var indexRow=function(row){var n=dated(row);if(!n)return;keys(row).forEach(function(k){if(!index[k])index[k]=[];index[k].push(n)})};list2(definitions2).forEach(indexRow);list2(model&&model.assignments).forEach(function(row){var text=[row.lessonSummary,row.assessmentTitle].concat(list2(row.tasks).map(function(t){return t.title})).join(" ");if(/kiem tra|lam lai|\btest\b|critical|debate/.test(normalize(text)))indexRow(row)});var numeric=function(v){return typeof v==="number"?isFinite(v):typeof v==="string"&&/^\s*\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*$/.test(v)};var hasScore=function(row){return["score","grade","band","originalScore","retakeScore","raw"].some(function(k){return row&&numeric(row[k])})||Boolean(row&&row.retake&&numeric(row.retake.score))||list2(row&&row.components).some(function(c){return numeric(c.band)||numeric(c.raw)})};var eligible2=function(row){var direct=dated(row);if(direct)return direct>=joined2;var dates=[];keys(row).forEach(function(k){dates=dates.concat(index[k]||[])});if(dates.length)return dates.some(function(n){return n>=joined2});return hasScore(row)};var filter=function(owner,key){if(owner&&Array.isArray(owner[key]))owner[key]=owner[key].filter(eligible2)};if(family==="fighter"||family==="ta"){filter(student2,"scoreDetails");filter(student2,"retakes");var scores=list2(student2.scoreDetails).filter(function(row){return typeof row.score==="number"&&isFinite(row.score)});student2.completedScores=scores.length;student2.totalScoreSlots=list2(student2.scoreDetails).length;student2.average=scores.length?Math.round(scores.reduce(function(n,row){return n+row.score},0)/scores.length*10)/10:null;if(!scores.length){student2.rank=null;student2.rankEligible=false}if(family==="ta"&&!scores.length&&student2.trend)student2.trend={delta:null,state:"neutral",label:"Chưa đủ dữ liệu"}}else if(family==="kids"){["results","tests","assessments","retakeResults"].forEach(function(k){filter(student2,k)});if(student2.summary&&student2.summary.latestTest&&!eligible2(student2.summary.latestTest)){var results=list2(student2.results||student2.tests||student2.assessments).filter(hasScore).sort(function(a,b){return dated(b)-dated(a)});student2.summary.latestTest=results[0]||{};student2.latestScore="—";student2.testScore="—"}}else if(family==="ielts"){filter(student2,"assessmentResults");filter(model,"assessmentReminders");Object.keys(student2.skills||{}).forEach(function(key){var skill=student2.skills[key];if(!skill||!Array.isArray(skill.records))return;skill.records=skill.records.filter(eligible2);var bands=skill.records.filter(function(row){return typeof row.band==="number"&&isFinite(row.band)});skill.latestBand=bands.length?bands[0].band:null;skill.averageBand=bands.length?Math.round(bands.reduce(function(n,row){return n+row.band},0)/bands.length*10)/10:null})}return eligible2}const gradeDefinitions=list(full.scoreDefinitions).concat(list(bundle.profile.scoreDefinitions));const gradeEligible=parentEnrollmentScoresV1_("fighter",student,publicData,gradeDefinitions,joined,fighterEnrollmentDateV29_);if(Array.isArray(full.scoreDefinitions))full.scoreDefinitions=full.scoreDefinitions.filter(gradeEligible);if(Array.isArray(bundle.profile.scoreDefinitions))bundle.profile.scoreDefinitions=bundle.profile.scoreDefinitions.filter(gradeEligible);list(full.students).forEach(row=>{if(row&&row.name===student.name)parentEnrollmentScoresV1_("fighter",row,publicData,gradeDefinitions,joined,fighterEnrollmentDateV29_)});publicData.assignments=list(publicData.assignments).filter(item=>eligible(item,false));publicData.selfStudyAssignments=list(publicData.selfStudyAssignments).filter(item=>eligible(item,true));publicData.schedule=list(publicData.schedule).filter(scheduleEligible);full.assignments=list(full.assignments).filter(item=>eligible(item,false));full.selfStudyAssignments=list(full.selfStudyAssignments).filter(item=>eligible(item,true));full.schedule=list(full.schedule).filter(scheduleEligible);bundle.profile.assignments=list(bundle.profile.assignments).filter(item=>eligible(item,Boolean(item&&item.isSelfStudy)));const definitions=list(publicData.assignments).concat(list(publicData.selfStudyAssignments)),allowed=new Map(definitions.map(item=>[id(item),item]).filter(row=>row[0]));const recordEligible=record=>{const definition=allowed.get(id(record));if(definition)return true;const serial=itemDate(record,Boolean(record&&record.isSelfStudy));return Boolean(serial&&serial>=joined)};student.assignments=list(student.assignments).filter(recordEligible);["preparedSelfStudy","directSelfStudyItems"].forEach(field=>{if(Array.isArray(student[field]))student[field]=student[field].filter(item=>eligible(item,true));if(Array.isArray(bundle.profile[field]))bundle.profile[field]=bundle.profile[field].filter(item=>eligible(item,true))});if(Array.isArray(full.students))full.students.forEach(row=>{if(row&&(row.name===student.name||row.alias===student.alias))row.assignments=list(row.assignments).filter(recordEligible)});return bundle}function fighterReadingNotebookTasksV1_(assignment){if(!assignment)return assignment;const day=String(assignment.lessonDate||"").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!day||Number(day[3]+day[2].padStart(2,"0")+day[1].padStart(2,"0"))<20261007)return assignment;const matching=typeof fighterReceiptMatching_!=="undefined"?fighterReceiptMatching_:{assignmentProgramKeyV7_,submissionTaskFactsV7_};const program=matching.assignmentProgramKeyV7_(assignment.program);if(!/^ri[12]$/.test(program))return assignment;(assignment.tasks||[]).forEach(function(task){const facts=matching.submissionTaskFactsV7_(task);const route=String(task.url||"").match(/\/ri([12])-u0*(\d+)-correction(?:\/|[?#]|$)/i);if(facts.redo||!facts.correction&&!(route&&"ri"+route[1]===program))return;const unit=facts.unit||route&&Number(route[2]);task.title="Sổ từ vựng & Vở chữa bài Reading Intensive "+program.slice(-1)+(unit?" — Unit "+unit:"");const note="Nộp đủ Sổ từ vựng (các từ được in đỏ) và Vở chữa bài vào hai mục tương ứng trong Form trên trang bài học.";if(String(task.instructions||"").indexOf(note)<0)task.instructions=String(task.instructions||"").trim()+"\n"+note});return assignment}function fighterReadingNotebookPackageV1_(value){[value&&value.publicData,value&&value.fullDashboard].forEach(function(part){(part&&part.assignments||[]).forEach(fighterReadingNotebookTasksV1_)});return value}var fighterSnapshotOpeningV1_=false;var FighterStableView=(function(){let depth=0;const attributes=["data-assignment-id","data-self-study-code"];const cards=attributes.map(a=>"["+a+"]").join(",");function capture(){const shell=document.querySelector("main.shell"),panel=document.querySelector(".panel:not([hidden])");if(!shell)return null;const anchor=panel&&Array.from(panel.querySelectorAll(cards)).find(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>80&&r.top<window.innerHeight});const attr=anchor&&attributes.find(a=>anchor.hasAttribute(a));return{shell,panelId:panel&&panel.id,x:window.scrollX||0,y:window.scrollY||0,height:shell.getBoundingClientRect().height,anchor:anchor&&{attr,value:anchor.getAttribute(attr),top:anchor.getBoundingClientRect().top},details:Array.from(shell.querySelectorAll("details[data-history-section]")).map(el=>({key:el.getAttribute("data-history-section"),open:el.open})),focusId:document.activeElement&&document.activeElement.id}}function update(view,render2){if(!view)return render2();const root=document.documentElement,shell=view.shell;const saved=[shell.style.getPropertyValue("min-height"),shell.style.getPropertyPriority("min-height"),root.style.getPropertyValue("scroll-behavior"),root.style.getPropertyPriority("scroll-behavior"),root.style.getPropertyValue("overflow-anchor"),root.style.getPropertyPriority("overflow-anchor")];shell.style.setProperty("min-height",view.height+"px","important");root.style.setProperty("scroll-behavior","auto","important");root.style.setProperty("overflow-anchor","none","important");depth++;try{return render2()}finally{depth--;try{for(const el of shell.querySelectorAll("details[data-history-section]")){const old=view.details.find(v=>v.key===el.getAttribute("data-history-section"));if(old)el.open=old.open}shell.style.setProperty("min-height",saved[0],saved[1]);const panel=document.getElementById(view.panelId),anchor=view.anchor&&panel&&Array.from(panel.querySelectorAll(cards)).find(el=>el.getAttribute(view.anchor.attr)===view.anchor.value);const top=anchor?window.scrollY+anchor.getBoundingClientRect().top-view.anchor.top:view.y;const focus=view.focusId&&document.getElementById(view.focusId);if(focus&&focus!==document.activeElement)focus.focus({preventScroll:true});window.scrollTo({left:view.x,top,behavior:"instant"})}finally{shell.style.setProperty("min-height",saved[0],saved[1]);root.style.setProperty("scroll-behavior",saved[2],saved[3]);root.style.setProperty("overflow-anchor",saved[4],saved[5])}}}return{capture,update,rendering:()=>depth>0}})();function fighterParentApply_(){if(fighterSnapshotOpeningV1_)return false;if(!fighterApi.parent.authorized||!fighterParentPackage_)return false;fighterSubmissionProjected_=fighterApplyEnrollmentCutoffV29_(submissionOwner_.reapply(fighterReadingNotebookPackageV1_(parentLessonAcceptV1_(JSON.parse(JSON.stringify(fighterParentPackage_))))),fighterApi.parent.binding);const stableView=fighterParentPainted_?FighterStableView.capture():null;const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterSubmissionProjected_;if(profile.student.name!==binding.studentName)return false;if(document.hidden)return true;return FighterStableView.update(stableView,()=>{studentDirectory_=binding.directory.students;studentDirectoryReady_=true;studentDirectoryLoading_=false;render(Object.assign({},fullDashboard,publicData,{scoreDefinitions:fullDashboard.scoreDefinitions||[],classSummary:fullDashboard.classSummary||{},selfStudyAssignments:publicData.selfStudyAssignments}));const request=++studentProfileRequestV1_;if(!applyStudentProfileFastV1_(profile,profile.student,request,false))throw new Error("Hồ sơ chưa sẵn sàng.");dashboard.classSummary=Object.assign({},fullDashboard.classSummary||{},profile.classSummary||{});dashboard.students=[profile.student];studentDataReady_=true;renderLeaderboard();renderImprovementHighlights();$("#student-input").value=binding.studentName;$("#student-input").disabled=true;$("#student-switch").hidden=false;fighterParentPainted_=true;fighterParentIdentity_();if(submissionOwner_.readState==="ready"&&!document.documentElement.dataset.snapshotReceiptReadyMs)document.documentElement.dataset.snapshotReceiptReadyMs=String(Math.round(performance.now()));document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));if(document.documentElement.dataset.parentFirstOpenMs===void 0)document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));return true})}let fighterParentPublicRefresh_=null;function fighterParentRefreshPublic_(){if(fighterParentPublicRefresh_)return fighterParentPublicRefresh_;const generation=fighterParentGeneration_;const job=fighterApi.parent.request("public",true).then(publicData=>{if(generation!==fighterParentGeneration_||!fighterApi.parent.authorized||!fighterParentPackage_)return false;if(publicData.cacheStale||!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments))return false;fighterParentPackage_.publicData=publicData;fighterParentApply_();return true}).catch(()=>false).finally(()=>{if(fighterParentPublicRefresh_===job)fighterParentPublicRefresh_=null});fighterParentPublicRefresh_=job;return job}function fighterParentLoad_(force=false,quiet=false){if(!fighterApi.parent.authorized)return Promise.resolve(false);if(fighterParentLoading_)return fighterParentLoading_;const generation=fighterParentGeneration_;document.documentElement.dataset.parentLoadStartedMs=String(Math.round(performance.now()));delete document.documentElement.dataset.parentLastOpenMs;if(!quiet)fighterParentGate_("Đang tải lịch học, bài tập và kết quả của con…");fighterParentLoading_=fighterApi.parent.request("bootstrap",force).then(async({className,publicData,fullDashboard,profile,manualTrackerRead})=>{if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;if(!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments)||!Array.isArray(fullDashboard.scoreDefinitions)||!fullDashboard.classSummary||!Array.isArray(fullDashboard.classSummary.leaderboard)||!Array.isArray(profile.student.assignments)||!Array.isArray(profile.student.scoreDetails))throw new Error("Dữ liệu đang được cập nhật.");if(FIGHTER_SNAPSHOT_ENABLED){fighterSnapshotOpeningV1_=true;try{await submissionOwner_.refresh(Boolean(force))}finally{fighterSnapshotOpeningV1_=false}if(generation!==fighterParentGeneration_||!fighterApi.parent.authorized)return false}fighterParentPackage_={className,publicData,fullDashboard,profile,manualTrackerRead};if(!fighterApi.parent.authorized)return false;fighterParentApply_();parentAcademicQueueV1_();return true}).catch(()=>{if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;if(!quiet||!fighterParentPainted_||!$("#student-gateway").hidden)fighterParentGate_("Chưa tải đủ hồ sơ. Bố mẹ bấm tải lại nhé.",true);else $("#updated").textContent="Đang hiển thị dữ liệu gần nhất · Bấm tải lại để kiểm tra cập nhật.";return false}).finally(()=>{if(generation===fighterParentGeneration_)fighterParentLoading_=null});fighterApi.parent.prefetchSelfStudy();return fighterParentLoading_}function fighterParentRecheck_(options={}){if(options.refresh)submissionOwner_.invalidate();if(options.refresh)fighterApi.parent.resetReads();if(options.refresh){document.documentElement.dataset.parentRefreshStartedMs=String(Math.round(performance.now()));delete document.documentElement.dataset.parentLastOpenMs}return fighterApi.parent.check(options).then(ok=>{if(!ok)return false;fighterParentIdentity_();const afterLoad=job=>Promise.resolve(job).then(ready=>{if(!FIGHTER_SNAPSHOT_ENABLED&&ready&&(!options.background||options.foreground||options.refresh))submissionOwner_.refresh(Boolean(options.refresh));return ready});if(fighterParentLoading_)return afterLoad(fighterParentLoading_);if(options.background&&fighterParentPainted_&&$("#student-gateway").hidden)return true;if(options.refresh)return afterLoad(fighterParentLoad_(true,false));if(fighterParentPackage_)return afterLoad(fighterParentApply_());return afterLoad(fighterParentLoad_(false,false))})}const fighterParentRenderBase_=render;render=function(data){if(fighterApi.parent.authorized)return fighterParentRenderBase_(data)};const fighterParentStudentBase_=renderStudent;renderStudent=function(student){const b=fighterApi.parent.binding;if(!b||!student||student.name!==b.studentName)return;return fighterParentStudentBase_.apply(this,arguments)};const fighterParentUnlockBase_=f9PortalUnlockV2_;f9PortalUnlockV2_=function(){if(fighterApi.parent.authorized)return fighterParentUnlockBase_.apply(this,arguments)};const fighterParentPendingBase_=fighterRenderPendingHomeworkV15_;fighterRenderPendingHomeworkV15_=function(){if(!fighterApi.parent.authorized){fighterClearPendingHomeworkV15_();return}const result=fighterParentPendingBase_.apply(this,arguments);fighterParentIdentity_();return result};const fighterParentNextClassBase_=updateNextClass;updateNextClass=function(){if(fighterApi.parent.authorized&&dashboard)return fighterParentNextClassBase_.apply(this,arguments)};ensureStudentDirectoryFastV1_=function(){};ensureFullStudentDataFastV1_=function(){};refreshDashboardInBackground_=function(){};retryFighterBootV1_=function(){return fighterParentRecheck_({refresh:true})};start=function(){return fighterParentRecheck_()};$("#parentOpeningRetry").addEventListener("click",()=>fighterParentRecheck_({refresh:true}));$("#student-switch").addEventListener("click",event=>{event.preventDefault();event.stopImmediatePropagation();fighterParentRecheck_({refresh:true})},true);window.addEventListener("fighter-parent-access",event=>{if(event.detail.status!=="authorized"){if(event.detail.status==="revoked")fighterParentClear_();fighterParentGate_()}else fighterParentIdentity_()});window.addEventListener("hashchange",()=>{fighterApi.parent.suspend();window.location.reload()});function fighterParentResumeView_(){if(!document.hidden&&fighterApi.parent.authorized&&fighterParentPackage_)fighterParentApply_()}document.addEventListener("visibilitychange",fighterParentResumeView_);window.addEventListener("pageshow",event=>{if(event.persisted)fighterParentResumeView_()});fighterParentGate_();fighterParentRecheck_();
+function fighterSubmissionSelectSelfStudyResult_(previous,current){if(!previous)return current;const empty=item=>Boolean(item&&(item.contentStatus==="empty"||item.contentMissing===true));const selected=!empty(previous)&&empty(current)?previous:current;const attempts=item=>Array.isArray(item.submissionAttempts)&&item.submissionAttempts.length?item.submissionAttempts:[item];return Object.assign({},selected,{submissionAttempts:DirectSubmissionHistory.merge(attempts(previous),attempts(current))})}function fighterEmptySubmissionMarkup_(state){if(!state)return"";const empty=(state.submissionAttempts||[]).filter(r=>r.contentStatus==="empty");if(!state.contentMissing&&!empty.length)return"";const current=state.contentMissing?"<strong>Đã nhận lượt gửi nhưng bài trống</strong><p>Chưa có video hoặc tệp đính kèm. Bài này vẫn chưa hoàn thành.</p>":"";const history=empty.map(r=>"<p>Lần "+esc(r.attempt||r.sourceAttempt||"")+" · "+esc(r.submittedAt||"")+" · Lượt gửi trống, không có video/tệp.</p>").join("");return'<div class="direct-empty-submission" style="'+(state.contentMissing?"border:2px solid #b91c1c;background:#fff1f2;color:#991b1b;padding:14px;border-radius:12px":"color:#64748b")+'">'+current+history+"</div>"}function fighterSubmissionReadLabel_(){return SharedSubmissionStatus.render(null);}function fighterSubmissionReadLabel_BeforeStatus_(){return ""}let fighterParentPackage_=null,fighterParentLoading_=null,fighterParentGeneration_=0,fighterParentPainted_=false;function fighterParentIdentity_(){const binding=fighterApi.parent.binding;const label=binding?String(binding.displayName||[binding.studentName,binding.englishName].filter(Boolean).join(" · ")):"";const status=fighterApi.parent.status,checking=!label&&status==="pending";$("#parentOpeningName").textContent=label||(status==="revoked"?"Hồ sơ không còn hoạt động":status==="unavailable"?"Hồ sơ học tập":"");$("#parentOpeningEyebrow").textContent=status==="revoked"||status==="unavailable"?"Trạng thái hồ sơ":"Đang mở hồ sơ của";$("#parentOpeningSkeleton").hidden=!checking;$("#parentOpeningIdentity").dataset.state=label?"authorized":status;$("#parentOpeningIdentity").setAttribute("aria-busy",String(checking));if(label&&document.documentElement.dataset.parentIdentityReadyMs===void 0)document.documentElement.dataset.parentIdentityReadyMs=String(Math.round(performance.now()));const pending=$("#parentPendingIdentity");if(pending){pending.textContent=label?"Hồ sơ của "+label:"";pending.hidden=!label}}function fighterParentGate_(message,retry){if(fighterParentPainted_&&fighterApi.parent.authorized&&!fighterApi.parent.revoked)return;fighterParentIdentity_();document.body.classList.add("f9-portal-locked");document.body.classList.remove("f9-portal-ready");$("#student-gateway").hidden=false;$("#loading").hidden=true;$("#student-switch").hidden=true;$("#parentOpeningMessage").textContent=message||(fighterApi.parent.revoked?"Hồ sơ không còn hoạt động":fighterApi.parent.status==="unavailable"?"Chưa thể kiểm tra hồ sơ. Bố mẹ bấm tải lại nhé.":"Đang kiểm tra và mở hồ sơ của con…");$("#parentOpeningRetry").hidden=fighterApi.parent.revoked||!(retry||fighterApi.parent.status==="unavailable");if(typeof fighterClearPendingHomeworkV15_==="function")fighterClearPendingHomeworkV15_()}function fighterParentClear_(){fighterParentGeneration_+=1;fighterParentPackage_=null;fighterParentLoading_=null;fighterParentPainted_=false;delete document.documentElement.dataset.parentLastOpenMs;dashboard=null;studentDirectory_=[];studentDirectoryReady_=false;studentDataReady_=false;studentDataLoading_=false;studentDirectoryLoading_=false;studentProfileRequestV1_+=1;selfStudyResultRequestV1_+=1;fighterBootRequestV1_+=1;f9PortalSelectedStudentV2_=null;f9PortalSelfStudyItemsV2_=[];fighterPendingStudentV15_=null;fighterPendingSelfStudyItemsV15_=[];activeStudentName_="";newsState_={};[typeof fighterProfileLoadV2_!=="undefined"?fighterProfileLoadV2_:null,typeof fighterDirectoryLoadV2_!=="undefined"?fighterDirectoryLoadV2_:null].filter(Boolean).forEach(state=>{state.terminal=true;["watchdog","retryTimer"].forEach(key=>{if(state[key])clearTimeout(state[key]);state[key]=null})});["student-profile","assignment-list","self-study-list","leaderboard","improvement-highlights","schedule-periods","schedule-location","assessment-reminders","next-class","updated","news-banner"].forEach(id=>{const node=$("#"+id);if(node)node.innerHTML=""});$("#student-input").innerHTML=""}function fighterApplyEnrollmentCutoffV29_(bundle,binding){if(!bundle||!bundle.profile||!bundle.profile.student)return bundle;function fighterEnrollmentDateV29_(value){const text=String(value==null?"":value).trim();let match,year,month,day;match=text.match(/(?:^|\D)(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);if(match){year=Number(match[1]);month=Number(match[2]);day=Number(match[3])}else{match=text.match(/(?:^|\D)(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2}|\d{4})(?:\D|$)/);if(!match)return 0;day=Number(match[1]);month=Number(match[2]);year=Number(match[3]);if(year<100)year+=2e3}const stamp=Date.UTC(year,month-1,day),date=new Date(stamp);return year>=2e3&&year<=2100&&date.getUTCFullYear()===year&&date.getUTCMonth()===month-1&&date.getUTCDate()===day?stamp:0}const list=value=>Array.isArray(value)?value:[];const directory=binding&&binding.directory||{},rows=list(directory.students).concat(list(directory.all));const live=rows.find(row=>row&&(row.name===binding.studentName||row.studentName===binding.studentName||row.alias===bundle.profile.student.alias))||rows[0]||{};const student=bundle.profile.student,joinDate=live.joinDate||student.joinDate;const joined=fighterEnrollmentDateV29_(joinDate);if(!joined)return bundle;student.joinDate=joinDate;const itemDate=(item,selfStudy)=>{if(!item)return 0;const fields=selfStudy?["releaseDate","assignedDate","lessonDate","date","dateLabel","startDate"]:["lessonDate","assignedDate","releaseDate","date","dateLabel","startDate"];for(const field of fields){const serial=fighterEnrollmentDateV29_(item[field]);if(serial)return serial}return 0};const eligible=(item,selfStudy)=>{const serial=itemDate(item,selfStudy);return Boolean(serial&&serial>=joined)};const scheduleEligible=item=>{if(item&&item.weekday!=null&&item.startTime){const end=fighterEnrollmentDateV29_(item.endDate);return!end||end>=joined}return eligible(item,false)};const id=item=>String(item&&(item.id||item.assignmentId||item.scheduleAssignmentId)||"").trim();const publicData=bundle.publicData||{},full=bundle.fullDashboard||{};function parentEnrollmentScoresV1_(family,student2,model,definitions2,joined2,dateOf){var list2=function(v){return Array.isArray(v)?v:[]};var normalize=function(v){return String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d")};var code=function(v){return normalize(v).replace(/^direct[-_:]/,"").replace(/[-_:](?:redo|retake)$/,"").replace(/[^a-z0-9]/g,"")};var keys=function(row){return["key","id","sourceCode","assignmentCode","assignmentId","scheduleAssignmentId"].map(function(k){return code(row&&row[k])}).filter(Boolean)};var dated=function(row){if(!row)return 0;var fields=["lessonDate","assignedDate","releaseDate","date","dateLabel","startDate"];for(var i=0;i<fields.length;i++){var n=dateOf(row[fields[i]]);if(n)return n}return 0};var index={};var indexRow=function(row){var n=dated(row);if(!n)return;keys(row).forEach(function(k){if(!index[k])index[k]=[];index[k].push(n)})};list2(definitions2).forEach(indexRow);list2(model&&model.assignments).forEach(function(row){var text=[row.lessonSummary,row.assessmentTitle].concat(list2(row.tasks).map(function(t){return t.title})).join(" ");if(/kiem tra|lam lai|\btest\b|critical|debate/.test(normalize(text)))indexRow(row)});var numeric=function(v){return typeof v==="number"?isFinite(v):typeof v==="string"&&/^\s*\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)?\s*$/.test(v)};var hasScore=function(row){return["score","grade","band","originalScore","retakeScore","raw"].some(function(k){return row&&numeric(row[k])})||Boolean(row&&row.retake&&numeric(row.retake.score))||list2(row&&row.components).some(function(c){return numeric(c.band)||numeric(c.raw)})};var eligible2=function(row){var direct=dated(row);if(direct)return direct>=joined2;var dates=[];keys(row).forEach(function(k){dates=dates.concat(index[k]||[])});if(dates.length)return dates.some(function(n){return n>=joined2});return hasScore(row)};var filter=function(owner,key){if(owner&&Array.isArray(owner[key]))owner[key]=owner[key].filter(eligible2)};if(family==="fighter"||family==="ta"){filter(student2,"scoreDetails");filter(student2,"retakes");var scores=list2(student2.scoreDetails).filter(function(row){return typeof row.score==="number"&&isFinite(row.score)});student2.completedScores=scores.length;student2.totalScoreSlots=list2(student2.scoreDetails).length;student2.average=scores.length?Math.round(scores.reduce(function(n,row){return n+row.score},0)/scores.length*10)/10:null;if(!scores.length){student2.rank=null;student2.rankEligible=false}if(family==="ta"&&!scores.length&&student2.trend)student2.trend={delta:null,state:"neutral",label:"Chưa đủ dữ liệu"}}else if(family==="kids"){["results","tests","assessments","retakeResults"].forEach(function(k){filter(student2,k)});if(student2.summary&&student2.summary.latestTest&&!eligible2(student2.summary.latestTest)){var results=list2(student2.results||student2.tests||student2.assessments).filter(hasScore).sort(function(a,b){return dated(b)-dated(a)});student2.summary.latestTest=results[0]||{};student2.latestScore="—";student2.testScore="—"}}else if(family==="ielts"){filter(student2,"assessmentResults");filter(model,"assessmentReminders");Object.keys(student2.skills||{}).forEach(function(key){var skill=student2.skills[key];if(!skill||!Array.isArray(skill.records))return;skill.records=skill.records.filter(eligible2);var bands=skill.records.filter(function(row){return typeof row.band==="number"&&isFinite(row.band)});skill.latestBand=bands.length?bands[0].band:null;skill.averageBand=bands.length?Math.round(bands.reduce(function(n,row){return n+row.band},0)/bands.length*10)/10:null})}return eligible2}const gradeDefinitions=list(full.scoreDefinitions).concat(list(bundle.profile.scoreDefinitions));const gradeEligible=parentEnrollmentScoresV1_("fighter",student,publicData,gradeDefinitions,joined,fighterEnrollmentDateV29_);if(Array.isArray(full.scoreDefinitions))full.scoreDefinitions=full.scoreDefinitions.filter(gradeEligible);if(Array.isArray(bundle.profile.scoreDefinitions))bundle.profile.scoreDefinitions=bundle.profile.scoreDefinitions.filter(gradeEligible);list(full.students).forEach(row=>{if(row&&row.name===student.name)parentEnrollmentScoresV1_("fighter",row,publicData,gradeDefinitions,joined,fighterEnrollmentDateV29_)});publicData.assignments=list(publicData.assignments).filter(item=>eligible(item,false));publicData.selfStudyAssignments=list(publicData.selfStudyAssignments).filter(item=>eligible(item,true));publicData.schedule=list(publicData.schedule).filter(scheduleEligible);full.assignments=list(full.assignments).filter(item=>eligible(item,false));full.selfStudyAssignments=list(full.selfStudyAssignments).filter(item=>eligible(item,true));full.schedule=list(full.schedule).filter(scheduleEligible);bundle.profile.assignments=list(bundle.profile.assignments).filter(item=>eligible(item,Boolean(item&&item.isSelfStudy)));const definitions=list(publicData.assignments).concat(list(publicData.selfStudyAssignments)),allowed=new Map(definitions.map(item=>[id(item),item]).filter(row=>row[0]));const recordEligible=record=>{const definition=allowed.get(id(record));if(definition)return true;const serial=itemDate(record,Boolean(record&&record.isSelfStudy));return Boolean(serial&&serial>=joined)};student.assignments=list(student.assignments).filter(recordEligible);["preparedSelfStudy","directSelfStudyItems"].forEach(field=>{if(Array.isArray(student[field]))student[field]=student[field].filter(item=>eligible(item,true));if(Array.isArray(bundle.profile[field]))bundle.profile[field]=bundle.profile[field].filter(item=>eligible(item,true))});if(Array.isArray(full.students))full.students.forEach(row=>{if(row&&(row.name===student.name||row.alias===student.alias))row.assignments=list(row.assignments).filter(recordEligible)});return bundle}function fighterReadingNotebookTasksV1_(assignment){if(!assignment)return assignment;const day=String(assignment.lessonDate||"").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!day||Number(day[3]+day[2].padStart(2,"0")+day[1].padStart(2,"0"))<20261007)return assignment;const matching=typeof fighterReceiptMatching_!=="undefined"?fighterReceiptMatching_:{assignmentProgramKeyV7_,submissionTaskFactsV7_};const program=matching.assignmentProgramKeyV7_(assignment.program);if(!/^ri[12]$/.test(program))return assignment;(assignment.tasks||[]).forEach(function(task){const facts=matching.submissionTaskFactsV7_(task);const route=String(task.url||"").match(/\/ri([12])-u0*(\d+)-correction(?:\/|[?#]|$)/i);if(facts.redo||!facts.correction&&!(route&&"ri"+route[1]===program))return;const unit=facts.unit||route&&Number(route[2]);task.title="Sổ từ vựng & Vở chữa bài Reading Intensive "+program.slice(-1)+(unit?" — Unit "+unit:"");const note="Nộp đủ Sổ từ vựng (các từ được in đỏ) và Vở chữa bài vào hai mục tương ứng trong Form trên trang bài học.";if(String(task.instructions||"").indexOf(note)<0)task.instructions=String(task.instructions||"").trim()+"\n"+note});return assignment}function fighterReadingNotebookPackageV1_(value){[value&&value.publicData,value&&value.fullDashboard].forEach(function(part){(part&&part.assignments||[]).forEach(fighterReadingNotebookTasksV1_)});return value}var fighterSnapshotOpeningV1_=false;var FighterStableView=(function(){let depth=0;const attributes=["data-assignment-id","data-self-study-code"];const cards=attributes.map(a=>"["+a+"]").join(",");function capture(){const shell=document.querySelector("main.shell"),panel=document.querySelector(".panel:not([hidden])");if(!shell)return null;const anchor=panel&&Array.from(panel.querySelectorAll(cards)).find(el=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0&&r.bottom>80&&r.top<window.innerHeight});const attr=anchor&&attributes.find(a=>anchor.hasAttribute(a));return{shell,panelId:panel&&panel.id,x:window.scrollX||0,y:window.scrollY||0,height:shell.getBoundingClientRect().height,anchor:anchor&&{attr,value:anchor.getAttribute(attr),top:anchor.getBoundingClientRect().top},details:Array.from(shell.querySelectorAll("details[data-history-section]")).map(el=>({key:el.getAttribute("data-history-section"),open:el.open})),focusId:document.activeElement&&document.activeElement.id}}function update(view,render2){if(!view)return render2();const root=document.documentElement,shell=view.shell;const saved=[shell.style.getPropertyValue("min-height"),shell.style.getPropertyPriority("min-height"),root.style.getPropertyValue("scroll-behavior"),root.style.getPropertyPriority("scroll-behavior"),root.style.getPropertyValue("overflow-anchor"),root.style.getPropertyPriority("overflow-anchor")];shell.style.setProperty("min-height",view.height+"px","important");root.style.setProperty("scroll-behavior","auto","important");root.style.setProperty("overflow-anchor","none","important");depth++;try{return render2()}finally{depth--;try{for(const el of shell.querySelectorAll("details[data-history-section]")){const old=view.details.find(v=>v.key===el.getAttribute("data-history-section"));if(old)el.open=old.open}shell.style.setProperty("min-height",saved[0],saved[1]);const panel=document.getElementById(view.panelId),anchor=view.anchor&&panel&&Array.from(panel.querySelectorAll(cards)).find(el=>el.getAttribute(view.anchor.attr)===view.anchor.value);const top=anchor?window.scrollY+anchor.getBoundingClientRect().top-view.anchor.top:view.y;const focus=view.focusId&&document.getElementById(view.focusId);if(focus&&focus!==document.activeElement)focus.focus({preventScroll:true});window.scrollTo({left:view.x,top,behavior:"instant"})}finally{shell.style.setProperty("min-height",saved[0],saved[1]);root.style.setProperty("scroll-behavior",saved[2],saved[3]);root.style.setProperty("overflow-anchor",saved[4],saved[5])}}}return{capture,update,rendering:()=>depth>0}})();function fighterParentApply_(){if(fighterSnapshotOpeningV1_)return false;if(!fighterApi.parent.authorized||!fighterParentPackage_)return false;fighterSubmissionProjected_=fighterApplyEnrollmentCutoffV29_(submissionOwner_.reapply(fighterReadingNotebookPackageV1_(parentLessonAcceptV1_(JSON.parse(JSON.stringify(fighterParentPackage_))))),fighterApi.parent.binding);const stableView=fighterParentPainted_?FighterStableView.capture():null;const binding=fighterApi.parent.binding,{publicData,fullDashboard,profile}=fighterSubmissionProjected_;if(profile.student.name!==binding.studentName)return false;if(document.hidden)return true;return FighterStableView.update(stableView,()=>{studentDirectory_=binding.directory.students;studentDirectoryReady_=true;studentDirectoryLoading_=false;render(Object.assign({},fullDashboard,publicData,{scoreDefinitions:fullDashboard.scoreDefinitions||[],classSummary:fullDashboard.classSummary||{},selfStudyAssignments:publicData.selfStudyAssignments}));const request=++studentProfileRequestV1_;if(!applyStudentProfileFastV1_(profile,profile.student,request,false))throw new Error("Hồ sơ chưa sẵn sàng.");dashboard.classSummary=Object.assign({},fullDashboard.classSummary||{},profile.classSummary||{});dashboard.students=[profile.student];studentDataReady_=true;renderLeaderboard();renderImprovementHighlights();$("#student-input").value=binding.studentName;$("#student-input").disabled=true;$("#student-switch").hidden=false;fighterParentPainted_=true;fighterParentIdentity_();if(submissionOwner_.readState==="ready"&&!document.documentElement.dataset.snapshotReceiptReadyMs)document.documentElement.dataset.snapshotReceiptReadyMs=String(Math.round(performance.now()));document.documentElement.dataset.parentLastOpenMs=String(Math.round(performance.now()));if(document.documentElement.dataset.parentFirstOpenMs===void 0)document.documentElement.dataset.parentFirstOpenMs=String(Math.round(performance.now()));return true})}let fighterParentPublicRefresh_=null;function fighterParentRefreshPublic_(){if(fighterParentPublicRefresh_)return fighterParentPublicRefresh_;const generation=fighterParentGeneration_;const job=fighterApi.parent.request("public",true).then(publicData=>{if(generation!==fighterParentGeneration_||!fighterApi.parent.authorized||!fighterParentPackage_)return false;if(publicData.cacheStale||!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments))return false;fighterParentPackage_.publicData=publicData;fighterParentApply_();return true}).catch(()=>false).finally(()=>{if(fighterParentPublicRefresh_===job)fighterParentPublicRefresh_=null});fighterParentPublicRefresh_=job;return job}function fighterParentLoad_(force=false,quiet=false,prefetch=null){if(!fighterApi.parent.authorized)return Promise.resolve(false);if(fighterParentLoading_)return fighterParentLoading_;const generation=fighterParentGeneration_;document.documentElement.dataset.parentLoadStartedMs=String(Math.round(performance.now()));delete document.documentElement.dataset.parentLastOpenMs;if(!quiet)fighterParentGate_("Đang tải lịch học, bài tập và kết quả của con…");fighterParentLoading_=(prefetch?Promise.resolve(prefetch):fighterApi.parent.request("bootstrap",force)).then(async({className,publicData,fullDashboard,profile,manualTrackerRead})=>{if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;if(!Array.isArray(publicData.assignments)||!Array.isArray(publicData.schedule)||!Array.isArray(publicData.selfStudyAssignments)||!Array.isArray(fullDashboard.scoreDefinitions)||!fullDashboard.classSummary||!Array.isArray(fullDashboard.classSummary.leaderboard)||!Array.isArray(profile.student.assignments)||!Array.isArray(profile.student.scoreDetails))throw new Error("Dữ liệu đang được cập nhật.");if(FIGHTER_SNAPSHOT_ENABLED){fighterSnapshotOpeningV1_=true;try{await submissionOwner_.refresh(Boolean(force))}finally{fighterSnapshotOpeningV1_=false}if(generation!==fighterParentGeneration_||!fighterApi.parent.authorized)return false}fighterParentPackage_={className,publicData,fullDashboard,profile,manualTrackerRead};if(!fighterApi.parent.authorized)return false;fighterParentApply_();parentAcademicQueueV1_();return true}).catch(()=>{if(generation!==fighterParentGeneration_||fighterApi.parent.revoked)return false;if(!quiet||!fighterParentPainted_||!$("#student-gateway").hidden)fighterParentGate_("Chưa tải đủ hồ sơ. Bố mẹ bấm tải lại nhé.",true);else $("#updated").textContent="Đang hiển thị dữ liệu gần nhất · Bấm tải lại để kiểm tra cập nhật.";return false}).finally(()=>{if(generation===fighterParentGeneration_)fighterParentLoading_=null});fighterApi.parent.prefetchSelfStudy();return fighterParentLoading_}
+/* NATIVE_FRESH_HANDOFF_V3 */
+
+window.addEventListener('mtt:confirmed-profile-fresh',function(event){
+ const x=event.detail,b=x&&x.packet&&x.packet.actions&&x.packet.actions.bootstrap;
+ if(!x||x.client!=='FighterSnapshotClient'||!b||!fighterApi.parent.authorized||fighterApi.parent.revoked)return;
+ Promise.resolve(fighterParentLoading_).catch(()=>{}).then(()=>{if(fighterApi.parent.authorized&&!fighterApi.parent.revoked){submissionOwner_.invalidate();return fighterParentLoad_(false,true,b);}}).catch(()=>{});
+});function fighterParentRecheck_(options={}){if(options.refresh)submissionOwner_.invalidate();if(options.refresh)fighterApi.parent.resetReads();if(options.refresh){document.documentElement.dataset.parentRefreshStartedMs=String(Math.round(performance.now()));delete document.documentElement.dataset.parentLastOpenMs}return fighterApi.parent.check(options).then(ok=>{if(!ok)return false;fighterParentIdentity_();const afterLoad=job=>Promise.resolve(job).then(ready=>{if(!FIGHTER_SNAPSHOT_ENABLED&&ready&&(!options.background||options.foreground||options.refresh))submissionOwner_.refresh(Boolean(options.refresh));return ready});if(fighterParentLoading_)return afterLoad(fighterParentLoading_);if(options.background&&fighterParentPainted_&&$("#student-gateway").hidden)return true;if(options.refresh)return afterLoad(fighterParentLoad_(true,false));if(fighterParentPackage_)return afterLoad(fighterParentApply_());return afterLoad(fighterParentLoad_(false,false))})}const fighterParentRenderBase_=render;render=function(data){if(fighterApi.parent.authorized)return fighterParentRenderBase_(data)};const fighterParentStudentBase_=renderStudent;renderStudent=function(student){const b=fighterApi.parent.binding;if(!b||!student||student.name!==b.studentName)return;return fighterParentStudentBase_.apply(this,arguments)};const fighterParentUnlockBase_=f9PortalUnlockV2_;f9PortalUnlockV2_=function(){if(fighterApi.parent.authorized)return fighterParentUnlockBase_.apply(this,arguments)};const fighterParentPendingBase_=fighterRenderPendingHomeworkV15_;fighterRenderPendingHomeworkV15_=function(){if(!fighterApi.parent.authorized){fighterClearPendingHomeworkV15_();return}const result=fighterParentPendingBase_.apply(this,arguments);fighterParentIdentity_();return result};const fighterParentNextClassBase_=updateNextClass;updateNextClass=function(){if(fighterApi.parent.authorized&&dashboard)return fighterParentNextClassBase_.apply(this,arguments)};ensureStudentDirectoryFastV1_=function(){};ensureFullStudentDataFastV1_=function(){};refreshDashboardInBackground_=function(){};retryFighterBootV1_=function(){return fighterParentRecheck_({refresh:true})};start=function(){return fighterParentRecheck_()};$("#parentOpeningRetry").addEventListener("click",()=>fighterParentRecheck_({refresh:true}));$("#student-switch").addEventListener("click",event=>{event.preventDefault();event.stopImmediatePropagation();fighterParentRecheck_({refresh:true})},true);window.addEventListener("fighter-parent-access",event=>{if(event.detail.status!=="authorized"){if(event.detail.status==="revoked")fighterParentClear_();fighterParentGate_()}else fighterParentIdentity_()});window.addEventListener("hashchange",()=>{fighterApi.parent.suspend();window.location.reload()});function fighterParentResumeView_(){if(!document.hidden&&fighterApi.parent.authorized&&fighterParentPackage_)fighterParentApply_()}document.addEventListener("visibilitychange",fighterParentResumeView_);window.addEventListener("pageshow",event=>{if(event.persisted)fighterParentResumeView_()});fighterParentGate_();fighterParentRecheck_();
 
 
 

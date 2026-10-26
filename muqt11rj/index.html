@@ -19,6 +19,9 @@ if(value.submitted===true)value.isOverdue=false;
 (function(root){'use strict';
  var names=['KidsPreparedSnapshotClient','IeltsPublicSnapshotClient','FighterSnapshotClient','TaSnapshotClient'];
  var revoked=false,dbPromise;
+ // Retire only this feature's superseded snapshot store. Entry grants, family
+ // checklists and native submission history have separate storage contracts.
+ try{root.indexedDB.deleteDatabase('mtt-confirmed-profile-v2');}catch(_){}
  function copy(v){return JSON.parse(JSON.stringify(v));}
  function present(v){
   if(typeof v==='string')return v.replace(/cần đối chiếu/gi,function(s){return s[0]===s[0].toUpperCase()?'Cô sẽ kiểm tra':'cô sẽ kiểm tra';}).replace(/Đang cập nhật|Đang xác minh|Đang xác nhận|Chưa đọc đủ/gi,'— Chưa nộp bài').replace(/Hồ sơ chưa tải xong|Chưa thể kết nối hồ sơ|Chưa thể kiểm tra quyền truy cập/gi,'Hồ sơ học tập');
@@ -47,28 +50,29 @@ if(value.submitted===true)value.isOverdue=false;
   if(packet.classNumber&&b&&b.partial){b.optionalSourcesPartial=true;b.partial=false;}return packet;
  }
  function database(){if(!dbPromise)dbPromise=new Promise(function(resolve){
-  try{var r=root.indexedDB.open('mtt-confirmed-profile-v2',1);r.onupgradeneeded=function(){r.result.createObjectStore('profiles');};r.onsuccess=function(){resolve(r.result);};r.onerror=function(){resolve(null);};r.onblocked=function(){resolve(null);};}catch(e){resolve(null);}
+  try{var r=root.indexedDB.open('mtt-confirmed-profile-v3',1);r.onupgradeneeded=function(){r.result.createObjectStore('profiles');};r.onsuccess=function(){r.result.onversionchange=function(){r.result.close();};resolve(r.result);};r.onerror=function(){resolve(null);};r.onblocked=function(){resolve(null);};}catch(e){resolve(null);}
  });return dbPromise;}
  async function disk(key,value){try{var db=await database();if(!db)return null;return await new Promise(function(resolve){var t=db.transaction('profiles',value===undefined?'readonly':'readwrite'),s=t.objectStore('profiles'),r=value===undefined?s.get(key):value===null?s.delete(key):s.put(value,key);r.onsuccess=function(){resolve(r.result||null);};r.onerror=function(){resolve(null);};t.onabort=function(){resolve(null);};});}catch(e){return null;}}
  function dead(e){return /^(PARENT_LINK_REVOKED|LINK_REVOKED|TOKEN_REVOKED|PARENT_LINK_INVALID|INVALID_LINK|INVALID_TOKEN)$/.test(e&&e.code||'');}
  function temporary(e){return /^(SOURCE_UNAVAILABLE|DATA_UNAVAILABLE|SNAPSHOT_NOT_READY|SNAPSHOT_PREPARING|NETWORK_ERROR|HTTP_5\d\d)$/.test(e&&e.code||'')||e&&/^(TypeError|AbortError)$/.test(e.name);}
- function install(api,label){if(!api||!api.create||api.confirmedProfilePolicy===2)return api;
+ function install(api,label){if(!api||!api.create||api.confirmedProfileCacheVersion===3)return api;
   var original=api.create;api.create=function(options){
-   var packet=null,sequence=0,ended=false,keyPromise=Promise.resolve().then(function(){return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token));}).then(function(b){return location.pathname+'|'+label+'|'+String(options.className||options.classNumber||'')+'|'+Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');});
+   var packet=null,sequence=0,ended=false,showedFallback=false,handoffTimer=null,keyPromise=Promise.resolve().then(function(){return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token));}).then(function(b){return location.pathname+'|'+label+'|'+String(options.className||options.classNumber||'')+'|'+Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');});
+   function handoff(){if(!showedFallback||!packet||!current())return;clearTimeout(handoffTimer);handoffTimer=setTimeout(function(){if(!current()||!packet)return;root.dispatchEvent(new CustomEvent('mtt:confirmed-profile-fresh',{detail:{client:label,packet:copy(packet)}}));},0);}
    var loaded=options.onLoaded,opts=Object.assign({},options,{onLoaded:function(value){
-    available(present(retain(value,packet)));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:2,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);
+    available(present(retain(value,packet)));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:3,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);handoff();
    }}),client=original.call(api,opts),request=client.request;
    function current(){return !revoked&&!ended&&(!options.isCurrent||options.isCurrent()===true);}
    function revoke(){ended=true;packet=null;keyPromise.then(function(key){disk(key,null);});}
    root.addEventListener('mtt:profile-revoked',revoke);
    root.addEventListener('hashchange',function(){ended=true;packet=null;});
-   async function prior(){if(!current())return null;if(packet)return packet;var key=await keyPromise,record=await disk(key);if(record&&record.schema===2&&record.packet&&record.packet.actions&&current())packet=available(record.packet);return packet;}
+   async function prior(){if(!current())return null;if(packet)return packet;var key=await keyPromise,record=await disk(key);if(record&&record.schema===3&&record.packet&&record.packet.actions&&current())packet=available(record.packet);return packet;}
    async function fallback(action,args){
     var p=await prior();if(!p||!current())return null;
     var a={refreshDashboard:'dashboard',refreshProfile:'profile'}[action]||action,value;
     if(a==='history'&&args[2]&&p.historyPages){var extra=args[2];if(p.actions.bootstrap&&p.actions.bootstrap.preparedSource&&p.actions.bootstrap.preparedSource.generation===extra.generation)value=p.historyPages[String(extra.historyPage)];}
     else value=p.actions[a];
-    if(value===undefined)return null;document.documentElement.dataset.confirmedProfileFallback='true';return {value:present(withdraw(copy(value)))};
+    if(value===undefined)return null;showedFallback=true;document.documentElement.dataset.confirmedProfileFallback='true';return {value:present(withdraw(copy(value)))};
    }
    client.request=async function(action){
     var args=Array.prototype.slice.call(arguments),last=await prior(),work=Promise.resolve().then(function(){return request.apply(client,args);});
@@ -83,7 +87,7 @@ if(value.submitted===true)value.isOverdue=false;
    };
    if(client.response)client.response=function(action,force,extra){return client.request(action,force,extra).then(function(data){return {ok:true,status:200,json:function(){return Promise.resolve({ok:true,data:data});}};},function(e){if(!dead(e))throw e;return {ok:true,status:200,json:function(){return Promise.resolve({ok:false,revoked:true,code:'PARENT_LINK_REVOKED'});}};});};
    return client;
-  };api.confirmedProfilePolicy=2;return api;
+  };api.confirmedProfilePolicy=2;api.confirmedProfileHandoff=1;api.confirmedProfileCacheVersion=3;return api;
  }
  names.forEach(function(name){var value=root[name];Object.defineProperty(root,name,{configurable:true,enumerable:true,get:function(){return value;},set:function(v){value=install(v,name);}});if(value)root[name]=value;});
  root.addEventListener('mtt:profile-revoked',function(){revoked=true;});
@@ -168,7 +172,7 @@ if(value.submitted===true)value.isOverdue=false;
 <link rel="preload" as="image" href="/vanlang-on-thi-lop-6/game-kit/art/teacher-titi-v1/welcome.webp">
 
 
-<script src="/student-learning/active-roster-v1.js?v=20261023-core-profile-v2" data-class-key="kids-22" data-access="https://kids-dashboard-cluster-two-v1.mstrangtrieuenglishhub-teacher3.workers.dev"></script>
+<script src="/student-learning/active-roster-v1.js?v=20261026-live-cache-v3" data-class-key="kids-22" data-access="https://kids-dashboard-cluster-two-v1.mstrangtrieuenglishhub-teacher3.workers.dev"></script>
 
 
 
@@ -24123,11 +24127,18 @@ ScienceStageContract.lessons=[
   'use strict';
   function createKidsReceiptProjector(matching,config){
     const list=v=>Array.isArray(v)?v:[],key=matching.normalizeKey_,known=new Map();
+    let mappingCache=new WeakMap(),peerCache=new WeakMap();
     const familyLabels={'Science G1':'SCIENCE G1 & G2','Science K':'SCIENCE K','Discover 1':'DISCOVER 1','Discover 2':'DISCOVER 2','Discover English':'DISCOVER ENGLISH','Family and Friends 1':'FF1','Family and Friends 2':'FF2','Phonics':'PHONICS 1–4'};
     function urlKey(value){try{let u=new URL(value);if(['/student-learning/','/kids-learning/'].includes(u.pathname))u=new URL(u.searchParams.get('lesson'));return u.origin+u.pathname.replace(/\/+$/,'')+'/';}catch(_){return '';}}
     list(config.urls).forEach(row=>known.set(urlKey(row.url),list(row.mappings).map(m=>({family:familyLabels[m.formFamily]||m.family||m.formFamily,code:m.code}))));
     function isRetake(assignment,task){return Boolean(assignment.isRetake||assignment.retakeTracking&&assignment.retakeTracking.tracked||task.isRetake||/lam lai|kiem tra lai|retake|redo/.test(matching.normalizeSearchText_([task.title,task.name].join(' '))));}
     function mappings(assignment,task,count){
+      if(!assignment||!task)return [];
+      let tasks=mappingCache.get(assignment);if(!tasks){tasks=new WeakMap();mappingCache.set(assignment,tasks);}
+      let counts=tasks.get(task);if(!counts){counts=new Map();tasks.set(task,counts);}
+      if(!counts.has(count))counts.set(count,calculateMappings(assignment,task,count));return counts.get(count);
+    }
+    function calculateMappings(assignment,task,count){
       const science=root.ScienceStageContract&&root.ScienceStageContract.mappings(assignment,task,root.ScienceStageContract.lessons);
       if(science)return science;
       const mapped=known.get(urlKey(task.url||task.learningUrl||task.taskUrl));
@@ -24185,8 +24196,10 @@ ScienceStageContract.lessons=[
       (map.exact?key(receipt.code)===key(map.code):matching.sourceKeyMatches_(receipt.code,map.code))&&
       (!map.taskType||matching.homeworkTaskType_(typeCode)===map.taskType);}
     function peersFor(assignment,maps,assignments){
-      return assignments.filter(other=>list(other.tasks).some(task=>mappings(other,task,list(other.tasks).filter(t=>t.requiresSubmission!==false).length)
+      let cached=peerCache.get(assignments);if(!cached){cached=new Map();peerCache.set(assignments,cached);}const signature=JSON.stringify(maps);if(cached.has(signature))return cached.get(signature);
+      const result=assignments.filter(other=>list(other.tasks).some(task=>mappings(other,task,list(other.tasks).filter(t=>t.requiresSubmission!==false).length)
         .some(candidate=>maps.some(map=>candidate.family===map.family&&(matches({family:map.family,code:map.code},candidate)||matches({family:candidate.family,code:candidate.code},map))))));
+      cached.set(signature,result);return result;
     }
     function currentAuthority(value,payload){
       const a=payload&&payload.assignmentAuthority;
@@ -24310,6 +24323,7 @@ ScienceStageContract.lessons=[
     }
     return function projectKidsSubmissions(value,payload,ticket,guard){
       if(!value||!value.profile||!payload)return value;
+      mappingCache=new WeakMap();peerCache=new WeakMap();
       if(root.ScienceStageContract){
         value.profile.assignments=root.ScienceStageContract.expand(value.profile.assignments,root.ScienceStageContract.lessons);
         if(value.dashboard)value.dashboard.assignments=root.ScienceStageContract.expand(value.dashboard.assignments,root.ScienceStageContract.lessons);
@@ -27232,6 +27246,12 @@ function parentApplyPackage_(quiet = false, fromServer = false, preserveJob = fa
 
 
     }
+/* NATIVE_FRESH_HANDOFF_V3 */
+
+window.addEventListener('mtt:confirmed-profile-fresh',function(event){
+ const x=event.detail;if(!x||x.client!=='KidsPreparedSnapshotClient'||!x.packet||x.packet.className!==CLASS_NAME||!kidsApi.parent.authorized||kidsApi.parent.revoked)return;
+ Promise.resolve(parentBootstrapJob_&&parentBootstrapJob_.promise).catch(()=>{}).then(()=>{if(kidsApi.parent.authorized&&!kidsApi.parent.revoked&&window.__kidsPreparedApply)return window.__kidsPreparedApply();}).catch(()=>{});
+});
 
 
 
