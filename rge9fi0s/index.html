@@ -1868,7 +1868,7 @@ if(value.submitted===true)value.isOverdue=false;
       return value;
     }
     if (!object(value) || !own.call(value, 'wireSchema')) return value;
-    if (value.wireSchema !== 1 || Object.keys(value).filter(function(k){return k!=='nativeReceiptDelta';}).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
+    if (value.wireSchema !== 1 || Object.keys(value).filter(function(k){return k!=='nativeReceiptDelta'&&k!=='nativeScheduleDelta';}).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
         !object(value.bundle) || own.call(value.bundle, 'actions') || !object(value.check) || !object(value.bootstrap) ||
         own.call(value.bootstrap, 'preparedSubmissions') || !object(value.submissions) || typeof value.embeddedSubmissions !== 'boolean') throw failure('INVALID_SNAPSHOT');
     var result = {}, bootstrap = {};
@@ -1877,6 +1877,7 @@ if(value.submitted===true)value.isOverdue=false;
     if (value.embeddedSubmissions) bootstrap.preparedSubmissions = value.submissions;
     result.actions = {check: value.check, bootstrap: bootstrap, dashboard: bootstrap.dashboard, profile: bootstrap.profile, submissions: value.submissions};
     if(value.nativeReceiptDelta)result.nativeReceiptDelta=value.nativeReceiptDelta;
+    if(value.nativeScheduleDelta)result.nativeScheduleDelta=value.nativeScheduleDelta;
     return result;
   }
 
@@ -2031,6 +2032,48 @@ function kidsPreviewResolveScienceV1_(value,number,bound,at) {
       value.sourceStatus=Object.assign({},value.sourceStatus,{lastReceiptEventAt:delta.updatedAt,receiptAsOf:delta.verifiedAt,receiptEventState:'applied'});
     }
     delete value.nativeReceiptDelta;
+    // NATIVE_SCHEDULE_DELTA_V1
+    var released=value.nativeScheduleDelta;
+    if(released&&released.schema===1&&released.classNumber===options.classNumber&&released.className===className&&finite(released.verifiedAt)&&released.verifiedAt>0&&released.value&&Array.isArray(released.value.assignments)&&Array.isArray(released.value.schedule)){
+      function clean_(value) {
+  return value === null || value === undefined ? '' : String(value).trim();
+}
+function dateFromText_(value) {
+  const match = clean_(value).match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/);
+  if (!match) return '';
+  return String(Number(match[1])).padStart(2, '0') + '/' + String(Number(match[2])).padStart(2, '0') + '/' + match[3];
+}
+function dateSerial_(value) {
+  const date = dateFromText_(value);
+  if (!date) return 0;
+  const parts = date.split('/').map(Number);
+  return Date.UTC(parts[2], parts[1] - 1, parts[0]);
+}
+function dashboardRecordDate_(item) {
+  return clean_((item || {}).assignedDate || (item || {}).lessonDate || (item || {}).date);
+}
+function studentItemAllowedByJoinDate_(student, item, isSelfPractice) {
+  const joined = dateSerial_(student && student.joinDate);
+  if (!joined) return true;
+  const dated = dateSerial_(dashboardRecordDate_(item));
+  if (!dated) return false;
+  // The joining lesson itself counts.  Independent self-practice starts with
+  // the next released item, so an item released on the joining date does not.
+  return dated >= joined;
+}
+function studentAssignmentAllowedByJoinDate_(student, assignment) {
+  const item = assignment || {};
+  return studentItemAllowedByJoinDate_(student, item, clean_(item.kind) === 'self-practice');
+}
+      var nativeProfile=actions.profile,join=nativeProfile.joinDate||'';
+      sub.assignmentAuthority={schema:1,className:className,complete:true,freshRead:true,verifiedAt:released.verifiedAt,lessonReleaseEvaluatedAt:released.value.lessonReleaseEvaluatedAt,joinDate:join,
+        assignments:released.value.assignments.filter(function(a){return studentAssignmentAllowedByJoinDate_(nativeProfile,a);}),
+        schedule:released.value.schedule.filter(function(s){return !join||dateSerial_(s.date)>=dateSerial_(join);})};
+      if(boot.preparedSource&&boot.preparedSource.generation)sub.preparedProjection={schema:1,nativeClientProjection:true};else delete sub.preparedProjection;
+      boot.preparedSubmissions=sub;value.sourceStatus=Object.assign({},value.sourceStatus,{scheduleAsOf:released.verifiedAt});
+    }
+    delete value.nativeScheduleDelta;
+    // END_NATIVE_SCHEDULE_DELTA_V1
     if (boot.preparedHistory || sub.preparedProjection) {
       var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
       if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
