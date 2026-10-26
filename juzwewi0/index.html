@@ -6,7 +6,15 @@
 
 
 
-<head><script id="native-tracker-feedback-view">(function(root){'use strict';const fields=['submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','score','maximum','scoreLabel','teacherComment','comment'];root.NativeTrackerFeedbackView={capture:function(value){if(!value)return null;if(!value.nativeTrackerOriginV1&&value.submitted===true&&!value.directFormEvidence){value.nativeTrackerOriginV1={};fields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(value,k))value.nativeTrackerOriginV1[k]=value[k]});}return value.nativeTrackerOriginV1||null;},restore:function(value,native){if(!native)return;fields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(native,k))value[k]=native[k];else if(['hasContent','contentMissing','isOverdue','isLate','state','stateLabel','submittedAt','lastSubmittedAt'].includes(k))delete value[k]});}};})(globalThis);</script>
+<head><script id="native-tracker-feedback-view">(function(root){'use strict';
+const fields=['submitted','submittedAt','lastSubmittedAt','submissionAttempts','viewUrl','submissionUrl','reviewUrl','hasContent','contentMissing','receiptReceived','isLate','isOverdue','state','stateLabel','score','maximum','scoreLabel','teacherComment','comment'];
+root.NativeTrackerFeedbackView={capture:function(value){if(!value)return null;if(!value.nativeTrackerOriginV1&&value.submitted===true&&!value.directFormEvidence){value.nativeTrackerOriginV1={};fields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(value,k))value.nativeTrackerOriginV1[k]=value[k]});}return value.nativeTrackerOriginV1||null;},restore:function(value,native){if(!native)return;
+// NATIVE_POSITIVE_UNION_V2. Fill missing native evidence without erasing newer
+// Form files/times or a real fresh automatic score, including zero.
+fields.forEach(k=>{if(Object.prototype.hasOwnProperty.call(native,k)&&(value[k]===undefined||value[k]===null||value[k]===''||k==='submitted'&&native[k]===true))value[k]=native[k];});
+if(value.submitted===true)value.isOverdue=false;
+}};})(globalThis);
+;</script>
 <script data-core-profile-policy="2">/* CONFIRMED_PROFILE_CLIENT_V2: validated profile fallback, scoped by token hash. */
 (function(root){'use strict';
  var names=['KidsPreparedSnapshotClient','IeltsPublicSnapshotClient','FighterSnapshotClient','TaSnapshotClient'];
@@ -20984,143 +20992,72 @@ function createStudentLearningPrefill(options) {
 
 
 
+/* DIRECT_FORM_RECEIPT_AUTHORITY_V1: tracker prose is never online receipt proof. */
 (function(root){
-
-
-
   'use strict';
-
-
-
   var receiptKeys=['submitted','completed','done','reviewed','tracked','missing','submittedAt','lastSubmittedAt','submissionAttempts','attempts','declaredAttemptCount','submissionCount','attemptCount','viewUrl','submissionUrl','reviewUrl','fileUrl','submissionFiles','evidenceUrls','links','hasContent','contentMissing','receiptReceived','submissionReceived','isLate','isOverdue','state','stateLabel','status','statusKey','statusLabel','submissionState','canViewSubmission','directSubmission','directReceiptContentEvidence','directReceiptEvidence'];
-
-
-
   function clear(target){
-
-
-
     if(!target)return;
-
-
-
     receiptKeys.forEach(function(key){delete target[key];});
-
-
-
     // False is not proof of absence: the submission guard alone may authorize
-
-
-
     // a missing verdict after a successful read of the current Form source.
-
-
-
     target.submitted=false;target.completed=false;target.receiptReceived=false;
-
-
-
   }
-
-
-
   function scope(identity,assignment,source){
-
-
-
     return JSON.stringify([String(identity||''),String(assignment.id||assignment.assignmentId||''),root.DirectSubmissionAssignmentWindow.assignedAt(assignment),source]);
-
-
-
   }
-
-
-
   function reconcile(target,identity,assignment,source,found,accept){
-
-
-
     var key=scope(identity,assignment,source),saved=target&&target.directFormEvidence;
-
-
-
-    var retained=identity&&saved&&saved.schema===1&&saved.scope===key&&Array.isArray(saved.receipts)?saved.receipts:[];
-
-
-
+    // NATIVE_POSITIVE_UNION_V2: an optional receipt refresh cannot erase a
+    // positive in this exact authorized native task. Reject an explicit change
+    // of pupil, assignment occurrence or component binding before retaining it.
+    var same=true;
+    if(saved&&saved.schema===1)try{var oldScope=JSON.parse(saved.scope),newScope=JSON.parse(key);same=oldScope[1]===newScope[1]&&oldScope[2]===newScope[2]&&JSON.stringify(oldScope[3])===JSON.stringify(newScope[3])&&(!oldScope[0]||!newScope[0]||oldScope[0]===newScope[0]);}catch(_){same=false;}
+    var positive=same&&target&&(target.submitted===true||target.completed===true||target.reviewed===true),prior={};
+    if(positive)receiptKeys.forEach(function(k){if(Object.prototype.hasOwnProperty.call(target,k))prior[k]=target[k];});
+    var retained=same&&saved&&saved.schema===1&&Array.isArray(saved.receipts)?saved.receipts:[];
     var rows=new Map();
-
-
-
     retained.concat(Array.isArray(found)?found:[]).forEach(function(row){
-
-
-
       if(!row||!row.id||!row.family||!row.code||!root.DirectSubmissionDeadlinePolicy.receiptTime(row)||!accept(row))return;
-
-
-
       var previous=rows.get(row.id);
-
-
-
       if(!previous||row.contentStatus!=='empty'||previous.contentStatus==='empty')rows.set(row.id,row);
-
-
-
     });
-
-
-
     clear(target);
-
-
-
+    if(positive){Object.keys(prior).forEach(function(k){target[k]=prior[k];});target.isOverdue=false;}
     var receipts=Array.from(rows.values());
-
-
-
     target.directFormEvidence={schema:1,scope:key,receipts:receipts};
-
-
-
     return receipts;
-
-
-
   }
-
-
-
   function copy(target,source){
-
-
-
+    var positive=target&&(target.submitted===true||target.completed===true||target.reviewed===true),prior={};
+    if(positive)receiptKeys.forEach(function(k){if(Object.prototype.hasOwnProperty.call(target,k))prior[k]=target[k];});
     clear(target);
-
-
-
     receiptKeys.concat(['directFormSource','directFormEvidence','directReceiptResolution','directReceiptDeadline','directReceiptExclusion','directReceiptCurrent']).forEach(function(key){if(Object.prototype.hasOwnProperty.call(source,key))target[key]=source[key];});
-
-
-
+    if(positive){Object.keys(prior).forEach(function(k){if(target[k]===undefined||target[k]===null||target[k]===''||typeof prior[k]==='boolean'&&prior[k]===true&&target[k]===false)target[k]=prior[k];});target.isOverdue=false;}
     return target;
-
-
-
   }
-
-
-
   var api={clear:clear,copy:copy,reconcile:reconcile};root.DirectFormReceiptAuthority=api;
-
-
-
   if(typeof module==='object'&&module.exports)module.exports=api;
-
-
-
 })(typeof globalThis==='object'?globalThis:this);
+
+/* Counts consume canonical task outcomes only; no receipt/name/link detection. */
+(function(root){'use strict';
+function recomputeSummaryCounters(results,options){
+ options=options||{};const now=options.now||Date.now(),shift=7*3600000,d=new Date(now+shift),midnight=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-shift,week=midnight-((d.getUTCDay()+6)%7)*86400000,next=week+7*86400000,byId=new Map();
+ (results||[]).forEach(r=>{if(r&&r.id&&!r.manualOnly&&!r.paperOnly)byId.set(r.id,r);});
+ const rows=[...byId.values()],completed=rows.filter(r=>r.complete===true),pending=rows.filter(r=>r.complete===false),overdue=pending.filter(r=>r.overdue===true),weekly=pending.filter(r=>!r.overdue&&Number.isFinite(r.dueAt)&&r.dueAt>=week&&r.dueAt<next),videos=new Map();
+ rows.filter(r=>r.videoGroup).forEach(r=>{const group=videos.get(r.videoGroup)||[];group.push(r);videos.set(r.videoGroup,group);});
+ return{schema:1,computedAt:now,total:rows.length,completed:completed.length,pending:pending.length,pendingThisWeek:weekly.length,overdue:overdue.length,videoTotal:videos.size,videoCompleted:[...videos.values()].filter(v=>v.every(r=>r.complete===true)).length,taskIds:rows.map(r=>r.id)};
+}
+function kidsCanonicalResults(value,now){
+ const out=[],time=root.DirectSubmissionDeadlinePolicy.time;
+ ((value.profile&&value.profile.assignments)||[]).forEach(a=>{if(!a||a.isAssessmentLesson)return;(a.tasks||[]).filter(t=>t&&t.requiresSubmission!==false).forEach((t,i)=>{const f=t.feedback||{},due=root.DirectSubmissionDeadlinePolicy.dueAt?root.DirectSubmissionDeadlinePolicy.dueAt(a):time(a.dueAt||a.dueDate),end=due&&(!a.dueAt?due+86399999:due),complete=f.submitted===true||f.completed===true||f.reviewed===true;
+ out.push({id:a.id+'::'+(t.id||i),assignmentId:a.id,taskId:t.id||'',complete,overdue:!complete&&(f.isOverdue===true||Number.isFinite(end)&&end>0&&end<now),dueAt:end||null,videoGroup:a.kind==='self-practice'?a.id:'',title:t.title||a.title||'',assignment:a,task:t});});});return out;
+}
+root.recomputeSummaryCounters=recomputeSummaryCounters;root.kidsCanonicalResults=kidsCanonicalResults;
+if(typeof module==='object'&&module.exports)module.exports={recomputeSummaryCounters,kidsCanonicalResults};
+})(typeof globalThis==='object'?globalThis:this);
+;
 
 
 
@@ -24136,6 +24073,7 @@ ScienceStageContract.lessons=[
 
 
 
+/* KIDS_DIRECT_RECEIPT_PROJECTOR_V1: canonical native receipt projection. */
 (function(root){
   'use strict';
   function createKidsReceiptProjector(matching,config){
@@ -24458,12 +24396,18 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         const proof={schema:1,complete:true,freshRead:true,verifiedAt:Number(payload.submissionVerification&&payload.submissionVerification.verifiedAt)||0};
         guard.authorize(ticket,profile,proof);profile.privateReminders.forEach(item=>guard.authorize(ticket,item,proof));
       }
+      // POST_MERGE_COUNTERS_V1: consume the same native task results as cards.
+      if(root.recomputeSummaryCounters&&root.kidsCanonicalResults){
+        const counters=root.recomputeSummaryCounters(root.kidsCanonicalResults(value,Date.now()));
+        profile.summary=Object.assign({},profile.summary,{submissionCounters:counters,needsCompletionCount:counters.pending,needsAttention:counters.pending>0});
+      }
       return value;
     };
   }
   root.createKidsReceiptProjector=createKidsReceiptProjector;
   if(typeof module==='object'&&module.exports)module.exports={createKidsReceiptProjector};
 })(typeof globalThis==='object'?globalThis:this);
+;
 
 
 
