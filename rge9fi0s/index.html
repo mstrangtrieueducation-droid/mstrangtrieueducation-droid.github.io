@@ -2015,6 +2015,7 @@ function kidsPreviewResolveScienceV1_(value,number,bound,at) {
       var joined=unionNativeReceipts((sub.receipts||[]).concat(sub.emptyReceipts||[]),delta.receipts.filter(function(r){return r.unassigned!==true;}));
       sub.receipts=joined.filter(function(r){return r.contentStatus!=='empty';});sub.emptyReceipts=joined.filter(function(r){return r.contentStatus==='empty';});sub.unassignedReceipts=unknown;
       kidsPreviewResolveScienceV1_({bootstrap:{profile:pupil},submissions:sub},options.classNumber,{aliasKey:kids7ParentAlias_(pupil.englishName),joinDate:pupil.joinDate||''},delta.verifiedAt);
+      sub.receipts=unionNativeReceipts([],sub.receipts);sub.emptyReceipts=unionNativeReceipts([],sub.emptyReceipts);
       // END_NATIVE_SCIENCE_CODE_BINDING_V1
       delta.receipts.forEach(function(r){if(!sub.coverage.some(function(c){return c.family===r.family;}))sub.coverage.push({schema:1,family:r.family,complete:false,freshRead:false,verifiedAt:0});});
       if(boot.preparedSource&&boot.preparedSource.generation)sub.preparedProjection={schema:1,nativeClientProjection:true};else delete sub.preparedProjection;
