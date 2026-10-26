@@ -1139,6 +1139,8 @@ function studentAssignmentAllowedByJoinDate_(student, assignment) {
         schedule:released.value.schedule.filter(function(s){return !join||dateSerial_(s.date)>=dateSerial_(join);})};
       if(boot.preparedSource&&boot.preparedSource.generation)sub.preparedProjection={schema:1,nativeClientProjection:true};else delete sub.preparedProjection;
       boot.preparedSubmissions=sub;value.sourceStatus=Object.assign({},value.sourceStatus,{scheduleAsOf:released.verifiedAt});
+      actions.profile.nativeScheduleVerifiedAt=released.verifiedAt;
+      boot.profile.nativeScheduleVerifiedAt=released.verifiedAt;
     }
     delete value.nativeScheduleDelta;
     // END_NATIVE_SCHEDULE_DELTA_V1
@@ -12479,7 +12481,7 @@ function kidsJourneyNativeSync_(){
  const api=window.TrialKidsJourneyPilot;if(!api)return;
  const alias=text(kidsApi.parent.alias).toUpperCase();
  if(location.hash!==kidsJourneyNativeHash_||CLASS_NUMBER!==39||!kidsApi.parent.authorized||kidsApi.parent.revoked||!matchKey(alias)||!app.child||Number(app.child.classNumber)!==39||text(app.child.englishName).toUpperCase()!==alias||matchKey(app.childAlias)!==matchKey(alias)){if(kidsJourneyNativeMounted_){api.disable();kidsJourneyNativeMounted_=false;}return;}
- const sourceAt=Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt);
+ const sourceAt=Math.max(Number(app.child.generatedAt)||Number(app.child.sourceModelBuiltAt)||0,Number(app.child.nativeScheduleVerifiedAt)||0);
  const matches=(app.data?.studentAliases||[]).filter(row=>matchKey(row.alias)===matchKey(alias));
  const label=text(kidsApi.parent.label||(matches.length===1?matches[0].label:'')||alias).replace(/\s*\([^)]*\)\s*$/,'');
  const profile={...app.child,kidsJourneyV1:{classNumber:39,className:CLASS_NAME,alias,fullName:label,sourceAt}};
@@ -21098,7 +21100,7 @@ function recomputeSummaryCounters(results,options){
 }
 function kidsCanonicalResults(value,now){
  const out=[],time=root.DirectSubmissionDeadlinePolicy.time;
- ((value.profile&&value.profile.assignments)||[]).forEach(a=>{if(!a||a.isAssessmentLesson)return;(a.tasks||[]).filter(t=>t&&t.requiresSubmission!==false).forEach((t,i)=>{const f=t.feedback||{},due=root.DirectSubmissionDeadlinePolicy.dueAt?root.DirectSubmissionDeadlinePolicy.dueAt(a):time(a.dueAt||a.dueDate),end=due&&(!a.dueAt?due+86399999:due),complete=f.submitted===true||f.completed===true||f.reviewed===true;
+ ((value.profile&&value.profile.assignments)||[]).forEach(a=>{if(!a||a.isAssessmentLesson||(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))!=='required')return;(a.tasks||[]).filter(t=>t&&t.requiresSubmission!==false&&Boolean(t.url||t.learningUrl)).forEach((t,i)=>{const f=t.feedback||{},due=root.DirectSubmissionDeadlinePolicy.dueAt?root.DirectSubmissionDeadlinePolicy.dueAt(a):time(a.dueAt||a.dueDate),end=due&&(!a.dueAt?due+86399999:due),complete=f.submitted===true||f.completed===true||f.reviewed===true;
  out.push({id:a.id+'::'+(t.id||i),assignmentId:a.id,taskId:t.id||'',complete,overdue:!complete&&(f.isOverdue===true||Number.isFinite(end)&&end>0&&end<now),dueAt:end||null,videoGroup:a.kind==='self-practice'?a.id:'',title:t.title||a.title||'',assignment:a,task:t});});});return out;
 }
 root.recomputeSummaryCounters=recomputeSummaryCounters;root.kidsCanonicalResults=kidsCanonicalResults;
@@ -24244,7 +24246,18 @@ ScienceStageContract.lessons=[
           const same=sameScope(prior,old,publicRow,task);if(prior&&!same)changed=true;
           result.feedback=old&&old.feedback?(same?Object.assign({},old.feedback):resetReceipt(old.feedback)):{};return result;
         });
-        if(changed){const cleaned=resetReceipt(merged);Object.keys(merged).forEach(k=>delete merged[k]);Object.assign(merged,cleaned);}
+        if(changed){
+          // A Schedule edit can reuse a lesson ID for a different book/URL.
+          // Keep the exact former positive record in its original scope; never
+          // copy that receipt onto the newly bound task or erase its history.
+          if(prior&&list(prior.tasks).some(t=>t&&t.feedback&&(t.feedback.submitted===true||t.feedback.completed===true))){
+            const history=list(profile.retainedPositiveAssignments),scope=a=>JSON.stringify([a.id,a.program,list(a.tasks).map(t=>[t.id,t.sourceCode||'',urlKey(t.url||t.learningUrl)])]);
+            const record=JSON.parse(JSON.stringify(prior)),index=history.findIndex(a=>scope(a)===scope(prior));
+            if(index<0)history.push(record);else history[index]=record;
+            profile.retainedPositiveAssignments=history;
+          }
+          const cleaned=resetReceipt(merged);Object.keys(merged).forEach(k=>delete merged[k]);Object.assign(merged,cleaned);
+        }
         if(prior)rows[rows.indexOf(prior)]=merged;else rows.push(merged);current.set(merged,publicRow);
       });profile.assignments=rows;return {rows,current};
     }
