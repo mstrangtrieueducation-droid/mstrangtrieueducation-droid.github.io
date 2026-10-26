@@ -1016,207 +1016,50 @@
 
 
   function validate(value, options, now) {
-
-
-
-
     var className = 'KIDS ' + options.classNumber;
-
-
-
-
     if (!object(value) || value.schema !== 1 || value.classNumber !== options.classNumber || value.className !== className || !alias(value.alias) || typeof value.rosterRevision !== 'string' || !value.rosterRevision) throw failure('INVALID_SCOPE');
-
-
-
-
     var fallback = Boolean(value.sourceStatus && value.sourceStatus.servingLastConfirmed === true);
-
-
-
-
     // SNAPSHOT_SERVER_AUTHORITY_V1: the server owns freshness; device time cannot refuse this pupil's package.
-
-
-
-
     var actions = value.actions, target = alias(value.alias), keys = ['check', 'bootstrap', 'dashboard', 'profile', 'submissions'];
-
-
-
-
     if (!object(actions) || keys.some(function (key) { return !object(actions[key]); })) throw failure('INVALID_SNAPSHOT');
-
-
-
-
     function scoped(part, name, directory) {
-
-
-
-
       if (!object(part) || part.classNumber !== options.classNumber || part.className !== className) throw failure('INVALID_SCOPE');
-
-
-
-
       if (directory && (!Array.isArray(part.studentAliases) || part.studentAliases.length !== 1 || alias(part.studentAliases[0]) !== target)) throw failure('INVALID_SCOPE');
-
-
-
-
       if (name && alias(part.englishName || part.alias) !== target) throw failure('INVALID_SCOPE');
-
-
-
-
       if (own.call(part, 'rosterRevision') && part.rosterRevision !== value.rosterRevision) throw failure('INVALID_SCOPE');
-
-
-
-
     }
-
-
-
-
     scoped(actions.check, false, true); scoped(actions.bootstrap, false, true); scoped(actions.dashboard, false, true); scoped(actions.profile, true, false);
-
-
-
-
     var boot = actions.bootstrap;
-
-
-
-
     scoped(boot.dashboard, false, true); scoped(boot.profile, true, false);
-
-
-
-
     if (!(Number(boot.sourceModelBuiltAt) > 0) || Number(boot.sourceModelBuiltAt) !== Number(boot.profile.sourceModelBuiltAt) || !(Number(boot.dashboard.snapshotBuiltAt) > 0) || !(Number(boot.profile.snapshotBuiltAt) > 0)) throw failure('INVALID_SNAPSHOT');
-
-
-
-
     if (JSON.stringify(boot.dashboard) !== JSON.stringify(actions.dashboard) || JSON.stringify(boot.profile) !== JSON.stringify(actions.profile)) throw failure('INVALID_SNAPSHOT');
-
-
-
-
     var sub = actions.submissions;
-
-
-
-
     if (sub.className !== className || sub.schema !== 1 || !Array.isArray(sub.receipts) || !Array.isArray(sub.coverage) || !sub.coverage.length || own.call(sub, 'emptyReceipts') && !Array.isArray(sub.emptyReceipts)) throw failure('INVALID_SNAPSHOT');
-
-
-
-
     if (sub.assignmentAuthority && sub.assignmentAuthority.className !== className) throw failure('INVALID_SCOPE');
-
-
-
-
-    // CORE_PROFILE_POLICY_V2: optional completeness does not own profile availability.
-    if (!sub.coverage.every(function(c){return object(c)&&typeof c.family==='string'&&c.family!=='*'&&typeof c.complete==='boolean'&&typeof c.freshRead==='boolean';}) || !object(sub.submissionVerification) || typeof sub.submissionVerification.complete!=='boolean' || !object(sub.assignmentAuthority)) throw failure('INVALID_SNAPSHOT');
+    // Receipt transport is independent of optional full-source absence proofs.
+    // Native per-task guards continue to decide whether absence is verified.
+    // Partial coverage or an unrelated malformed row must not reject this
+    // exact pupil's positive canonical receipts and last-confirmed history.
+    if(!object(sub.submissionVerification)||!sub.coverage.every(object)||!object(sub.assignmentAuthority))throw failure('INVALID_SNAPSHOT');
     if (boot.preparedHistory || sub.preparedProjection) {
-
-
-
-
       var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
-
-
-
-
       if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
-
-
-
-
       if (JSON.stringify(embedded) !== JSON.stringify(sub)) throw failure('INVALID_SNAPSHOT');
-
-
-
-
       var count = Number(boot.preparedHistory && boot.preparedHistory.pageCount), pages = value.historyPages;
-
-
-
-
       if (!finite(count) || count < 0 || Math.floor(count) !== count || !object(pages) || Object.keys(pages).length !== count) throw failure('INVALID_SNAPSHOT');
-
-
-
-
       for (var i = 0; i < count; i += 1) {
-
-
-
-
         var page = pages[String(i)];
-
-
-
-
         if (!object(page) || page.schema !== 1 || page.page !== i || !Array.isArray(page.entries) || page.classNumber !== options.classNumber || page.className !== className || alias(page.englishName) !== target || !page.preparedSource || page.preparedSource.generation !== generation) throw failure('INVALID_SNAPSHOT');
-
-
-
-
       }
-
-
-
-
     }
-
-
-
-
     // Prepared history and projected positives survive source failures, but no
-
-
-
-
     // nested receipt proof may accidentally reauthorize a negative status.
-
-
-
-
     if (fallback) (function visit(node) {
-
-
-
-
       if (!node || typeof node !== 'object') return;
-
-
-
-
       if (node.preparedSubmissionVerification && !withdrawn(node.preparedSubmissionVerification)) throw failure('INVALID_SNAPSHOT');
-
-
-
-
       Object.keys(node).forEach(function (key) { visit(node[key]); });
-
-
-
-
     })({actions: actions, historyPages: value.historyPages});
-
-
-
-
     return value;
-
-
-
-
   }
 
 
@@ -25175,49 +25018,22 @@ const projectKidsReceipts_=createKidsReceiptProjector(kidsReceiptMatching_,{"rul
 
 
 function parentProjectPrepared_(value,payload,ticket,guard) {
-
-
-
-  if(!payload||!payload.preparedProjection)return projectKidsReceipts_(value,payload,ticket,guard);
-
-
-
-  const generation=value&&value.preparedSource&&value.preparedSource.generation;
-
-
-
-  if(payload.preparedProjection.schema!==1||!generation||!payload.preparedSource||payload.preparedSource.generation!==generation||payload.className!==value.className||!ticket||!guard.isCurrent(ticket))return value;
-
-
-
-  const seen=new WeakSet();
-
-
-
-  function visit(node){if(!node||typeof node!=='object'||seen.has(node))return;seen.add(node);
-
-
-
-    const proof=node.preparedSubmissionVerification;
-
-
-
-    if(proof&&proof.schema===1&&proof.complete===true&&proof.freshRead===true&&Number.isFinite(proof.verifiedAt)&&proof.verifiedAt>0)guard.authorize(ticket,node,proof,{complete:true});
-
-
-
-    Object.keys(node).forEach(key=>{if(key!=='preparedSubmissionVerification'&&key!=='preparedSubmissions')visit(node[key]);});
-
-
-
+  if(payload&&payload.preparedProjection&&payload.preparedProjection.nativeClientProjection===true){
+    if(!value||payload.className!==value.className||!ticket||!guard||!guard.isCurrent(ticket))return value;
+    const child=value&&value.profile;
+    if(child){delete child.preparedPracticeSchema;delete child.preparedPracticeRows;delete child.preparedPaperGradeSchema;}
+    return projectKidsReceipts_(value,payload,ticket,guard);
   }
-
-
-
+  if(!payload||!payload.preparedProjection)return projectKidsReceipts_(value,payload,ticket,guard);
+  const generation=value&&value.preparedSource&&value.preparedSource.generation;
+  if(payload.preparedProjection.schema!==1||!generation||!payload.preparedSource||payload.preparedSource.generation!==generation||payload.className!==value.className||!ticket||!guard.isCurrent(ticket))return value;
+  const seen=new WeakSet();
+  function visit(node){if(!node||typeof node!=='object'||seen.has(node))return;seen.add(node);
+    const proof=node.preparedSubmissionVerification;
+    if(proof&&proof.schema===1&&proof.complete===true&&proof.freshRead===true&&Number.isFinite(proof.verifiedAt)&&proof.verifiedAt>0)guard.authorize(ticket,node,proof,{complete:true});
+    Object.keys(node).forEach(key=>{if(key!=='preparedSubmissionVerification'&&key!=='preparedSubmissions')visit(node[key]);});
+  }
   visit(value);return value;
-
-
-
 }
 
 
