@@ -5767,7 +5767,7 @@ function model(student,publicData,selfResults,now){
 
 
 
- const liveKeys=new Set();
+ const manualReservedColumns=new Set((student.assignments||[]).flatMap(r=>r.tasks||[]).filter(s=>s?.manualSubmissionKind).flatMap(s=>s.manualSubmissionVerification?.columns||[]));const liveKeys=new Set();
  const attach=(id,a,assigned)=>{let u=byKey.get(id.key);if(!u){u={key:id.key,program:id.program.label,programKey:id.program.key,family:id.program.family,unit:id.unit.value,level:id.unit.level,title:id.program.label+' · '+id.unit.label+(id.unit.level?' · Level '+id.unit.level:''),components:[]};units.push(u);byKey.set(id.key,u);}liveKeys.add(id.key);u.assignments=u.assignments||[];if(!u.assignments.includes(a))u.assignments.push(a);u.assignedAt=Math.max(u.assignedAt||0,assigned);return u;};
  for(const a of definitions){
   const assigned=dateTime(a.releaseDate||a.lessonDate);if(joined&&assigned&&assigned<joined)continue;
@@ -5783,7 +5783,7 @@ function model(student,publicData,selfResults,now){
     if(binding.id.key!==id.key&&!nativeKeys.has(binding.id.key)&&!state?.tracked&&!state?.completed&&!state?.submitted){
      u.guidance=u.guidance||[];u.guidance.push(t);u.guidanceHeading='Bài chuẩn bị theo buổi học';u.explicitNextUnitGuidance=true;return;
     }
-    const role=binding.role,c=binding.column?u.components.find(c=>c.column===binding.column):u.components.find(c=>c.role===role);
+    const role=binding.role,isManual=Boolean(state?.manualSubmissionKind||t.manualSubmissionKind),c=binding.column?u.components.find(c=>c.column===binding.column):u.components.find(c=>c.role===role&&(isManual||!manualReservedColumns.has(c.column)));
     if(c){const nativeDeadline=c.column>0&&c.dueDate&&(binding.column||unit(t.title,binding.id.program)||a.tasks.length===1||binding.id.program.key==='pt');c.tasks=c.tasks||[];c.tasks.push({task:t,state,...(nativeDeadline?{trackerDeadline:c.dueDate}:{})});if(c.status==='todo'&&FighterSubmissionEvidence.received(state)){c.status='done';c.statusText=state.status||'Đã hoàn thành';c.score=Number.isFinite(state.score)?state.score:c.score;c.times=[state.submittedAt,...c.times].filter(Boolean);c.late=Boolean(state.isLate)||c.late;}if(!c.dueDate)c.dueDate=a.dueDate||'';}
     else if(t.url||state?.tracked||state?.submitted){const v=cell('',state?.comment||'',{column:-1,role,label:t.title,dueDate:a.dueDate||''});v.tasks=[{task:t,state}];if(FighterSubmissionEvidence.received(state)){v.status='done';v.statusText=state.status||'Đã hoàn thành';v.score=Number.isFinite(state.score)?state.score:null;v.times=state.submittedAt?[state.submittedAt]:[];v.late=Boolean(state.isLate);}u.components.push(v);}
     else {u.guidance=u.guidance||[];u.guidance.push(t);u.guidanceHeading=u.guidanceHeading||'Yêu cầu theo buổi học';}
