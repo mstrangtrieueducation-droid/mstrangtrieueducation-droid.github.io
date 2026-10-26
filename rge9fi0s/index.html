@@ -1853,175 +1853,23 @@
 
 
   function unpack(value) {
-
-
-
-
-
-
-
-
-
     if (object(value) && value.schema === 1 && object(value.actions) && object(value.actions.bootstrap) && object(value.actions.submissions) && !own.call(value.actions,'dashboard') && !own.call(value.actions,'profile')) {
-
-
-
-
-
-
-
-
-
       value.actions.dashboard=value.actions.bootstrap.dashboard;
-
-
-
-
-
-
-
-
-
       value.actions.profile=value.actions.bootstrap.profile;
-
-
-
-
-
-
-
-
-
       value.actions.bootstrap.preparedSubmissions=value.actions.submissions;
-
-
-
-
-
-
-
-
-
       return value;
-
-
-
-
-
-
-
-
-
     }
-
-
-
-
-
-
-
-
-
     if (!object(value) || !own.call(value, 'wireSchema')) return value;
-
-
-
-
-
-
-
-
-
-    if (value.wireSchema !== 1 || Object.keys(value).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
-
-
-
-
-
-
-
-
-
+    if (value.wireSchema !== 1 || Object.keys(value).filter(function(k){return k!=='nativeReceiptDelta';}).sort().join('|') !== 'bootstrap|bundle|check|embeddedSubmissions|submissions|wireSchema' ||
         !object(value.bundle) || own.call(value.bundle, 'actions') || !object(value.check) || !object(value.bootstrap) ||
-
-
-
-
-
-
-
-
-
         own.call(value.bootstrap, 'preparedSubmissions') || !object(value.submissions) || typeof value.embeddedSubmissions !== 'boolean') throw failure('INVALID_SNAPSHOT');
-
-
-
-
-
-
-
-
-
     var result = {}, bootstrap = {};
-
-
-
-
-
-
-
-
-
     Object.keys(value.bundle).forEach(function (key) { result[key] = value.bundle[key]; });
-
-
-
-
-
-
-
-
-
     Object.keys(value.bootstrap).forEach(function (key) { bootstrap[key] = value.bootstrap[key]; });
-
-
-
-
-
-
-
-
-
     if (value.embeddedSubmissions) bootstrap.preparedSubmissions = value.submissions;
-
-
-
-
-
-
-
-
-
     result.actions = {check: value.check, bootstrap: bootstrap, dashboard: bootstrap.dashboard, profile: bootstrap.profile, submissions: value.submissions};
-
-
-
-
-
-
-
-
-
+    if(value.nativeReceiptDelta)result.nativeReceiptDelta=value.nativeReceiptDelta;
     return result;
-
-
-
-
-
-
-
-
-
   }
 
 
@@ -2058,6 +1906,54 @@
     // Partial coverage or an unrelated malformed row must not reject this
     // exact pupil's positive canonical receipts and last-confirmed history.
     if(!object(sub.submissionVerification)||!sub.coverage.every(object)||!object(sub.assignmentAuthority))throw failure('INVALID_SNAPSHOT');
+    // NATIVE_RECEIPT_DELTA_V1. Same canonical union as the server; no classifier.
+    var delta=value.nativeReceiptDelta,pupil=actions.profile;
+    if(delta&&delta.schema===1&&delta.classNumber===options.classNumber&&delta.className===className&&
+       typeof delta.identity==='string'&&/^[a-f0-9]{64}$/.test(delta.identity)&&alias(delta.alias)===target&&
+       delta.label===actions.check.label&&(pupil.joinDate||delta.classStart)===(delta.enrollmentKey||delta.classStart)&&
+       finite(delta.updatedAt)&&delta.updatedAt>0&&Array.isArray(delta.receipts)&&delta.receipts.length){
+      function present(v){return v!==undefined&&v!==null&&v!=='';}
+      function hasOwn(o,k){return Object.prototype.hasOwnProperty.call(o,k);}
+      function unionNativeReceipts(previous=[],incoming=[]) {
+  const map=new Map();
+  for(const row of previous) if(row?.id) map.set(row.id,copy(row));
+  for(const row of incoming) {
+    if(!row?.id) continue;
+    const old=map.get(row.id);
+    if(!old){map.set(row.id,copy(row));continue;}
+    const merged=copy(old);
+    for(const [key,value] of Object.entries(row)) if(present(value)) merged[key]=copy(value);
+    if(old.code!==row.code || old.family!==row.family){
+      // Native migrations/teacher source edits can correct the binding of a
+      // stable attempt. Retain its provenance and prefer the fresh native
+      // binding; a historical label difference cannot reject a valid receipt.
+      merged.nativeBindingHistory=[...new Map([...(old.nativeBindingHistory||[]),{code:old.code,family:old.family}].map(v=>[JSON.stringify(v),v])).values()];
+    }
+    // A later empty upload cannot erase the usable content of the same native
+    // attempt. A separate empty attempt retains its own id and feedback.
+    if(old.contentStatus==='provided' && row.contentStatus!=='provided') {
+      merged.contentStatus=old.contentStatus;
+      for(const key of ['contentMissing','missingContentVerified']) delete merged[key];
+      for(const key of ['viewUrl','evidenceUrls','links','canonicalPdf','components'])
+        if(hasOwn(old,key)) merged[key]=copy(old[key]);
+    }
+    for(const key of ['links','evidenceUrls']) {
+      const values=[...(Array.isArray(old[key])?old[key]:[]),...(Array.isArray(row[key])?row[key]:[])];
+      if(values.length) merged[key]=[...new Map(values.map(v=>[typeof v==='string'?v:JSON.stringify(v),copy(v)])).values()];
+    }
+    map.set(row.id,merged);
+  }
+  return [...map.values()].sort((a,b)=>(Number(a.submittedAtMs)||Number(a.submittedAt)||0)-(Number(b.submittedAtMs)||Number(b.submittedAt)||0)||a.id.localeCompare(b.id));
+}
+
+      var joined=unionNativeReceipts((sub.receipts||[]).concat(sub.emptyReceipts||[]),delta.receipts);
+      sub.receipts=joined.filter(function(r){return r.contentStatus!=='empty';});sub.emptyReceipts=joined.filter(function(r){return r.contentStatus==='empty';});
+      delta.receipts.forEach(function(r){if(!sub.coverage.some(function(c){return c.family===r.family;}))sub.coverage.push({schema:1,family:r.family,complete:false,freshRead:false,verifiedAt:0});});
+      if(boot.preparedSource&&boot.preparedSource.generation)sub.preparedProjection={schema:1,nativeClientProjection:true};else delete sub.preparedProjection;
+      boot.preparedSubmissions=sub;
+      value.sourceStatus=Object.assign({},value.sourceStatus,{lastReceiptEventAt:delta.updatedAt,receiptAsOf:delta.verifiedAt,receiptEventState:'applied'});
+    }
+    delete value.nativeReceiptDelta;
     if (boot.preparedHistory || sub.preparedProjection) {
       var generation = boot.preparedSource && boot.preparedSource.generation, embedded = boot.preparedSubmissions;
       if (!generation || !sub.preparedSource || sub.preparedSource.generation !== generation || !sub.preparedProjection || sub.preparedProjection.schema !== 1 || !embedded || !embedded.preparedSource || embedded.preparedSource.generation !== generation || !embedded.preparedProjection || embedded.preparedProjection.schema !== 1) throw failure('INVALID_SNAPSHOT');
