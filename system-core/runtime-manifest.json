@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "format": "AES-256-GCM+gzip",
+  "sha256": "e66c9e3ee4a322a088562fd115000ffcdc3aa8d70761075781e625d8581c7392",
+  "files": 59,
+  "classes": 44,
+  "containsStudentSnapshots": false,
+  "containsCredentials": false
+}

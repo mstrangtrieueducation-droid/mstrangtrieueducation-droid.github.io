@@ -1,0 +1,35 @@
+name: Dashboard core cloud maintenance
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '2-59/5 * * * *'
+permissions:
+  contents: write
+concurrency:
+  group: dashboard-core-cloud-maintenance
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TZ: Asia/Bangkok
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          sparse-checkout: system-core
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Refresh native Schedule and class summaries
+        run: node system-core/cloud-run.mjs
+        env:
+          DASHBOARD_CORE_KEY: ${{ secrets.DASHBOARD_CORE_KEY }}
+          DASHBOARD_GOOGLE_PRIMARY: ${{ secrets.DASHBOARD_GOOGLE_PRIMARY }}
+          DASHBOARD_GOOGLE_BACKUP: ${{ secrets.DASHBOARD_GOOGLE_BACKUP }}
+          DASHBOARD_RECEIPT_SECRET: ${{ secrets.DASHBOARD_RECEIPT_SECRET }}
+      - name: Record daily operational heartbeat
+        run: node system-core/cloud-health.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
