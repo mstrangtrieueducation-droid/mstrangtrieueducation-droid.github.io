@@ -106,7 +106,7 @@
  function install(api,label){if(!api||!api.create||api.confirmedProfileCacheVersion===3)return api;
   var original=api.create;api.create=function(options){
    var packet=null,sequence=0,ended=false,showedFallback=false,handoffTimer=null,keyPromise=Promise.resolve().then(function(){return root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(options.token));}).then(function(b){return location.pathname+'|'+label+'|'+String(options.className||options.classNumber||'')+'|'+Array.from(new Uint8Array(b),function(n){return n.toString(16).padStart(2,'0');}).join('');});
-   function handoff(){if(!showedFallback||!packet||!current())return;clearTimeout(handoffTimer);handoffTimer=setTimeout(function(){if(!current()||!packet)return;root.dispatchEvent(new CustomEvent('mtt:confirmed-profile-fresh',{detail:{client:label,packet:copy(packet)}}));},0);}
+   function handoff(){if(!showedFallback||!packet||!current())return;clearTimeout(handoffTimer);handoffTimer=setTimeout(function(){if(!current()||!packet||!showedFallback)return;showedFallback=false;root.dispatchEvent(new CustomEvent('mtt:confirmed-profile-fresh',{detail:{client:label,packet:copy(packet)}}));},0);}
    var loaded=options.onLoaded,opts=Object.assign({},options,{onLoaded:function(value){
     available(present(retain(value,packet)));packet=copy(value);sequence++;keyPromise.then(function(key){if(!revoked&&!ended)disk(key,{schema:3,packet:packet,savedAt:Date.now()});});if(loaded)loaded(value);handoff();
    }}),client=original.call(api,opts),request=client.request;
