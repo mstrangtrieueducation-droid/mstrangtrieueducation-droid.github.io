@@ -1,0 +1,3166 @@
+{
+  "schema": 1,
+  "tag": "stable-20261026",
+  "sourceCommit": "867066fff2caecf045cc6920611fd35c43cd01f4",
+  "policy": "Only explicit user instruction: sá»­a lÃµi nháº­n bÃ i permits changing this frozen baseline. UI/CSS uses dashboard-ui/.",
+  "classes": 44,
+  "assets": {
+    ".github/workflows/dashboard-core-cloud.yml": "905dbe90423e6b5ecacdd483edfceddedc2bfa3a22ba27e04fa06242935341c4",
+    "student-learning/active-roster-v1.js": "e9dbc72b753daae49b21b6fe4695f1d926ff67ccf8282b9a0fed9e9d9be06874",
+    "student-learning/class-entry/access.7dcf943efa56.js": "7dcf943efa564e8493a38fac03e2aefb20f32593d0fe0a0d7a818d416f4e1041",
+    "student-learning/class-entry/dashboard.7c1db93d3b9b.js": "7c1db93d3b9b45f55676b8dfce763f843a33b0adb11090fdc7487c77e8b5fab0",
+    "student-learning/fighter10/access.21e8a4948962.js": "21e8a49489626fd73c73f1dfe6fe8e1bc481ac99ae506af0bc6342352486840a",
+    "student-learning/fighter10/dashboard.ad8f5bea71f1.js": "ad8f5bea71f1fbaf87b8b8415bcd258ede7b7f3b764efeb08b9bb15c0f841b12",
+    "student-learning/fighter9/access.b50441118447.js": "b504411184473ac89d8951a119208446ff97ad27f0af83807e8923c1a2704e2c",
+    "student-learning/fighter9/dashboard.1c7b824bd6e3.js": "1c7b824bd6e3509a6fb48e2fa6dfb293f433169ce185bdce16f5616ba34f7d13",
+    "student-learning/kids-journey/pilot.4fcf30475fea.js": "4fcf30475feaf6e7799133f7dec23b82e750741287dda10a7e4065b2980789ce",
+    "student-learning/kids-journey/standard-native.e0c59c024a4b.js": "e0c59c024a4b40671adfcaae203603011d5863718988c5e7617c771f14288b29",
+    "student-learning/kids-ta-entry/access.ca8dd5e6b12c.js": "ca8dd5e6b12c343bb0416b8ea20cc500354c4857dd17a1f2ea3924537933a4bd",
+    "student-learning/kids-ta-entry/access.eab18d492b95.js": "eab18d492b95132a243156ac24cc4dff2fa85f35e07a972a7d3e0ecf92699d32",
+    "student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js": "b4aeb22aa17524b90a9ded5236eddc36e41afcdcdefcd61202d6e8b0b54c8708",
+    "student-learning/kids-ta-entry/dashboard.d322e344da4b.js": "d322e344da4b6308d1f8884912fd35f632b335f0b0316aed25d502576b8db48a",
+    "student-learning/titi-games/dashboard.js": "81d47799d1e1e4fb4864645b2c7669a397d5e4f7b6c2f489078836c7de64f0f4",
+    "system-core/cloud-health.mjs": "5ed6264da1625933f26ff00e00476c4cf7e85bc9318e6edc27d41c77ca53c7e4",
+    "system-core/cloud-run.mjs": "be7b71ab0f9301e8cb4b9c2f4c8e5680264cc222ff6ea28a4df7841eb5e87793",
+    "system-core/runtime-manifest.json": "b6cdbbd70d085dcb6ccef6acd523f73f50351d6a749e6814f4fdbfe5d7d71018",
+    "system-core/runtime.enc": "e66c9e3ee4a322a088562fd115000ffcdc3aa8d70761075781e625d8581c7392",
+    "system-core/check-freeze.mjs": "694fc509d742adc965a561ee1a93618019ba8a7f2de05a6d22cc9e39c31dfbf9",
+    "system-restore/backend-restore.enc": "597d21818473f5e858814df8cb11ecf1cca30787280c22a143c8df76f15babf2",
+    "system-restore/backend-restore-manifest.json": "9878d5dc9070f2db48df253755f3601ef81f7893f8006bd36454bce18a32db8e"
+  },
+  "pageScripts": {
+    "u90k1f5e/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "d6c32f76da10120d6883279d493244c7b1c7bacc409a9e289a1acab54c04159e"
+      },
+      {
+        "sha256": "e2f6f9f4f82aa6dcad00b2330e02e93608eb2403e5bd28a1c96da9837e681706"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "3afe664a5444f3e50d2238742d060eca87fa5bf3aef58c975308b72b41651f09"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "byogxkvy/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "0f6a5cb81e58775c34ba4ea7f0b8c0e1922b6df3a529c150168a73233b2a61ab"
+      },
+      {
+        "sha256": "aff0bda93eb6b5cbaff735cbd681c92492a3c7c4fc6a481e4cdfbcd94405d862"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "cddfc38b40627ec61a2c6685410519d36f45bedb5dc18c0cc4e912e0e7e36f1a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "iw6h6bmb/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "6df1562d2d37d9b330124ee4b8320d0ece20ec176f8e362c164d96b407ec5a78"
+      },
+      {
+        "sha256": "4b802ef36054be48a37070fe73ced0f1a548aac8037861cc1e28898591475199"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "a79d4b6e51d3c086e9c2005de49788abbbb76c827d7dabe0eb7fe7a9be01a58a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "r60hdc1i/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "9375cefa4ddf0fa56f00fab3be097032c0662ac64d04df67b7b2479ca5c861d6"
+      },
+      {
+        "sha256": "10e7da7b23aaa0984ab52823bf02a63b2a9a57d5770dfb04066328483e81fc8e"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "0752a776283302964e69bbc40f90955f1e7a9de6904e7c75a71dd8373ad0ffd7"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "chaq17fk/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "36821647d548bf22a1edcdff783c1b81ef9da6bb2b81130bee5ce9cac5b036d6"
+      },
+      {
+        "sha256": "a76728095d7fc73f5bd14e03b52931dee66ac7a9c2a517078bf3717fb76923dc"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "3b5e42b13adf19cdb9f0224f87f8fb475f3bda0970fc8b5892ddaf89a0cf860e"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "y31ibppw/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "9d7e8f063f36ed81d76c04d36e4721ac7e0231f38356be36dde0a2087e124ca2"
+      },
+      {
+        "sha256": "ee7fc455257cda2abc84aed3823302247fe9600ec6e84ee875b1853cdde6f981"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "f240c04366848cb16aa15c7e7bb3b57f9482dc92d03c9e8c1ab0a801e7ee167a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "gu159u7j/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "cf1946152e33b7ecd0264405732ff56d7d67ab6d75874c5ac031a8f2e198acc7"
+      },
+      {
+        "sha256": "c615aae34acd92d451fa76d9034e31afc1036b88eb3f538b5666380fb99af887"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "9c823c62b4a2d325adcc9a02c1cb0adc58f9ba8fb384ca262483a58e9e779934"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "uee89ho9/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "e3d7d87ea02f26c9d2f974aad1e2681e89a4069e80abbdd933881addfdf62831"
+      },
+      {
+        "sha256": "1ecaabfb192789974da3c010a60c7c648b90eddaf5b2292aa58fe079d536e7ed"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "814f53565dcab0500669145adc703207c23c1b91c25367689755c79771303fe5"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "ywxrw9yp/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "bfe59a0f0746fed5901b242703b322bee686e7cedffcee260b1904a2b92e74a1"
+      },
+      {
+        "sha256": "c27cb4c8ca46a2a758681028b53e15bf3d5a1916cd91ffd342efd03e850dd74f"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "972bf209719c1d9fbff625db1fab6213b9a12df5dd2e17d9dd7046fff76b3b50"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "l8tzmx20/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "0b5f0f88da05114a62f1d7856b923c94e27c5e16d03ab43228614c5bf0aec9c4"
+      },
+      {
+        "sha256": "c18186892e52bd39fa86cef4f4f832c38713d0b12f7356d52d7ce672a9c2ea5c"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "295df935f8378e6e1d593849bb6d8569cd9f75aeaf93adf6cba210909e7c1077"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "rge9fi0s/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "042376169480058a37a0b94e32b5c331a91cef1ac064ee52031cae9011cce009"
+      },
+      {
+        "sha256": "adfc51cb4a45ed34a4bf853048edec2522c8df3116b2ba3f2db6e0f0f23c6347"
+      },
+      {
+        "sha256": "013183281a74dbccb796c50f978f4c0e487157f2b81469718a95e1eb79da234f"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "c2d287c5b389dd047abe3cd1cd06006741cbc24abf7f6ad00af8dbd4d627f423"
+      },
+      {
+        "sha256": "95b379c5f5a7f9efd344c10adb453d04fbe1a6336f665ba0a6c4ca878b26ec56"
+      },
+      {
+        "sha256": "e8d624c912a828a2aba878cc7f5136f77407b980f2e84f9c4350e01d008657e1"
+      },
+      {
+        "sha256": "39ccdb787802068a0661850d9c30e5c3e7c35d0c714b8bc056af964335140b7d"
+      },
+      {
+        "sha256": "c60a0adc607bea137556e280325695758bd656af49e43b9944381db40796fae2"
+      },
+      {
+        "sha256": "29cfd5d52ab3553e90df4a9a166dac07f3d84ae63b8c2d5cfead342613d1b263"
+      },
+      {
+        "sha256": "75950bd9b7c93e9dcbd2c2ea2e65141a7bd7fe09dd0536d60088ab50a445d61b"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "936cefb3d5ffe18fb3beb9c0339294117f1bcf77662276fc34a3ffd7eb136ee4"
+      },
+      {
+        "sha256": "045cff89fdce9d8037da015967ad99f8938ee405cd692a7920fbed610a961450"
+      },
+      {
+        "src": "/student-learning/kids-journey/pilot.4fcf30475fea.js"
+      },
+      {
+        "sha256": "ea5d0aee823add309f8fb7962d9c271777e31921cb2976cc85c3a34197d7453f"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=release-20261018a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=release-20261018a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=release-20261018a"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=release-20261018a"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "muqt11rj/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "73bbe47486d3956cb759c3214eef421829e45ac1eb1285729017f7c953b06eff"
+      },
+      {
+        "sha256": "fb9f1d10f58272d8cb80eca7d1b62d196eee3db576e54fda3b4e030424a7d06b"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "d149f94c47d8590666f703fddef0a52670b841d03e016873bfc438eac3468c28"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "3lu0698p/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "034515b34c6519f95b7c147ed8080e2e8d45fc12aa73469ccd42bf4d17f62bbf"
+      },
+      {
+        "sha256": "f2d558e7cba57e96957a9556669fbaf9ef32bf73a34eeaee8380d3597b64296b"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "30890463a639775d781cab1e65b3fcca2bf2e6a87328f568a200d2d39aaf2171"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "myude9i0/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "85b326f4aa1577c7b94ea6347452dce1f4c1d488d1f8be56de1c235820bbbe71"
+      },
+      {
+        "sha256": "116b19fa57ac22a3210966854574d98b2cd98ea31a178c6735bfc50450c54bfd"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "fc345490dc794a634da849bcd44e8122b91c760fc453deb536e457b461826baf"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "i8a0r77q/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "4ef82dfac89ad0c66b96a6c23ad478e56954cd71fd2494617371fdff7409e46a"
+      },
+      {
+        "sha256": "9b4ca5a6a5323ddcf757ca3ab22cc9ef0f3f67249e9ac47db9d8cacf6790f42b"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "412470d9c7024d41a8464d8b513c9d5bbd41d4c6b035500bcbf438c9cb9188ef"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "qo7alz0y/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "2932687443fb3fc1a558a6f6872d0ef459104a68ff44229bc4e07dfae4ec8989"
+      },
+      {
+        "sha256": "7afcd6ef82dbddfd20d242ee3af86fa3c0f784d892540a0a73c588310218bf68"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "d6178dfa95ac986a71a75e5f382053cbec9fbb6f5d4f899384f0ef4a5df59e5a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "xcxhducu/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "4065bf93938f9beef8404a9b3b522a7dc6fe021fe65fe154778e37e7db78788c"
+      },
+      {
+        "sha256": "4172bbb3ac0cfca045c4e5ef5aa9c46bebb1f05e7cde1637b86b906df807ff3f"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "80985a526e95a60eb92692ed47f09882556ff3459d7e48a26cab6f6db86e8041"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "9fpwzhnz/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "7253234fcf934b742c103bf326e64a8aaaebcf75da5aef10705937b7a32463bb"
+      },
+      {
+        "sha256": "9c74fbd46784ba115aac863b7c0c030cd8f0339962e9b0bd8168c58b81ccb8af"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "b89e79b6ffc3fef145108033ffba0d6e8e4a2c12810c5a5a04b49a8aa81fd0de"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "31wagboo/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "6d9fc491472412688a287c4211ef454645b022ff53703c7b922ddd7333cfdbd0"
+      },
+      {
+        "sha256": "d0ee3186d844fa6fabe9724b19c15dc8acb65171a7f3ee6b742f89f21ff13798"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "e705c6fee97b0969086cccfeb21d835a2d6c1765d9dbffb4faacf26e3cbe07c2"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "juzwewi0/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "c4e3cdf41648e0d1acc0109c0ac89720b29fea4df2b44d047bbdeed0bf817518"
+      },
+      {
+        "sha256": "7ff57eaaa456426b72c63435338569b6675aba79fa82b5dcd6e21a1a46c5ce5b"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "4d225273d2763f55274ea187a8aca2247bad20639d4d5d670456dfb955a962be"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "wfyjrm4m/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "42f54468f29aadbf409781863d63082620762768bee3e76c0b7a5278db5d92bc"
+      },
+      {
+        "sha256": "77ce3d305d3cb3ce46b62a3aab18fce3f324a0085ec95810df31c465e2c66cb4"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "67154a0e040d8dd77716b95f6c6c02abd4f20c6e272f2dca947ee0bbe1f5b359"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "firegh4f/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "4a89cf694fd376836777bcb767145a873f79a324e14403151c7fa424f0d8d3dc"
+      },
+      {
+        "sha256": "4377cdca55b1006d3b66af21651d00475cacfdab6d4b1cbac59f1eaa77a5f15e"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "3476c67c7f47abbea7eaa61aa249da114724796a2f7910ef9aad0d1faa902ff8"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "u1g9ay98/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "4c23cf1e87242581ac923864ad55870c4fd74dae4bb08111e1c9e7ab5c22fa99"
+      },
+      {
+        "sha256": "f7c8cacf5003d41e9151fc1bee6c67ca314956ee50a63e3bb8ceb40e762852f3"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "96d56416eb80e95a1107d1586c78c6aa987a2ec16480c9d495daf809cf17091d"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "63habmwz/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "7d92c8bc2820dc6e83d174e922fe885f8e71f33184c494e49e3860c362f260fd"
+      },
+      {
+        "sha256": "25a2cb9e604ec51932f11bdf2a7423402f98be3d21bddd4ee33adf2bb237a079"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "7067ffcfb817f9f31d529315768bb81195dd52126343253c304a53a16bba88a4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "odwhkat1/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "97fe172bca8f9e87719bedb3d4a6a8fcc5982fe06bf4714ef2c6e19882e5e9f1"
+      },
+      {
+        "sha256": "bba30e191e3fe72a07a6b9d0b43bb82e2a328b9376bc2665c401983aee70abe2"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "ab9a5d7d18c74e9503047370b71d6f5c7f2b68824903c19ee3d0a3fa0b03bcb6"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "d5f9almb/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "84f539230065fddb6327ed06a0a75e246eda75b4bcca91d13d044e5d1dfd7ee5"
+      },
+      {
+        "sha256": "e7f59041a9cac3b60814ab413e4a920bf5bf2fe7804c6ee3d64148ecba00c07c"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "af011d0fb7f6c652bd5f476a41ff01ffc902b57ed248f9491a197f9e2c821efd"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "p8qdzsoa/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "b836444cdce2266cbf3caca09e30aa022f38748b914e1678ea1f7c53fd05002e"
+      },
+      {
+        "sha256": "7190acaffeb9f7da0ac1430610fc6c33ca8f923660a280ae7302d88169e515ed"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "ce1e71813f0534bdc65c8960a197505c10f8dcc4d3a98d9ab3e6e5b45e08ff82"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "1t5tlkn7/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "e1b74949050d5317774a49437bda5b86da9c2a9bc57b4162b7b7a83d6b165fcf"
+      },
+      {
+        "sha256": "5fd1b2f80ef13610077fb962ffd38cd0223905b8f575809d560984547524fe2d"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "05361924756e95ccb25a0fce53e2e76bc6fc9a384ba9fcd6ab91a67c33764efe"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.e0c59c024a4b.js"
+      }
+    ],
+    "zredv9ef/index.html": [
+      {
+        "sha256": "c1dee918c37cdbdc66b3b82c9dce3e990546873b3d52716f14041d3320166322"
+      },
+      {
+        "sha256": "7f7ba0a1ad51db78c7ecc5284e28c9aac03a05448b638c23f986b72490e6275b"
+      },
+      {
+        "sha256": "89420e5d3c909e474d00bf9c20156f9d147ede8553c6f43eaef4192ba887f669"
+      },
+      {
+        "sha256": "df118dbf5524e0b1a9f7067c80aca0853a4dfda75ba87fe657203f6e4ab45192"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "ad6d0ed717adb6e80bf50537595dc03b1c4a1adf5b4479d3a9cacd9036cf375a"
+      },
+      {
+        "sha256": "f9b0a3123e03283292810adc934c71e467ed39e6547819b36033e3f648678b34"
+      },
+      {
+        "sha256": "3b8b593dac64639d1c90f6983584cf1c17a6ac9bd37d702f2265ca59bc06e69c"
+      },
+      {
+        "sha256": "c588fd2332d847cf0a9be26a6e2bb6202e64c12c24c401621ffcf36dfb759104"
+      },
+      {
+        "sha256": "d6f07d37e4d651aba70f098433248f491b9af07df69da1efb444ed6ebd697acf"
+      },
+      {
+        "sha256": "f272ed7ef1563a424e2e4651457de08de43c6e8d74506cf964edc981b116304b"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "6b188833246a97d36a7297bdf2361bdf851f5a71f5bff7e3c97cd772fa267371"
+      },
+      {
+        "sha256": "ad64503ff944e0350706f1817b6f0a4b14aeabc5d84d5a1ae381040084ebf7c1"
+      },
+      {
+        "sha256": "27428ddac8a6fe055eea62af0d12b76b5544facbc2c1bd8bbdac9c0e5a7146d6"
+      },
+      {
+        "sha256": "2c8919bdaa21ba9c02a321e48b77777a163624b0fca4c1b5ad55a4ab46a9243a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "00796e2c65bd63d95f165620fe64ef3bb9451a1d38772d22c1fea857089f3508"
+      },
+      {
+        "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
+      },
+      {
+        "sha256": "936589b1c5671189ec464bdc4151c8c531cbf2637c834f158f78045b24932d85"
+      },
+      {
+        "sha256": "9138f687d7180a47fafc352a42b97a4323106822cb2727f45f56250638723984"
+      },
+      {
+        "sha256": "29eec676b66c76517bfc4b28e7c4ac382d5012b2c1b9d0007db69e905448351e"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "fff4501c6c85c759c23b09d9d6954bb2e98d1343981db86809d6d9c6a363abf3"
+      }
+    ],
+    "hwz7zw86/index.html": [
+      {
+        "sha256": "8834f287cf3c8e57ca8c3c4780f1ad695f517e0ecb7f4202974d3a86de6115bf"
+      },
+      {
+        "sha256": "fd245dc3d72e6637483a55f063ed269c35023d7743b9d5f90bee1f0918962c1f"
+      },
+      {
+        "sha256": "7150c6c4ca7d8fa621f7ff470f4e765dd30ff78046cb35bfec88e8491c5f85a2"
+      },
+      {
+        "sha256": "df118dbf5524e0b1a9f7067c80aca0853a4dfda75ba87fe657203f6e4ab45192"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "b3d4d6fb32774afada17ca1f34c496c70664ff0efb3eb56184f7bb5acd716db8"
+      },
+      {
+        "sha256": "98c9dcfac9414a6f28e6a9887f8c8f9dd9f1a86a5e14fb8548235bf7c86828a5"
+      },
+      {
+        "sha256": "4b6fa77dfe5b1ea99b126165f6074ec6ae689edb3f1c0dd8ee0607e28369fa53"
+      },
+      {
+        "sha256": "6f79989fba6aee647a86ae4644bd4afd3135017b1aa0f105f287213e3100f6b4"
+      },
+      {
+        "sha256": "2b6e71cd3d02262e972d1442776d00c43962f988942789452fd0e0ee365be02b"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "064550385f265ee9f168008ae21e9635246e32d29e896be85decd3ad0478e178"
+      },
+      {
+        "sha256": "8b6bdad6558f486f88e47592ee3e1e23e4e6ac51772059f2febe33a3398e6c35"
+      },
+      {
+        "sha256": "f74ffae6b8551b58629910c2f85b8233e9419b33cbb3c3602df9deb6560298f6"
+      },
+      {
+        "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
+      },
+      {
+        "sha256": "2c8919bdaa21ba9c02a321e48b77777a163624b0fca4c1b5ad55a4ab46a9243a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "60928e64c3db16f002506b616b055c5bb4a6450d2d77ceddb33b7e604fad7aea"
+      },
+      {
+        "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
+      },
+      {
+        "sha256": "936589b1c5671189ec464bdc4151c8c531cbf2637c834f158f78045b24932d85"
+      },
+      {
+        "sha256": "9138f687d7180a47fafc352a42b97a4323106822cb2727f45f56250638723984"
+      },
+      {
+        "sha256": "29eec676b66c76517bfc4b28e7c4ac382d5012b2c1b9d0007db69e905448351e"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "fff4501c6c85c759c23b09d9d6954bb2e98d1343981db86809d6d9c6a363abf3"
+      }
+    ],
+    "dgpu6c9h/index.html": [
+      {
+        "sha256": "8834f287cf3c8e57ca8c3c4780f1ad695f517e0ecb7f4202974d3a86de6115bf"
+      },
+      {
+        "sha256": "fd245dc3d72e6637483a55f063ed269c35023d7743b9d5f90bee1f0918962c1f"
+      },
+      {
+        "sha256": "7150c6c4ca7d8fa621f7ff470f4e765dd30ff78046cb35bfec88e8491c5f85a2"
+      },
+      {
+        "sha256": "df118dbf5524e0b1a9f7067c80aca0853a4dfda75ba87fe657203f6e4ab45192"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "1d21aa8e73558a28b30ef9cd29385ef0e53dadc8f8ca447c07defda6224e1163"
+      },
+      {
+        "sha256": "98c9dcfac9414a6f28e6a9887f8c8f9dd9f1a86a5e14fb8548235bf7c86828a5"
+      },
+      {
+        "sha256": "4b6fa77dfe5b1ea99b126165f6074ec6ae689edb3f1c0dd8ee0607e28369fa53"
+      },
+      {
+        "sha256": "6f79989fba6aee647a86ae4644bd4afd3135017b1aa0f105f287213e3100f6b4"
+      },
+      {
+        "sha256": "2b6e71cd3d02262e972d1442776d00c43962f988942789452fd0e0ee365be02b"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "d14b6c60a5366752053253a8ff2ba7573f1dfc8cdc684e861a83173f00bbd650"
+      },
+      {
+        "sha256": "1cf1c3de3836f12c8dcee6c5dec49d29df0b41805f61b8d5cf1bf46819cb3cf7"
+      },
+      {
+        "sha256": "90d3bd52fecd7c07dd7207e747a98f03efcec2efa6b2db5007f703b0bc729037"
+      },
+      {
+        "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
+      },
+      {
+        "sha256": "2c8919bdaa21ba9c02a321e48b77777a163624b0fca4c1b5ad55a4ab46a9243a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "60928e64c3db16f002506b616b055c5bb4a6450d2d77ceddb33b7e604fad7aea"
+      },
+      {
+        "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
+      },
+      {
+        "sha256": "936589b1c5671189ec464bdc4151c8c531cbf2637c834f158f78045b24932d85"
+      },
+      {
+        "sha256": "9138f687d7180a47fafc352a42b97a4323106822cb2727f45f56250638723984"
+      },
+      {
+        "sha256": "29eec676b66c76517bfc4b28e7c4ac382d5012b2c1b9d0007db69e905448351e"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "fff4501c6c85c759c23b09d9d6954bb2e98d1343981db86809d6d9c6a363abf3"
+      }
+    ],
+    "cecccjpg/index.html": [
+      {
+        "sha256": "8834f287cf3c8e57ca8c3c4780f1ad695f517e0ecb7f4202974d3a86de6115bf"
+      },
+      {
+        "sha256": "fd245dc3d72e6637483a55f063ed269c35023d7743b9d5f90bee1f0918962c1f"
+      },
+      {
+        "sha256": "7150c6c4ca7d8fa621f7ff470f4e765dd30ff78046cb35bfec88e8491c5f85a2"
+      },
+      {
+        "sha256": "df118dbf5524e0b1a9f7067c80aca0853a4dfda75ba87fe657203f6e4ab45192"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "46b93f474a5024114c9aad0813a7083e0c1213b68abf63bfc6bb81c5c0a78db5"
+      },
+      {
+        "sha256": "98c9dcfac9414a6f28e6a9887f8c8f9dd9f1a86a5e14fb8548235bf7c86828a5"
+      },
+      {
+        "sha256": "4b6fa77dfe5b1ea99b126165f6074ec6ae689edb3f1c0dd8ee0607e28369fa53"
+      },
+      {
+        "sha256": "6f79989fba6aee647a86ae4644bd4afd3135017b1aa0f105f287213e3100f6b4"
+      },
+      {
+        "sha256": "2b6e71cd3d02262e972d1442776d00c43962f988942789452fd0e0ee365be02b"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "5ab87ecab3d93c24341144a186836472043306a9f6bef9d1c6a63930c13d686a"
+      },
+      {
+        "sha256": "72f45625545f90a95cccc35ac5d03d55b52d7711ab35fffc3e63c7242ca781b5"
+      },
+      {
+        "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
+      },
+      {
+        "sha256": "2c8919bdaa21ba9c02a321e48b77777a163624b0fca4c1b5ad55a4ab46a9243a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "60928e64c3db16f002506b616b055c5bb4a6450d2d77ceddb33b7e604fad7aea"
+      },
+      {
+        "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
+      },
+      {
+        "sha256": "936589b1c5671189ec464bdc4151c8c531cbf2637c834f158f78045b24932d85"
+      },
+      {
+        "sha256": "9138f687d7180a47fafc352a42b97a4323106822cb2727f45f56250638723984"
+      },
+      {
+        "sha256": "29eec676b66c76517bfc4b28e7c4ac382d5012b2c1b9d0007db69e905448351e"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "fff4501c6c85c759c23b09d9d6954bb2e98d1343981db86809d6d9c6a363abf3"
+      }
+    ],
+    "p8w8wz4f/index.html": [
+      {
+        "sha256": "8834f287cf3c8e57ca8c3c4780f1ad695f517e0ecb7f4202974d3a86de6115bf"
+      },
+      {
+        "sha256": "fd245dc3d72e6637483a55f063ed269c35023d7743b9d5f90bee1f0918962c1f"
+      },
+      {
+        "sha256": "7150c6c4ca7d8fa621f7ff470f4e765dd30ff78046cb35bfec88e8491c5f85a2"
+      },
+      {
+        "sha256": "df118dbf5524e0b1a9f7067c80aca0853a4dfda75ba87fe657203f6e4ab45192"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "d921270a97be9406ac1ecdd60ebc160ce84fe7330422075620bf063cb653e5d1"
+      },
+      {
+        "sha256": "98c9dcfac9414a6f28e6a9887f8c8f9dd9f1a86a5e14fb8548235bf7c86828a5"
+      },
+      {
+        "sha256": "4b6fa77dfe5b1ea99b126165f6074ec6ae689edb3f1c0dd8ee0607e28369fa53"
+      },
+      {
+        "sha256": "6f79989fba6aee647a86ae4644bd4afd3135017b1aa0f105f287213e3100f6b4"
+      },
+      {
+        "sha256": "2b6e71cd3d02262e972d1442776d00c43962f988942789452fd0e0ee365be02b"
+      },
+      {
+        "src": "/student-learning/fighter9/access.b50441118447.js"
+      },
+      {
+        "src": "/student-learning/fighter9/dashboard.1c7b824bd6e3.js"
+      },
+      {
+        "sha256": "bf33846f61da63ec005a42287f1f036b60e27d5e47bf2b6ca3de76cd0b636d35"
+      },
+      {
+        "sha256": "4f0ca7eed0807c5936a5fe63e0f5fc6a6f63a72b306e9b966975afed25a168d8"
+      },
+      {
+        "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
+      },
+      {
+        "sha256": "2c8919bdaa21ba9c02a321e48b77777a163624b0fca4c1b5ad55a4ab46a9243a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "60928e64c3db16f002506b616b055c5bb4a6450d2d77ceddb33b7e604fad7aea"
+      },
+      {
+        "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
+      },
+      {
+        "sha256": "936589b1c5671189ec464bdc4151c8c531cbf2637c834f158f78045b24932d85"
+      },
+      {
+        "sha256": "9138f687d7180a47fafc352a42b97a4323106822cb2727f45f56250638723984"
+      },
+      {
+        "sha256": "29eec676b66c76517bfc4b28e7c4ac382d5012b2c1b9d0007db69e905448351e"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "fff4501c6c85c759c23b09d9d6954bb2e98d1343981db86809d6d9c6a363abf3"
+      }
+    ],
+    "7rsn6kbh/index.html": [
+      {
+        "sha256": "1823aec05dc4571e9b71b5b58f69d872afe5cbb82fa6d917352866aef7a27fff"
+      },
+      {
+        "sha256": "25e02142b20e69f34592cac53bfbb659ee294f5e0fed683579b543565ac0c338"
+      },
+      {
+        "sha256": "fd6ebc50cb88488aace48a90fb70ee5f411031af70debd1b4142fde88f8e23d8"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "dc50a48e211ca441939eb2487f6abb2f544939b952f189943040b7f714e7504b"
+      },
+      {
+        "sha256": "353aba9661634ee7044394ee0d1357217f5371a218c4900137ba80e1f908277f"
+      },
+      {
+        "sha256": "9ddca5aac9b4a92ea93784e5ee62fd72848225e9dcd870555955b7a13977e039"
+      },
+      {
+        "sha256": "a73d9c16051e43d2104592a661735f2b8b851e2775aa1a40683d77a09548c013"
+      },
+      {
+        "sha256": "4a96b8ed9c6b609d03fc50018a7979c66b5f12bd0239ea40d320775b4f1efb79"
+      },
+      {
+        "sha256": "fb3126db836e2130e590579229381b373daeb716e989aa985fe71cf0f3bec0ed"
+      },
+      {
+        "sha256": "f78b4cf78fca1620960941e3a8d649e185d1a53538876638f84057293de0f836"
+      },
+      {
+        "sha256": "ad90ff80275364e81d321183e26d1304f2663e68ea345d9fad5027cf1ce786ed"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "d5a615df90147291418b569c8a40dd2905880a55d61bebdce2a016c4eff5a92d"
+      },
+      {
+        "sha256": "a13a23f1433d8905a23d3aa5294f5e407531001a67cca194bbc7fa4cdea491b4"
+      },
+      {
+        "sha256": "36d880f55fa48245a65724f79924e3f3d1c6d5f4ee86f4251977beb752bb181d"
+      },
+      {
+        "sha256": "74a3145101a5d7a08ff85ae9c999f4f6ad9c6f213b5ab954765d57ed772a18b4"
+      },
+      {
+        "sha256": "eacbb138afd29d3a283b30c791d4e017501d7444d5aa7c34f66a60b030629d79"
+      },
+      {
+        "sha256": "a7b7dd7d45ebb0d5ce9946e37e18f760396c2016b1c893aa43a8933e82704d64"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "485ff56dd5df1c6cd0590cf3fb387070a97d28ce7b6406d681762e02ee43f733"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "xpe6dd4j/index.html": [
+      {
+        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+      },
+      {
+        "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
+      },
+      {
+        "sha256": "1b5d8b052192ce0895128a5c7c0b99d63e6565dda5ceaf28ef68af2f1ff26b62"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "2fca36ec93777583f24ea4f6db1a2d30956ebd1d056ccecaea64a6c51267842e"
+      },
+      {
+        "sha256": "52e4484aafcbdacb90fa13ad4bc48d8e8e098c7fdf78abbe458d99cb7c6ca4c1"
+      },
+      {
+        "sha256": "069dff678c7f92931741149591fe0042335c5faa926badad252decddd06fd45d"
+      },
+      {
+        "sha256": "cb0f661aa4f7395252a4d539f43bbf7ff323a44d2503e8c0823156569390b476"
+      },
+      {
+        "sha256": "7879cf8be8152893953fd243b163e6adc1d400974a9fcc696f827f92dbb14c84"
+      },
+      {
+        "sha256": "7f602f34f1cc5eea1be233de5b385960465d496901eb71949698d99521e145fd"
+      },
+      {
+        "sha256": "4cbc03640771d9486bfb43003cf89ef2ece9f0295fda177c79a45c9b59157191"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "8d8c9f5bb23e676c3e1393d407f6a7f0e3d6a661e2f7911ec41e3af68f6f2ba1"
+      },
+      {
+        "sha256": "5819861ec3b864831928706bd76278c8bb4b3a779e0afc167c29e4d54d3a4429"
+      },
+      {
+        "sha256": "9d83a3ee2383a1018d61fd9334455637f46c0ac38cc6a4c2ba414394fcb072c9"
+      },
+      {
+        "sha256": "7b8e9e5efc7070ef990ff3063cd531a04cb4b3163367f4b447afc7d98ea136f2"
+      },
+      {
+        "sha256": "fbb998f8a9e4a7129bb1c9a17f88c61598af87a46d7c4d721bb1dbe93f3355eb"
+      },
+      {
+        "sha256": "f8eca7eed6c844819d4899a816a74a6bc43fe3c6419286979f318c36a28602b7"
+      },
+      {
+        "sha256": "564a139bca2851aa15247ab039f4314e088ea2c51db7ff79d051c7e975c81d70"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "494b686146d4993f89d2b97a55dfc8b27584650f11112bc5c5c434d4ee2c1152"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "bhg37bsz/index.html": [
+      {
+        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+      },
+      {
+        "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
+      },
+      {
+        "sha256": "1b5d8b052192ce0895128a5c7c0b99d63e6565dda5ceaf28ef68af2f1ff26b62"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "45d9856618a9566e100846945d39c61415b650eccf503327493c2e2617746f94"
+      },
+      {
+        "sha256": "e6c41948427bb49c77a5cad579a344fd5003a16b26eb32a653cfca25b59801a9"
+      },
+      {
+        "sha256": "069dff678c7f92931741149591fe0042335c5faa926badad252decddd06fd45d"
+      },
+      {
+        "sha256": "cb0f661aa4f7395252a4d539f43bbf7ff323a44d2503e8c0823156569390b476"
+      },
+      {
+        "sha256": "7879cf8be8152893953fd243b163e6adc1d400974a9fcc696f827f92dbb14c84"
+      },
+      {
+        "sha256": "7f602f34f1cc5eea1be233de5b385960465d496901eb71949698d99521e145fd"
+      },
+      {
+        "sha256": "4cbc03640771d9486bfb43003cf89ef2ece9f0295fda177c79a45c9b59157191"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "8d8c9f5bb23e676c3e1393d407f6a7f0e3d6a661e2f7911ec41e3af68f6f2ba1"
+      },
+      {
+        "sha256": "5819861ec3b864831928706bd76278c8bb4b3a779e0afc167c29e4d54d3a4429"
+      },
+      {
+        "sha256": "1e72083b5eef75134c9395a4f1b24e59e0d04119dc460c67fa6d4c0427507c3a"
+      },
+      {
+        "sha256": "7b400be75babab2fd998f18d85ed57b5003910dd7f5efad95753cfe2e888687f"
+      },
+      {
+        "sha256": "a0c27531ed2a1b6645cae160bfcc4a08ed0fce78bbb71e408b73997bd2f5957f"
+      },
+      {
+        "sha256": "9bcbb23d6f371de4c0ca0b39b906bf3a802467e4c340a1e0160b4eb13de12e4e"
+      },
+      {
+        "sha256": "a7d747749965b68470be0349f34d3b3759db81e8e1c28a93c95a744c3ba10341"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "e73wgva4/index.html": [
+      {
+        "sha256": "8ec60061392576d2f960fa8d0a08b1d0cdcee5e46f1cf2758076e9d466ff1d85"
+      },
+      {
+        "sha256": "37e9528c7a1d56b7701bc51ba82ac2c7c439b9f11d02677b4461c168a9c44d25"
+      },
+      {
+        "sha256": "08845ada4399e0daa8609bb6b24bcfd9ff9366be297a5da46bc67cdcac6fddfe"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "1dfaf77d8f05c304ea23405f8c205e09646dd938d5f4203d1d896e0e1c4955e3"
+      },
+      {
+        "sha256": "fc465a0382141b5fd7c6e2b5780e2508d79f4bf4d4a23c60eeca10504fb9be8c"
+      },
+      {
+        "sha256": "89f0e6b73ef76ee7312257df96c6fab87ed950be1afa8e9a12332efcda90c536"
+      },
+      {
+        "sha256": "59f7b311ec13056cebbffbc0169a69f9bac13a19722e1ab9370183988d38651f"
+      },
+      {
+        "sha256": "1f3d4c617f1cee52b434961b4a87a7c770c94f98b2a67e29d636259efe66b556"
+      },
+      {
+        "sha256": "4c59cb75b7d23db6817fef69666c2be459b594fd0b30db8e7a8bdc22a01645fe"
+      },
+      {
+        "sha256": "04aec616744dc854b791ef0ce5fa706da88e5a5c33c6f92921305c8134a0ff07"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "1726d21caac6d74d9c44383fcc1a678e5cd119fd92f3831a4f31e1185135bba3"
+      },
+      {
+        "sha256": "e5bc036797fabfdbc85181e5953d8bd0250dfd77385ea789cfbb335c89dbf9f2"
+      },
+      {
+        "sha256": "93cb4bf837f54456b6373b6e3313075c843563087fa68b7f356ccf92bf26f4b1"
+      },
+      {
+        "sha256": "4665c4db50fd8792199bf51ada404484fae95dd371e340c0309aae0bcdef579c"
+      },
+      {
+        "sha256": "e199f0c1e365b630b06c9e2a2ca26e43147277bdd46cc0e753b0f552d868a207"
+      },
+      {
+        "sha256": "2e52dea8cfb3087f276784cf797bbde45aaa3f98938922409e81047ab882184d"
+      },
+      {
+        "sha256": "a41fe5c7f7cf8394c86dccf88d299818c701ae2ba61ca57d8a8a8a0cd235c9d1"
+      },
+      {
+        "sha256": "1d85c089e457630a9c632631fc43934702193243e47430b79eb56405f1134e5e"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "9k6a4bxe/index.html": [
+      {
+        "sha256": "8ec60061392576d2f960fa8d0a08b1d0cdcee5e46f1cf2758076e9d466ff1d85"
+      },
+      {
+        "sha256": "37e9528c7a1d56b7701bc51ba82ac2c7c439b9f11d02677b4461c168a9c44d25"
+      },
+      {
+        "sha256": "08845ada4399e0daa8609bb6b24bcfd9ff9366be297a5da46bc67cdcac6fddfe"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "2698d7839bb215a30589156171874f1b1af10dfa865c9f25c95db60da9fd0e54"
+      },
+      {
+        "sha256": "b54d3dfe498e794b783cc856d31485b235b8ed8f1932393795eaa7f211813eb2"
+      },
+      {
+        "sha256": "370ac6b33007c0cc00b62f6a428cb3034029f6264e414236827e9f50ac593bca"
+      },
+      {
+        "sha256": "59f7b311ec13056cebbffbc0169a69f9bac13a19722e1ab9370183988d38651f"
+      },
+      {
+        "sha256": "89cbe5a232f24cdd1b7f599d77f5ca956e9b1bf292862ce763deba7290382d16"
+      },
+      {
+        "sha256": "8879f9aaace7f95165a3723770036ef6b3b7e25514a425b3689487f3ed9d8b12"
+      },
+      {
+        "sha256": "04aec616744dc854b791ef0ce5fa706da88e5a5c33c6f92921305c8134a0ff07"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "1726d21caac6d74d9c44383fcc1a678e5cd119fd92f3831a4f31e1185135bba3"
+      },
+      {
+        "sha256": "e5bc036797fabfdbc85181e5953d8bd0250dfd77385ea789cfbb335c89dbf9f2"
+      },
+      {
+        "sha256": "dfa0206eac2eca25f41e1201ebf205265d980048a2d325204aa158006444d2ba"
+      },
+      {
+        "sha256": "2861daa9b4448e94721e8594f34eb6420fddff3235b2dacc9696564ab76624bc"
+      },
+      {
+        "sha256": "3137418b717a5399ccf5299232cba16ee4eee720c47b89426e7bc52bd790695e"
+      },
+      {
+        "sha256": "81cfd0016066dd9fbd5ffdd5438d0f98233a5275db24a3995daf1ed8ddcf9a33"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "e6bb2c7b750978002d15ae5779aea4860e51a9066b666bfb11563278f290972c"
+      },
+      {
+        "sha256": "6a0e759f6b372baa8e49356598ac71703c438573b6b1c414c5c669771b8cee5e"
+      },
+      {
+        "sha256": "8ddd67747e9c9bdd3d97624dd99b2371a93b2037a1d37b49cfbaf18266ef869e"
+      }
+    ],
+    "jbjdsuj7/index.html": [
+      {
+        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+      },
+      {
+        "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
+      },
+      {
+        "sha256": "1b5d8b052192ce0895128a5c7c0b99d63e6565dda5ceaf28ef68af2f1ff26b62"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "eb82b2b771aac78fa6c6bff13755cdb041214c7d331bb5be6228e1cee7fefdf8"
+      },
+      {
+        "sha256": "19956646b9323177cf98f9af048cebe2f5c334c5091ce6b4517926fbc4ef0b27"
+      },
+      {
+        "sha256": "b0594bc58e43b75c413b40170677bf7cca0b8cdcccb131fb423083ed9a38d42c"
+      },
+      {
+        "sha256": "cb0f661aa4f7395252a4d539f43bbf7ff323a44d2503e8c0823156569390b476"
+      },
+      {
+        "sha256": "885758e147d622ceaa1c5d381e31e66d31bc0a81111629b4d5c22ac2107740f3"
+      },
+      {
+        "sha256": "430f7925a1e281afc638bbb0477ea49e020ae926cff6384106c0173e8eb34e24"
+      },
+      {
+        "sha256": "4cbc03640771d9486bfb43003cf89ef2ece9f0295fda177c79a45c9b59157191"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "8d8c9f5bb23e676c3e1393d407f6a7f0e3d6a661e2f7911ec41e3af68f6f2ba1"
+      },
+      {
+        "sha256": "5819861ec3b864831928706bd76278c8bb4b3a779e0afc167c29e4d54d3a4429"
+      },
+      {
+        "sha256": "cbb73151005d0319a3d11f15e3dcea55cfea239289b80285501fa33defc3fc6f"
+      },
+      {
+        "sha256": "475954c68fcfd063da796ca032646116aa2df4c8e0f851e23ea884022b8ff20c"
+      },
+      {
+        "sha256": "c08b6b8775294fb8fbaff8ef960cf16972f6544bac8bc66bf163779f2d341688"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "f4dfed09a0210377bd223ed83c26ce3fc8872948728b626b1e097b1356bde303"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "t2n2eyyu/index.html": [
+      {
+        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+      },
+      {
+        "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
+      },
+      {
+        "sha256": "1b5d8b052192ce0895128a5c7c0b99d63e6565dda5ceaf28ef68af2f1ff26b62"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "fb44976bce67834d2448872ea7323b1379d361e23896f4c2edc206ec1c354307"
+      },
+      {
+        "sha256": "ad4ea97468fd7999dc653a5ec4007307425395d81f7bdc455764a8ef1f819426"
+      },
+      {
+        "sha256": "8102b9114ce58da88d21f0c19e91ecb77a3ebcf92bc76ae2a2774d01150eb9ce"
+      },
+      {
+        "sha256": "b0594bc58e43b75c413b40170677bf7cca0b8cdcccb131fb423083ed9a38d42c"
+      },
+      {
+        "sha256": "cb0f661aa4f7395252a4d539f43bbf7ff323a44d2503e8c0823156569390b476"
+      },
+      {
+        "sha256": "885758e147d622ceaa1c5d381e31e66d31bc0a81111629b4d5c22ac2107740f3"
+      },
+      {
+        "sha256": "430f7925a1e281afc638bbb0477ea49e020ae926cff6384106c0173e8eb34e24"
+      },
+      {
+        "sha256": "4cbc03640771d9486bfb43003cf89ef2ece9f0295fda177c79a45c9b59157191"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "3dcda3b23fc9de54e156b70c16cdcd7b1d9b867e8310debdb39e5e5072d43386"
+      },
+      {
+        "sha256": "f7b4c6b9a004f71bc816c9868355825f7413ecec1102d851864b95bfdc2dc4ea"
+      },
+      {
+        "sha256": "be7562ae15cbc9eda3d7ed241be3d19f6fa624e114cafb63bb9036ddf022bf55"
+      },
+      {
+        "sha256": "be82119daad63e44d0a86d5e11ee7ef2a66e50e048edcff5eb8dfd10bb7fbc06"
+      },
+      {
+        "sha256": "292b4c2645966578740a6acdb441c08781fdce8be77f2f51c0177e3a856899a2"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "np93vg0b/index.html": [
+      {
+        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+      },
+      {
+        "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
+      },
+      {
+        "sha256": "1b5d8b052192ce0895128a5c7c0b99d63e6565dda5ceaf28ef68af2f1ff26b62"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "e8e580533587370b166052cd162817c9ea2660522fc3fbc5b279562dbca2f8a0"
+      },
+      {
+        "sha256": "64f598f6072bcb8e77771b217562c3eebeae9bbe45161bd5e0947dc30c7e6bc4"
+      },
+      {
+        "sha256": "785c5d5c4d8b0c83531b813186cdebb2cb00d3aae54174d4df0f590512e52ec0"
+      },
+      {
+        "sha256": "b0594bc58e43b75c413b40170677bf7cca0b8cdcccb131fb423083ed9a38d42c"
+      },
+      {
+        "sha256": "cb0f661aa4f7395252a4d539f43bbf7ff323a44d2503e8c0823156569390b476"
+      },
+      {
+        "sha256": "885758e147d622ceaa1c5d381e31e66d31bc0a81111629b4d5c22ac2107740f3"
+      },
+      {
+        "sha256": "430f7925a1e281afc638bbb0477ea49e020ae926cff6384106c0173e8eb34e24"
+      },
+      {
+        "sha256": "4cbc03640771d9486bfb43003cf89ef2ece9f0295fda177c79a45c9b59157191"
+      },
+      {
+        "src": "/student-learning/class-entry/access.7dcf943efa56.js"
+      },
+      {
+        "src": "/student-learning/class-entry/dashboard.7c1db93d3b9b.js"
+      },
+      {
+        "sha256": "3dcda3b23fc9de54e156b70c16cdcd7b1d9b867e8310debdb39e5e5072d43386"
+      },
+      {
+        "sha256": "f7b4c6b9a004f71bc816c9868355825f7413ecec1102d851864b95bfdc2dc4ea"
+      },
+      {
+        "sha256": "bd2be0da7753d2e3d9ffe3f51c402cac777151b2e87aaa4742b9479606ee8504"
+      },
+      {
+        "sha256": "c44bbcaeb8ceaa40e0d79f84713f033d66a6f40c86b548fc03e6b88c89059efa"
+      },
+      {
+        "sha256": "ee09c860000ffe8c960fc561a5cf579e0ba42c9e7440fc8149c983b84d448357"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "47b61bc45467027589202f474f853204e84fd06c782c0308db3b7840eb67e76b"
+      }
+    ],
+    "6shx6heb/index.html": [
+      {
+        "sha256": "6881e2429e3d9dccd4df00c6df3a376cbf75f40de5bc2f9c44ee39f5e54a7b43"
+      },
+      {
+        "sha256": "28a33672f778375ce027029c57da216d7bf5cc4f8941ba31f5490e78076eab30"
+      },
+      {
+        "sha256": "54545eeb29bb213aeb215e61c3320ebc0d72b96f19560e8f0b411140ff84ee10"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "5e4f88517309caaa071b45b2cfb268772170d106f04053328c5f230126d5c97a"
+      },
+      {
+        "sha256": "70bc1567abb7e508b37803e5bd976cdeb1947c399dff706db0929b46fd5a220e"
+      },
+      {
+        "sha256": "765b9e80b97a402199c3f34561127e8a9dd8cd1648dde264a38e0c12d3758432"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.eab18d492b95.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.d322e344da4b.js"
+      },
+      {
+        "sha256": "16c96ca3943a3eacb09004cf990b8c277a2899bdeafdba45c3ecf880634060d7"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      }
+    ],
+    "qhaj55f2/index.html": [
+      {
+        "sha256": "6881e2429e3d9dccd4df00c6df3a376cbf75f40de5bc2f9c44ee39f5e54a7b43"
+      },
+      {
+        "sha256": "28a33672f778375ce027029c57da216d7bf5cc4f8941ba31f5490e78076eab30"
+      },
+      {
+        "sha256": "54545eeb29bb213aeb215e61c3320ebc0d72b96f19560e8f0b411140ff84ee10"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
+      },
+      {
+        "sha256": "8d7b3c6f16a95200a5bd559c852bfac30815af42db0567852a44e92396d76744"
+      },
+      {
+        "sha256": "70bc1567abb7e508b37803e5bd976cdeb1947c399dff706db0929b46fd5a220e"
+      },
+      {
+        "sha256": "765b9e80b97a402199c3f34561127e8a9dd8cd1648dde264a38e0c12d3758432"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.eab18d492b95.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.d322e344da4b.js"
+      },
+      {
+        "sha256": "b1dc54623bb54cabd31ca7cf0afa4fbc1601598876eda916c1ac2886b0853aeb"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      }
+    ],
+    "837f2c31/index.html": [
+      {
+        "sha256": "ecc2bf2c6ce843301c395b2563d6b9c9ecf072e7e7594b874a0f1875f0ef48e4"
+      },
+      {
+        "sha256": "7f7ba0a1ad51db78c7ecc5284e28c9aac03a05448b638c23f986b72490e6275b"
+      },
+      {
+        "sha256": "1820c4f9034f9d13bc33bce25f1122d3d5e3a1f61ae5a401701cf0c6514b05e2"
+      },
+      {
+        "sha256": "98c9dcfac9414a6f28e6a9887f8c8f9dd9f1a86a5e14fb8548235bf7c86828a5"
+      },
+      {
+        "sha256": "27529e7de79c5602767bf77f2d172a7d47aad13fff4ed2a8ee40b4e70b43f102"
+      },
+      {
+        "sha256": "6f79989fba6aee647a86ae4644bd4afd3135017b1aa0f105f287213e3100f6b4"
+      },
+      {
+        "sha256": "2b6e71cd3d02262e972d1442776d00c43962f988942789452fd0e0ee365be02b"
+      },
+      {
+        "src": "/student-learning/fighter10/access.21e8a4948962.js"
+      },
+      {
+        "src": "/student-learning/fighter10/dashboard.ad8f5bea71f1.js"
+      },
+      {
+        "sha256": "0c5130a4f9a01cf1131c7baa41304e18827fc01edf75caa35f49a0e06b92e499"
+      },
+      {
+        "sha256": "d7bc2bb5e53e48e16b164c6422ba5584eab7372ab230cbec605872eb8bb25a38"
+      },
+      {
+        "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
+      },
+      {
+        "sha256": "2c8919bdaa21ba9c02a321e48b77777a163624b0fca4c1b5ad55a4ab46a9243a"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "sha256": "60928e64c3db16f002506b616b055c5bb4a6450d2d77ceddb33b7e604fad7aea"
+      },
+      {
+        "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
+      },
+      {
+        "sha256": "936589b1c5671189ec464bdc4151c8c531cbf2637c834f158f78045b24932d85"
+      },
+      {
+        "sha256": "9138f687d7180a47fafc352a42b97a4323106822cb2727f45f56250638723984"
+      },
+      {
+        "sha256": "29eec676b66c76517bfc4b28e7c4ac382d5012b2c1b9d0007db69e905448351e"
+      },
+      {
+        "sha256": "2be29b5e650224a3c26f91b791d91629c463d644e28d12e1189daeb7033e266e"
+      },
+      {
+        "sha256": "fff4501c6c85c759c23b09d9d6954bb2e98d1343981db86809d6d9c6a363abf3"
+      }
+    ]
+  }
+}

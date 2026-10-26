@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "tag": "stable-20261026",
+  "format": "AES-256-GCM+gzip+JSON(base64 files)",
+  "magic": "DRS1",
+  "aad": "mstrangtrieueducation-droid/mstrangtrieueducation-droid.github.io/stable-20261026/backend-restore-v1",
+  "keySecret": "DASHBOARD_CORE_KEY",
+  "sha256": "597d21818473f5e858814df8cb11ecf1cca30787280c22a143c8df76f15babf2",
+  "files": 158,
+  "workers": 13,
+  "googleSources": 44,
+  "containsStudentDatabaseRows": false
+}

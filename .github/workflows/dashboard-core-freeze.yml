@@ -1,0 +1,89 @@
+name: Protect frozen dashboard core
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  frozen-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.github/workflows/dashboard-core-cloud.yml
+            /1t5tlkn7/index.html
+            /31wagboo/index.html
+            /3lu0698p/index.html
+            /63habmwz/index.html
+            /6shx6heb/index.html
+            /7rsn6kbh/index.html
+            /837f2c31/index.html
+            /9fpwzhnz/index.html
+            /9k6a4bxe/index.html
+            /bhg37bsz/index.html
+            /byogxkvy/index.html
+            /cecccjpg/index.html
+            /chaq17fk/index.html
+            /d5f9almb/index.html
+            /dgpu6c9h/index.html
+            /e73wgva4/index.html
+            /firegh4f/index.html
+            /gu159u7j/index.html
+            /hwz7zw86/index.html
+            /i8a0r77q/index.html
+            /iw6h6bmb/index.html
+            /jbjdsuj7/index.html
+            /juzwewi0/index.html
+            /l8tzmx20/index.html
+            /muqt11rj/index.html
+            /myude9i0/index.html
+            /np93vg0b/index.html
+            /odwhkat1/index.html
+            /p8qdzsoa/index.html
+            /p8w8wz4f/index.html
+            /qhaj55f2/index.html
+            /qo7alz0y/index.html
+            /r60hdc1i/index.html
+            /rge9fi0s/index.html
+            /student-learning/active-roster-v1.js
+            /student-learning/class-entry/access.7dcf943efa56.js
+            /student-learning/class-entry/dashboard.7c1db93d3b9b.js
+            /student-learning/fighter10/access.21e8a4948962.js
+            /student-learning/fighter10/dashboard.ad8f5bea71f1.js
+            /student-learning/fighter9/access.b50441118447.js
+            /student-learning/fighter9/dashboard.1c7b824bd6e3.js
+            /student-learning/kids-journey/pilot.4fcf30475fea.js
+            /student-learning/kids-journey/standard-native.e0c59c024a4b.js
+            /student-learning/kids-ta-entry/access.ca8dd5e6b12c.js
+            /student-learning/kids-ta-entry/access.eab18d492b95.js
+            /student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js
+            /student-learning/kids-ta-entry/dashboard.d322e344da4b.js
+            /student-learning/titi-games/dashboard.js
+            /system-core/check-freeze.mjs
+            /system-core/cloud-health.mjs
+            /system-core/cloud-run.mjs
+            /system-core/freeze-lock.json
+            /system-core/runtime-manifest.json
+            /system-core/runtime.enc
+            /system-restore/backend-restore-manifest.json
+            /system-restore/backend-restore.enc
+            /t2n2eyyu/index.html
+            /u1g9ay98/index.html
+            /u90k1f5e/index.html
+            /uee89ho9/index.html
+            /wfyjrm4m/index.html
+            /xcxhducu/index.html
+            /xpe6dd4j/index.html
+            /y31ibppw/index.html
+            /ywxrw9yp/index.html
+            /zredv9ef/index.html
+      - name: Verify against immutable stable baseline
+        shell: bash
+        run: |
+          git fetch --depth=1 origin refs/tags/stable-20261026:refs/tags/stable-20261026
+          git show stable-20261026:system-core/check-freeze.mjs > "$RUNNER_TEMP/check-freeze.mjs"
+          git show stable-20261026:system-core/freeze-lock.json > "$RUNNER_TEMP/freeze-lock.json"
+          git diff --exit-code stable-20261026 -- system-core/freeze-lock.json system-core/check-freeze.mjs .github/workflows/dashboard-core-freeze.yml
+          node "$RUNNER_TEMP/check-freeze.mjs" . "$RUNNER_TEMP/freeze-lock.json"
