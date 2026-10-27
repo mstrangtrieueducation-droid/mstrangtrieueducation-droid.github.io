@@ -1,0 +1,37 @@
+name: Dashboard dispatch keepalive
+on:
+  workflow_dispatch:
+    inputs:
+      window_minutes:
+        description: 'Controller window, 26 normally; 1 for the handoff acceptance test'
+        type: choice
+        options: ['26', '1']
+        default: '26'
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: dashboard-dispatch-keepalive
+  cancel-in-progress: false
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 34
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          sparse-checkout: dashboard-trigger
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Dispatch the frozen native workflow every five minutes
+        run: node dashboard-trigger/controller.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WINDOW_MINUTES: ${{ inputs.window_minutes || '26' }}
+      - name: Hand off to the next controller
+        if: always()
+        run: node dashboard-trigger/dispatch-next.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
