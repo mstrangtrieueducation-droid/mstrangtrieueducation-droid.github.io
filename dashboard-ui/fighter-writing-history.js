@@ -1,11 +1,12 @@
-/* Presentation only: keep completed native Academic Paragraph lessons in history. */
+/* Presentation only: remove the duplicate Schedule lesson view from Fighter work. */
 (() => {
   'use strict';
 
-  const completedStatus = 'Đã hoàn thành';
   let observedWork = null;
   let workObserver = null;
   let visibilityObserver = null;
+  let listObserver = null;
+  let programObserver = null;
   let scheduled = false;
   let rootObserver = null;
 
@@ -50,35 +51,35 @@
     scheduled = false;
     const work = document.querySelector('#f5-writing-work');
     const student = nativeStudent();
-    if (!work || !student || work.hidden) return;
+    if (!work || !student) return;
 
     workObserver?.disconnect();
-    decorateWritingTests(work, student);
-    workObserver?.observe(work, {childList: true, subtree: true});
-
-    const cards = [...work.children].filter(node => node.matches?.('.f5-writing-lesson[data-f5-writing]'));
-    const heading = work.querySelector(':scope > .f5-writing-heading');
-    if (heading) heading.hidden = cards.length === 0 && ![...work.children].some(node => node.matches?.('.f5-writing-card'));
-    const completed = cards.filter(card =>
-      student.assignments?.some(item =>
-        item.assignmentId === card.dataset.f5Writing && item.status === completedStatus));
-    if (!completed.length) return;
-
-    workObserver?.disconnect();
-    let history = [...work.children].find(node => node.matches?.('.f5-writing-completed-history'));
-    if (!history) {
-      history = document.createElement('details');
-      history.className = 'f5-writing-history f5-writing-completed-history';
-      const summary = document.createElement('summary');
-      const content = document.createElement('div');
-      history.append(summary, content);
-      work.append(history);
+    // The native #f5-list already renders these lessons, their original status,
+    // feedback and submitted files. The older parallel Schedule cards repeated
+    // the same sessions and added unnecessary "Xem buổi" history controls.
+    for (const card of work.querySelectorAll('.f5-writing-card:not(.f5-writing-lesson)')) {
+      if (card.parentElement !== work) work.append(card);
     }
-    const content = history.querySelector(':scope > div');
-    completed.forEach(card => content.append(card));
-    const total = content.querySelectorAll('.f5-writing-card').length;
-    history.querySelector(':scope > summary').textContent = `Xem ${total} buổi Đoạn văn học thuật đã hoàn thành`;
-    if (heading) heading.hidden = ![...work.children].some(node => node.matches?.('.f5-writing-card'));
+    work.querySelectorAll('.f5-writing-lesson, .f5-writing-history, .f5-writing-heading').forEach(node => node.remove());
+    decorateWritingTests(work, student);
+    const list = document.querySelector('#f5-list');
+    if (list?.parentElement === work.parentElement && work.previousElementSibling !== list) list.after(work);
+    const selected = document.querySelector('#f5-programs [data-f5-program="dvht"][aria-pressed="true"]');
+    const hasTest = !!work.querySelector('.f5-writing-card:not(.f5-writing-lesson)');
+    const show = !!selected && hasTest;
+    if (work.hidden === show) work.hidden = !show;
+    // A teacher-marked KT is not Web homework. Avoid a misleading empty Web
+    // list just above it; never change native counts or component statuses.
+    if (list && selected && hasTest) {
+      const hasNativeCards = !!list.querySelector('[data-f5-key]');
+      if (list.hidden !== !hasNativeCards) list.hidden = !hasNativeCards;
+      const count = document.querySelector('#f5-list-count');
+      if (count && count.hidden !== !hasNativeCards) count.hidden = !hasNativeCards;
+    } else {
+      if (list?.hidden) list.hidden = false;
+      const count = document.querySelector('#f5-list-count');
+      if (count?.hidden) count.hidden = false;
+    }
     workObserver?.observe(work, {childList: true, subtree: true});
   }
 
@@ -93,11 +94,23 @@
     if (!work || work === observedWork) return;
     workObserver?.disconnect();
     visibilityObserver?.disconnect();
+    listObserver?.disconnect();
+    programObserver?.disconnect();
     observedWork = work;
     workObserver = new MutationObserver(schedule);
     workObserver.observe(work, {childList: true, subtree: true});
     visibilityObserver = new MutationObserver(schedule);
     visibilityObserver.observe(work, {attributes: true, attributeFilter: ['hidden']});
+    const list = document.querySelector('#f5-list');
+    if (list) {
+      listObserver = new MutationObserver(schedule);
+      listObserver.observe(list, {childList: true, subtree: true});
+    }
+    const programs = document.querySelector('#f5-programs');
+    if (programs) {
+      programObserver = new MutationObserver(schedule);
+      programObserver.observe(programs, {childList: true, subtree: true});
+    }
     rootObserver?.disconnect();
     schedule();
   }
