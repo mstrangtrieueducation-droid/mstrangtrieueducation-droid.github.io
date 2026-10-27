@@ -8,8 +8,9 @@ export async function api(path, {method = 'GET', body, token = process.env.GH_TO
   let last;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const response = await fetch('https://api.github.com/repos/' + repository + path, {
-        method, headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json'},
+      const freshPath = method === 'GET' ? path + (path.includes('?') ? '&' : '?') + '_trigger_check=' + Date.now() : path;
+      const response = await fetch('https://api.github.com/repos/' + repository + freshPath, {
+        method, headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json', 'Cache-Control': 'no-cache'},
         ...(body ? {body: JSON.stringify(body)} : {}), signal: AbortSignal.timeout(20000)
       });
       if (!response.ok) throw Error('GITHUB_HTTP_' + response.status);
