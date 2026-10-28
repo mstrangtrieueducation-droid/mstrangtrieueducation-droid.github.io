@@ -35,7 +35,13 @@
     dialog.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>jump('#fp-note-'+b.dataset.note));dialog.querySelectorAll('[data-revision-note]').forEach(b=>b.onclick=()=>jump('#fp-revision-note-'+b.dataset.revisionNote));
     document.body.append(dialog);images(r);dialog.showModal();
   }
-  function render(){if(!owner||identity()!==owner)return;reviews.forEach(r=>{document.querySelectorAll('#assignment-list [data-assignment-id]').forEach(card=>{if(card.dataset.assignmentId!==r.assignmentCode)return;const dest=card.querySelector('.f9-inline-task-state');if(!dest||dest.querySelector('.fp-review-card'))return;const box=document.createElement('section');box.className='fp-review-card';box.innerHTML='<small>ĐOẠN VĂN HỌC THUẬT</small><h4>Nhận xét chung</h4><p>'+esc(r.overall)+'</p><button class="fp-btn">Mở bài chữa</button>';box.querySelector('button').onclick=()=>open(r);dest.append(box);});});}
+  function render(){if(!owner||identity()!==owner)return;reviews.forEach(r=>{
+    const destinations=new Set();
+    document.querySelectorAll('#assignment-list [data-assignment-id]').forEach(card=>{if(card.dataset.assignmentId===r.assignmentCode)destinations.add(card.querySelector('.f9-inline-task-state'));});
+    // Bind only to the exact assignment already rendered by the native detail view.
+    document.querySelectorAll('#f5-modal [data-f5-assignment]').forEach(row=>{if(row.dataset.f5Assignment===r.assignmentCode)destinations.add(row.closest('.f5-component')?.querySelector('.f5-feedback'));});
+    destinations.forEach(dest=>{if(!dest||Array.from(dest.querySelectorAll('.fp-review-card')).some(el=>el.dataset.reviewId===r.reviewId))return;const box=document.createElement('section');box.className='fp-review-card';box.dataset.reviewId=r.reviewId;box.innerHTML='<small>ĐOẠN VĂN HỌC THUẬT · BÀI VIẾT TRÊN LỚP</small><h4>Nhận xét chung</h4><p>'+esc(r.overall)+'</p><button class="fp-btn">Mở bài chữa</button>';box.querySelector('button').onclick=()=>open(r);dest.append(box);});
+  });}
   function loadAssets(){if(assetJob||!reviews.length||identity()!==owner)return assetJob||Promise.resolve();const e=epoch;assetJob=fighterApi.parent.request('paragraphAssets',false).then(data=>{if(e!==epoch||identity()!==owner)return;if(!valid(data)||!Array.isArray(data.assets))throw Error('scope');const next={};data.assets.forEach(a=>{if(!reviews.some(r=>r.reviewId===a.reviewId)||a.mime!=='image/jpeg'||!/^[A-Za-z0-9+/=]+$/.test(a.base64))throw Error('asset');(next[a.reviewId]||(next[a.reviewId]=[])).push(a);});assets=next;const r=reviews.find(v=>v.reviewId===dialog?.dataset.reviewId);if(r)images(r);}).catch(()=>{}).finally(()=>{if(e===epoch)assetJob=null;});return assetJob;}
   function start(){const id=identity();if(!id)return;if(owner&&owner!==id)clear();owner=id;if(job||loaded||failed)return;const e=epoch;job=fighterApi.parent.request('paragraphReviews',false).then(data=>{if(e!==epoch||identity()!==id)return;if(!valid(data)||!Array.isArray(data.reviews)||data.reviews.some(r=>key(r.studentName)!==id||r.className!==data.className))throw Error('scope');reviews=data.reviews;loaded=true;render();loadAssets();}).catch(()=>{if(e===epoch){failed=true;const host=document.querySelector('#assignment-list');if(host){const b=document.createElement('button');b.className='fp-btn fp-review-card';b.textContent='Tải lại nhận xét đoạn văn';b.onclick=()=>{b.remove();failed=false;start();};host.append(b);}}}).finally(()=>{if(e===epoch)job=null;});}
   // Wait for the profile to render; feedback never blocks opening the dashboard.
@@ -44,3 +50,4 @@
   window.addEventListener('fighter-parent-access',e=>{if(e.detail.status!=='authorized')clear();else if(document.querySelector('#assignment-list [data-assignment-id]'))start();});
   if(document.querySelector('#assignment-list [data-assignment-id]'))start();
 })();
+
