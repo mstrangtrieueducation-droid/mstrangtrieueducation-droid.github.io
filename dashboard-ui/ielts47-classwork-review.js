@@ -48,21 +48,33 @@ const CLASSWORK_TEMPLATE = "<!doctype html>\n<html lang=\"vi\">\n<head>\n  <meta
     const work = (async () => {
       const url = new URL(endpoint);
       Object.entries({api:'parent1', class:'IELTS 47', action, token:ieltsParentAccess.token, _:String(Date.now()), ...extra}).forEach(([k,v]) => url.searchParams.set(k,v));
-      const response = await fetch(url.href, {credentials:'omit', mode:'cors', cache:'no-store', referrerPolicy:'no-referrer', signal:AbortSignal.timeout(90000)});
-      if (!response.ok) throw Error('Connection');
+      const response = await fetch(url.href, {credentials:'omit', mode:'cors', cache:'no-store', referrerPolicy:'no-referrer', signal:AbortSignal.timeout(40000)});
+      if (!response.ok) throw Object.assign(Error('Connection'), {retryable:response.status===429||response.status>=500});
       const envelope = await response.json();
       if (!current() || epoch !== generation || identity !== id) throw Error('Session ended');
       if (envelope?.error === 'INVALID_LINK') {
         if (typeof ieltsParentLock_ === 'function') ieltsParentLock_('Liên kết này không còn hợp lệ. Vui lòng liên hệ cô để nhận link của em.');
         throw Error('Invalid link');
       }
+      if (!envelope?.ok && envelope?.error === 'SOURCE_UNAVAILABLE') throw Object.assign(Error('Source temporarily unavailable'),{retryable:true});
       const data = envelope?.data;
       if (!envelope?.ok || envelope.className !== 'IELTS 47' || envelope.action !== action ||
           data?.className !== 'IELTS 47' || data.parentName !== parentState.name ||
           data.parentRosterRevision !== parentState.revision || normalize(data.studentName) !== normalize(parentState.name)) throw Error('Identity mismatch');
       return data;
-    })().finally(() => { if (pending.get(key) === work) pending.delete(key); });
-    pending.set(key, work); return work;
+    });
+    const readOnce=work;
+    const retried=(async()=>{
+      for(let attempt=0;attempt<2;attempt++){
+        try{return await readOnce();}
+        catch(error){
+          if(attempt||!(error.retryable||error.name==='TypeError'||error.name==='TimeoutError'||error.name==='AbortError'))throw error;
+          await new Promise(resolve=>setTimeout(resolve,3000));
+          if(!current()||generation!==epoch||identity!==id)throw Error('Session ended');
+        }
+      }
+    })().finally(() => { if (pending.get(key) === retried) pending.delete(key); });
+    pending.set(key, retried); return retried;
   }
   function card(record, compact = false) {
     const box = el('section', undefined, 'cw47-card');
