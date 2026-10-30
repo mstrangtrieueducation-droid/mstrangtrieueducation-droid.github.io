@@ -12490,12 +12490,22 @@ function kidsJourneyNativeSync_(){
  const label=text(kidsApi.parent.label||(matches.length===1?matches[0].label:'')||alias).replace(/\s*\([^)]*\)\s*$/,'');
  const profile={...app.child,kidsJourneyV1:{classNumber:26,className:CLASS_NAME,alias,fullName:label,sourceAt}};
  const ready=api.update({profile,dashboard:app.data||{},practice:practiceRows(),serverNow:sourceAt,
-  nativeProgram:{sessions:sessions(),upcoming:scheduleRows().filter(row=>Number(row._end)>=sourceAt),schedule:scheduleRows(),status:statusMeta,isRetake:homeworkTaskIsRetake,lessonRecord:trackerLessonFor,
+  nativeProgram:{assessmentNotices:kidsExamNoticePresentation_(),sessions:sessions(),upcoming:scheduleRows().filter(row=>Number(row._end)>=sourceAt),schedule:scheduleRows(),status:statusMeta,isRetake:homeworkTaskIsRetake,lessonRecord:trackerLessonFor,
    files:f=>submissionEvidenceActionsHtml_(f,f.viewUrl||'')+submissionHistoryHtml(f.submissionAttempts,f.viewUrl||'',{compact:true,showSingle:true,fallbackScore:f.score,fallbackMaximum:f.maximum}),
    resultsHTML:$('#profilePanel').innerHTML,competitionHTML:$('#competitionPanel').innerHTML}});
  if(ready){kidsJourneyNativeMounted_=true;renderPendingWorkBanner();}
 }
 window.addEventListener('titi-dashboard-ready',kidsJourneyNativeSync_);
+// Presentation bridge: reuse native assessment selection, target binding and copy.
+function kidsExamNoticePresentation_(){
+ const rows=scheduleRows(),now=new Date(),seen=new Set();
+ return scheduleAssessmentCandidates(rows).filter(item=>assessmentAlertIsActive(item,rows,now))
+ .sort((a,b)=>assessmentAlertSortValue(a,rows)-assessmentAlertSortValue(b,rows))
+ .map(item=>{const event=assessmentTargetEvent(item,rows)||item._assessmentSource||item;
+ return {type:item.assessmentType,title:assessmentDisplayTitle(item),date:item.assessmentTargetDate||event.date||'',time:event.startTime||'',program:event.program||item.program||'',html:scheduleAssessmentAlert(item,rows)};})
+ .filter(n=>{const key=[n.type,n.date,n.program].join('|');if(seen.has(key))return false;seen.add(key);return true;});
+}
+
 /* NATIVE_KIDS_JOURNEY_STANDARD_V1_END */
 
 
@@ -28376,7 +28386,8 @@ window.addEventListener('mtt:confirmed-profile-fresh',function(event){
 
 
 
-<script src="/dashboard-ui/kids-video-actions-bound-20261030.js"></script><script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.932a1e1fcdbbfeee.js" defer></script>
+<script src="/dashboard-ui/kids-video-actions-bound-20261030.js"></script>
+<script src="/dashboard-ui/kids-exam-notices-20261030.js"></script><script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.932a1e1fcdbbfeee.js" defer></script>
 </body>
 
 
