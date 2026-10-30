@@ -5685,7 +5685,7 @@ root.FighterResultProgramPolicy={available};
  }
  root.FighterHomeworkGroups={build,units,manualUnits};
 })(globalThis);
-</script><script src="/dashboard-ui/fighter-manual-policy.js?v=20261030"></script>
+</script><script src="/dashboard-ui/fighter-manual-policy.js?v=20261030b"></script>
 <script id="dashboard-native-updates">/* Presentation-only notices from an already-authorized native dashboard model. */
 (function(root){
  'use strict';
@@ -5903,6 +5903,7 @@ function renderNativeNotices(student){
   records.push({id,kind:'result',at:P.dateTime(s.date||s.lessonDate||'')||0,label:[s.program,s.label].filter(Boolean).join(' · '),score,feedback:[s.comment,s.teacherNote].filter(Boolean).join('|')});
   noticeTargets.set(id,{type:'result'});
  }
+ FighterHomeworkGroups.retireNoticeHistory([dashboard.className,student.name,location.hash].join('|'),current.homeworkGroups.retiredRecordIds);
  root.NativeUpdatesBell.render({profileKey:[dashboard.className,student.name,location.hash].join('|'),records,onSelect:event=>{
   const target=noticeTargets.get(event.recordId);if(!target)return;
   if(target.type==='result'){resultView='personal';activate('results');render();return;}

@@ -67,7 +67,8 @@
     const manualRows = result.manualRows.filter(keep).map(projectRow);
     const buckets = { todo: [], overdue: [], fix: [], done: [] };
     for (const row of rows) buckets[row.status].push(row);
-    return { ...result, rows, manualRows, buckets, pending: [...buckets.todo, ...buckets.overdue].map(row => row.entry) };
+    const retiredRecordIds = [...result.rows, ...result.manualRows].filter(row => !keep(row)).map(row => 'task:' + row.key);
+    return { ...result, rows, manualRows, buckets, retiredRecordIds, pending: [...buckets.todo, ...buckets.overdue].map(row => row.entry) };
   }
   function visibleModel(model) {
     const selected = scope(model), statusByUnit = new Map(
@@ -85,5 +86,22 @@
   groups.build = build;
   groups.visibleModel = visibleModel;
   groups.formula = value => String(value || '').replace(/; phần tra cứu được đánh dấu Đủ vẫn tính hoàn thành\./u, '.');
+  const cleanedProfiles = new Set();
+  groups.retireNoticeHistory = function (profileKey, recordIds) {
+    if (!profileKey || !recordIds?.length || cleanedProfiles.has(profileKey)) return;
+    const retired = new Set(recordIds);
+    let hash = 2166136261;
+    for (const character of String(profileKey)) { hash ^= character.charCodeAt(0); hash = Math.imul(hash, 16777619); }
+    const key = 'mtt_native_updates_v1_' + (hash >>> 0).toString(36);
+    try {
+      const ledger = JSON.parse(root.localStorage.getItem(key) || 'null');
+      if (ledger?.version === 1) {
+        ledger.events = (ledger.events || []).filter(event => !retired.has(event.recordId));
+        for (const id of retired) if (ledger.seen) delete ledger.seen[id];
+        root.localStorage.setItem(key, JSON.stringify(ledger));
+      }
+    } catch (_) { /* Notice storage is optional; no submission data is changed. */ }
+    cleanedProfiles.add(profileKey);
+  };
   groups.retiredManualPolicy = 1;
 })(globalThis);
