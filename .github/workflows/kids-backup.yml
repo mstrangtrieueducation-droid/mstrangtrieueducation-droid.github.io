@@ -1,7 +1,7 @@
 name: KIDS encrypted fallback
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 */4 * * *'
   workflow_dispatch:
 permissions:
   contents: write
