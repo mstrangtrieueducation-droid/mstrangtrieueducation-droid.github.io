@@ -7425,7 +7425,7 @@ root.FighterResultProgramPolicy={available};
  }
  root.FighterHomeworkGroups={build,units,manualUnits};
 })(globalThis);
-</script>
+</script><script src="/dashboard-ui/fighter-manual-policy.js?v=20261030"></script>
 <script id="dashboard-native-updates">/* Presentation-only notices from an already-authorized native dashboard model. */
 (function(root){
  'use strict';
@@ -8113,7 +8113,7 @@ function results(){if(!current)return;const available=FighterResultProgramPolicy
 
 
 
- const own=roster.find(r=>r.name===activeStudentName_),leaders=roster.filter(r=>r.rank).slice(0,3);update(q('#f5-ranking'),'<p class="f5-muted">Chương trình đã học: '+E(available.programs.map(([key,name])=>displayProgram(name)).join(' · '))+'</p><div class="f5-podium">'+leaders.map((r,i)=>'<article><span>'+['🥇','🥈','🥉'][i]+' Hạng '+r.rank+'</span><h3>'+E(displayName(r.name))+'</h3><p>'+E(r.englishName)+'</p><strong>'+num(r.average)+'<small> / 10</small></strong></article>').join('')+'</div>'+(own?'<div class="f5-standing"><strong>📍 Vị trí hiện tại của con: '+(own.rank?'Hạng '+own.rank:'Chưa có điểm')+'</strong><p>Điểm TB '+num(own.average)+' / 10 · Hoàn thành '+own.completed+'/'+own.total+' đầu việc.</p><p>'+(current.homeworkGroups.pending.length>0?'Con ưu tiên hoàn thành '+current.homeworkGroups.pending.length+' đầu mục cần làm hoặc quá hạn để củng cố kiến thức.':'Con duy trì việc nộp đủ bài và ôn các Unit có điểm cần cải thiện nhé.')+'</p></div>':'')+'<div class="f5-formula"><strong>Cách tính điểm xếp hạng</strong><p>'+E(available.keys.has('listening')?ranking.formula:String(ranking.formula||'').replace(' và từng bài Listening đã có điểm',''))+'</p></div><div class="f5-table-wrap"><table><thead><tr><th>Hạng</th><th>Học viên</th><th>Điểm TB tích lũy</th><th>Tiến độ bài tập</th><th>Đúng hạn / đã nộp</th></tr></thead><tbody>'+roster.map(r=>'<tr class="'+(r.name===activeStudentName_?'is-own':'')+'"><td>'+E(r.rank?'#'+r.rank:'—')+'</td><td><strong>'+E(displayName(r.name))+'</strong>'+(r.name===activeStudentName_?' <b>(Con)</b>':'')+'<br><small>'+E(r.englishName)+'</small></td><td>'+num(r.average)+' / 10<br><small>'+r.scoreCount+' bài có điểm</small></td><td>'+r.completed+'/'+r.total+' bài'+(r.total?' ('+Math.round(r.completed*100/r.total)+'%)':'')+'</td><td>'+r.onTime+'/'+r.submitted+'</td></tr>').join('')+'</tbody></table></div>');
+ const own=roster.find(r=>r.name===activeStudentName_),leaders=roster.filter(r=>r.rank).slice(0,3);update(q('#f5-ranking'),'<p class="f5-muted">Chương trình đã học: '+E(available.programs.map(([key,name])=>displayProgram(name)).join(' · '))+'</p><div class="f5-podium">'+leaders.map((r,i)=>'<article><span>'+['🥇','🥈','🥉'][i]+' Hạng '+r.rank+'</span><h3>'+E(displayName(r.name))+'</h3><p>'+E(r.englishName)+'</p><strong>'+num(r.average)+'<small> / 10</small></strong></article>').join('')+'</div>'+(own?'<div class="f5-standing"><strong>📍 Vị trí hiện tại của con: '+(own.rank?'Hạng '+own.rank:'Chưa có điểm')+'</strong><p>Điểm TB '+num(own.average)+' / 10 · Hoàn thành '+own.completed+'/'+own.total+' đầu việc.</p><p>'+(current.homeworkGroups.pending.length>0?'Con ưu tiên hoàn thành '+current.homeworkGroups.pending.length+' đầu mục cần làm hoặc quá hạn để củng cố kiến thức.':'Con duy trì việc nộp đủ bài và ôn các Unit có điểm cần cải thiện nhé.')+'</p></div>':'')+'<div class="f5-formula"><strong>Cách tính điểm xếp hạng</strong><p>'+E(available.keys.has('listening')?FighterHomeworkGroups.formula(ranking.formula):String(FighterHomeworkGroups.formula(ranking.formula)||'').replace(' và từng bài Listening đã có điểm',''))+'</p></div><div class="f5-table-wrap"><table><thead><tr><th>Hạng</th><th>Học viên</th><th>Điểm TB tích lũy</th><th>Tiến độ bài tập</th><th>Đúng hạn / đã nộp</th></tr></thead><tbody>'+roster.map(r=>'<tr class="'+(r.name===activeStudentName_?'is-own':'')+'"><td>'+E(r.rank?'#'+r.rank:'—')+'</td><td><strong>'+E(displayName(r.name))+'</strong>'+(r.name===activeStudentName_?' <b>(Con)</b>':'')+'<br><small>'+E(r.englishName)+'</small></td><td>'+num(r.average)+' / 10<br><small>'+r.scoreCount+' bài có điểm</small></td><td>'+r.completed+'/'+r.total+' bài'+(r.total?' ('+Math.round(r.completed*100/r.total)+'%)':'')+'</td><td>'+r.onTime+'/'+r.submitted+'</td></tr>').join('')+'</tbody></table></div>');
 
 
 
@@ -8216,7 +8216,7 @@ function render(){if(!fighterApi.parent.authorized||!fighterParentPainted_||!das
 
 
 
- current=P.model(student,dashboard,fighterPendingSelfStudyItemsV15_||[]);current.homeworkGroups=FighterHomeworkGroups.build(current,fighterNativePendingEntriesV15_(student));current.manualUnits=FighterHomeworkGroups.manualUnits(current.homeworkGroups,'all');for(const r of current.homeworkGroups.rows)if(!current.units.some(u=>u.key===r.unit.key))current.units.push(r.unit);const b=buckets(current.units,programFilter),missing=b.todo.length+b.overdue.length;
+ current=P.model(student,dashboard,fighterPendingSelfStudyItemsV15_||[]);current.homeworkGroups=FighterHomeworkGroups.build(current,fighterNativePendingEntriesV15_(student));current.manualUnits=FighterHomeworkGroups.manualUnits(current.homeworkGroups,'all');current=FighterHomeworkGroups.visibleModel(current);for(const r of current.homeworkGroups.rows)if(!current.units.some(u=>u.key===r.unit.key))current.units.push(r.unit);const b=buckets(current.units,programFilter),missing=b.todo.length+b.overdue.length;
 
 
 
