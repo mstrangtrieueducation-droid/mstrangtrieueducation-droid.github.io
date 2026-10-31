@@ -65,7 +65,10 @@
     const components = (unit.components || []).filter(component => !selected.hidden.has(component));
     const warning = component => component.teacherNote || component.label + ': ' + component.statusText;
     const removedWarnings = new Set(removed.map(warning)), keptWarnings = new Set(components.map(warning));
-    components.forEach(component => relabelPractice(unit, component));
+    components.forEach(component => {
+      relabelPractice(unit, component);
+      if (component.teacherNote) component.teacherNote = uniqueLines(component.teacherNote);
+    });
     const redoGuidance = practiceRedoGuidance(unit, removed, selected);
     const guidance = (unit.guidance || []).filter(task => !selected.hiddenTasks.has(task) && !retiredTask(unit, task));
     return {
@@ -73,8 +76,20 @@
       components,
       guidance: [...redoGuidance, ...guidance],
       ...(redoGuidance.length ? { guidanceHeading: REDO_HEADING } : {}),
-      warnings: (unit.warnings || []).filter(value => !removedWarnings.has(value) || keptWarnings.has(value))
+      warnings: [...new Set((unit.warnings || []).filter(value => !removedWarnings.has(value) || keptWarnings.has(value)).map(uniqueLines))]
     };
+  }
+  // The tracker note and the feedback extracted from the same cell are joined natively, so the
+  // teacher's comment appeared twice; show each distinct line once.
+  function uniqueLines(text) {
+    const seen = new Set();
+    return String(text).split('\n').filter(line => {
+      const key = line.trim();
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).join('\n').replace(/\n{3,}/g, '\n\n').trim();
   }
   function build(model, nativeEntries) {
     const selected = scope(model), result = nativeBuild(model, nativeEntries);
