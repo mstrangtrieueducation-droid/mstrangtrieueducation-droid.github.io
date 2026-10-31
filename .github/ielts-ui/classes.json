@@ -51,7 +51,7 @@
       "className": "IELTS 48",
       "baseUrl": "https://ielts48-private-pilot.trangnga2024.workers.dev/data/",
       "endpoints": [
-        "https://script.google.com/macros/s/AKfycbzPBNjRrdK6eDL8CQUpbPFvPIJDlQnsyTwGPAOz9WeeoXWxM16rZRrGEEvv4SdR7Gwauw/exec",
+        "https://script.google.com/macros/s/AKfycbyEtjxRQpIFsgZGzTHd0QpwvvjDhjQaPTpCeAdIPYEIuCElhgerif_1WcBh-iXOD3FV/exec",
         "https://script.google.com/macros/s/AKfycbyCWtfi2hHWGut8qks2CKTa3q8QsUmoovYuAh83wORlMIhmaELYpWy6u5f36x36YTZWow/exec"
       ],
       "capabilities": {
