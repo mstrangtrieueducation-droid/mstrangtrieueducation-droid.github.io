@@ -42,6 +42,7 @@
     }
     return { hidden, hiddenTasks, hiddenEntries };
   }
+  const REDO_HEADING = 'Hướng dẫn làm lại · cô kiểm tra trực tiếp trên lớp';
   // Untracked Practice Test parts are labelled by their task title, which the detail view repeats.
   const practiceLabel = { submission: '📤 Bài nộp', redo: '🌐 Làm lại web' };
   function relabelPractice(unit, component) {
@@ -71,7 +72,7 @@
       ...unit,
       components,
       guidance: [...redoGuidance, ...guidance],
-      ...(redoGuidance.length ? { guidanceHeading: 'Hướng dẫn làm lại · cô kiểm tra trực tiếp trên lớp' } : {}),
+      ...(redoGuidance.length ? { guidanceHeading: REDO_HEADING } : {}),
       warnings: (unit.warnings || []).filter(value => !removedWarnings.has(value) || keptWarnings.has(value))
     };
   }
@@ -105,7 +106,73 @@
     const guidanceOnly = projectedUnits.filter(unit => !unit.components.length && unit.programKey === 'pt' && unit.guidance.length);
     const guidanceUnits = [...(model.guidanceUnits || []).map(unit => projectUnit(unit, selected)), ...guidanceOnly]
       .filter(unit => unit.guidance.length);
+    teacherChecked = teacherCheckedItems(units, guidanceUnits, model.manualUnits || []);
+    root.setTimeout(renderTeacherChecked, 0);
     return { ...model, units, guidanceUnits };
+  }
+
+  // Teacher-checked work is not counted as homework to submit, but pupils must still see it
+  // prominently in every status filter and in today's plan.
+  let teacherChecked = [];
+  const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  function todaySerial() {
+    const bangkok = new Date(Date.now() + 7 * 3600000);
+    return Date.UTC(bangkok.getUTCFullYear(), bangkok.getUTCMonth(), bangkok.getUTCDate());
+  }
+  function taskDue(unit, task) {
+    const assignment = (unit.assignments || []).find(a => (a.tasks || []).includes(task));
+    return assignment?.dueDate || '';
+  }
+  function teacherCheckedItems(units, guidanceUnits, manualUnits) {
+    const today = todaySerial(), items = [], parse = root.FighterCourseParser.dateTime;
+    const current = due => !due || parse(due) <= 0 || parse(due) >= today;
+    for (const unit of [...units, ...guidanceUnits]) {
+      if (unit.guidanceHeading !== REDO_HEADING) continue;
+      const tasks = (unit.guidance || []).filter(task => current(taskDue(unit, task)));
+      if (tasks.length) items.push({ key: unit.key, title: unit.title, program: unit.program, due: taskDue(unit, tasks[0]), parts: tasks.map(t => t.title), state: 'Mang sổ đến lớp' });
+    }
+    for (const unit of manualUnits) {
+      const pending = (unit.components || []).filter(c => c.status === 'manual' || c.status === 'fix');
+      if (!pending.length) continue;
+      const fix = pending.some(c => c.status === 'fix');
+      items.push({ key: unit.key, title: unit.title, program: unit.program, due: pending.map(c => c.dueDate).find(Boolean) || '', parts: pending.map(c => c.label), state: fix ? 'Cần bổ sung' : 'Chờ cô ghi nhận' });
+    }
+    return items;
+  }
+  function ensureStyle() {
+    if (document.getElementById('f5-teacher-checked-style')) return;
+    const style = document.createElement('style');
+    style.id = 'f5-teacher-checked-style';
+    style.textContent = '.f5-teacher-checked{margin:12px 0 14px;padding:14px 16px;border:1px solid #e3b45c;border-left:5px solid #d9901a;border-radius:10px;background:#fff8e8;color:#5c3d07}' +
+      '.f5-teacher-checked h3{margin:0 0 4px;font-size:15px;color:#7a4b00}.f5-teacher-checked>p{margin:0 0 10px;font-size:12.5px;line-height:1.55}' +
+      '.f5-teacher-checked button{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;padding:9px 11px;border:1px solid #ecd3a3;border-radius:8px;background:#fff;color:#3d2a07;font:inherit;font-size:13px;text-align:left;cursor:pointer}' +
+      '.f5-teacher-checked button b{flex:none;font-size:12px;color:#a35f00}.f5-teacher-checked small{display:block;color:#7d6640;font-size:11.5px;margin-top:2px}' +
+      '.f5-priority-row.f5-teacher-row{border-color:#e3b45c;background:#fff8e8}';
+    document.head.append(style);
+  }
+  function row(item, extraClass) {
+    const due = item.due ? ' · Hạn ' + escape(item.due) : '';
+    return '<button type="button" class="' + extraClass + '" data-f5-open="' + escape(item.key) + '"><span>' + escape(item.title) +
+      '<small>' + escape(item.parts.join(' · ')) + due + '</small></span><b>' + escape(item.state) + ' →</b></button>';
+  }
+  function renderTeacherChecked() {
+    const count = document.getElementById('f5-list-count');
+    if (!count) return;
+    ensureStyle();
+    let panel = document.getElementById('f5-teacher-checked');
+    if (!teacherChecked.length) { panel?.remove(); } else {
+      if (!panel) { panel = document.createElement('section'); panel.id = 'f5-teacher-checked'; panel.className = 'f5-teacher-checked'; }
+      if (panel.nextElementSibling !== count) count.before(panel);
+      const html = '<h3>📌 Cô kiểm tra trực tiếp trên lớp · ' + teacherChecked.length + ' bài</h3>' +
+        '<p>Không cần nộp Form. Con hoàn thành đúng hướng dẫn và mang sổ đến lớp để cô kiểm tra.</p>' +
+        teacherChecked.map(item => row(item, 'f5-teacher-item')).join('');
+      if (panel.innerHTML !== html) panel.innerHTML = html;
+    }
+    const priority = document.getElementById('f5-priority');
+    if (priority) {
+      priority.querySelectorAll('.f5-teacher-row').forEach(node => node.remove());
+      if (teacherChecked.length) priority.insertAdjacentHTML('beforeend', teacherChecked.map(item => row(item, 'f5-priority-row f5-teacher-row')).join(''));
+    }
   }
   groups.build = build;
   groups.visibleModel = visibleModel;
