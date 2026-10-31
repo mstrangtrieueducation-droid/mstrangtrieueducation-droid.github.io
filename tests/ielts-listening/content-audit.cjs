@@ -10,6 +10,9 @@ const manifestPath = path.join(__dirname, 'visual-manifest.json');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 const audioManifestPath = path.join(__dirname, 'audio-manifest.json');
 const audioManifest = JSON.parse(fs.readFileSync(audioManifestPath, 'utf8'));
+const audioWorkerBase = 'https://ielts-audio.s--rang--rieu.workers.dev/ielts-nghe/';
+const audioMirror = process.env.IELTS_AUDIO_MIRROR || '';
+let workerAudioCount = 0;
 const sourceReview = JSON.parse(fs.readFileSync(path.join(__dirname,'source-review-20261022.json'),'utf8'));
 assert.equal(sourceReview.sections.length,120);
 assert.equal(new Set(sourceReview.sections.map(s=>`${s.test}:${s.section}`)).size,120);
@@ -156,7 +159,8 @@ for (const name of pages) {
     assert(!summary.sections.has(sectionNumber), `Test ${test}: duplicated section ${sectionNumber}`);
     summary.sections.add(sectionNumber);
     const audio = String(section.audio || '');
-    const isFileAudio = /^\.\/audio\/test-\d+\/section-\d+\.(?:mp3|m4a)$/.test(audio);
+    const isWorkerAudio = audio.startsWith(audioWorkerBase) && /^audio\/test-\d+\/section-\d+\.mp3$/.test(audio.slice(audioWorkerBase.length));
+    const isFileAudio = isWorkerAudio || /^\.\/audio\/test-\d+\/section-\d+\.(?:mp3|m4a)$/.test(audio);
     const isEmbeddedAudio = /^data:audio\/(?:ogg|mpeg|mp4);base64,/.test(audio) && audio.length > 100_000;
     assert(isFileAudio || isEmbeddedAudio, `${name}: invalid audio source for section ${sectionNumber}`);
     const audioKey = isEmbeddedAudio ? crypto.createHash('sha256').update(audio).digest('hex') : audio;
@@ -174,6 +178,13 @@ for (const name of pages) {
     if (isEmbeddedAudio) {
       audioBytes = Buffer.from(audio.slice(audio.indexOf(',') + 1), 'base64');
       audioRef = 'embedded';
+    } else if (isWorkerAudio) {
+      // MP3s are served by the ielts-audio Worker, not the repo; bytes are verified when a local mirror is given.
+      audioRef = audio.slice(audioWorkerBase.length);
+      const mirrorFile = audioMirror && path.join(audioMirror, 'ielts-nghe', audioRef);
+      if (mirrorFile) assert(fs.existsSync(mirrorFile), `Test ${test} Section ${sectionNumber}: audio missing from mirror`);
+      audioBytes = mirrorFile ? fs.readFileSync(mirrorFile) : null;
+      workerAudioCount += 1;
     } else {
       audioRef = audio.slice(2);
       const audioFile = path.join(siteDir, audioRef);
@@ -181,12 +192,14 @@ for (const name of pages) {
       audioBytes = fs.readFileSync(audioFile);
     }
     assert.equal(review.audio, audioRef, `Test ${test} Section ${sectionNumber}: audio reference changed`);
+    if (audioBytes) {
     assert.equal(review.bytes, audioBytes.length, `Test ${test} Section ${sectionNumber}: audio byte count changed`);
     assert.equal(
       review.sha256,
       crypto.createHash('sha256').update(audioBytes).digest('hex'),
       `Test ${test} Section ${sectionNumber}: audio changed without semantic review`,
     );
+    }
     assert(review.durationSeconds > 30, `Test ${test} Section ${sectionNumber}: reviewed duration is invalid`);
     assert.equal(review.asrReview.matchedTest, test, `Test ${test} Section ${sectionNumber}: ASR matched another test`);
     assert.equal(review.asrReview.matchedSection, sectionNumber, `Test ${test} Section ${sectionNumber}: ASR matched another section`);
@@ -257,5 +270,5 @@ for (const item of manifest.assets) {
 assert.deepEqual([...actualAssetRefs.keys()].sort(), [...expectedRefs.keys()].sort(), 'Visual manifest and page references differ');
 
 console.log(`PASS visual audit: ${manifest.assets.length} verified source assets, ${manifest.structuredFlows.length} reviewed structured flows, 0 hand-drawn spatial diagrams`);
-console.log(`PASS audio audit: ${reviewedAudio.size} section audios locked to transcript-matched SHA-256 files`);
+console.log(`PASS audio audit: ${reviewedAudio.size} section audios locked to transcript-matched SHA-256 files (${workerAudioCount} served by the ielts-audio Worker, ${audioMirror ? "bytes verified against mirror" : "set IELTS_AUDIO_MIRROR to verify their bytes"})`);
 console.log(`PASS full audit: ${tests.size} tests, ${sectionCount} sections, ${questionCount} questions, ${dictationGapCount} dictation gaps`);
