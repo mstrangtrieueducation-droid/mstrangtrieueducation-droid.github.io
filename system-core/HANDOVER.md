@@ -2,7 +2,9 @@
 
 Requested restore tag: **stable-20261026**. Acceptance completed on 27 October 2026 (Asia/Bangkok). Scope: 28 KIDS, 8 IELTS, 6 FIGHTER, TA6 and TA7.
 
-Current CI baseline: **stable-20261031**, taken on 31 October 2026 with the owner's explicit approval. It locks the same files as stable-20261026 at their state after the owner's 26–31 October dashboard changes (Kids exam notices and video history, Fighter writing reviews, IELTS token guard and sealed Writing/leaderboard data). stable-20261026 remains intact as the earlier restore point; its backend restore package (`system-restore/`) is unchanged and does not include the 31 October IELTS Worker token guard, whose pre-change Worker code is backed up privately outside the repository.
+Current CI baseline: **stable-20261031b**, taken the same evening after the owner authorized (“sửa lõi nhận bài”) the lesson-entry Back fix: each tab now remembers its 12 most recent dashboard-issued lesson passes in all four entry modules. Copied links in other tabs or browsers stay blocked.
+
+Previous CI baseline: **stable-20261031**, taken on 31 October 2026 with the owner's explicit approval. It locks the same files as stable-20261026 at their state after the owner's 26–31 October dashboard changes (Kids exam notices and video history, Fighter writing reviews, IELTS token guard and sealed Writing/leaderboard data). stable-20261026 remains intact as the earlier restore point; its backend restore package (`system-restore/`) is unchanged and does not include the 31 October IELTS Worker token guard, whose pre-change Worker code is backed up privately outside the repository.
 
 ## Operations without this computer
 
