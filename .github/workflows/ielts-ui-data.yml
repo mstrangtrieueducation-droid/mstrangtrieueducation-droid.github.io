@@ -17,6 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         id: checkout
       - name: Update academic summaries from prepared edge data
+        env:
+          IELTS_UI_PARENT_ROSTER: ${{ secrets.IELTS_UI_PARENT_ROSTER }}
         run: node .github/ielts-ui/refresh-academic.mjs
       - name: Prepare existing Writing reviews in the background
         env:

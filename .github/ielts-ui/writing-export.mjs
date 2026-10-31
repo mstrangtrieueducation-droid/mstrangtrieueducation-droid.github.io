@@ -1,5 +1,7 @@
 // Background preparation only. Parent browsers read saved JSON and never run this exporter.
 import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';
+// Classes whose edge Worker requires ?t=<token> (IELTS_TOKEN_GUARD_V2); others must keep plain URLs.
+const tokenGuarded=new Set([49]);
 const folder=path.dirname(fileURLToPath(import.meta.url)),local=process.argv.includes('--local'),retryWarnings=process.argv.includes('--retry-warnings'),only=Number(process.argv.find(a=>a.startsWith('--class='))?.split('=')[1]||process.env.IELTS_UI_CLASS||0);
 const config=JSON.parse(fs.readFileSync(local?folder+'/private/inventory.json':folder+'/classes.json')).classes;
 const secret=local?null:JSON.parse(process.env.IELTS_UI_PARENT_ROSTER||'null');if(!local&&!Array.isArray(secret))throw Error('PRIVATE_ROSTER_REQUIRED');
@@ -16,7 +18,7 @@ for(const c of classes){const out=local?folder+'/candidate/'+c.route+'/data/writ
  }
  await pool(roster,pupilWorkers,async p=>{try{let old;const dest=out+'/'+p.hash+'.json';try{old=JSON.parse(fs.readFileSync(dest));}catch(_){}
   if(local&&old?.name===p.name&&old.className===c.className&&!old.sourceWarnings?.length&&Date.now()-Date.parse(old.capturedAt)<3600000){reports.push({class:c.number,hash:p.hash,ok:true,reused:true});console.log(JSON.stringify({class:c.number,completed:++completed,total:roster.length,reused:true}));return;}
-  let packet;if(local)packet=JSON.parse(fs.readFileSync(folder+'/private/profiles/'+c.number+'/'+p.hash+'.json'));else{const r=await fetch(c.baseUrl+p.hash+'.json',{signal:AbortSignal.timeout(30000)});if(r.status===410){reports.push({class:c.number,hash:p.hash,ok:true,revoked:true});return;}if(!r.ok)throw Error('PREPARED_PROFILE_HTTP_'+r.status);packet=await r.json();}
+  let packet;if(local)packet=JSON.parse(fs.readFileSync(folder+'/private/profiles/'+c.number+'/'+p.hash+'.json'));else{const r=await fetch(c.baseUrl+p.hash+'.json'+(tokenGuarded.has(c.number)?'?t='+encodeURIComponent(p.token):''),{signal:AbortSignal.timeout(30000)});if(r.status===410){reports.push({class:c.number,hash:p.hash,ok:true,revoked:true});return;}if(!r.ok)throw Error('PREPARED_PROFILE_HTTP_'+r.status);packet=await r.json();}
   if(packet.name!==p.name||packet.className!==c.className)throw Error('PREPARED_IDENTITY');
   const actions={},versions={},assets={},sourceWarnings=[];
   const previous=k=>old?.name===p.name&&old.className===c.className&&old.actions?.[k]&&!old.actions[k].staticUnavailable&&(!old.actions[k].staticAsset||fs.existsSync(out+'/'+old.actions[k].staticAsset))?old.actions[k]:null;
