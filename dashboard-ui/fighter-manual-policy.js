@@ -42,15 +42,36 @@
     }
     return { hidden, hiddenTasks, hiddenEntries };
   }
+  // Untracked Practice Test parts are labelled by their task title, which the detail view repeats.
+  const practiceLabel = { submission: '📤 Bài nộp', redo: '🌐 Làm lại web' };
+  function relabelPractice(unit, component) {
+    const only = component.tasks?.length === 1 ? component.tasks[0].task : null;
+    if (unit.programKey === 'pt' && only && component.label === only.title && practiceLabel[component.role]) {
+      component.label = practiceLabel[component.role];
+    }
+  }
+  // Teacher-checked Practice Test redo notebooks are not submissions, but their instructions stay visible.
+  function practiceRedoGuidance(unit, removed, selected) {
+    if (unit.programKey !== 'pt') return [];
+    const tasks = new Set(removed.flatMap(component => (component.tasks || []).map(entry => entry.task)));
+    for (const assignment of unit.assignments || []) {
+      for (const task of assignment.tasks || []) if (selected.hiddenTasks.has(task) || retiredTask(unit, task)) tasks.add(task);
+    }
+    return [...tasks].filter(Boolean);
+  }
   function projectUnit(unit, selected) {
     const removed = (unit.components || []).filter(component => selected.hidden.has(component));
     const components = (unit.components || []).filter(component => !selected.hidden.has(component));
     const warning = component => component.teacherNote || component.label + ': ' + component.statusText;
     const removedWarnings = new Set(removed.map(warning)), keptWarnings = new Set(components.map(warning));
+    components.forEach(component => relabelPractice(unit, component));
+    const redoGuidance = practiceRedoGuidance(unit, removed, selected);
+    const guidance = (unit.guidance || []).filter(task => !selected.hiddenTasks.has(task) && !retiredTask(unit, task));
     return {
       ...unit,
       components,
-      guidance: (unit.guidance || []).filter(task => !selected.hiddenTasks.has(task) && !retiredTask(unit, task)),
+      guidance: [...redoGuidance, ...guidance],
+      ...(redoGuidance.length ? { guidanceHeading: 'Hướng dẫn làm lại · cô kiểm tra trực tiếp trên lớp' } : {}),
       warnings: (unit.warnings || []).filter(value => !removedWarnings.has(value) || keptWarnings.has(value))
     };
   }
@@ -74,12 +95,15 @@
     const selected = scope(model), statusByUnit = new Map(
       groups.units(model.homeworkGroups || build(model, []), 'all', 'all').map(unit => [unit.key, unit.status])
     );
-    const units = (model.units || []).map(unit => {
+    const projectedUnits = (model.units || []).map(unit => {
       const projected = projectUnit(unit, selected);
       if (statusByUnit.has(unit.key)) projected.status = statusByUnit.get(unit.key);
       return projected;
-    }).filter(unit => unit.components.length);
-    const guidanceUnits = (model.guidanceUnits || []).map(unit => projectUnit(unit, selected))
+    });
+    const units = projectedUnits.filter(unit => unit.components.length);
+    // A Practice Test whose only part is a teacher-checked notebook still shows its instructions.
+    const guidanceOnly = projectedUnits.filter(unit => !unit.components.length && unit.programKey === 'pt' && unit.guidance.length);
+    const guidanceUnits = [...(model.guidanceUnits || []).map(unit => projectUnit(unit, selected)), ...guidanceOnly]
       .filter(unit => unit.guidance.length);
     return { ...model, units, guidanceUnits };
   }
