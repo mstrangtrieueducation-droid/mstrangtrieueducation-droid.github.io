@@ -17,6 +17,10 @@
   // A click on a verified dashboard grants only this browsing session.
   // URL parameters and old shared localStorage records are never entry proofs.
   const STORE='mtt-lesson-session-entry-v3:'+MARK, TTL=43200000;
+  // ENTRY_RECENT_V1: this tab's recent dashboard passes, so Back to an earlier lesson still opens.
+  const RECENT=STORE+':recent';
+  function recent(){try{const list=JSON.parse(root.sessionStorage.getItem(RECENT)||'[]');return Array.isArray(list)?list.filter(x=>typeof x==='string'):[]}catch(_){return []}}
+  function remember(pass){try{const list=recent().filter(x=>x!==pass);list.push(pass);root.sessionStorage.setItem(RECENT,JSON.stringify(list.slice(-12)))}catch(_){}}
   function profileHash(value){
     try{const text=String(value||'').replace(/^#/,''),p=new URLSearchParams(text),hash=(p.has('p')?p.get('p'):text).split(/[?&#]/,1)[0];return /^[A-Za-z0-9_-]{16,128}$/.test(hash)?hash:null}catch(_){return null}
   }
@@ -33,6 +37,7 @@
     const k=key(value);if(!k)throw Error('INVALID_ENTRY');
     const pass=JSON.stringify({marker:MARK,key:k,at:Date.now()});let stored=false;
     try{root.sessionStorage.setItem(STORE,pass);stored=root.sessionStorage.getItem(STORE)===pass}catch(_){}
+    remember(pass);
     try{root.name=pass;stored=stored||root.name===pass}catch(_){}
     if(!stored)throw Error('ENTRY_SESSION_UNAVAILABLE');
     return pass;
@@ -41,6 +46,7 @@
     const k=key(value);if(!k)return false;
     try{if(valid(root.name,k))return true}catch(_){}
     try{if(valid(root.sessionStorage.getItem(STORE),k))return true}catch(_){}
+    if(recent().some(raw=>valid(raw,k)))return true;
     return false;
   }
 
