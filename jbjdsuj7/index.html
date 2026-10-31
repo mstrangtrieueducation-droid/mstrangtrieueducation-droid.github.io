@@ -46,7 +46,7 @@
 
 
 
-<head>
+<head><script src="/dashboard-ui/ielts-sealed-v1.js"></script>
 
 
 <script data-core-profile-policy="2">/* CONFIRMED_PROFILE_CLIENT_V2: validated profile fallback, scoped by token hash. */
@@ -7190,7 +7190,7 @@ const boundStudyButtons=new WeakSet();
 function bind(host){root.Ielts50Experience.bind(host);host.querySelectorAll('[data-study-week]').forEach(b=>{if(boundStudyButtons.has(b))return;boundStudyButtons.add(b);b.addEventListener('click',()=>{const v=Number(b.dataset.studyWeek);weekOffset=v===0?0:weekOffset+v;planner();});});host.querySelectorAll('[data-study-open]').forEach(b=>{if(boundStudyButtons.has(b))return;boundStudyButtons.add(b);b.addEventListener('click',()=>options.activate(b.dataset.studyOpen));});}
 
 
-async function refreshSummary(){try{const r=await fetch('./data/academic-leaderboard.json',{cache:'no-cache',signal:AbortSignal.timeout(7000)});if(!r.ok)throw Error('SUMMARY_UNAVAILABLE');const data=await r.json();if(data.schemaVersion!==1||data.className!=='IELTS 50'||!Array.isArray(data.entries))throw Error('INVALID_SUMMARY');const changed=JSON.stringify(data)!==JSON.stringify(summary);summary=data;loadFailed=false;if(changed&&current().active==='leaderboard')leaderboard();if(changed&&current().active==='overview')options.preserve(()=>options.activate('overview'));}catch(_){loadFailed=true;if(current().active==='leaderboard'&&!summary)leaderboard();}}
+async function refreshSummary(){try{const r=await fetch('./data/academic-leaderboard.json',{cache:'no-cache',signal:AbortSignal.timeout(7000)});if(!r.ok)throw Error('SUMMARY_UNAVAILABLE');const data=await window.IeltsSealedV1.open(await r.json());if(data.schemaVersion!==1||data.className!=='IELTS 50'||!Array.isArray(data.entries))throw Error('INVALID_SUMMARY');const changed=JSON.stringify(data)!==JSON.stringify(summary);summary=data;loadFailed=false;if(changed&&current().active==='leaderboard')leaderboard();if(changed&&current().active==='overview')options.preserve(()=>options.activate('overview'));}catch(_){loadFailed=true;if(current().active==='leaderboard'&&!summary)leaderboard();}}
 
 
 function render(tab){if(tab==='planner'){planner();return true;}if(tab==='leaderboard'){leaderboard();return true;}flushDeferred();return false;}
@@ -7450,7 +7450,7 @@ const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>'
 const key=(a,e={})=>a+'|'+JSON.stringify(Object.fromEntries(Object.entries(e).sort(([a],[b])=>a.localeCompare(b))));
 
 
-async function load(){const token=new URLSearchParams(location.hash.slice(1)).get('p');if(!/^[\w-]{22}$/.test(token||''))throw Error('INVALID_LINK');const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');const r=await fetch('./data/writing/'+hash+'.json',{cache:'no-cache'});if(!r.ok)throw Error('WRITING_CACHE_UNAVAILABLE');const p=await r.json();if(p.className!=='IELTS 50'||!p.actions)throw Error('INVALID_WRITING_CACHE');return p;}
+async function load(){const token=new URLSearchParams(location.hash.slice(1)).get('p');if(!/^[\w-]{22}$/.test(token||''))throw Error('INVALID_LINK');const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join('');const r=await fetch('./data/writing/'+hash+'.json',{cache:'no-cache'});if(!r.ok)throw Error('WRITING_CACHE_UNAVAILABLE');const p=await window.IeltsSealedV1.open(await r.json());if(p.className!=='IELTS 50'||!p.actions)throw Error('INVALID_WRITING_CACHE');return p;}
 
 
 let evidenceIdentity='',evidenceBusy=false,evidenceNext=0;
@@ -7504,7 +7504,7 @@ function install(o){opts=o;root.IeltsSubmissionStatus.configure(()=>opts.getStat
  o.access.request=async function(action,force,extra){if(['writing','classwork_index','classwork_review','classwork_source','writing_assessment','writing_assessment_source'].includes(action)){
 
 
-  const p=cache||await ready,s=o.getState().student;if(s&&p.name!==s.name)throw Error('WRITING_CACHE_IDENTITY');let value=p.actions[key(action,extra||{})];if(!value||value.staticUnavailable)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');if(value.staticAsset){const r=await fetch('./data/writing/'+value.staticAsset,{cache:'force-cache'});if(!r.ok)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');value=await r.json();}return structuredClone(value);
+  const p=cache||await ready,s=o.getState().student;if(s&&p.name!==s.name)throw Error('WRITING_CACHE_IDENTITY');let value=p.actions[key(action,extra||{})];if(!value||value.staticUnavailable)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');if(value.staticAsset){const r=await fetch('./data/writing/'+value.staticAsset,{cache:'force-cache'});if(!r.ok)throw Error('Bài chữa đang được đồng bộ. Em vui lòng xem lại sau.');value=await window.IeltsSealedV1.open(await r.json());}return structuredClone(value);
 
 
  }return request.call(this,action,force,extra);};
