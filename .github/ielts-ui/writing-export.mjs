@@ -1,7 +1,7 @@
 // Background preparation only. Parent browsers read saved JSON and never run this exporter.
 import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';
 // Classes whose edge Worker requires ?t=<token> (IELTS_TOKEN_GUARD_V2); others must keep plain URLs.
-const tokenGuarded=new Set([49]);
+const tokenGuarded=new Set([45,46,47,48,49,50,51,52]);
 const folder=path.dirname(fileURLToPath(import.meta.url)),local=process.argv.includes('--local'),retryWarnings=process.argv.includes('--retry-warnings'),only=Number(process.argv.find(a=>a.startsWith('--class='))?.split('=')[1]||process.env.IELTS_UI_CLASS||0);
 const config=JSON.parse(fs.readFileSync(local?folder+'/private/inventory.json':folder+'/classes.json')).classes;
 const secret=local?null:JSON.parse(process.env.IELTS_UI_PARENT_ROSTER||'null');if(!local&&!Array.isArray(secret))throw Error('PRIVATE_ROSTER_REQUIRED');
