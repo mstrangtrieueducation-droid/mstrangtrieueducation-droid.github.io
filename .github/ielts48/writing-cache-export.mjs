@@ -1,3 +1,6 @@
+// Retired 2026-10-31: IELTS 48 uses the shared .github/ielts-ui exporters, which seal pupil data (IELTS_SEALED_V1).
+// This script wrote plaintext pupil data to the public repo; do not re-enable it.
+throw Error('RETIRED_USE_IELTS_UI_EXPORTERS');
 import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';
 const local=process.argv.includes('--local'),base=local?new URL('public/writing/',import.meta.url).pathname.replace(/^\/(C:)/,'$1'):path.resolve('e73wgva4/data/writing');fs.mkdirSync(decodeURI(base),{recursive:true});const out=decodeURI(base);
 const allRoster=local?JSON.parse(fs.readFileSync(new URL('private/inventory.json',import.meta.url))).profiles:JSON.parse(process.env.IELTS48_PARENT_ROSTER||'null');const roster=process.env.IELTS48_ONLY?allRoster.filter(p=>p.name===process.env.IELTS48_ONLY):allRoster;if(!Array.isArray(roster)||!roster.length)throw Error('ROSTER_SECRET_REQUIRED');

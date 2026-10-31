@@ -1,3 +1,6 @@
+// Retired 2026-10-31: IELTS 48 uses the shared .github/ielts-ui exporters, which seal pupil data (IELTS_SEALED_V1).
+// This script wrote plaintext pupil data to the public repo; do not re-enable it.
+throw Error('RETIRED_USE_IELTS_UI_EXPORTERS');
 import fs from 'node:fs';import {execFileSync} from 'node:child_process';
 const paths=execFileSync('git',['status','--porcelain','--untracked-files=all','--','e73wgva4/data/writing'],{encoding:'utf8'}).split('\n').filter(Boolean).map(line=>line.slice(3)).filter(p=>!p.endsWith('export-report.json'));
 if(!paths.length){console.log('Prepared Writing unchanged');process.exit(0);}

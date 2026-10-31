@@ -1,3 +1,6 @@
+// Retired 2026-10-31: IELTS 48 uses the shared .github/ielts-ui exporters, which seal pupil data (IELTS_SEALED_V1).
+// This script wrote plaintext pupil data to the public repo; do not re-enable it.
+throw Error('RETIRED_USE_IELTS_UI_EXPORTERS');
 // Reads only the already-prepared edge packets. Never calls Google or grading APIs.
 import fs from 'node:fs';
 import path from 'node:path';
