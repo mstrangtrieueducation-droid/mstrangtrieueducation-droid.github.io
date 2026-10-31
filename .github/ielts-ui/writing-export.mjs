@@ -1,5 +1,5 @@
 // Background preparation only. Parent browsers read saved JSON and never run this exporter.
-import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';import{sealForPupil,openForPupil,isSealed}from'./sealed.mjs';
+import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';import{sealForPupil,openForPupil,isSealed}from'./sealed.mjs';import{retainFinalNotebookFeedback}from'./writing-retention.mjs';
 // Classes whose edge Worker requires ?t=<token> (IELTS_TOKEN_GUARD_V2); others must keep plain URLs.
 const tokenGuarded=new Set([45,46,47,48,49,50,51,52]);
 const folder=path.dirname(fileURLToPath(import.meta.url)),local=process.argv.includes('--local'),retryWarnings=process.argv.includes('--retry-warnings'),only=Number(process.argv.find(a=>a.startsWith('--class='))?.split('=')[1]||process.env.IELTS_UI_CLASS||0);
@@ -26,6 +26,7 @@ for(const c of classes){const out=local?folder+'/candidate/'+c.route+'/data/writ
   async function metadata(action,enabled){if(!enabled)return empty(action);const saved=previous(key(action));if(retryWarnings&&saved&&!old.sourceWarnings?.some(w=>w.action===action))return saved;try{return await call(p,action);}catch(e){if(e.message.endsWith('_INVALID_REQUEST'))return {...empty(action),sourceCapability:'not-supported'};sourceWarnings.push({action,error:e.message});return saved||{staticUnavailable:true};}}
   const capabilities=c.capabilities||{writing:true,classwork:true,assessment:true};
   [actions[key('writing')],actions[key('classwork_index')]]=await Promise.all([metadata('writing',capabilities.writing),metadata('classwork_index',capabilities.classwork)]);
+  if(capabilities.writing){let saved=previous(key('writing'));if(saved?.staticAsset){try{saved=openForPupil(p.token,JSON.parse(fs.readFileSync(out+'/'+saved.staticAsset)));}catch(_){saved=null;}}actions[key('writing')]=retainFinalNotebookFeedback(actions[key('writing')],saved);}
   const jobs=[];for(const r of actions[key('classwork_index')].reviews||[])for(const[action,version]of[['classwork_review',r.hash],['classwork_source',r.sourceHash]])jobs.push({action,extra:{reviewKey:r.key,reviewHash:version},version});
   const descriptors=new Map((capabilities.assessment?packet.actions.profile?.student?.assessmentResults||[]:[]).flatMap(r=>r.components||[]).map(c=>c.writingAssessment).filter(d=>d?.available).map(d=>[JSON.stringify([d.assessmentKey,d.attempt,d.paper]),d]));
   for(const d of descriptors.values())for(const action of['writing_assessment','writing_assessment_source'])jobs.push({action,extra:{assessment_key:d.assessmentKey,attempt:String(d.attempt),paper:d.paper},version:d.payloadSha256});
