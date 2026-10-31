@@ -55,7 +55,7 @@ jobs:
             /student-learning/fighter9/access.b50441118447.js
             /student-learning/fighter9/dashboard.1c7b824bd6e3.js
             /student-learning/kids-journey/pilot.4fcf30475fea.js
-            /student-learning/kids-journey/standard-native.e0c59c024a4b.js
+            /student-learning/kids-journey/standard-native.932a1e1fcdbbfeee.js
             /student-learning/kids-ta-entry/access.ca8dd5e6b12c.js
             /student-learning/kids-ta-entry/access.eab18d492b95.js
             /student-learning/kids-ta-entry/dashboard.b4aeb22aa175.js
@@ -82,8 +82,8 @@ jobs:
       - name: Verify against immutable stable baseline
         shell: bash
         run: |
-          git fetch --depth=1 origin refs/tags/stable-20261026:refs/tags/stable-20261026
-          git show stable-20261026:system-core/check-freeze.mjs > "$RUNNER_TEMP/check-freeze.mjs"
-          git show stable-20261026:system-core/freeze-lock.json > "$RUNNER_TEMP/freeze-lock.json"
-          git diff --exit-code stable-20261026 -- system-core/freeze-lock.json system-core/check-freeze.mjs .github/workflows/dashboard-core-freeze.yml
+          git fetch --depth=1 origin refs/tags/stable-20261031:refs/tags/stable-20261031
+          git show stable-20261031:system-core/check-freeze.mjs > "$RUNNER_TEMP/check-freeze.mjs"
+          git show stable-20261031:system-core/freeze-lock.json > "$RUNNER_TEMP/freeze-lock.json"
+          git diff --exit-code stable-20261031 -- system-core/freeze-lock.json system-core/check-freeze.mjs .github/workflows/dashboard-core-freeze.yml
           node "$RUNNER_TEMP/check-freeze.mjs" . "$RUNNER_TEMP/freeze-lock.json"

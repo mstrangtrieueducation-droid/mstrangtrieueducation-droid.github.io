@@ -2,6 +2,8 @@
 
 Requested restore tag: **stable-20261026**. Acceptance completed on 27 October 2026 (Asia/Bangkok). Scope: 28 KIDS, 8 IELTS, 6 FIGHTER, TA6 and TA7.
 
+Current CI baseline: **stable-20261031**, taken on 31 October 2026 with the owner's explicit approval. It locks the same files as stable-20261026 at their state after the owner's 26–31 October dashboard changes (Kids exam notices and video history, Fighter writing reviews, IELTS token guard and sealed Writing/leaderboard data). stable-20261026 remains intact as the earlier restore point; its backend restore package (`system-restore/`) is unchanged and does not include the 31 October IELTS Worker token guard, whose pre-change Worker code is backed up privately outside the repository.
+
 ## Operations without this computer
 
 The 13 existing Cloudflare receivers retain native receipt intake, per-row isolation, positive-history preservation and the central one-minute rotating catch-up. Direct Google Sheets readers use primary and backup service accounts. The existing Google-hosted full-model exporters remain cloud services.
