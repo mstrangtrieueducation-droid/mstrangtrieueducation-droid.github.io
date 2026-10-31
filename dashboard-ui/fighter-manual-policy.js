@@ -17,7 +17,11 @@
       const columns = new Set();
       for (const component of unit.components || []) {
         const tasks = component.tasks || [];
-        const retired = vocab(unit) && component.role === 'preparation' ||
+        // An empty Practice Test notebook column with no Schedule task or deadline is a retired
+        // teacher-checked column (e.g. for pupils who joined after the test was set).
+        const untrackedNotebook = unit.programKey === 'pt' && component.role === 'submission' &&
+          !tasks.length && !component.raw && !component.dueDate;
+        const retired = vocab(unit) && component.role === 'preparation' || untrackedNotebook ||
           tasks.length > 0 && tasks.every(entry => retiredTask(unit, entry.task, entry.state));
         if (!retired) continue;
         hidden.add(component);
