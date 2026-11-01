@@ -17,11 +17,10 @@
       const columns = new Set();
       for (const component of unit.components || []) {
         const tasks = component.tasks || [];
-        // An empty Practice Test notebook column with no Schedule task or deadline is a retired
-        // teacher-checked column (e.g. for pupils who joined after the test was set).
-        const untrackedNotebook = unit.programKey === 'pt' && component.role === 'submission' &&
-          !tasks.length && !component.raw && !component.dueDate;
-        const retired = vocab(unit) && component.role === 'preparation' || untrackedNotebook ||
+        // Homework is assigned by the Schedule. A tracker column with no Schedule task and nothing
+        // recorded in it has not been assigned; recorded history (any non-empty cell) stays visible.
+        const unassigned = !tasks.length && !component.raw;
+        const retired = vocab(unit) && component.role === 'preparation' || unassigned ||
           tasks.length > 0 && tasks.every(entry => retiredTask(unit, entry.task, entry.state));
         if (!retired) continue;
         hidden.add(component);
