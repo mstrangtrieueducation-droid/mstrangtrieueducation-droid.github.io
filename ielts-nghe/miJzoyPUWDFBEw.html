@@ -109,7 +109,7 @@ function setGroup(key,value,box,max){
 function speak(word){speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(word);utterance.lang="en-GB";speechSynthesis.speak(utterance)}
 function sectionAudioUrl(){
   const raw=String(section().audio||"").trim();if(!raw)return "";
-  try{const url=new URL(raw,window.location.href);return url.origin===window.location.origin&&/\.(?:mp3|m4a)$/i.test(url.pathname)?url.href:""}catch{return ""}
+  try{const url=new URL(raw,window.location.href);return (url.origin===window.location.origin||url.origin==="https://ielts-audio.s--rang--rieu.workers.dev")&&/\.(?:mp3|m4a)$/i.test(url.pathname)?url.href:""}catch{return ""}
 }
 function formatAudioDuration(seconds){
   if(!Number.isFinite(seconds)||seconds<=0)return "";
