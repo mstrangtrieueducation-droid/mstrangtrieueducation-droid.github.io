@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "tag": "stable-20261031b",
-  "sourceCommit": "ac418cc021b89758fbef827b61d75d637c9289ba",
+  "tag": "stable-20261101",
+  "sourceCommit": "6791cab037a5ec6b6f1dead7354d75e2551e504a",
   "policy": "Only explicit user instruction: sá»­a lÃµi nháº­n bÃ i permits changing this frozen baseline. UI/CSS uses dashboard-ui/.",
   "classes": 44,
   "assets": {
@@ -2668,7 +2668,7 @@
         "sha256": "a41fe5c7f7cf8394c86dccf88d299818c701ae2ba61ca57d8a8a8a0cd235c9d1"
       },
       {
-        "sha256": "1d85c089e457630a9c632631fc43934702193243e47430b79eb56405f1134e5e"
+        "sha256": "99f9e3be0e603325bf242efd76f5fa3fd581b81fa31c5b738703222ecaf6f818"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
