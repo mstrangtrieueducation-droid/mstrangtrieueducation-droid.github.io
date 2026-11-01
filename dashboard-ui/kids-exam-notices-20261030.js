@@ -24,5 +24,9 @@
  @keyframes ken-soft{0%,75%,100%{transform:translateY(0)}82%{transform:translateY(-2px)}90%{transform:translateY(0)}}
  @media(max-width:600px){.ken-card{display:grid;grid-template-columns:30px minmax(0,1fr) auto;padding:12px 11px;gap:9px}.ken-icon{width:30px;height:34px;font-size:20px}.ken-copy strong{font-size:14px}.ken-copy small{font-size:10px}.ken-date{font-size:12px}.ken-side{width:auto;display:grid;justify-items:end;gap:8px;font-size:10px}.ken-count{font-size:9px;padding:4px 5px}}
  @media(prefers-reduced-motion:reduce){.ken-count{animation:none}}
+
+ /* Dialog shell matches the KIDS detail dialogs: close button in the corner, focus ring for keyboards only. */
+ .ken-dialog{width:min(720px,calc(100vw - 24px));border-radius:22px}.ken-dialog header{padding:22px 26px 18px}.ken-dialog header>div{flex:1;min-width:0}.ken-dialog header small{font-weight:700;text-transform:uppercase}.ken-dialog h2{font-size:21px}.ken-dialog header button{background:#e9eef5;font-size:20px}.ken-dialog button:focus{outline:none}.ken-dialog button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}.ken-body{padding:20px 26px}.ken-dialog footer{padding:14px 26px 18px}.ken-dialog footer button{min-height:40px;padding:9px 18px;border-radius:11px;font-size:13.5px}
+ @media(max-width:600px){.ken-dialog header,.ken-body{padding:16px}.ken-dialog footer{padding:12px 16px}.ken-dialog footer button{width:100%}}
  `;D.head.append(style);
 })(window);
