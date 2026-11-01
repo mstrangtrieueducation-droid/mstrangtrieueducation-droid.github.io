@@ -12,3 +12,21 @@
 .fa-legend{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}.fa-legend span{font-size:12px;font-weight:750;padding:5px 9px;border-radius:6px;color:var(--fa-ink);background:var(--fa-tint);border-left:3px solid var(--fa-accent)}
 
 .fa-section details{margin:12px 0}.fa-review-card{margin-top:16px}.fa-images img{display:block}
+
+/* Score + teacher comment lead the KT card; "new" is highlighted until the review is opened. */
+.fa-review-card.fa-hero{display:flex;gap:18px;align-items:flex-start;margin:14px 0 4px;padding:16px 18px;border:1px solid #d9c48f;border-radius:14px;background:linear-gradient(135deg,#fffaf0,#fff3d9);line-height:1.6}
+.fa-review-card.fa-hero.is-new{border:2px solid #c48a26;box-shadow:0 0 0 4px #f4dfaa66,0 8px 22px #9a6a1e26}
+.fa-hero-score{flex:0 0 auto;display:grid;justify-items:center;min-width:96px;padding:12px 10px;border-radius:12px;background:#143a60;color:#fff;text-align:center}
+.fa-hero-score small{font-size:10px;letter-spacing:.14em;color:#d6e4f1;font-weight:800}
+.fa-hero-score strong{font-size:34px;line-height:1.05;font-weight:800;color:#f6d98f}
+.fa-hero-score span{font-size:13px;color:#d6e4f1}
+.fa-hero-copy{min-width:0;flex:1}
+.fa-hero-copy h4{margin:6px 0 4px;color:#153d65;font-size:16px}
+.fa-hero-copy p{margin:4px 0;font-size:14px;color:#21405f;white-space:pre-line}
+.fa-flag{display:inline-block;padding:3px 10px;border-radius:99px;background:#e9f1f8;color:#164975;font-size:11px;font-weight:800;letter-spacing:.04em}
+.fa-hero.is-new .fa-flag{background:#ae3841;color:#fff;animation:fa-pulse 2.4s ease-in-out 3}
+.fa-hero .fa-btn{margin-top:10px}
+.fa-pill-badge{display:inline-block;margin-left:7px;padding:2px 8px;border-radius:99px;background:#ae3841;color:#fff;font-size:11px;font-weight:800;line-height:1.5;vertical-align:1px}
+@keyframes fa-pulse{0%,100%{box-shadow:0 0 0 0 #ae384100}50%{box-shadow:0 0 0 6px #ae384133}}
+@media(max-width:600px){.fa-review-card.fa-hero{flex-direction:column;gap:12px;padding:14px}.fa-hero-score{display:flex;align-items:baseline;gap:6px;min-width:0}.fa-hero-score strong{font-size:28px}}
+@media(prefers-reduced-motion:reduce){.fa-hero.is-new .fa-flag{animation:none}}
