@@ -75,10 +75,39 @@
    api.slArranged=true;
   }
  }
+ // The native warning keeps its own text and numbers. Only attributes are added here (the native renderer
+ // rewrites the box contents), and CSS turns them into the number tile and the "next task" line.
+ const ALERTS=[
+  {box:'[id$="-important"]',list:'#panel-homework .master-list',card:'article.master-card',pending:'.needs,.overdue',title:'.master-title',date:'.master-card-text p',total:'.compact-count-main',late:'.compact-count-late'},
+  {box:'#f5-alert',list:'#f5-list',card:'article.f5-unit',pending:'.todo,.overdue,.fix',title:'h3',date:'.f5-dates',total:'strong',late:null}
+ ];
+ function setAttr(el,name,value){if(value==null){if(el.hasAttribute(name))el.removeAttribute(name);}else if(el.getAttribute(name)!==value)el.setAttribute(name,value);}
+ function nextTask(spec){
+  const card=[...D.querySelectorAll(spec.list+'>'+spec.card)].find(c=>!c.hidden&&c.matches(spec.pending));
+  if(!card)return null;
+  const title=card.querySelector(spec.title)?.textContent.trim().replace(/\s+/g,' ').replace(/\s*↗$/,'');
+  const at=dueAt(card.querySelector(spec.date)?.textContent);
+  if(!title)return null;
+  if(!Number.isFinite(at))return 'Tiếp theo: '+title;
+  const days=Math.round((at-today())/DAY);
+  return 'Tiếp theo: '+title+' · '+(days>1?'còn '+days+' ngày':days===1?'hạn ngày mai':days===0?'hạn hôm nay':'quá hạn '+(-days)+' ngày');
+ }
+ function decorateAlerts(){
+  for(const spec of ALERTS)for(const box of D.querySelectorAll(spec.box)){
+   const total=box.querySelector(spec.total)?.textContent.match(/\d+/)?.[0];
+   if(!total){setAttr(box,'data-sl-alert',null);continue;}
+   const lateText=spec.late?box.querySelector(spec.late)?.textContent:box.textContent.match(/(\d+)\s*quá hạn/)?.[0];
+   const late=+(String(lateText||'').match(/\d+/)?.[0]||0);
+   setAttr(box,'data-sl-alert',late>0?'late':'todo');
+   setAttr(box,'data-sl-count',total);
+   const next=nextTask(spec);if(next)setAttr(box,'data-sl-next',next);
+  }
+ }
  function paint(){
   queued=false;
   wrapStableViews();
   arrangeAll();
+  decorateAlerts();
   if(!dockDone)dockDone=foldDock();
  }
  function schedule(){if(!queued){queued=true;root.requestAnimationFrame(paint);}}
@@ -106,6 +135,31 @@
  :is(.master-card,.f5-unit)[data-sl-skill="test"]{border-left-color:#0f766e!important}
  :is(.master-card,.f5-unit)[data-sl-skill="other"]{border-left-color:#94a3b8!important}
  .master-list>.master-card{margin:0 0 8px!important}
+ /* The warning as a mission bar: number tile, native sentence, next task, gold action. */
+ :is([id$="-important"],#f5-alert)[data-sl-alert]{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;column-gap:16px;row-gap:2px;align-items:center;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;padding:14px 18px!important;border:0!important;border-radius:16px!important;background:linear-gradient(105deg,#0b2a4a,#123d66)!important;color:#fff!important;box-shadow:0 10px 26px #0b2a4a2e}
+ :is([id$="-important"],#f5-alert)[data-sl-alert]::before{content:attr(data-sl-count);grid-column:1;grid-row:1/span 2;display:grid;place-items:center;min-width:54px;height:54px;padding:0 8px;box-sizing:border-box;border-radius:14px;font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+ :is([id$="-important"],#f5-alert)[data-sl-alert="todo"]::before{background:#f6c445;color:#0b2a4a}
+ :is([id$="-important"],#f5-alert)[data-sl-alert="late"]::before{background:#e5484d;color:#fff;animation:sl-pulse 2.4s ease-out infinite}
+ :is([id$="-important"],#f5-alert)[data-sl-next]::after{content:attr(data-sl-next);grid-column:2;grid-row:2;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:13px;line-height:1.5;color:#c9d9ea}
+ [id$="-important"][data-sl-alert]>svg{display:none!important}
+ [id$="-important"][data-sl-alert]>p,#f5-alert[data-sl-alert]>span{grid-column:2;grid-row:1;align-self:end;margin:0!important;min-width:0;color:#fff!important;font-size:14px!important;line-height:1.45!important}
+ :is([id$="-important"],#f5-alert)[data-sl-alert]:not([data-sl-next])>:is(p,span){grid-row:1/span 2;align-self:center}
+ [id$="-important"][data-sl-alert] :is(.compact-count-main,.compact-count-late,.compact-count-separator){display:inline!important;font-size:15px!important;line-height:1.45!important;white-space:normal!important;color:#fff!important}
+ [id$="-important"][data-sl-alert="late"] .compact-count-late{color:#ffb4b0!important}
+ #f5-alert[data-sl-alert]>span strong{font-size:15px;color:#fff}
+ :is([id$="-important"],#f5-alert)[data-sl-alert]>button{grid-column:3;grid-row:1/span 2;margin:0!important;min-height:42px;padding:9px 16px!important;border:0!important;border-radius:11px!important;background:#f6c445!important;color:#0b2a4a!important;font-size:13.5px!important;font-weight:800!important;white-space:nowrap;box-shadow:none!important}
+ :is([id$="-important"],#f5-alert)[data-sl-alert]>button:hover{background:#ffd566!important}
+ :is([id$="-important"],#f5-alert)[data-sl-alert]>button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+ body.f5-study-hub #f5-alert[data-sl-alert]{flex:1 1 100%}
+ @keyframes sl-pulse{0%{box-shadow:0 0 0 0 #e5484d99}70%{box-shadow:0 0 0 12px #e5484d00}100%{box-shadow:0 0 0 0 #e5484d00}}
+ @media(prefers-reduced-motion:reduce){:is([id$="-important"],#f5-alert)[data-sl-alert="late"]::before{animation:none}}
+ @media(max-width:600px){
+  :is([id$="-important"],#f5-alert)[data-sl-alert]{grid-template-columns:auto minmax(0,1fr);column-gap:12px;padding:12px 14px!important;row-gap:3px}
+  :is([id$="-important"],#f5-alert)[data-sl-alert]::before{min-width:46px;height:46px;font-size:22px;border-radius:12px}
+  :is([id$="-important"],#f5-alert)[data-sl-next]::after{white-space:normal;font-size:12.5px}
+  :is([id$="-important"],#f5-alert)[data-sl-alert]>button{grid-column:1/-1;grid-row:3;width:100%;margin-top:8px!important}
+  [id$="-important"][data-sl-alert] :is(.compact-count-main,.compact-count-late,.compact-count-separator){font-size:14px!important}
+ }
  /* Floating widgets stay out of the way */
  #snapshot-stamp,#public-snapshot-stamp{position:static!important;display:block!important;width:max-content;max-width:calc(100% - 32px);margin:0 auto 18px!important;box-shadow:none!important;background:transparent!important;border:0!important;opacity:.75;transform:none!important}
  /* IELTS: compact header and student strip */
