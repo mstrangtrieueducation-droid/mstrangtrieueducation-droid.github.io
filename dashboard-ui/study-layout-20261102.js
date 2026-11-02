@@ -186,6 +186,10 @@
  [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]{grid-row:7;width:auto!important;min-height:52px!important;margin-top:18px!important;margin-bottom:0!important;border-radius:12px!important;background:#f6c445!important;color:#0b2a4a!important;font-size:15px!important;font-weight:800!important}
  [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]:hover{background:#ffd566!important}
  [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]:focus-visible{outline:2px solid #0b2a4a!important;outline-offset:2px!important}
+ /* Test results: the attempt marker is a small label above the comments, not a tall coloured column beside them. */
+ .ielts-assessment-attempt:has(>.ielts-attempt-marker){grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+ .ielts-assessment-attempt>.ielts-attempt-marker{display:inline-flex!important;flex-direction:row!important;gap:6px;width:auto!important;min-height:0!important;justify-self:start;padding:6px 12px!important;border-radius:999px!important;box-shadow:none!important}
+ .ielts-assessment-attempt>.ielts-attempt-marker strong{margin:0!important;font-size:15px!important}
  /* Floating widgets stay out of the way */
  #snapshot-stamp,#public-snapshot-stamp{position:static!important;display:block!important;width:max-content;max-width:calc(100% - 32px);margin:0 auto 18px!important;box-shadow:none!important;background:transparent!important;border:0!important;opacity:.75;transform:none!important}
  /* IELTS: compact header and student strip */

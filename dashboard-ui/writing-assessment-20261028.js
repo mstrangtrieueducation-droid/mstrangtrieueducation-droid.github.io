@@ -362,6 +362,8 @@
     dialog.showModal(); showMessage('Đang tải danh sách bài chữa…');
     try {
       await startContext(opening);
+      // startContext clears the dialog, and the list can take several more seconds.
+      showMessage('Đang tải danh sách bài chữa…');
       const data = await request('index');
       if (dialog.open && opening === openSerial) renderIndex(data);
     } catch (error) {
@@ -378,6 +380,11 @@
     if (!canOpen()) { if (launcher.isConnected) launcher.remove(); if (dialog.open) dialog.close(); return; }
     const target = panel.querySelector('.ielts-personal-results') || panel;
     if (!launcher.isConnected || launcher.parentElement !== target) target.prepend(launcher);
+    // Also offer the review where the pupil reads the teacher's Writing comment.
+    for (const section of panel.querySelectorAll('.ielts-assessment-feedback')) {
+      if (section.querySelector('.wa-inline-open') || !/^Writing/.test(section.querySelector('strong')?.textContent || '')) continue;
+      section.append(makeButton('Xem bài chữa', () => openButton.click(), 'wa-button wa-inline-open'));
+    }
   };
   const schedule = () => { if (!scheduled) { scheduled = true; queueMicrotask(mount); } };
   new MutationObserver(schedule).observe(panel, {childList:true,subtree:true});
