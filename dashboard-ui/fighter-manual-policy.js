@@ -18,8 +18,9 @@
       for (const component of unit.components || []) {
         const tasks = component.tasks || [];
         // Homework is assigned by the Schedule. A tracker column with no Schedule task and nothing
-        // recorded in it has not been assigned; recorded history (any non-empty cell) stays visible.
-        const unassigned = !tasks.length && !component.raw;
+        // recorded in it has not been assigned; the tracker's bare "— CHƯA GHI NHẬN" records nothing.
+        // Recorded history (any other non-empty cell) stays visible.
+        const unassigned = !tasks.length && (!component.raw || /^—\s*CHƯA GHI NHẬN$/.test(String(component.raw).trim()));
         const retired = vocab(unit) && component.role === 'preparation' || unassigned ||
           tasks.length > 0 && tasks.every(entry => retiredTask(unit, entry.task, entry.state));
         if (!retired) continue;
