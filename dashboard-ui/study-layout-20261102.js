@@ -63,13 +63,27 @@
   return true;
  }
  let dockDone=false;
+ function arrangeAll(){for(const spec of LISTS)for(const list of D.querySelectorAll(spec.list))arrange(spec,list);}
+ // After a repaint the native stable view scrolls back to the card the pupil was reading. Arrange inside
+ // that repaint, before it measures, or it measures the native order and the page jumps on every refresh.
+ function wrapStableViews(){
+  for(const name of ['IeltsStableView','FighterStableView']){
+   const api=root[name];
+   if(!api||api.slArranged)continue;
+   const update=api.update;
+   api.update=function(view,render){return update.call(this,view,function(){const out=render.apply(this,arguments);arrangeAll();return out;});};
+   api.slArranged=true;
+  }
+ }
  function paint(){
   queued=false;
-  for(const spec of LISTS)for(const list of D.querySelectorAll(spec.list))arrange(spec,list);
+  wrapStableViews();
+  arrangeAll();
   if(!dockDone)dockDone=foldDock();
  }
  function schedule(){if(!queued){queued=true;root.requestAnimationFrame(paint);}}
  new MutationObserver(records=>{if(records.some(r=>!(r.target.closest&&r.target.closest('.sl-head'))))schedule();}).observe(D.documentElement,{childList:true,subtree:true});
+ wrapStableViews();
  schedule();
 
  const style=D.createElement('style');style.textContent=`
