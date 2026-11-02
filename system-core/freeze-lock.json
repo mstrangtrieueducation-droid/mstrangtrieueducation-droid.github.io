@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "tag": "stable-20261101",
-  "sourceCommit": "6791cab037a5ec6b6f1dead7354d75e2551e504a",
+  "tag": "stable-20261102",
+  "sourceCommit": "cdd8e0955d63faae66a20ec675309e6360c67ae8",
   "policy": "Only explicit user instruction: sá»­a lÃµi nháº­n bÃ i permits changing this frozen baseline. UI/CSS uses dashboard-ui/.",
   "classes": 44,
   "assets": {
     ".github/workflows/dashboard-core-cloud.yml": "905dbe90423e6b5ecacdd483edfceddedc2bfa3a22ba27e04fa06242935341c4",
-    "student-learning/active-roster-v1.js": "e9dbc72b753daae49b21b6fe4695f1d926ff67ccf8282b9a0fed9e9d9be06874",
+    "student-learning/active-roster-v1.js": "41d034962fbc6e9e5d93ac6da3a1e8ab6c86a1932e36233fe4e3abc6385d5bfe",
     "student-learning/class-entry/access.7dcf943efa56.js": "df3531ae036ad76da147712c74c41fb06215e43f22f13aabd0ed84609011e8fe",
     "student-learning/class-entry/dashboard.7c1db93d3b9b.js": "7c1db93d3b9b45f55676b8dfce763f843a33b0adb11090fdc7487c77e8b5fab0",
     "student-learning/fighter10/access.21e8a4948962.js": "e343d1d2a6d842d2e564910496f04d22929bdfc1af31f8e37150ad85ce4cf907",
@@ -2362,7 +2362,7 @@
     ],
     "7rsn6kbh/index.html": [
       {
-        "sha256": "1823aec05dc4571e9b71b5b58f69d872afe5cbb82fa6d917352866aef7a27fff"
+        "sha256": "5dd37dff42508b860524f028eca41d346b9d5a945bafdda356809c0741cc54b5"
       },
       {
         "sha256": "25e02142b20e69f34592cac53bfbb659ee294f5e0fed683579b543565ac0c338"
@@ -2377,7 +2377,7 @@
         "sha256": "dc50a48e211ca441939eb2487f6abb2f544939b952f189943040b7f714e7504b"
       },
       {
-        "sha256": "4050c16ce20015e8867c2edf5420c02ac73b503c4f6e7c08a7597fa0ff223a01"
+        "sha256": "a18b7373dedca78d0a8c16d69de269893b67562e8080a765b89404a1b64bf0a9"
       },
       {
         "sha256": "9ddca5aac9b4a92ea93784e5ee62fd72848225e9dcd870555955b7a13977e039"
@@ -2413,10 +2413,10 @@
         "sha256": "36d880f55fa48245a65724f79924e3f3d1c6d5f4ee86f4251977beb752bb181d"
       },
       {
-        "sha256": "6a555c233a8d7cee05d7c64a91a8727f48e9ec6b671856ede752b7a323c9677f"
+        "sha256": "52981520dfd643c2aa28be6d1d5b07c5f8c7bb0e508ea3423a0be5cceb89c076"
       },
       {
-        "sha256": "eacbb138afd29d3a283b30c791d4e017501d7444d5aa7c34f66a60b030629d79"
+        "sha256": "c09c41586b62437667583277522dd8324e6420e6d4e33e4e3a22dcd509cd46c9"
       },
       {
         "sha256": "a7b7dd7d45ebb0d5ce9946e37e18f760396c2016b1c893aa43a8933e82704d64"
@@ -2445,7 +2445,7 @@
     ],
     "xpe6dd4j/index.html": [
       {
-        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+        "sha256": "793859b2d8b73f85a30e445a58f241fa16eb44d4d018483d0006f36611c12d56"
       },
       {
         "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
@@ -2457,7 +2457,7 @@
         "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
       },
       {
-        "sha256": "7ac32defaccd221b17e084002edaace4c65278a24003e9413fe5f441026a7e23"
+        "sha256": "3734a32413a8fdcf9fcdaeef2ce0237fd31ff8516a068e7a5985dc4174959437"
       },
       {
         "sha256": "52e4484aafcbdacb90fa13ad4bc48d8e8e098c7fdf78abbe458d99cb7c6ca4c1"
@@ -2493,10 +2493,10 @@
         "sha256": "9d83a3ee2383a1018d61fd9334455637f46c0ac38cc6a4c2ba414394fcb072c9"
       },
       {
-        "sha256": "c869ef2b9cc8b8183242600da6b8855453ea62c3253b3d7be48cbbf454041ccc"
+        "sha256": "973102bff6c627559d4ee9e698887ab56228900b2d1b7cf83267624a59361a88"
       },
       {
-        "sha256": "fbb998f8a9e4a7129bb1c9a17f88c61598af87a46d7c4d721bb1dbe93f3355eb"
+        "sha256": "ec5ce43c6f5c1eaf3faacb73504e86bc462741140bedbb785808d11007507c27"
       },
       {
         "sha256": "f8eca7eed6c844819d4899a816a74a6bc43fe3c6419286979f318c36a28602b7"
@@ -2528,7 +2528,7 @@
     ],
     "bhg37bsz/index.html": [
       {
-        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+        "sha256": "793859b2d8b73f85a30e445a58f241fa16eb44d4d018483d0006f36611c12d56"
       },
       {
         "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
@@ -2540,7 +2540,7 @@
         "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
       },
       {
-        "sha256": "94c27a1a97cfde18dbb113eb1f7b3e3406ecc228cbfa4ff00cc21beb11a8de84"
+        "sha256": "986d61133436324d2e2eddb9916d089e95ea43a10459248a13b336937a4e06a6"
       },
       {
         "sha256": "e6c41948427bb49c77a5cad579a344fd5003a16b26eb32a653cfca25b59801a9"
@@ -2576,10 +2576,10 @@
         "sha256": "1e72083b5eef75134c9395a4f1b24e59e0d04119dc460c67fa6d4c0427507c3a"
       },
       {
-        "sha256": "f5e04955d0a109c99ab69ccc42e4436088ae3b79733e731c9a39267b94aece6c"
+        "sha256": "0d6310f3216920772d4b8f566951d0d5c5f4ac39c961b310344d4708a2df41f4"
       },
       {
-        "sha256": "a0c27531ed2a1b6645cae160bfcc4a08ed0fce78bbb71e408b73997bd2f5957f"
+        "sha256": "476f28b45c96051c2beba19b07b57fc93e946b2e2ec231b2c1106305e1ad3986"
       },
       {
         "sha256": "9bcbb23d6f371de4c0ca0b39b906bf3a802467e4c340a1e0160b4eb13de12e4e"
@@ -2608,7 +2608,7 @@
     ],
     "e73wgva4/index.html": [
       {
-        "sha256": "8ec60061392576d2f960fa8d0a08b1d0cdcee5e46f1cf2758076e9d466ff1d85"
+        "sha256": "1cf231738d542d98a58f83e1ae1729cb4e9ec6170021813ef774037c483ac94b"
       },
       {
         "sha256": "37e9528c7a1d56b7701bc51ba82ac2c7c439b9f11d02677b4461c168a9c44d25"
@@ -2620,7 +2620,7 @@
         "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
       },
       {
-        "sha256": "5d5a4d00ba8449d4c9b128d34aeae64f026fca251e28aa87801398c08abb6f48"
+        "sha256": "0a0bf44055b29cb2e027c04c216f71ebc45bbd6dbb9dafff1469dc909bd12526"
       },
       {
         "sha256": "fc465a0382141b5fd7c6e2b5780e2508d79f4bf4d4a23c60eeca10504fb9be8c"
@@ -2656,10 +2656,10 @@
         "sha256": "93cb4bf837f54456b6373b6e3313075c843563087fa68b7f356ccf92bf26f4b1"
       },
       {
-        "sha256": "6444ef6bddcc9f2f717c39748a3e7d0584dc2376300c4a27123019be5f9861eb"
+        "sha256": "26dfa38ad24a493af3a8a46102cdd8b62da4987dcdefeeca562c7848c4860369"
       },
       {
-        "sha256": "e199f0c1e365b630b06c9e2a2ca26e43147277bdd46cc0e753b0f552d868a207"
+        "sha256": "39f8220dba60295b15938396af1bcff6ee155ba363fa58618a940f715f8b36e3"
       },
       {
         "sha256": "2e52dea8cfb3087f276784cf797bbde45aaa3f98938922409e81047ab882184d"
@@ -2691,7 +2691,7 @@
     ],
     "9k6a4bxe/index.html": [
       {
-        "sha256": "8ec60061392576d2f960fa8d0a08b1d0cdcee5e46f1cf2758076e9d466ff1d85"
+        "sha256": "1cf231738d542d98a58f83e1ae1729cb4e9ec6170021813ef774037c483ac94b"
       },
       {
         "sha256": "37e9528c7a1d56b7701bc51ba82ac2c7c439b9f11d02677b4461c168a9c44d25"
@@ -2703,7 +2703,7 @@
         "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
       },
       {
-        "sha256": "f27064aa030685f0dcb3d1c1acb42b59c6e7b361f17fd28cbbafc1f83338d785"
+        "sha256": "10fd88e362eb1c63fbac4a2489c732a25e6bf9a1b91387c921304d0795874fea"
       },
       {
         "sha256": "b54d3dfe498e794b783cc856d31485b235b8ed8f1932393795eaa7f211813eb2"
@@ -2739,10 +2739,10 @@
         "sha256": "dfa0206eac2eca25f41e1201ebf205265d980048a2d325204aa158006444d2ba"
       },
       {
-        "sha256": "d4688e2d6a11320f17c1efcd87346fb0b37076f3759edd9f6391d2184a6c081d"
+        "sha256": "c2632d816cda8fe3eb0e899ee3a809e425cda243d403614244f2444967ea61d5"
       },
       {
-        "sha256": "3137418b717a5399ccf5299232cba16ee4eee720c47b89426e7bc52bd790695e"
+        "sha256": "6264255d20c40548be09bd291f597c84616ccd5bed7d387711e10fabecb5371c"
       },
       {
         "sha256": "81cfd0016066dd9fbd5ffdd5438d0f98233a5275db24a3995daf1ed8ddcf9a33"
@@ -2771,7 +2771,7 @@
     ],
     "jbjdsuj7/index.html": [
       {
-        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+        "sha256": "793859b2d8b73f85a30e445a58f241fa16eb44d4d018483d0006f36611c12d56"
       },
       {
         "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
@@ -2783,7 +2783,7 @@
         "src": "/student-learning/active-roster-v1.js?v=20261026-live-cache-v3"
       },
       {
-        "sha256": "c18773bf2fc82e881a12a31300ffa028d86eb3bedb210d870366ffbce7c3fe28"
+        "sha256": "068181126f60b185b0a71f17de947648d5f08a56bcfb36f81458dc556b430dbf"
       },
       {
         "sha256": "19956646b9323177cf98f9af048cebe2f5c334c5091ce6b4517926fbc4ef0b27"
@@ -2819,10 +2819,10 @@
         "sha256": "cbb73151005d0319a3d11f15e3dcea55cfea239289b80285501fa33defc3fc6f"
       },
       {
-        "sha256": "469883f9460f7eab1e2e3ab300fa507162f1845ab9db3ed47aa9341f83ada7b1"
+        "sha256": "3683bd002b37694e596c592c334451b3055a604d211aaa187784d0c02614c14e"
       },
       {
-        "sha256": "c08b6b8775294fb8fbaff8ef960cf16972f6544bac8bc66bf163779f2d341688"
+        "sha256": "d83a996b909b04af63e25eaab98b7c4511ff9c93da136acb357052a38abba93f"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
@@ -2848,7 +2848,7 @@
     ],
     "t2n2eyyu/index.html": [
       {
-        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+        "sha256": "793859b2d8b73f85a30e445a58f241fa16eb44d4d018483d0006f36611c12d56"
       },
       {
         "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
@@ -2863,7 +2863,7 @@
         "sha256": "fb44976bce67834d2448872ea7323b1379d361e23896f4c2edc206ec1c354307"
       },
       {
-        "sha256": "2bdb8aca9b98a2a8c065086834898a585de137ed87cd7caba3d0e8883c3fdce1"
+        "sha256": "7d82feb2df03e80515751157d8b38a4ff0889f3c84e145f13bc28932bc0f97b7"
       },
       {
         "sha256": "8102b9114ce58da88d21f0c19e91ecb77a3ebcf92bc76ae2a2774d01150eb9ce"
@@ -2899,10 +2899,10 @@
         "sha256": "be7562ae15cbc9eda3d7ed241be3d19f6fa624e114cafb63bb9036ddf022bf55"
       },
       {
-        "sha256": "2a9cab9189284a984e165d9c6665b975c7fd16920b0f2fd86676ce0058cfd6a2"
+        "sha256": "451b7dcde90f593e17b4cd4aff4b9151140f840355cce2cbfae7991bf3b52483"
       },
       {
-        "sha256": "292b4c2645966578740a6acdb441c08781fdce8be77f2f51c0177e3a856899a2"
+        "sha256": "49b9a6db46d41ed542c67d7d4055fe5a9d8690a20d3f7be437ad60fae2b353d2"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
@@ -2925,7 +2925,7 @@
     ],
     "np93vg0b/index.html": [
       {
-        "sha256": "f810822ae4dcf17b4865ae243aff9c75c4ea196ad467725d090d70af3d09f074"
+        "sha256": "793859b2d8b73f85a30e445a58f241fa16eb44d4d018483d0006f36611c12d56"
       },
       {
         "sha256": "06273f0fe8e53ff6518bdb89bcb80a121b7effa63022b9baf765edae47b76dae"
@@ -2940,7 +2940,7 @@
         "sha256": "e8e580533587370b166052cd162817c9ea2660522fc3fbc5b279562dbca2f8a0"
       },
       {
-        "sha256": "7b65299067fe0cdb88f609cd765e16d165499254b016e5088a9a4c443c9c56a6"
+        "sha256": "194e96499e0c4485d843116f9a27793df6c030401a0e49b74313838b50267095"
       },
       {
         "sha256": "785c5d5c4d8b0c83531b813186cdebb2cb00d3aae54174d4df0f590512e52ec0"
@@ -2976,10 +2976,10 @@
         "sha256": "bd2be0da7753d2e3d9ffe3f51c402cac777151b2e87aaa4742b9479606ee8504"
       },
       {
-        "sha256": "8d11eb08f28f3a89ace69e8b976353e901aa4bc81800c9d166fa0026e049c094"
+        "sha256": "341569e0f40ee485c5fd068bc621acdc18e07c06ec65abeeed1593ebd3f435f6"
       },
       {
-        "sha256": "ee09c860000ffe8c960fc561a5cf579e0ba42c9e7440fc8149c983b84d448357"
+        "sha256": "d4f7915fe33b1cada8e32f72dff2e15431404f4a737cc68365251a1fec6c0d49"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"

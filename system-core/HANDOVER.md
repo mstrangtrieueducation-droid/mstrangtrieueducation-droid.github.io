@@ -2,11 +2,13 @@
 
 Requested restore tag: **stable-20261026**. Acceptance completed on 27 October 2026 (Asia/Bangkok). Scope: 28 KIDS, 8 IELTS, 6 FIGHTER, TA6 and TA7.
 
-Current CI baseline: **stable-20261101**, taken on 1 November 2026 after the owner approved (“sửa lõi”) accepting the IELTS 48 Writing 16 homework-review assignment (commit 0b587d38). Only that page script changed; every other frozen asset and page is identical to stable-20261031b.
+Current CI baseline: **stable-20261102**, taken on 2 November 2026 after the owner authorized (“sửa lõi nhận bài”) keeping IELTS overdue status steady while receipt sources are unavailable. A task stays overdue when the last confirmed read happened after its deadline and found no receipt; verification flags and permissions are never promoted. The baseline also accepts the owner-approved IELTS Reading rule (a self-study Reading counts as done only with a passage score). Changed: the 8 IELTS pages and `student-learning/active-roster-v1.js`, whose `withdraw` only adds a `lastConfirmed` marker that non-IELTS pages do not read.
 
-Previous CI baseline: **stable-20261031b**, taken on 31 October 2026 after the owner authorized (“sửa lõi nhận bài”) the lesson-entry Back fix: each tab now remembers its 12 most recent dashboard-issued lesson passes in all four entry modules. Copied links in other tabs or browsers stay blocked.
+Previous CI baseline: **stable-20261101**, taken on 1 November 2026 after the owner approved (“sửa lõi”) accepting the IELTS 48 Writing 16 homework-review assignment (commit 0b587d38). Only that page script changed; every other frozen asset and page is identical to stable-20261031b.
 
-Earlier CI baseline: **stable-20261031**, taken on 31 October 2026 with the owner's explicit approval. It locks the same files as stable-20261026 at their state after the owner's 26–31 October dashboard changes (Kids exam notices and video history, Fighter writing reviews, IELTS token guard and sealed Writing/leaderboard data). stable-20261026 remains intact as the earlier restore point; its backend restore package (`system-restore/`) is unchanged and does not include the 31 October IELTS Worker token guard, whose pre-change Worker code is backed up privately outside the repository.
+Earlier CI baseline: **stable-20261031b**, taken on 31 October 2026 after the owner authorized (“sửa lõi nhận bài”) the lesson-entry Back fix: each tab now remembers its 12 most recent dashboard-issued lesson passes in all four entry modules. Copied links in other tabs or browsers stay blocked.
+
+Older CI baseline: **stable-20261031**, taken on 31 October 2026 with the owner's explicit approval. It locks the same files as stable-20261026 at their state after the owner's 26–31 October dashboard changes (Kids exam notices and video history, Fighter writing reviews, IELTS token guard and sealed Writing/leaderboard data). stable-20261026 remains intact as the earlier restore point; its backend restore package (`system-restore/`) is unchanged and does not include the 31 October IELTS Worker token guard, whose pre-change Worker code is backed up privately outside the repository.
 
 ## Operations without this computer
 
