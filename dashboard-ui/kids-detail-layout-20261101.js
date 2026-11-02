@@ -72,22 +72,20 @@
   decorate();
   foldReceived();
  }
- // "Bài đã nhận": recent receipts stay in view; older ones fold under "Xem thêm" so parents can still
- // open their child's work. Only the native articles move; their text, links and order are unchanged.
- const RECENT_DAYS=14,receivedOpen=new Set();
+ // "Bài đã nhận" exists for work just submitted to a lesson Schedule has not listed yet. Older entries
+ // are duplicates under a generic code or work from before the owner's history cut-off (the lesson
+ // history already shows the real receipts), so only recent entries are shown.
+ const RECENT_DAYS=14;
  function foldReceived(){
   for(const sec of D.querySelectorAll('#kids-journey-root .ka-received-work:not([data-kdl-received])')){
    sec.dataset.kdlReceived='';
-   const now=Date.now(),old=[...sec.querySelectorAll(':scope>article')].filter(art=>{
+   const now=Date.now(),articles=[...sec.querySelectorAll(':scope>article')];
+   const old=articles.filter(art=>{
     const m=art.querySelector('.j-task-status')?.textContent.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     return m&&now-Date.UTC(+m[3],+m[2]-1,+m[1])>RECENT_DAYS*864e5;
    });
-   if(!old.length)continue;
-   const key=root.location.hash,box=D.createElement('details');
-   box.className='kdl-received-history';box.open=receivedOpen.has(key);
-   box.addEventListener('toggle',()=>{if(box.open)receivedOpen.add(key);else receivedOpen.delete(key);});
-   box.innerHTML='<summary>Xem thêm '+old.length+' bài nộp trước đây</summary><p class="kdl-received-note">Bài con đã nộp cho các tiết cũ, ngoài khung đang hiển thị. Phần này chỉ để xem lại, không cập nhật thêm.</p>';
-   old.forEach(art=>box.append(art));sec.append(box);
+   old.forEach(art=>{art.hidden=true;});
+   if(old.length===articles.length)sec.hidden=true;
   }
  }
  // Each native section gets a kind for its icon tile; emoji that only some native headings carry are dropped.
@@ -201,13 +199,7 @@
  #kids-journey-root #j-detail .kdl-notes li::marker{color:#b8c3cf}
  #kids-journey-root #j-detail .kdl-notes .kdl-warn{color:#8a5a12}
  #kids-journey-root #j-detail .kdl-list a{color:#1d5fa8;text-decoration:underline;overflow-wrap:anywhere}
- /* Older received work folds into one "Xem thêm" disclosure at the end of the section. */
- #kids-journey-root .ka-received-work .kdl-received-history{margin-top:14px;padding-top:12px;border-top:1px solid #e8edf2}
- #kids-journey-root .ka-received-work .kdl-received-history>summary{display:inline-flex;align-items:center;gap:8px;cursor:pointer;list-style:none;padding:8px 14px;border:1px solid #d6e2ee;border-radius:999px;background:#f6f9fc;color:#1d4f7a;font-size:13.5px;font-weight:700}
- #kids-journey-root .ka-received-work .kdl-received-history>summary::-webkit-details-marker{display:none}
- #kids-journey-root .ka-received-work .kdl-received-history>summary::before{content:"▸";transition:transform .15s}
- #kids-journey-root .ka-received-work .kdl-received-history[open]>summary::before{transform:rotate(90deg)}
- #kids-journey-root .ka-received-work .kdl-received-note{margin:10px 0 4px;font-size:12.5px;line-height:1.6;color:#7a8a9b}
+ #kids-journey-root .ka-received-work[hidden],#kids-journey-root .ka-received-work>article[hidden]{display:none!important}
  @media(max-width:600px){
   ${P}{width:calc(100vw - 16px);max-width:calc(100vw - 16px);border-radius:18px}
   ${P} .ka-modal-header{padding:18px 56px 14px 16px}
