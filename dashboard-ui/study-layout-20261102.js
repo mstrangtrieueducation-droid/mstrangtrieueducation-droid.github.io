@@ -78,8 +78,8 @@
  // The native warning keeps its own text and numbers. Only attributes are added here (the native renderer
  // rewrites the box contents), and CSS turns them into the number tile and the "next task" line.
  const ALERTS=[
-  {box:'[id$="-important"]',list:'#panel-homework .master-list',card:'article.master-card',pending:'.needs,.overdue',title:'.master-title',date:'.master-card-text p',total:'.compact-count-main',late:'.compact-count-late'},
-  {box:'#f5-alert',list:'#f5-list',card:'article.f5-unit',pending:'.todo,.overdue,.fix',title:'h3',date:'.f5-dates',total:'strong',late:null}
+  {box:'[id$="-important"]',gate:'#ielts-pending-work-gate',list:'#panel-homework .master-list',card:'article.master-card',pending:'.needs,.overdue',title:'.master-title',date:'.master-card-text p',total:'.compact-count-main',late:'.compact-count-late'},
+  {box:'#f5-alert',gate:'#fighter-pending-work-gate',list:'#f5-list',card:'article.f5-unit',pending:'.todo,.overdue,.fix',title:'h3',date:'.f5-dates',total:'strong',late:null}
  ];
  function setAttr(el,name,value){if(value==null){if(el.hasAttribute(name))el.removeAttribute(name);}else if(el.getAttribute(name)!==value)el.setAttribute(name,value);}
  function nextTask(spec){
@@ -92,15 +92,25 @@
   const days=Math.round((at-today())/DAY);
   return 'Tiếp theo: '+title+' · '+(days>1?'còn '+days+' ngày':days===1?'hạn ngày mai':days===0?'hạn hôm nay':'quá hạn '+(-days)+' ngày');
  }
+ function lateCount(spec,box){
+  const text=spec.late?box.querySelector(spec.late)?.textContent:box.textContent.match(/(\d+)\s*quá hạn/)?.[0];
+  return +(String(text||'').match(/\d+/)?.[0]||0);
+ }
  function decorateAlerts(){
-  for(const spec of ALERTS)for(const box of D.querySelectorAll(spec.box)){
-   const total=box.querySelector(spec.total)?.textContent.match(/\d+/)?.[0];
-   if(!total){setAttr(box,'data-sl-alert',null);continue;}
-   const lateText=spec.late?box.querySelector(spec.late)?.textContent:box.textContent.match(/(\d+)\s*quá hạn/)?.[0];
-   const late=+(String(lateText||'').match(/\d+/)?.[0]||0);
-   setAttr(box,'data-sl-alert',late>0?'late':'todo');
-   setAttr(box,'data-sl-count',total);
-   const next=nextTask(spec);if(next)setAttr(box,'data-sl-next',next);
+  for(const spec of ALERTS){
+   for(const box of D.querySelectorAll(spec.box)){
+    const total=box.querySelector(spec.total)?.textContent.match(/\d+/)?.[0];
+    if(!total){setAttr(box,'data-sl-alert',null);continue;}
+    setAttr(box,'data-sl-alert',lateCount(spec,box)>0?'late':'todo');
+    setAttr(box,'data-sl-count',total);
+    const next=nextTask(spec);if(next)setAttr(box,'data-sl-next',next);
+   }
+   // The opening notice: same next task and overdue count. Its native button and page lock are untouched.
+   const gate=D.querySelector(spec.gate),card=gate?.firstElementChild,title=gate?.querySelector('h2');
+   if(!card||!title)continue;
+   const box=D.querySelector(spec.box),late=box?lateCount(spec,box):0;
+   setAttr(card,'data-sl-next',nextTask(spec));
+   setAttr(title,'data-sl-late',late>0?'Trong đó '+late+' quá hạn':null);
   }
  }
  function paint(){
@@ -160,6 +170,22 @@
   :is([id$="-important"],#f5-alert)[data-sl-alert]>button{grid-column:1/-1;grid-row:3;width:100%;margin-top:8px!important}
   [id$="-important"][data-sl-alert] :is(.compact-count-main,.compact-count-late,.compact-count-separator){font-size:14px!important}
  }
+ /* The opening notice: one navy header (who, how many), then the next task, the rule and one action. */
+ [class$="-pending-work-gate__card"]{display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:22px;width:min(480px,100%)!important;max-width:480px!important;padding:0 0 24px!important;border:0!important;border-radius:22px!important;background:#fff!important;overflow:hidden}
+ [class$="-pending-work-gate__card"]::before{content:"";grid-column:1;grid-row:1/5;background:linear-gradient(105deg,#0b2a4a,#123d66)}
+ [class$="-pending-work-gate__card"]>*{grid-column:1;width:auto!important;margin-left:26px!important;margin-right:26px!important}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__icon"]{display:none!important}
+ [class$="-pending-work-gate__card"]>:is(#parent-pending-identity,#parentPendingIdentity){grid-row:2;margin-top:0!important;margin-bottom:12px!important;padding:0!important;border:0!important;color:#c9d9ea!important;font-size:14px!important;font-weight:700!important;line-height:1.4!important}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__label"]{grid-row:3;margin-top:0!important;margin-bottom:4px!important;color:#f6c445!important;font-size:11.5px!important}
+ [class$="-pending-work-gate__card"]>h2{grid-row:4;margin-top:0!important;margin-bottom:22px!important;color:#fff!important;font-size:clamp(25px,4vw,30px)!important;line-height:1.25!important}
+ [class$="-pending-work-gate__card"]>h2[data-sl-late]::after{content:attr(data-sl-late);display:block;margin-top:5px;color:#ffb4b0;font-size:15px;font-weight:700;letter-spacing:0;line-height:1.4}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__detail"]{grid-row:5;margin-top:18px!important;margin-bottom:0!important;color:#3d5670!important;font-size:14px!important;line-height:1.55!important}
+ [class$="-pending-work-gate__card"][data-sl-next]>[class$="-pending-work-gate__detail"]{display:none!important}
+ [class$="-pending-work-gate__card"][data-sl-next]::after{content:attr(data-sl-next);grid-column:1;grid-row:5;margin:18px 26px 0;color:#0b2a4a;font-size:15px;font-weight:700;line-height:1.5;overflow-wrap:anywhere}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__encourage"]{grid-row:6;margin-top:10px!important;margin-bottom:0!important;padding:0!important;border:0!important;border-radius:0!important;background:none!important;color:#b42318!important;font-size:13.5px!important;font-weight:600!important;line-height:1.55!important}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]{grid-row:7;width:auto!important;min-height:52px!important;margin-top:18px!important;margin-bottom:0!important;border-radius:12px!important;background:#f6c445!important;color:#0b2a4a!important;font-size:15px!important;font-weight:800!important}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]:hover{background:#ffd566!important}
+ [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]:focus-visible{outline:2px solid #0b2a4a!important;outline-offset:2px!important}
  /* Floating widgets stay out of the way */
  #snapshot-stamp,#public-snapshot-stamp{position:static!important;display:block!important;width:max-content;max-width:calc(100% - 32px);margin:0 auto 18px!important;box-shadow:none!important;background:transparent!important;border:0!important;opacity:.75;transform:none!important}
  /* IELTS: compact header and student strip */
