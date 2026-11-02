@@ -71,7 +71,7 @@
  }
  function withdraw(v){
   if(!v||typeof v!=='object')return v;
-  if(typeof v.complete==='boolean'&&typeof v.freshRead==='boolean'){v.complete=false;v.freshRead=false;}
+  if(typeof v.complete==='boolean'&&typeof v.freshRead==='boolean'){if(v.family&&v.complete&&v.freshRead)v.lastConfirmed=true;v.complete=false;v.freshRead=false;}
   Object.keys(v).forEach(function(k){withdraw(v[k]);});return v;
  }
  function retain(next,old){

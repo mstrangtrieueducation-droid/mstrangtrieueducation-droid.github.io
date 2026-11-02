@@ -113,11 +113,15 @@
    setAttr(title,'data-sl-late',late>0?'Trong đó '+late+' quá hạn':null);
   }
  }
+ function markSkillReviews(){
+  for(const section of D.querySelectorAll('#panel-overview .ielts-self-study-skill-section'))setAttr(section,'data-sl-skill-review',/^(Speaking|Shadow)/i.test(section.querySelector('h3')?.textContent.trim()||'')?'':null);
+ }
  function paint(){
   queued=false;
   wrapStableViews();
   arrangeAll();
   decorateAlerts();
+  markSkillReviews();
   if(!dockDone)dockDone=foldDock();
  }
  function schedule(){if(!queued){queued=true;root.requestAnimationFrame(paint);}}
@@ -186,6 +190,8 @@
  [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]{grid-row:7;width:auto!important;min-height:52px!important;margin-top:18px!important;margin-bottom:0!important;border-radius:12px!important;background:#f6c445!important;color:#0b2a4a!important;font-size:15px!important;font-weight:800!important}
  [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]:hover{background:#ffd566!important}
  [class$="-pending-work-gate__card"]>[class$="-pending-work-gate__button"]:focus-visible{outline:2px solid #0b2a4a!important;outline-offset:2px!important}
+ /* Homework reviews open from their own skill tab; the results tab keeps tests and scores. */
+ #panel-overview .wr-personal,#panel-overview [data-sl-skill-review]{display:none!important}
  /* Test results: the attempt marker is a small label above the comments, not a tall coloured column beside them. */
  .ielts-assessment-attempt:has(>.ielts-attempt-marker){grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
  .ielts-assessment-attempt>.ielts-attempt-marker{display:inline-flex!important;flex-direction:row!important;gap:6px;width:auto!important;min-height:0!important;justify-self:start;padding:6px 12px!important;border-radius:999px!important;box-shadow:none!important}
