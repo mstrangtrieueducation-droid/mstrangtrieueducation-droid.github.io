@@ -47,6 +47,7 @@
   let index = null;
   let activeReview = null;
   let nearObserver = null;
+  let rechecking = null;
   // The native shell's visibility is the presentation gate; every service call
   // independently verifies the unchanged parent profile and identity.
   const canOpen = () => Boolean(access.valid && access.token && !shell.hidden);
@@ -69,7 +70,7 @@
     /^data:image\/webp;base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
   async function nativeProfile() {
     if (!canOpen()) throw new Error('Hồ sơ học viên chưa sẵn sàng.');
-    const profile = await access.request('profile', true);
+    const profile = await access.request('profile');
     if (!profile?.parentName || !profile?.student?.name || !profile?.parentRosterRevision)
       throw new Error('Hồ sơ học viên chưa xác thực đầy đủ.');
     if (profile.className && profile.className !== className)
@@ -127,23 +128,31 @@
       if (descriptor && !envelope.data.reviews.some(row => row.assessmentKey === descriptor.assessmentKey &&
           row[action+'ObjectSha256'] === descriptor[action+'ObjectSha256']))
         throw new Error('Bài chữa không còn trong hồ sơ hiện tại.');
-    } catch (error) { clear(); throw error; }
+    } catch (error) { if (context === owner) clear(); throw error; }
+  }
+  function recheck(owner, descriptor, action) {
+    if (rechecking) return;
+    const opening = openSerial;
+    rechecking = refreshContext().then(() => freshIndexGuard(owner, descriptor, action)).catch(error => {
+      if (dialog.open && opening === openSerial && error.name !== 'AbortError') showMessage(error.message);
+    }).finally(() => { rechecking = null; });
   }
   async function request(action, assessmentKey) {
     if (!endpoint || !sameContext()) throw new Error('Chưa thể mở bài chữa từ hồ sơ hiện tại.');
     const owner = context;
     const descriptor = assessmentKey && index?.reviews?.find(row => row.assessmentKey === assessmentKey);
     if (assessmentKey && !descriptor) throw new Error('Bài chữa không nằm trong hồ sơ này.');
+    const key = `${owner.identity}|${action}|${assessmentKey || ''}|${descriptor?.[action+'ObjectSha256'] || ''}`;
+    // A review this page already holds shows at once. The live check runs behind
+    // it, and a failed check still clears the dialog.
+    if (memory.has(key)) {
+      if (action !== 'index') recheck(owner, descriptor, action);
+      return memory.get(key);
+    }
     // Native profile guards identity; the service index is authoritative for
     // cache hits because its own profile checks bypass stale browser snapshots.
     if (action !== 'index') await refreshContext();
     if (context !== owner || !sameContext()) throw new Error('Phiên học viên đã thay đổi.');
-    const key = `${owner.identity}|${action}|${assessmentKey || ''}|${descriptor?.[action+'ObjectSha256'] || ''}`;
-    if (memory.has(key)) {
-      if (action !== 'index') await freshIndexGuard(owner, descriptor, action);
-      if (context !== owner || !sameContext()) throw new Error('Phiên học viên đã thay đổi.');
-      return memory.get(key);
-    }
     if (pending.has(key)) return pending.get(key).promise;
     const current = epoch;
     const controller = new AbortController();
