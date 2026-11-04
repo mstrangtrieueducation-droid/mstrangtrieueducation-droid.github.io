@@ -5,10 +5,10 @@
  const LISTS=[
   // IELTS: article.master-card (needs/overdue pending), deadline "Hạn dd/mm/yyyy".
   {list:'.master-list',card:'article.master-card',pending:c=>c.matches('.needs,.overdue'),date:c=>c.querySelector('.master-card-text p')?.textContent,skill:c=>c.querySelector('.master-skill')?.textContent},
-  // FIGHTER: article.f5-unit (todo/overdue/fix pending), deadline "Hạn gần nhất dd/mm/yyyy".
-  {list:'#f5-list',card:'article.f5-unit',pending:c=>c.matches('.todo,.overdue,.fix'),date:c=>c.querySelector('.f5-dates')?.textContent,skill:c=>c.querySelector('.f5-eyebrow')?.textContent}
+  // FIGHTER: article.f5-unit (todo/overdue pending; fix has its own tab, so it is never put first), deadline "Hạn gần nhất dd/mm/yyyy".
+  {list:'#f5-list',card:'article.f5-unit',pending:c=>c.matches('.todo,.overdue'),aside:c=>c.matches('.fix'),date:c=>c.querySelector('.f5-dates')?.textContent,skill:c=>c.querySelector('.f5-eyebrow')?.textContent}
  ];
- const GROUPS={week:'⏰ Hạn trong 7 ngày tới',late:'⚠️ Vừa quá hạn · làm bù ngay',later:'🗓 Hạn sau 7 ngày',done:'✅ Đã hoàn thành'};
+ const GROUPS={week:'⏰ Hạn trong 7 ngày tới',late:'⚠️ Vừa quá hạn · làm bù ngay',later:'🗓 Hạn sau 7 ngày',aside:'📝 Cần bổ sung',done:'✅ Đã hoàn thành'};
  const openOld=new Set();let queued=false;
 
  function dueAt(text){const m=String(text||'').match(/Hạn[^0-9]*(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?Date.UTC(+m[3],+m[2]-1,+m[1]):NaN;}
@@ -25,10 +25,11 @@
   list.querySelectorAll(':scope>.sl-head').forEach(h=>h.remove());
   cards.forEach(c=>{c.dataset.slSkill=skillKey(spec.skill(c));});
   if(!cards.some(spec.pending)){list.dataset.slSig=sig;return;}
-  const now=today(),buckets={week:[],late:[],later:[],old:[],done:[]};
+  const now=today(),buckets={week:[],late:[],later:[],old:[],aside:[],done:[]};
   for(const c of cards){
    const at=dueAt(spec.date(c));c.dataset.slDue=Number.isFinite(at)?at:'';
-   if(!spec.pending(c))buckets.done.push(c);
+   if(spec.aside?.(c))buckets.aside.push(c);
+   else if(!spec.pending(c))buckets.done.push(c);
    else if(!Number.isFinite(at))buckets.later.push(c);
    else if(at>=now&&at<=now+7*DAY)buckets.week.push(c);
    else if(at>now)buckets.later.push(c);
@@ -47,6 +48,7 @@
    toggle.addEventListener('click',()=>{if(openOld.has(key))openOld.delete(key);else openOld.add(key);delete list.dataset.slSig;arrange(spec,list);});
    frag.append(toggle);buckets.old.forEach(c=>{c.dataset.slOld='';c.hidden=!expanded;frag.append(c);});
   }
+  if(buckets.aside.length){frag.append(head('aside',GROUPS.aside));buckets.aside.forEach(c=>{c.hidden=false;delete c.dataset.slOld;frag.append(c);});}
   if(buckets.done.length){frag.append(head('done',GROUPS.done));buckets.done.forEach(c=>{c.hidden=false;frag.append(c);});}
   list.append(frag);list.dataset.slSig=sig;
  }
@@ -79,7 +81,7 @@
  // rewrites the box contents), and CSS turns them into the number tile and the "next task" line.
  const ALERTS=[
   {box:'[id$="-important"]',gate:'#ielts-pending-work-gate',list:'#panel-homework .master-list',card:'article.master-card',pending:'.needs,.overdue',title:'.master-title',date:'.master-card-text p',total:'.compact-count-main',late:'.compact-count-late'},
-  {box:'#f5-alert',gate:'#fighter-pending-work-gate',list:'#f5-list',card:'article.f5-unit',pending:'.todo,.overdue,.fix',title:'h3',date:'.f5-dates',total:'strong',late:null}
+  {box:'#f5-alert',gate:'#fighter-pending-work-gate',list:'#f5-list',card:'article.f5-unit',pending:'.todo,.overdue',title:'h3',date:'.f5-dates',total:'strong',late:null}
  ];
  function setAttr(el,name,value){if(value==null){if(el.hasAttribute(name))el.removeAttribute(name);}else if(el.getAttribute(name)!==value)el.setAttribute(name,value);}
  function nextTask(spec){

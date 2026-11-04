@@ -151,10 +151,10 @@
       if (tasks.length) items.push({ key: unit.key, title: unit.title, program: unit.program, due: taskDue(unit, tasks[0]), parts: tasks.map(t => t.title), state: 'Mang sổ đến lớp' });
     }
     for (const unit of manualUnits) {
-      const pending = (unit.components || []).filter(c => c.status === 'manual' || c.status === 'fix');
+      // Parts to complete stay in the Cần bổ sung tab; this panel sits above every list.
+      const pending = (unit.components || []).filter(c => c.status === 'manual');
       if (!pending.length) continue;
-      const fix = pending.some(c => c.status === 'fix');
-      items.push({ key: unit.key, title: unit.title, program: unit.program, due: pending.map(c => c.dueDate).find(Boolean) || '', parts: pending.map(c => c.label), state: fix ? 'Cần bổ sung' : 'Chờ cô ghi nhận' });
+      items.push({ key: unit.key, title: unit.title, program: unit.program, due: pending.map(c => c.dueDate).find(Boolean) || '', parts: pending.map(c => c.label), state: 'Chờ cô ghi nhận' });
     }
     return items;
   }

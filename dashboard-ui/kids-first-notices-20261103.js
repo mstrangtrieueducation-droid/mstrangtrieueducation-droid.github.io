@@ -1,9 +1,9 @@
 /* Presentation only. A browser opening a link for the first time treats every comment as old, so a comment just written never reaches the bell; and the bell's small count is easy to miss, so a red label sits beside it until it is opened. Feeds the page's own bell; never changes marks, status, receipts or counts. */
 (function(root){'use strict';
- const RECENT_MS=7*864e5,PREFIX='kids_journey_updates_v1_',SEEN_PREFIX='kids_notice_label_seen_v1_',D=root.document;
+ const RECENT_MS=7*864e5,KEEP=10,PREFIX='kids_journey_updates_v1_',KEPT_PREFIX='kids_notice_kept_v1_',SEEN_PREFIX='kids_notice_label_seen_v1_',D=root.document;
  const hash=v=>{let n=2166136261;for(const c of String(v)){n^=c.charCodeAt(0);n=Math.imul(n,16777619)}return(n>>>0).toString(36)};
  const dayOf=v=>root.TrialKidsJourneyParser?.date?.(v)?.at||0;
- let videoAt=new Map,activeKey='';
+ let videoAt=new Map,activeKey='';const keptMemory=new Map;
  function stored(input){
   for(const name of ['localStorage','sessionStorage']){
    try{for(const key of [input.studentKey,input.legacyStudentKey])if(key&&root[name].getItem(PREFIX+hash(key)))return true;}catch{return true;}
@@ -16,9 +16,43 @@
   const date=String(record.label||'').match(/\d{1,2}\/\d{1,2}\/\d{4}/);
   return date?dayOf(date[0]):0;
  }
- function results(){
-  try{return (JSON.parse(root.localStorage.getItem(PREFIX+activeKey))?.events||[]).filter(e=>e.kind==='result').map(e=>e.key);}catch{return [];}
+ // The bell's own list stops at 3, inside the frozen bundle. The bell still decides what is a notice; this only keeps more of what it announces, beside its ledger.
+ function ledgerOf(input){
+  for(const key of [input.studentKey,input.legacyStudentKey])if(key)for(const name of ['localStorage','sessionStorage']){
+   try{const value=root[name].getItem(PREFIX+hash(key));if(value)return JSON.parse(value);}catch{}
+  }
+  return null;
  }
+ function keptOf(key){
+  try{const value=JSON.parse(root.localStorage.getItem(KEPT_PREFIX+key));if(Array.isArray(value))return value;}catch{}
+  return keptMemory.get(key)||[];
+ }
+ function newest(...feeds){
+  const keys=new Set();
+  return feeds.flat().map((e,index)=>({e,index})).sort((a,b)=>(b.e.createdAt||0)-(a.e.createdAt||0)||a.index-b.index).filter(({e})=>!keys.has(e.key)&&keys.add(e.key)).slice(0,KEEP).map(({e})=>e);
+ }
+ function announced(api,input,prior){
+  const day=new Date((input.now??Date.now())+252e5).getUTCDay(),options={weekend:day===6||day===0},known=new Set((prior?.events||[]).map(e=>e.key));
+  if(api.advance(prior,input.records,options).events.every(e=>known.has(e.key)))return [];
+  // One refresh can bring more than 3 notices and the bell drops the rest in that same call, so each row is asked about alone.
+  return input.records.flatMap(r=>api.advance(prior&&{...prior,events:[]},[r],options).events).reverse();
+ }
+ function keeping(api,render){
+  return function(input){
+   if(!input?.studentKey||!Array.isArray(input.records))return render.apply(this,arguments);
+   const key=hash(input.studentKey),prior=ledgerOf(input),open=input.openNotifications;
+   // The open list can redraw during the bell's render, so the new notices are in place before it runs.
+   let list=newest(keptOf(key),prior?.events||[],announced(api,input,prior));
+   const result=render.call(this,{...input,openNotifications:open&&(()=>open(list.slice()))});
+   list=newest(list,ledgerOf(input)?.events||[]);
+   keptMemory.set(key,list);
+   try{root.localStorage.setItem(KEPT_PREFIX+key,JSON.stringify(list));}catch{}
+   const bell=D.querySelector('#bean-updates .ku-bell');
+   if(bell&&list.length){bell.setAttribute('aria-label','Thông báo — '+list.length+' mới');const count=bell.querySelector('.ku-bell-count');if(count)count.textContent=list.length;}
+   return result;
+  };
+ }
+ function results(){return keptOf(activeKey).filter(e=>e.kind==='result').map(e=>e.key);}
  function seen(){try{const value=JSON.parse(root.localStorage.getItem(SEEN_PREFIX+activeKey));return Array.isArray(value)?value:[];}catch{return [];}}
  function paint(){
   const slot=D.querySelector('#kids-journey-root .j-notification-slot');if(!slot)return;
@@ -51,7 +85,7 @@
   const api=root.TrialBeanHomeworkUpdates;
   if(!api||api.__firstNotices)return;
   api.__firstNotices=true;
-  const render=api.render;
+  const render=keeping(api,api.render);
   api.render=function(input){
    if(Array.isArray(input?.records)&&!stored(input)){
     const now=Number(input.now)||Date.now();
