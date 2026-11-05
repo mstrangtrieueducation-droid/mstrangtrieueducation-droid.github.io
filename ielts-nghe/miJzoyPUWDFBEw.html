@@ -277,4 +277,4 @@ function openTest(){
 entryName.oninput=updateEntryGate;entryClass.onchange=updateEntryGate;enterTest.onclick=openTest;entryName.onkeydown=event=>{if(event.key==="Enter"&&!enterTest.disabled)openTest()};
 document.addEventListener("keydown",event=>{if(event.key==="Enter"&&event.target.matches("#content input"))event.preventDefault()});
 window.addEventListener("online",()=>{clearScoreRetry();if(finalRequested()&&!finalSubmitted())void resumeFinalSubmission()});updateEntryGate();save();render();window.IELTSSubmission.subscribe?.(event=>{if(event.status==='confirmed'&&scoreParts.some(part=>event.submissionId===state.final.receiptId+'-'+part.key)&&finalRequested()&&!finalSubmitted()&&!state.final.legacyUnverified)void resumeFinalSubmission()});if(finalRequested()&&!finalSubmitted()&&!state.final.legacyUnverified)void resumeFinalSubmission();
-</script></body></html>
+</script><script defer src="/ielts-nghe/titi-review.v1.js"></script></body></html>
