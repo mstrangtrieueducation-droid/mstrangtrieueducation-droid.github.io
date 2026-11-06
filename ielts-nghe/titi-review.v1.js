@@ -36,6 +36,7 @@
     '.tt-ok-t{background:#dff5ea;color:#16754d}.tt-bad-t{background:#ffe3dc;color:#b23a22}.tt-skip-t{background:#eceff4;color:#55607a}' +
     '.tt-q .tt-ans{margin:4px 0 6px;color:#3b4660}.tt-q .tt-ev{border-left:3px solid #142d67;padding-left:10px;color:#24334d;margin:6px 0}.tt-q .tt-trap{border-left:3px solid #d29b2f;padding-left:10px;color:#5d4a20;margin-top:6px}' +
     '.tt-hide{display:none!important}' +
+    '.tt-arh{margin:6px 0 4px;color:#071535;text-align:left}#answerReview{text-align:left}#answerReview details{border:1px solid #d6dbe7;border-radius:12px;background:#fff;padding:10px 14px;margin:0 0 10px}#answerReview summary{cursor:pointer;color:#071535}#answerReview ol{list-style:none;padding-left:4px}' +
     '@media (max-width:640px){.tt-card{grid-template-columns:1fr}.tt-side{flex-direction:row;gap:10px;padding:12px 12px 0;align-items:center}.tt-titi{height:140px}.tt-name{display:none}.tt-bubble{flex:1;text-align:left}.tt-bubble:after{display:none}}';
 
   function ring(c, w, s) {
@@ -117,6 +118,12 @@
       '<div class="tt-actions"><button type="button" class="tt-btn tt-primary" data-a="go">Xem chữa từng câu</button><button type="button" class="tt-btn tt-ghost" data-a="bad" aria-pressed="false">Chỉ hiện câu sai</button></div></div>';
     var rev = document.createElement('div'); rev.className = 'tt-review'; rev.innerHTML = '<h3>Chữa từng câu cùng cô Titi</h3><p style="margin:0;color:#667087">Đang tải giải thích…</p>';
     host.insertBefore(card, host.firstChild); card.after(rev);
+    var ar = document.getElementById('answerReview');
+    if (ar && ar.querySelector('details')) {
+      var arh = document.createElement('h3'); arh.className = 'tt-arh'; arh.textContent = 'Đáp án chép chính tả & câu hỏi IELTS (từng Section)';
+      ar.querySelectorAll('details').forEach(function (d) { d.open = true; });
+      card.after(arh); arh.after(ar);
+    }
     loadExplain(function (ex) {
       rev.innerHTML = '<h3>Chữa từng câu cùng cô Titi</h3>' + list.map(function (r) {
         var st = !String(r.mine).trim() ? 'skip' : r.ok ? 'ok' : 'bad', x = ex[String(r.n)] || {};
