@@ -48003,6 +48003,35 @@ ScienceStageContract.lessons=[
         target.scoreLabel=String(last.score)+(Number.isFinite(last.maximum)?'/'+last.maximum:'');
       }
     }
+    // KIDS_COMMENT_RECEIPT_EXCEPTION_V1 (owner, 06/11/2026): before Form receipts were in place,
+    // parents sent work through Zalo and the teacher commented in the tracker. Required work assigned
+    // from 10/08/2026 and due by 05/11/2026 that carries a teacher comment counts as submitted. A comment
+    // asking for a resubmission keeps the task unfinished. No receipt, time, link, score or lateness is
+    // invented, and later work still needs a Form receipt.
+    const commentExceptionStart=Date.UTC(2026,7,9,17),commentExceptionEnd=Date.UTC(2026,10,5,17)-1;
+    const commentPlain=v=>String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/\s+/g,' ').trim();
+    const commentResubmit=/nop lai|can nop|nop bo sung|lam lai bai|gui lai|chua nop|chua dung yeu cau|chua dinh kem|chua co bai|khong co bai|chua lam bai|khong mo duoc|khong xem duoc/;
+    function commentReceiptException(assignment,required,profile){
+      if(assignment.isAssessmentLesson||!required.length)return;
+      const assigned=root.DirectSubmissionAssignmentWindow.assignedAt(assignment);
+      if(!(assigned>=commentExceptionStart))return;
+      required.forEach(task=>{
+        const feedback=task&&task.feedback;
+        if(!feedback||feedback.submitted===true||feedback.completed===true||feedback.receiptReceived===true||feedback.contentMissing===true)return;
+        const due=Number(feedback.directReceiptDeadline&&feedback.directReceiptDeadline.dueAt)||0;
+        if(due?due>commentExceptionEnd:assigned>commentExceptionEnd)return;
+        let comment=feedback.teacherComment||feedback.comment||'';
+        if(!comment&&assignment.kind==='self-practice'&&required.length===1){
+          const id=String(assignment.id||''),rows=list(profile.selfPractice).concat(list(profile.preparedPracticeRows)).filter(row=>row&&id&&String(row.scheduleAssignmentId||row.id||'')===id&&row.teacherComment);
+          if(rows.length)comment=rows[0].teacherComment;
+        }
+        const plain=commentPlain(comment);
+        if(plain.replace(/🔗|mo bai ca lop|han:?|https?:\S+/g,'').replace(/[^a-z0-9]+/g,'').length<8||commentResubmit.test(plain))return;
+        feedback.submitted=true;feedback.isOverdue=false;feedback.commentReceiptException=true;
+        feedback.state='co_da_nhan_xet';feedback.stateLabel='Đã nộp bài';
+        if(feedback.directReceiptDeadline)feedback.directReceiptDeadline=Object.assign({},feedback.directReceiptDeadline,{received:true,complete:true,pending:false,missing:false,label:'Đã nộp'});
+      });
+    }
     return function projectKidsSubmissions(value,payload,ticket,guard){
       if(!value||!value.profile||!payload)return value;
       mappingCache=new WeakMap();peerCache=new WeakMap();
@@ -48068,6 +48097,7 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
           // Its due date controls late status, not whether a fresh reminder may appear.
           if(active&&mode==='required'&&task.requiresSubmission!==false&&Boolean(task.url||task.learningUrl)&&root.DirectSubmissionDeadlinePolicy.evaluate(assignment,[],{verified:true}).pending)checks.push(Boolean(feedback.submitted||guard.can(task)&&eligible));
         });
+        commentReceiptException(assignment,required,profile);
         if(required.some(task=>mappings(assignment,task,required.length).length)){root.DirectFormReceiptAuthority.clear(assignment);assignment.directFormSource=true;}
         const complete=required.length>0&&required.every(task=>task.feedback&&task.feedback.submitted);
         if(complete){assignment.submitted=true;assignment.isOverdue=false;assignment.state=assignment.teacherComment?'co_da_nhan_xet':'da_nop_cho_nhan_xet';assignment.stateLabel=assignment.teacherComment?'Cô đã nhận xét':'Đã nộp bài';}
