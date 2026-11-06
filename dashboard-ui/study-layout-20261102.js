@@ -118,12 +118,37 @@
  function markSkillReviews(){
   for(const section of D.querySelectorAll('#panel-overview .ielts-self-study-skill-section'))setAttr(section,'data-sl-skill-review',/^(Speaking|Shadow)/i.test(section.querySelector('h3')?.textContent.trim()||'')?'':null);
  }
+ // FIGHTER: the raw tracker block is hidden, so each attempt's own score moves beside that attempt's time. Text copied as written; nothing is recounted.
+ function attemptStamp(text){const m=String(text).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[\s,·]+(\d{1,2}):(\d{2}))?/);return m?[m[1].padStart(2,'0'),m[2].padStart(2,'0'),m[3],(m[4]||'').padStart(2,'0'),m[5]||''].join('|'):'';}
+ function attemptScores(){
+  for(const raw of D.querySelectorAll('details[data-history-section^="f5-raw-"]:not([data-sl-scores])')){
+   raw.setAttribute('data-sl-scores','');
+   const lines=(raw.querySelector('.f5-full-review')?.textContent||'').split('\n').map(line=>line.trim()),attempts=[];
+   for(const line of lines){
+    const m=line.match(/^(?:Lần|Lượt)\s*\d+\s*:\s*(.+)$/);if(!m)continue;
+    const score=m[1].replace(/\d{1,2}\/\d{1,2}\/\d{4}(?:[\s,]+\d{1,2}:\d{2}(?::\d{2})?)?/,'').replace(/^Điểm\s*/i,'').replace(/(\d)\.(\d)/g,'$1,$2').replace(/[\s·]+$/,'').replace(/^[\s·]+/,'');
+    if(score)attempts.push({stamp:attemptStamp(m[1]),score,line});
+   }
+   const box=raw.parentElement,quality=lines.find(line=>/^Chất lượng\s*:/i.test(line))?.match(/(\d+(?:[.,]\d+)?)\s*%/)?.[1]?.replace('.',',');
+   if(quality&&!box.textContent.replace(raw.textContent,'').includes(quality+'%')){const p=D.createElement('p');p.className='f5-times';p.textContent='Chất lượng '+quality+'%';raw.before(p);}
+   if(!attempts.length)continue;
+   let times=box.querySelector('.f5-times');const nodes=times?[...times.childNodes].filter(n=>n.nodeType===3):[];
+   for(const a of attempts){
+    const node=nodes.find(n=>!n.slScored&&attemptStamp(n.textContent)===a.stamp);
+    if(node){node.slScored=true;node.textContent+=' · '+a.score;continue;}
+    if(!times){times=D.createElement('p');times.className='f5-times';raw.before(times);}
+    if(times.childNodes.length)times.append(D.createElement('br'));
+    times.append(a.line.replace(/^(Lần|Lượt)\s*(\d+)\s*:\s*/,'$1 $2 · ').replace(/^(.*?·\s*)Điểm\s*/i,'$1').replace(/(\d)\.(\d)/g,'$1,$2'));
+   }
+  }
+ }
  function paint(){
   queued=false;
   wrapStableViews();
   arrangeAll();
   decorateAlerts();
   markSkillReviews();
+  attemptScores();
   if(!dockDone)dockDone=foldDock();
  }
  function schedule(){if(!queued){queued=true;root.requestAnimationFrame(paint);}}
@@ -225,6 +250,8 @@
  body.f5-study-hub #f5-list>.f5-unit h3{margin:4px 0 2px!important;font-size:17px!important}
  body.f5-study-hub #f5-list>.f5-unit .f5-dates{margin:0 0 8px!important;font-size:12.5px!important}
  body.f5-study-hub #f5-list>.f5-unit .f5-unit-footer{margin-top:10px!important;padding-top:10px!important}
+ /* FIGHTER: parents do not need the raw tracker text under each attempt; times, work links and comments stay. */
+ details[data-history-section^="f5-raw-"]{display:none!important}
  @media(max-width:600px){
   .sl-head{font-size:12.5px;margin:14px 0 6px}
   body.f5-study-hub #f5-summary{gap:8px}
