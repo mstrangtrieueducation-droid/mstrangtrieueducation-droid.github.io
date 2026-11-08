@@ -2,7 +2,7 @@ Presentation-only changes live here. Reuse the existing native model; never add 
 
 # Frozen dashboard core
 
-Restore point: `stable-20261106c` (earlier: `stable-20261106b`, `stable-20261106`, `stable-20261105`, `stable-20261102`, `stable-20261101`, `stable-20261031b`, `stable-20261031`, `stable-20261026`, kept intact). All 44 class dashboards share the frozen native data contract.
+Restore point: `stable-20261108` (earlier: `stable-20261106c`, `stable-20261106b`, `stable-20261106`, `stable-20261105`, `stable-20261102`, `stable-20261101`, `stable-20261031b`, `stable-20261031`, `stable-20261026`, kept intact). All 44 class dashboards share the frozen native data contract.
 
 Only the human owner explicitly saying **“sửa lõi nhận bài”** authorizes changing receipt recognition, Schedule reading/release, history preservation, canonical counters or identity/entry protection. A UI/CSS request or new practice content does not authorize core changes. Never move or delete the stable tag or silently regenerate its baseline.
 
