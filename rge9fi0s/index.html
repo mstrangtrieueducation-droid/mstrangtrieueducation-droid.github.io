@@ -36652,6 +36652,7 @@ function sciencePracticeCardV1_(item,isNewPractice){try{
 
 
       const meta=submissionOriginalStatusMeta_(item);
+      if(item&&item.resubmitRequired)return {cls:'late',label:'Cần nộp lại'}; // KIDS_RESUBMIT_NOTICE_V1
 
 
 
@@ -41760,14 +41761,14 @@ function createStudentLearningPrefill(options) {
 function recomputeSummaryCounters(results,options){
  options=options||{};const now=options.now||Date.now(),shift=7*3600000,d=new Date(now+shift),midnight=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-shift,week=midnight-((d.getUTCDay()+6)%7)*86400000,next=week+7*86400000,byId=new Map();
  (results||[]).forEach(r=>{if(r&&r.id&&!r.manualOnly&&!r.paperOnly)byId.set(r.id,r);});
- const rows=[...byId.values()],completed=rows.filter(r=>r.complete===true),pending=rows.filter(r=>r.complete===false),overdue=pending.filter(r=>r.overdue===true),weekly=pending.filter(r=>!r.overdue&&Number.isFinite(r.dueAt)&&r.dueAt>=week&&r.dueAt<next),videos=new Map();
+ const rows=[...byId.values()],completed=rows.filter(r=>r.complete===true),pending=rows.filter(r=>r.complete===false),overdue=pending.filter(r=>r.overdue===true),resubmit=pending.filter(r=>r.resubmit===true),weekly=pending.filter(r=>!r.overdue&&!r.resubmit&&Number.isFinite(r.dueAt)&&r.dueAt>=week&&r.dueAt<next),videos=new Map();
  rows.filter(r=>r.videoGroup).forEach(r=>{const group=videos.get(r.videoGroup)||[];group.push(r);videos.set(r.videoGroup,group);});
- return{schema:1,computedAt:now,total:rows.length,completed:completed.length,pending:pending.length,pendingThisWeek:weekly.length,overdue:overdue.length,videoTotal:videos.size,videoCompleted:[...videos.values()].filter(v=>v.every(r=>r.complete===true)).length,taskIds:rows.map(r=>r.id)};
+ return{schema:1,computedAt:now,total:rows.length,completed:completed.length,pending:pending.length,pendingThisWeek:weekly.length,overdue:overdue.length,resubmit:resubmit.length,videoTotal:videos.size,videoCompleted:[...videos.values()].filter(v=>v.every(r=>r.complete===true)).length,taskIds:rows.map(r=>r.id)};
 }
 function kidsCanonicalResults(value,now){
  const out=[],time=root.DirectSubmissionDeadlinePolicy.time;
- ((value.profile&&value.profile.assignments)||[]).forEach(a=>{if(!a||a.isAssessmentLesson||(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))!=='required')return;(a.tasks||[]).filter(t=>t&&t.requiresSubmission!==false&&Boolean(t.url||t.learningUrl)).forEach((t,i)=>{const f=t.feedback||{},due=root.DirectSubmissionDeadlinePolicy.dueAt?root.DirectSubmissionDeadlinePolicy.dueAt(a):time(a.dueAt||a.dueDate),end=due&&(!a.dueAt?due+86399999:due),complete=f.submitted===true||f.completed===true||f.reviewed===true;
- out.push({id:a.id+'::'+(t.id||i),assignmentId:a.id,taskId:t.id||'',complete,overdue:!complete&&(f.isOverdue===true||Number.isFinite(end)&&end>0&&end<now),dueAt:end||null,videoGroup:a.kind==='self-practice'?a.id:'',title:t.title||a.title||'',assignment:a,task:t});});});return out;
+ ((value.profile&&value.profile.assignments)||[]).forEach(a=>{if(!a||a.isAssessmentLesson||(a.webActivityMode||(a.optionalWebPractice?'self-directed':'required'))!=='required')return;(a.tasks||[]).filter(t=>t&&t.requiresSubmission!==false&&Boolean(t.url||t.learningUrl)).forEach((t,i)=>{const f=t.feedback||{},due=root.DirectSubmissionDeadlinePolicy.dueAt?root.DirectSubmissionDeadlinePolicy.dueAt(a):time(a.dueAt||a.dueDate),end=due&&(!a.dueAt?due+86399999:due),complete=f.submitted===true||f.completed===true||f.reviewed===true,resubmit=!complete&&f.resubmitRequired===true;
+ out.push({id:a.id+'::'+(t.id||i),assignmentId:a.id,taskId:t.id||'',complete,resubmit,overdue:!complete&&!resubmit&&(f.isOverdue===true||Number.isFinite(end)&&end>0&&end<now),dueAt:end||null,videoGroup:a.kind==='self-practice'?a.id:'',title:t.title||a.title||'',assignment:a,task:t});});});return out;
 }
 root.recomputeSummaryCounters=recomputeSummaryCounters;root.kidsCanonicalResults=kidsCanonicalResults;
 if(typeof module==='object'&&module.exports)module.exports={recomputeSummaryCounters,kidsCanonicalResults};
@@ -48032,6 +48033,51 @@ ScienceStageContract.lessons=[
         if(feedback.directReceiptDeadline)feedback.directReceiptDeadline=Object.assign({},feedback.directReceiptDeadline,{received:true,complete:true,pending:false,missing:false,label:'Đã nộp'});
       });
     }
+    // KIDS_RESUBMIT_NOTICE_V1 (owner, 08/11/2026): a "CẦN NỘP LẠI" notice from the teacher or the grader
+    // means the task is not finished until the pupil sends it again; it is shown and counted separately.
+    // The tracker stamps the notice with the receipt minute it answers, and a later receipt is a
+    // resubmission waiting for the teacher. Without a stamp, only a receipt sent from 06/11/2026 (when
+    // resubmissions stopped being graded automatically) and two hours after the previous one counts as a
+    // resubmission. Receipts, links, history, marks and comments stay as they are.
+    const resubmitHead=/^\s*❌\s*CẦN\s+NỘP\s+LẠI(?:\s*\(([^)\n]*)\))?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*$/;
+    const resubmitCut=Date.UTC(2026,10,5,17);
+    function resubmitNoticeOf(comment){
+      const lines=String(comment==null?'':comment).split('\n').map(s=>s.trim()).filter(Boolean);if(!lines.length)return null;
+      const m=lines[0].match(resubmitHead),rest=m?lines.slice(1):lines,first=rest[0]||'';
+      const why=rest.map(s=>s.match(/^[•\-\s]*Lý do yêu cầu nộp lại\s*:\s*(.+)$/i)).find(Boolean);
+      const reason=why?why[1].trim():m&&m[1]?m[1].trim():first.replace(/^[^\p{L}\p{N}]*CẦN\s+NỘP\s+LẠI\s*[:—–-]?\s*/iu,'').replace(/^Chất lượng:\s*/i,'').trim();
+      if(m)return {at:Date.UTC(+m[4],+m[3]-1,+m[2],+m[5]-7,+m[6]),reason};
+      const plain=commentPlain(first),all=commentPlain(lines.join(' '));
+      if(/^[^a-z0-9]*can nop lai\b/.test(plain)||/yeu cau quay lai|ly do yeu cau nop lai/.test(all)||/\bnop lai (?:cho co|con nhe|nhe)\b/.test(all)&&!/\bda nop lai\b/.test(all))return {at:null,reason};
+      return null;
+    }
+    function resubmitApply(target,comment){
+      const notice=resubmitNoticeOf(comment);if(!target||!notice)return '';
+      const times=list(target.submissionAttempts).filter(a=>a&&a.contentStatus!=='empty'&&a.contentStatus!=='unconfirmed').map(a=>Number(a.submittedAtMs)||root.DirectSubmissionDeadlinePolicy.time(a.submittedAt)||0).filter(n=>n>0).sort((a,b)=>a-b);
+      const last=times[times.length-1]||0,prev=times[times.length-2]||0;
+      const again=notice.at!==null?times.some(t=>Math.floor(t/60000)*60000>notice.at):times.length>1&&last>=resubmitCut&&last-prev>=7200000;
+      delete target.resubmitRequired;delete target.resubmitReason;
+      if(again){target.resubmittedAfterNotice=true;if(target.submitted===true){target.state='da_nop_cho_nhan_xet';target.stateLabel='Đã nộp lại';}return 'again';}
+      target.resubmitRequired=true;target.resubmitReason=notice.reason.slice(0,160);
+      target.submitted=false;target.completed=false;target.reviewed=false;target.isOverdue=false;
+      target.state='can_nop_lai';target.stateLabel='Cần nộp lại';
+      return 'pending';
+    }
+    function resubmitNotice(assignment,required,profile){
+      if(assignment.isAssessmentLesson||!required.length)return;
+      let pending=false;
+      required.forEach(task=>{
+        const feedback=task&&task.feedback;if(!feedback)return;
+        let comment=feedback.teacherComment||feedback.comment||'';
+        if(!comment&&required.length===1)comment=assignment.teacherComment||assignment.comment||'';
+        if(!comment&&assignment.kind==='self-practice'&&required.length===1){
+          const id=String(assignment.id||''),rows=list(profile.selfPractice).concat(list(profile.preparedPracticeRows)).filter(row=>row&&id&&String(row.scheduleAssignmentId||row.id||'')===id&&row.teacherComment);
+          if(rows.length)comment=rows[0].teacherComment;
+        }
+        if(resubmitApply(feedback,comment)==='pending')pending=true;
+      });
+      if(pending){assignment.submitted=false;assignment.completed=false;assignment.reviewed=false;assignment.isOverdue=false;assignment.resubmitRequired=true;assignment.state='can_nop_lai';assignment.stateLabel='Cần nộp lại';}
+    }
     return function projectKidsSubmissions(value,payload,ticket,guard){
       if(!value||!value.profile||!payload)return value;
       mappingCache=new WeakMap();peerCache=new WeakMap();
@@ -48109,6 +48155,7 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         // Only a complete set of source-confirmed task receipts replaces the
         // assignment timing. Paper/teacher-only and unknown-source work stay intact.
         if(complete&&required.every(task=>receivedTiming.has(task))){assignment.isLate=required.some(task=>receivedTiming.get(task).late);if(assignment.isLate)assignment.stateLabel='Đã nộp · Muộn';}
+        resubmitNotice(assignment,required,profile);
       });
       // A native accepted receipt does not depend on Schedule being refreshed.
       // Keep unmatched positive receipts as received work, with no invented
@@ -48131,6 +48178,14 @@ root.NativeTrackerFeedbackView.restore(feedback,nativeTrackerFeedback);
         }else if(mappings(row,{url:row.learningUrl||row.url||row.taskUrl||''},1).length){
           const native=root.NativeTrackerFeedbackView.capture(row);root.DirectFormReceiptAuthority.clear(row);root.NativeTrackerFeedbackView.restore(row,native);row.directFormSource=true;
         }
+      }));
+      // KIDS_RESUBMIT_NOTICE_V1: a practice row shows the same verdict as its assignment; a row without
+      // an assignment applies the same notice rule to its own receipts.
+      [profile.selfPractice,profile.preparedPracticeRows].forEach(rows=>list(rows).forEach(row=>{
+        if(!row)return;const id=String(row.scheduleAssignmentId||row.id||'');
+        const bound=assignments.filter(a=>a&&a.kind==='self-practice'&&id&&a.id===id);
+        if(bound.length===1){if(bound[0].resubmitRequired){row.submitted=false;row.completed=false;row.reviewed=false;row.isOverdue=false;row.resubmitRequired=true;row.state='can_nop_lai';row.stateLabel='Cần nộp lại';}return;}
+        if(!bound.length)resubmitApply(row,row.teacherComment||row.comment||'');
       }));
       list(profile.tests).concat(list(profile.retakeResults)).forEach(test=>{
         const retake=test&&test.retake;if(!retake||!retake.assignmentId)return;
@@ -56005,7 +56060,7 @@ window.addEventListener('mtt:confirmed-profile-fresh',function(event){
 
 
 <script src="/dashboard-ui/kids-video-actions-bound-20261030.js"></script>
-<script src="/dashboard-ui/kids-exam-notices-20261030.js"></script><script src="/dashboard-ui/kids-detail-layout-20261101.js"></script><script src="/dashboard-ui/kids-grade-percent-20261102.js"></script><script src="/dashboard-ui/kids-first-notices-20261103.js"></script><script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.932a1e1fcdbbfeee.js" defer></script>
+<script src="/dashboard-ui/kids-exam-notices-20261030.js"></script><script src="/dashboard-ui/kids-detail-layout-20261101.js"></script><script src="/dashboard-ui/kids-grade-percent-20261102.js"></script><script src="/dashboard-ui/kids-first-notices-20261103.js"></script><script id="kids-native-journey-standard" src="/student-learning/kids-journey/standard-native.7dda1804a14435cc.js" defer></script>
 </body>
 
 
