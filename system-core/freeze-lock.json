@@ -3,7 +3,7 @@
   "tag": "stable-20261102",
   "sourceCommit": "cdd8e0955d63faae66a20ec675309e6360c67ae8",
   "policy": "Only explicit user instruction: sá»­a lÃµi nháº­n bÃ i permits changing this frozen baseline. UI/CSS uses dashboard-ui/.",
-  "classes": 44,
+  "classes": 45,
   "assets": {
     ".github/workflows/dashboard-core-cloud.yml": "905dbe90423e6b5ecacdd483edfceddedc2bfa3a22ba27e04fa06242935341c4",
     "student-learning/active-roster-v1.js": "41d034962fbc6e9e5d93ac6da3a1e8ab6c86a1932e36233fe4e3abc6385d5bfe",
@@ -26,7 +26,8 @@
     "system-core/runtime.enc": "b62b6ffe96a102fbf8a3e81411cf6a17b14cf81b6cc0cc79196fb95b573a2479",
     "system-core/check-freeze.mjs": "694fc509d742adc965a561ee1a93618019ba8a7f2de05a6d22cc9e39c31dfbf9",
     "system-restore/backend-restore.enc": "597d21818473f5e858814df8cb11ecf1cca30787280c22a143c8df76f15babf2",
-    "system-restore/backend-restore-manifest.json": "9878d5dc9070f2db48df253755f3601ef81f7893f8006bd36454bce18a32db8e"
+    "system-restore/backend-restore-manifest.json": "9878d5dc9070f2db48df253755f3601ef81f7893f8006bd36454bce18a32db8e",
+    "student-learning/kids-ta-entry/dashboard.bce5c373911c.js": "bce5c373911c947d42b0a13dbde4da96638b5d6f46b33ddb69111b2ad35c277f"
   },
   "pageScripts": {
     "u90k1f5e/index.html": [
@@ -3160,6 +3161,74 @@
       },
       {
         "sha256": "6afc11b7e0454b16647fd480d9b705d670653b78ac9cff8f2f49b9610c44f570"
+      }
+    ],
+    "qadivm79/index.html": [
+      {
+        "sha256": "98b3ff1cb921042e2662636cfdfed34cfc6f05633fb7aafba4b526602161404a"
+      },
+      {
+        "sha256": "610cb9a96a2b03e4ad5a13285f49f6feab1675b456087cf7ab45e021cb117829"
+      },
+      {
+        "sha256": "5c279107d1ef764f7eadda626b73399975efd0ce7f7f88d207b533fbfe584612"
+      },
+      {
+        "sha256": "4b8f8165a3b31e67784066a8274af3ab9a93874a2dc1dc4a496681b8d14199ce"
+      },
+      {
+        "src": "/student-learning/active-roster-v1.js?v=20261026-kids-class-results-v1"
+      },
+      {
+        "sha256": "ba54f621d380631ade35892aa94415d773ca16821686360aedea03da5afbff50"
+      },
+      {
+        "sha256": "284831ad7f687713d838ac948cf78b64f2c286135e149fd26587f6e2c275c119"
+      },
+      {
+        "sha256": "27e91da44ab460ea00877bed0f936261a99dfe419606ec00aad710d960efe04c"
+      },
+      {
+        "sha256": "e8828fd66e2bdb61d2250ecad39bc8ad9926d19b1e9704c89d621260b5902728"
+      },
+      {
+        "sha256": "f23370d70fcd7bdf9322f49b6a9d29e8f3b02bba47475fc78daf1cef721f5b6a"
+      },
+      {
+        "sha256": "b520789deb7d84850cb86b62a44077025e00b9f98f1499addbaddf1f93824c14"
+      },
+      {
+        "sha256": "befc4e449ebead65037e0cfee31bb45db69befeaf12ab558825f0cbfe15d5ffb"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/access.ca8dd5e6b12c.js"
+      },
+      {
+        "src": "/student-learning/kids-ta-entry/dashboard.bce5c373911c.js"
+      },
+      {
+        "sha256": "2df1042e07b77a1b9279ce8be0554081e993758715b115ad574cdc9c61d6e09d"
+      },
+      {
+        "sha256": "f506059d34001debf20f8ee81e380e56743ecfda65329aa764db96022daf950d"
+      },
+      {
+        "sha256": "ff009ef39a7942130ae726d50fb0351a3507c14ca9a23abe0061fd2278d7f5e0"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/game-kit/classroom-progress.js?v=classroom-4"
+      },
+      {
+        "src": "/vanlang-on-thi-lop-6/vu-tru/galaxy-core.js?v=classroom-4"
+      },
+      {
+        "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
+      },
+      {
+        "src": "/student-learning/kids-journey/standard-native.7dda1804a14435cc.js"
       }
     ]
   }
