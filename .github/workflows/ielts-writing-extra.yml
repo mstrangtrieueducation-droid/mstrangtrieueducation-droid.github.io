@@ -1,0 +1,35 @@
+name: IELTS Writing extra weeks
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: ielts-writing-extra
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          sparse-checkout: |
+            .github/ielts-ui
+            dashboard-ui
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Build the week list
+        run: node .github/ielts-ui/writing-extra.mjs
+      - name: Publish if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git add dashboard-ui/ielts-writing-extra-assignments.js
+          git diff --cached --quiet && { echo unchanged; exit 0; }
+          git -c user.name=writing-extra -c user.email=writing-extra@users.noreply.github.com commit -qm "Refresh IELTS Writing extra weeks"
+          for i in 1 2 3; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
+          curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/${{ github.repository }}/pages/builds" >/dev/null || true
