@@ -805,7 +805,9 @@ const ieltsWritingReviews_ = (() => {
     refresh();
   }, 30000);
   const baseOverview=renderOverview;
-  renderOverview=function(){const result=baseOverview.apply(this,arguments);const host=document.getElementById('panel-overview');if(host&&state.student&&who())Ielts50Polish.updateWriting(host,overviewHtml());return result;};
+  renderOverview=function(){const result=baseOverview.apply(this,arguments);const host=document.getElementById('panel-overview');if(host&&state.student&&who())putOverviewWriting(host,overviewHtml());return result;};
+  /* WRITING_OVERVIEW_SLOT_V1: IELTS 51/52 pages have no Ielts50Polish helper; use it when present, else our own slot. */
+  function putOverviewWriting(host,html){const polish=window.Ielts50Polish;if(polish&&typeof polish.updateWriting==="function")return polish.updateWriting(host,html);let slot=host.querySelector("#ielts-writing-overview");if(!slot){slot=document.createElement("section");slot.id="ielts-writing-overview";host.appendChild(slot);}if(slot.__writingHtml===html)return;slot.__writingHtml=html;slot.innerHTML=html;}
   function savedResultCard(record) {
     if(!current() || !validRecord(record) || writingBlockedByPolicy(record.assignmentCode)) return '';
     const assignment=ieltsWritingAssignments_.all().find(a=>a.assignmentCode===code(record.assignmentCode));
