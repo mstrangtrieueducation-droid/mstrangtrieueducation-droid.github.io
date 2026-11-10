@@ -100,7 +100,7 @@
         "https://script.google.com/macros/s/AKfycbzboGfHvCRgAa98P84XlbUnY5_LzhU_ZDBdvjANONQvMo-4uA2eicPT3EhqFVNSSNhw/exec"
       ],
       "capabilities": {
-        "writing": false,
+        "writing": true,
         "classwork": false,
         "assessment": false
       }
@@ -115,7 +115,7 @@
         "https://script.google.com/macros/s/AKfycbwbJ2wjdgLfyAkbwTUTu2w5vWDL6UuwIIveeutBBpGKOik64DeAEe7sgHjcXHM4-O6l/exec"
       ],
       "capabilities": {
-        "writing": false,
+        "writing": true,
         "classwork": false,
         "assessment": false
       }
