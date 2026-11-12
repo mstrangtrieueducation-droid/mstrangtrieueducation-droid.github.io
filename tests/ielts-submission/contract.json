@@ -758,7 +758,7 @@
     },
     {
       "file": "ielts-full-test/assets/index-92ed559b7fbc.js",
-      "sha256": "e24eabe7895bc4727b7b61954c2a0f6fa096c35cd0c613b6572daa79fd9c1a8d",
+      "sha256": "28528caed2396241f4152e822967db9493593336962fd4439233ed6cb9930d2c",
       "requires": [
         "window.IELTSFullDurable.register(",
         "window.IELTSFullDurable.submit(",
