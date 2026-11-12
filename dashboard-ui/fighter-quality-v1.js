@@ -45,6 +45,17 @@
         }
       }
       card.querySelector('.fq-alert')?.remove();
+      card.querySelector('.fq-bars')?.remove();
+      const rows = (u.components || []).filter(c => graded(c) && (c.status === 'done' || c.status === 'fix'));
+      if (rows.length) {
+        // KIDS-style quality bars: one bar per graded notebook, green from 90%, red below.
+        card.querySelector('.f5-chips')?.insertAdjacentHTML('afterend', '<div class="fq-bars">' + rows.map(c => {
+          const v = Math.max(0, Math.min(100, pct(c.quality))), ok = c.status === 'done';
+          return '<div class="fq-bar ' + (ok ? 'ok' : 'bad') + '"><div class="fq-bar-top"><span>' + E(c.label) + '</span><b>' +
+            (ok ? '✅ ' : '❌ ') + v + '%</b></div><div class="fq-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+            v + '"><span style="width:' + v + '%"></span><i style="left:90%" title="Mức đạt 90%"></i></div></div>';
+        }).join('') + '</div>');
+      }
       const bad = failing(u);
       if (bad.length) {
         card.classList.add('fq-card-bad');
@@ -124,6 +135,13 @@
   #fq-dialog h2{margin:0 0 10px;color:#b71c1c;font-size:18px}
   #fq-dialog ul{padding-left:18px;margin:0 0 10px}
   #fq-dialog .fq-close{margin-top:6px;border:0;border-radius:8px;padding:9px 14px;background:#b71c1c;color:#fff;font-weight:700;cursor:pointer}
+  .fq-bars{display:grid;gap:8px;margin:10px 0 4px}
+  .fq-bar-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:4px;color:#16263b}
+  .fq-bar.ok .fq-bar-top b{color:#1b5e20}.fq-bar.bad .fq-bar-top b{color:#b71c1c}
+  .fq-track{position:relative;height:12px;border-radius:999px;background:#e9eef4;overflow:visible}
+  .fq-track>span{display:block;height:100%;border-radius:999px;transition:width .8s ease}
+  .fq-bar.ok .fq-track>span{background:#2e9d57}.fq-bar.bad .fq-track>span{background:#d32f2f}
+  .fq-track>i{position:absolute;top:-3px;width:2px;height:18px;background:#16263b;opacity:.55}
   @keyframes fqPulse{0%,100%{box-shadow:0 0 0 0 rgba(183,28,28,.5)}50%{box-shadow:0 0 0 8px rgba(183,28,28,0)}}
   `;
   D.head.append(style);

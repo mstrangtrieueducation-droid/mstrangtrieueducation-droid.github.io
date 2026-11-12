@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "tag": "stable-20261102",
+  "tag": "stable-20261112",
   "sourceCommit": "cdd8e0955d63faae66a20ec675309e6360c67ae8",
   "policy": "Only explicit user instruction: sá»­a lÃµi nháº­n bÃ i permits changing this frozen baseline. UI/CSS uses dashboard-ui/.",
   "classes": 45,
@@ -1981,7 +1981,7 @@
         "sha256": "6b188833246a97d36a7297bdf2361bdf851f5a71f5bff7e3c97cd772fa267371"
       },
       {
-        "sha256": "ad64503ff944e0350706f1817b6f0a4b14aeabc5d84d5a1ae381040084ebf7c1"
+        "sha256": "a28902941d4dca6b0ce2a4da1130ddf3c27a8d799ce685b27ca702624424d7dd"
       },
       {
         "sha256": "27428ddac8a6fe055eea62af0d12b76b5544facbc2c1bd8bbdac9c0e5a7146d6"
@@ -2002,7 +2002,7 @@
         "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
       },
       {
-        "sha256": "9d24262306865e47f27e35c6a8a7d4bb44fa21d6141e1b0ae0495386f5e0fddf"
+        "sha256": "837e78990a48c8d71ece50e7452fe3bf944f23226973457c844d1c490a404843"
       },
       {
         "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
@@ -2064,7 +2064,7 @@
         "sha256": "064550385f265ee9f168008ae21e9635246e32d29e896be85decd3ad0478e178"
       },
       {
-        "sha256": "8b6bdad6558f486f88e47592ee3e1e23e4e6ac51772059f2febe33a3398e6c35"
+        "sha256": "e1a506eddbd3bf654765fedae5dcb26d09d259ac8c26524c473e63ec3933f6ae"
       },
       {
         "sha256": "f74ffae6b8551b58629910c2f85b8233e9419b33cbb3c3602df9deb6560298f6"
@@ -2088,7 +2088,7 @@
         "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
       },
       {
-        "sha256": "af52e78ff315cbeebe42559f19feedf96d2618316a33fd2f7b0eeddb597d1567"
+        "sha256": "47915116dbf58051e49e715b9f11295a81befc0b0a2ba3bf63d5a71bd4546403"
       },
       {
         "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
@@ -2150,7 +2150,7 @@
         "sha256": "d14b6c60a5366752053253a8ff2ba7573f1dfc8cdc684e861a83173f00bbd650"
       },
       {
-        "sha256": "1cf1c3de3836f12c8dcee6c5dec49d29df0b41805f61b8d5cf1bf46819cb3cf7"
+        "sha256": "1ee48060cb7cde6d624c86ecac6f57cbd28bfe9d50680f446550f7755bfe30ef"
       },
       {
         "sha256": "90d3bd52fecd7c07dd7207e747a98f03efcec2efa6b2db5007f703b0bc729037"
@@ -2174,7 +2174,7 @@
         "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
       },
       {
-        "sha256": "af52e78ff315cbeebe42559f19feedf96d2618316a33fd2f7b0eeddb597d1567"
+        "sha256": "47915116dbf58051e49e715b9f11295a81befc0b0a2ba3bf63d5a71bd4546403"
       },
       {
         "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
@@ -2236,7 +2236,7 @@
         "sha256": "5ab87ecab3d93c24341144a186836472043306a9f6bef9d1c6a63930c13d686a"
       },
       {
-        "sha256": "72f45625545f90a95cccc35ac5d03d55b52d7711ab35fffc3e63c7242ca781b5"
+        "sha256": "67326f06496358f249fa8e8a1b8061b1ef47789d53d0b5628dc30bd4890b7f80"
       },
       {
         "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
@@ -2257,7 +2257,7 @@
         "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
       },
       {
-        "sha256": "af52e78ff315cbeebe42559f19feedf96d2618316a33fd2f7b0eeddb597d1567"
+        "sha256": "47915116dbf58051e49e715b9f11295a81befc0b0a2ba3bf63d5a71bd4546403"
       },
       {
         "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
@@ -2319,7 +2319,7 @@
         "sha256": "bf33846f61da63ec005a42287f1f036b60e27d5e47bf2b6ca3de76cd0b636d35"
       },
       {
-        "sha256": "4f0ca7eed0807c5936a5fe63e0f5fc6a6f63a72b306e9b966975afed25a168d8"
+        "sha256": "b3ba976d9d30412a1207e2ae08f7369d6de3e72d68ab20c779a37d3baf22e728"
       },
       {
         "sha256": "e2de05ff01e2b5c437376eafa88ad413e5f6cab6f2e0f27502673bf953e6c41c"
@@ -2340,7 +2340,7 @@
         "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
       },
       {
-        "sha256": "af52e78ff315cbeebe42559f19feedf96d2618316a33fd2f7b0eeddb597d1567"
+        "sha256": "47915116dbf58051e49e715b9f11295a81befc0b0a2ba3bf63d5a71bd4546403"
       },
       {
         "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"
@@ -3142,7 +3142,7 @@
         "src": "/student-learning/titi-games/dashboard.js?v=touch-play-20261017"
       },
       {
-        "sha256": "af52e78ff315cbeebe42559f19feedf96d2618316a33fd2f7b0eeddb597d1567"
+        "sha256": "47915116dbf58051e49e715b9f11295a81befc0b0a2ba3bf63d5a71bd4546403"
       },
       {
         "sha256": "754ee0e53040f370ade69c0d9abe9dda3a9fb4ad2086dcfafc5447724c148f90"

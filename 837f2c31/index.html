@@ -4906,7 +4906,7 @@ function cell(value,note,def){const raw=text(value),n=norm(raw),manual=text(note
 
 
 
- const bad=/bai chua hop le|can nop lai|nop sai|thieu bai/.test(norm(mark))||/(?:^|\n)\s*(?:loi\s*:|.*nop (?:bo sung|thieu|sai)|.*chua hop le)/.test(norm(teacherNote));
+ const bad=/bai chua hop le|can nop lai|nop sai|thieu bai/.test(norm(mark))||/chua dat \(yeu cau nop lai/.test(n)/*FIGHTER_NOTEBOOK_VERDICT_V1*/||/(?:^|\n)\s*(?:loi\s*:|.*nop (?:bo sung|thieu|sai)|.*chua hop le)/.test(norm(teacherNote));
 
 
 
