@@ -12,7 +12,12 @@
   let queued = false;
 
   const graded = c => c && c.role !== 'shadow' && Number.isFinite(c.quality);
-  const failing = u => (u.components || []).filter(c => graded(c) && c.status === 'fix');
+  const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+  // The grader's own verdict line decides (owner 12/11): "Chưa đạt (Yêu cầu nộp lại…)" is a fail even where a cached
+  // model still says done.
+  const isBad = c => graded(c) && (c.status === 'fix' || /chua dat \(yeu cau nop lai/.test(norm(c.raw || c.comment)));
+  const isOk = c => graded(c) && !isBad(c) && c.status === 'done';
+  const failing = u => (u.components || []).filter(isBad);
 
   function chipFor(card, c, used) {
     for (const chip of card.querySelectorAll('.f5-chips > .f5-chip')) {
@@ -36,29 +41,31 @@
         if (!graded(c)) continue;
         const chip = chipFor(card, c, used);
         if (!chip) continue;
-        if (c.status === 'done') {
+        if (isOk(c)) {
           chip.innerHTML = '<b>' + E(c.label) + ':</b> ✅ Đạt ' + pct(c.quality) + '%' + (c.late ? ' · Muộn' : '');
           chip.classList.add('fq-ok');
-        } else if (c.status === 'fix') {
+        } else if (isBad(c)) {
           chip.innerHTML = '<b>' + E(c.label) + ':</b> ❌ ' + pct(c.quality) + '% · CẦN NỘP LẠI';
           chip.classList.add('fq-bad');
         }
       }
       card.querySelector('.fq-alert')?.remove();
       card.querySelector('.fq-bars')?.remove();
-      const rows = (u.components || []).filter(c => graded(c) && (c.status === 'done' || c.status === 'fix'));
+      const rows = (u.components || []).filter(c => isOk(c) || isBad(c));
       if (rows.length) {
         // KIDS-style quality bars: one bar per graded notebook, green from 90%, red below.
         card.querySelector('.f5-chips')?.insertAdjacentHTML('afterend', '<div class="fq-bars">' + rows.map(c => {
-          const v = Math.max(0, Math.min(100, pct(c.quality))), ok = c.status === 'done';
+          const v = Math.max(0, Math.min(100, pct(c.quality))), ok = isOk(c);
           return '<div class="fq-bar ' + (ok ? 'ok' : 'bad') + '"><div class="fq-bar-top"><span>' + E(c.label) + '</span><b>' +
-            (ok ? '✅ ' : '❌ ') + v + '%</b></div><div class="fq-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+            (ok ? '✅ Đạt ' : '❌ CHƯA ĐẠT · ') + v + '%' + (ok ? '' : ' — NỘP LẠI') + '</b></div><div class="fq-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
             v + '"><span style="width:' + v + '%"></span><i style="left:90%" title="Mức đạt 90%"></i></div></div>';
         }).join('') + '</div>');
       }
       const bad = failing(u);
       if (bad.length) {
         card.classList.add('fq-card-bad');
+        const pill = card.querySelector('.f5-status');
+        if (pill) { pill.textContent = '❌ Cần nộp lại'; pill.classList.add('fq-pill-bad'); }
         const worst = Math.min(...bad.map(c => c.quality));
         card.querySelector('.f5-unit-top')?.insertAdjacentHTML('afterend',
           '<p class="fq-alert">❌ CHƯA ĐẠT — chất lượng ' + pct(worst) + '% (cần từ 90%). Bài vẫn tính là CHƯA NỘP cho tới khi con nộp lại đạt yêu cầu.</p>');
@@ -135,6 +142,9 @@
   #fq-dialog h2{margin:0 0 10px;color:#b71c1c;font-size:18px}
   #fq-dialog ul{padding-left:18px;margin:0 0 10px}
   #fq-dialog .fq-close{margin-top:6px;border:0;border-radius:8px;padding:9px 14px;background:#b71c1c;color:#fff;font-weight:700;cursor:pointer}
+  .f5-status.fq-pill-bad{background:#b71c1c!important;color:#fff!important;font-weight:800}
+  .f5-unit.fq-card-bad{background:#fff5f5!important}
+  .fq-bar.bad .fq-bar-top{font-size:13px}
   .fq-bars{display:grid;gap:8px;margin:10px 0 4px}
   .fq-bar-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-bottom:4px;color:#16263b}
   .fq-bar.ok .fq-bar-top b{color:#1b5e20}.fq-bar.bad .fq-bar-top b{color:#b71c1c}
