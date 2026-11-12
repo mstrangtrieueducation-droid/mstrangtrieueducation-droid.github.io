@@ -16,6 +16,7 @@ try{
  const tag=r=>String(r&&(r.classKey||r.className||r.classNumber||r.class||r.key||r.id||'?')).slice(0,40),why=r=>String(r&&(r.error||r.code||r.reason||r.status||'')).replace(/\s+/g,' ').slice(0,80);
  const problems=[];
  if(!summary.ok)problems.push('summary.ok=false'+(summary.error?' ('+String(summary.error).slice(0,120)+')':''));
+ (Array.isArray(summary.failed)?summary.failed:summary.failed?[summary.failed]:[]).slice(0,20).forEach(f=>problems.push('failed: '+(typeof f==='object'?tag(f)+' '+why(f)+' '+String(f.stage||f.step||'').slice(0,40):String(f).slice(0,120))));
  if(summary.classes!==44)problems.push('summary.classes='+summary.classes);
  if(!summary.classResultsOk)problems.push('summary.classResultsOk=false');
  if(schedule.length!==44)problems.push('schedule.length='+schedule.length);
