@@ -94,13 +94,18 @@
     remind(bad);
   }
 
-  // One pop-up a day per pupil while something is still owed.
+  // One pop-up a day per pupil while something is still owed — and only ONE on the page:
+  // the page repaints several times while data loads (slower laptops), which used to stack
+  // several pop-ups so "Con đã hiểu" seemed not to close it (12/11).
+  let reminded = false;
   function remind(bad) {
+    if (reminded || D.getElementById('fq-dialog')) return;
     let key = '';
     try {
       key = 'fq_remind_' + (location.hash || '').slice(0, 80) + '_' + new Date().toISOString().slice(0, 10);
       if (localStorage.getItem(key)) return;
     } catch (_) { return; }
+    reminded = true;   // once per page load even where the browser will not keep localStorage
     const dlg = D.createElement('dialog');
     dlg.id = 'fq-dialog';
     dlg.innerHTML = '<h2>❌ Bài CHƯA ĐẠT — cần nộp lại</h2><ul>' +
@@ -108,11 +113,15 @@
       '</ul><p>Các bài này vẫn tính là <b>CHƯA NỘP</b>. Con xem nhận xét của cô, bổ sung đủ rồi chụp lại và nộp lại trước buổi học tới.</p>' +
       '<button type="button" class="fq-close">Con đã hiểu</button>';
     D.body.append(dlg);
-    dlg.querySelector('.fq-close').addEventListener('click', () => {
+    const done = () => {
       try { localStorage.setItem(key, '1'); } catch (_) {}
-      dlg.close(); dlg.remove();
-    });
-    try { dlg.showModal(); } catch (_) { dlg.remove(); }
+      try { dlg.close(); } catch (_) {}
+      dlg.remove();
+    };
+    dlg.querySelector('.fq-close').addEventListener('click', done);
+    dlg.addEventListener('cancel', done);   // Esc key
+    dlg.addEventListener('click', e => { if (e.target === dlg) done(); });   // click outside the box
+    try { if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.remove(); } catch (_) { dlg.remove(); }
   }
 
   function paint() {
