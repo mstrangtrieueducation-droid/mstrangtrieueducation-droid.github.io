@@ -11,8 +11,34 @@
     return vocab(unit) && (manualKind === 'preparation' ||
       /^tra cuu truoc\b/.test(root.FighterCourseParser.norm(task?.title)));
   }
+  // Owner 12/11/2026 ("logic lên bài là của schedule, không liên quan file toàn diện"): a tracker column
+  // made ahead of its lesson gets the tracker's own "⛔ QUÁ HẠN" stamp from the date typed in its header
+  // (FIGHTER 9 VF1 Unit 11, FIGHTER 5 RI2 Unit 5 correction notebook, Practice Tests not yet held).
+  // A cell holding only the tracker's status words records nothing.
+  const DAY = 86400000, WINDOW_MARGIN = 14 * DAY;
+  const statusOnly = raw => {
+    const lines = String(raw || '').split('\n').map(line => line.trim()).filter(Boolean);
+    return lines.length > 0 && lines.every(line => /^⛔\s*QUÁ HẠN$/.test(line) || /^—\s*CHƯA\b/.test(line));
+  };
+  // The page holds about two months of Schedule assignments. Before that the Schedule cannot say
+  // whether a column was assigned, so older columns keep their native status (real old debts stay).
+  function scheduleStart(model) {
+    let start = 0;
+    for (const unit of [...(model.units || []), ...(model.guidanceUnits || [])]) {
+      for (const assignment of unit.assignments || []) {
+        const at = root.FighterCourseParser.dateTime(assignment.lessonDate);
+        if (at > 0 && (!start || at < start)) start = at;
+      }
+    }
+    return start;
+  }
   function scope(model) {
     const hidden = new Set(), hiddenTasks = new Set(), hiddenEntries = new Set();
+    const start = scheduleStart(model);
+    const insideSchedule = component => {
+      const due = root.FighterCourseParser.dateTime(component.dueDate);
+      return start > 0 && due > 0 && due >= start + WINDOW_MARGIN;
+    };
     for (const unit of [...(model.units || []), ...(model.guidanceUnits || [])]) {
       const columns = new Set();
       for (const component of unit.components || []) {
@@ -20,7 +46,8 @@
         // Homework is assigned by the Schedule. A tracker column with no Schedule task and nothing
         // recorded in it has not been assigned; the tracker's bare "— CHƯA GHI NHẬN" records nothing.
         // Recorded history (any other non-empty cell) stays visible.
-        const unassigned = !tasks.length && (!component.raw || /^—\s*CHƯA GHI NHẬN$/.test(String(component.raw).trim()));
+        const unassigned = !tasks.length && (!component.raw || /^—\s*CHƯA GHI NHẬN$/.test(String(component.raw).trim()) ||
+          statusOnly(component.raw) && insideSchedule(component));
         const retired = vocab(unit) && component.role === 'preparation' || unassigned ||
           tasks.length > 0 && tasks.every(entry => retiredTask(unit, entry.task, entry.state));
         if (!retired) continue;
