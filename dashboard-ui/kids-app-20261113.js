@@ -43,7 +43,7 @@
 
   const css = `#kapp{position:fixed;right:14px;bottom:96px;z-index:2147480000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp button{border:0;border-radius:999px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(12,24,48,.22);display:inline-flex;align-items:center;gap:7px}
-#kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:3px 7px;font-size:13px;font-weight:700;box-shadow:none;border:1px solid #bfe3cc;line-height:1.2}
+#kapp .k-on{background:#0F172A;color:#fff}#kapp .k-fab{position:relative;width:46px;height:46px;padding:0;justify-content:center;border-radius:50%;background:#fff;border:1px solid #dfe6ef;font-size:21px;box-shadow:0 6px 16px rgba(12,24,48,.18);animation:kappNudge 1.2s ease-in-out 2 1.5s}#kapp .k-fab i{position:absolute;top:7px;right:8px;width:9px;height:9px;border-radius:50%;background:#e5484d;border:2px solid #fff}@keyframes kappNudge{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(5deg)}}@media(prefers-reduced-motion:reduce){#kapp .k-fab{animation:none}}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:3px 7px;font-size:13px;font-weight:700;box-shadow:none;border:1px solid #bfe3cc;line-height:1.2}
 .kapp-spot{position:relative;z-index:2147479000;box-shadow:0 0 0 4px #2f7bd0,0 0 0 100vmax rgba(9,20,40,.55)!important;border-radius:18px;transition:box-shadow .3s}
 @keyframes kappFlash{0%,100%{box-shadow:0 0 0 0 rgba(47,123,208,0)}30%,70%{box-shadow:0 0 0 6px rgba(47,123,208,.35)}}.kapp-flash{animation:kappFlash 1.3s ease-in-out 3;border-radius:16px}
 html.kapp-on #mtt-native-bell,html.kapp-on .mtt-notice-bubble,html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
@@ -116,18 +116,27 @@ html.kapp-on #mtt-native-bell,html.kapp-on .mtt-notice-bubble,html.kapp-on #bean
     try { if (reg) subscribed = Boolean(await reg.pushManager.getSubscription()) && Notification.permission === 'granted' && ls.get(ON) === '1'; } catch (_) {}
     box.innerHTML = '';
     const add = (cls, text, fn) => { const b = D.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; b.addEventListener('click', fn); box.appendChild(b); };
-    if (installEvt && !standalone) add('k-inst', '📲 Cài app', async () => { const e = installEvt; installEvt = null; e.prompt(); try { await e.userChoice; } catch (_) {} paint(); });
-    // Links opened inside Zalo / Facebook / Messenger cannot receive notifications (most parents open them there).
-    if (inApp || samsung) { add('k-inst', '🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo', inAppHelp); return; }
-    if (ios && !standalone && !pushOK) { add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', iosHelp); return; }
-    // Android: no home-screen step at all (owner 14/11: the menu item was not there on her Samsung). Notifications work
-    // in Chrome without it, and a tap opens the pupil's page.
-    if (!pushOK) return;
-    // Owner 14/11: once notifications are on, the page's pink bell goes away (the phone rings instead) and the
-    // "on" mark is a small tag at the top, so it is not tapped by mistake. Turning off needs two taps and a confirmation.
+    // Owner 14/11: no long bar — one small round bell. A tap opens a short sheet that does both steps for this device
+    // (home screen / app + notifications), worded for Android, iPhone, computer, or a link opened inside Zalo.
     D.documentElement.classList.toggle('kapp-on', subscribed);
-    if (subscribed) add('k-ok', '🔔✓', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại báo giống chiếc chuông trên trang: điểm / sao / nhận xét mới, bài nộp đã nhận, bài học và bài tự luyện mới. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="p" data-x>Đóng</button></div><p style="margin-top:18px;font-size:13px;color:#6b7a8f">Muốn tắt thông báo trên máy này? <button class="d" data-off style="padding:6px 10px;font-size:13px">Tắt</button></p>', s => s.querySelector('[data-off]').addEventListener('click', () => { if (confirm('Tắt thông báo trên máy này?')) { s.remove(); disable(); } })));
-    else add('k-on', '🔔 Bật thông báo', enable);
+    if (subscribed) { add('k-ok', '🔔✓', onSheet); return; }
+    if (!pushOK && !(ios && !standalone) && !inApp && !samsung) return;   // a browser that cannot notify at all
+    const fab = D.createElement('button'); fab.type = 'button'; fab.className = 'k-fab'; fab.setAttribute('aria-label', 'Nhận thông báo về điện thoại');
+    fab.innerHTML = '<span aria-hidden="true">🔔</span><i></i>'; fab.addEventListener('click', setup); box.appendChild(fab);
+  }
+  function onSheet() {
+    sheet('<h3>🔔 Đang nhận thông báo</h3><p>Máy này báo giống chiếc chuông trên trang. Bấm vào tin là mở đúng bài. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="p" data-x>Đóng</button></div><p style="margin-top:18px;font-size:13px;color:#6b7a8f">Muốn tắt thông báo trên máy này? <button class="d" data-off style="padding:6px 10px;font-size:13px">Tắt</button></p>', s => s.querySelector('[data-off]').addEventListener('click', () => { if (confirm('Tắt thông báo trên máy này?')) { s.remove(); disable(); } }));
+  }
+  function setup() {
+    if (inApp || samsung) return inAppHelp();
+    if (ios && !standalone) return iosHelp();
+    const desktop = !ios && !android;
+    sheet('<h3>🔔 Nhận tin của con ' + (desktop ? 'trên máy tính' : 'trên điện thoại') + '</h3><p>Có điểm, sao, nhận xét của cô, bài mới hay bài nộp đã nhận là máy báo ngay. Bấm vào tin là mở đúng bài. Không cần cài gì.</p>' +
+      '<div class="row">' + (installEvt && !standalone ? '<button class="s" data-inst>💻 Thêm biểu tượng ra màn hình</button>' : '') + '<button class="p" data-on>Bật thông báo</button></div>', sh => {
+        sh.querySelector('[data-on]').addEventListener('click', () => { sh.remove(); enable(); });
+        const inst = sh.querySelector('[data-inst]');
+        if (inst) inst.addEventListener('click', async () => { const e = installEvt; installEvt = null; inst.remove(); try { e.prompt(); await e.userChoice; } catch (_) {} });
+      });
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; paint(); });
   window.addEventListener('appinstalled', () => { installEvt = null; paint(); toast('📲 Đã cài app. Mở app ' + LABEL + ' từ màn hình chính.'); });
