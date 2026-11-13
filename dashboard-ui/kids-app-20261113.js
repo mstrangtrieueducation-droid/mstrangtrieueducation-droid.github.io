@@ -10,13 +10,16 @@
   if (!CLS || !SERVER || !VAPID) return;
   const D = document, path = location.pathname.replace(/index\.html$/, ''), LINK = 'kids-app-link:' + path, ON = 'kids-app-push:' + path;
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(navigator.userAgent), HELPED = 'kids-app-home:' + location.pathname;
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const token = () => { const m = /[#&]p=([A-Za-z0-9_-]{16,128})/.exec(location.hash); return m ? m[1] : ''; };
   const ls = { get: k => { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (_) {} } };
 
   // Home-screen icon on Android/desktop: add the manifest (iOS keeps the exact address it was added from instead).
   const head = (tag, attrs) => { const n = D.createElement(tag); Object.assign(n, attrs); D.head.appendChild(n); };
-  if (!ios) head('link', { rel: 'manifest', href: path + 'app.webmanifest' });
+  // Android: no manifest, so "Thêm vào màn hình chính" makes a plain shortcut to this exact page. Installing it as an
+  // app was blocked by Google Play Protect / Samsung Auto Blocker on the owner's Samsung (13/11). Desktop keeps install.
+  if (!ios && !android) head('link', { rel: 'manifest', href: path + 'app.webmanifest' });
   head('link', { rel: 'apple-touch-icon', href: '/dashboard-ui/kids-app/icon-192.png' });
   head('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
   head('meta', { name: 'mobile-web-app-capable', content: 'yes' });
@@ -56,7 +59,15 @@
     D.body.appendChild(s); if (wire) wire(s); return s;
   }
   function iosHelp() {
-    sheet('<h3>📲 Cài app vào iPhone</h3><p>Để nhận thông báo trên iPhone, bố mẹ cài trang này thành app trước:</p><ol><li>Mở trang bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑).</li><li>Chọn <b>Thêm vào MH chính</b> → <b>Thêm</b>.</li><li>Mở app <b>KIDS ' + CLS + '</b> trên màn hình chính rồi bấm <b>🔔 Bật thông báo</b>.</li></ol><div class="row"><button class="p" data-x>Đã hiểu</button></div>');
+    sheet('<h3>📲 Đưa hồ sơ của con ra màn hình chính</h3><p><b>Không cần cài app.</b> iPhone chỉ báo tin khi trang đã ở màn hình chính, bố mẹ làm một lần:</p><ol><li>Mở trang bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑).</li><li>Chọn <b>Thêm vào MH chính</b> → <b>Thêm</b>.</li><li>Mở app <b>KIDS ' + CLS + '</b> trên màn hình chính rồi bấm <b>🔔 Bật thông báo</b>.</li></ol><div class="row"><button class="p" data-x>Đã hiểu</button></div>');
+  }
+  function androidHelp() {
+    sheet('<h3>📲 Đưa hồ sơ của con ra màn hình chính</h3><p><b>Không cần cài app.</b> Bố mẹ chỉ thêm một biểu tượng ra màn hình chính, bấm vào là mở thẳng hồ sơ của con:</p>' +
+      '<p><b>Chrome:</b></p><ol><li>Bấm nút <b>⋮</b> (ba chấm, góc trên bên phải).</li><li>Chọn <b>Thêm vào màn hình chính</b>.</li><li>Bấm <b>Thêm</b>.</li></ol>' +
+      '<p><b>Trình duyệt Samsung Internet:</b></p><ol><li>Bấm nút <b>☰</b> (góc dưới bên phải).</li><li>Chọn <b>Thêm trang vào</b> → <b>Màn hình chính</b>.</li></ol>' +
+      '<p>Rồi bấm <b>🔔 Bật thông báo</b> → <b>Cho phép</b> để điện thoại báo khi cô nhận xét, có sao/điểm, có bài mới và trước hạn nộp.</p>' +
+      '<div class="row"><button class="p" data-done>Đã làm xong</button><button class="s" data-x>Để sau</button></div>',
+      sh => sh.querySelector('[data-done]').addEventListener('click', () => { ls.set(HELPED, '1'); sh.remove(); paint(); }));
   }
   async function enable() {
     try {
@@ -87,7 +98,8 @@
     box.innerHTML = '';
     const add = (cls, text, fn) => { const b = D.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; b.addEventListener('click', fn); box.appendChild(b); };
     if (installEvt && !standalone) add('k-inst', '📲 Cài app', async () => { const e = installEvt; installEvt = null; e.prompt(); try { await e.userChoice; } catch (_) {} paint(); });
-    if (ios && !standalone && !pushOK) { add('k-inst', '📲 Cài app để nhận thông báo', iosHelp); return; }
+    if (ios && !standalone && !pushOK) { add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', iosHelp); return; }
+    if (android && !standalone && !ls.get(HELPED)) add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', androidHelp);
     if (!pushOK) return;
     if (subscribed) add('k-ok', '🔔 ✓', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại sẽ báo khi cô nhận xét, có sao/điểm, có bài mới và trước hạn nộp bài. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="s" data-x>Đóng</button><button class="d" data-off>Tắt thông báo</button></div>', s => s.querySelector('[data-off]').addEventListener('click', () => { s.remove(); disable(); })));
     else add('k-on', '🔔 Bật thông báo', enable);
