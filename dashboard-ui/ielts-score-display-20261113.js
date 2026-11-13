@@ -158,6 +158,8 @@
 .isd-low{--isd-ink:#9b1c3a;--isd-bg:#fdeef2;--isd-line:#f3c2cf;--isd-fill:#d64a6c}
 .isd-bar i.isd-high{--isd-fill:#2e9d5b}.isd-bar i.isd-good{--isd-fill:#2f7bd0}.isd-bar i.isd-mid{--isd-fill:#e39b2d}.isd-bar i.isd-low{--isd-fill:#d64a6c}
 .isd-pill{background:var(--isd-bg)!important;color:var(--isd-ink)!important;border:1px solid var(--isd-line)!important;font-weight:800!important}
+/* Owner 13/11: remove the "Nhận xét của cô trên bảng theo dõi" block entirely. */
+section.native-tracker-teacher-comment{display:none!important}
 @media(max-width:520px){.isd-score{gap:10px;padding:10px 12px}.isd-num{min-width:64px}.isd-num b{font-size:28px}}`;
  const st=doc.createElement('style');st.id='ielts-score-display-v1';st.textContent=css;(doc.head||doc.documentElement).appendChild(st);
  root.IeltsScoreDisplay={version:1,speakingNormalize,writingCriteria};
