@@ -254,6 +254,12 @@ html.kapp-on #mtt-native-bell,html.kapp-on .mtt-notice-bubble,html.kapp-on #bean
         reg = await navigator.serviceWorker.register(path + 'ph-sw.js', { scope: path });
         const ready = await navigator.serviceWorker.ready;
         (ready.active || reg.active)?.postMessage({ type: 'link', url: location.origin + path + '#p=' + token() });
+        // Quietly re-register a device that already turned notifications on (repairs an address the push service
+        // dropped; the server sends no welcome for a known device).
+        if (ls.get(ON) === '1' && 'Notification' in window && Notification.permission === 'granted') {
+          const sub = await ready.pushManager.getSubscription();
+          if (sub) fetch(SERVER + '/dk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cls: CLS, hash: await hex(token()), sub: sub.toJSON(), quiet: true }) }).catch(() => {});
+        }
       } catch (_) { reg = null; }
     }
     paint();
