@@ -111,7 +111,8 @@
     // Links opened inside Zalo / Facebook / Messenger cannot receive notifications (most parents open them there).
     if (inApp) { add('k-inst', '🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo', inAppHelp); return; }
     if (ios && !standalone && !pushOK) { add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', iosHelp); return; }
-    if (android && !standalone && !ls.get(HELPED)) add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', androidHelp);
+    // Android: no home-screen step at all (owner 14/11: the menu item was not there on her Samsung). Notifications work
+    // in Chrome without it, and a tap opens the pupil's page.
     if (!pushOK) return;
     if (subscribed) add('k-ok', '🔔 ✓', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại sẽ báo khi cô nhận xét, có sao/điểm, có bài mới và trước hạn nộp bài. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="s" data-x>Đóng</button><button class="d" data-off>Tắt thông báo</button></div>', s => s.querySelector('[data-off]').addEventListener('click', () => { s.remove(); disable(); })));
     else add('k-on', '🔔 Bật thông báo', enable);
