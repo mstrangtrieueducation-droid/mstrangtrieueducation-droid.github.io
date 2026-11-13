@@ -10,6 +10,7 @@
   if (!CLS || !SERVER || !VAPID) return;
   const D = document, path = location.pathname.replace(/index\.html$/, ''), LINK = 'kids-app-link:' + path, ON = 'kids-app-push:' + path;
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const inApp = /Zalo|FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|; wv\)/i.test(navigator.userAgent);
   const android = /Android/i.test(navigator.userAgent), HELPED = 'kids-app-home:' + location.pathname;
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const token = () => { const m = /[#&]p=([A-Za-z0-9_-]{16,128})/.exec(location.hash); return m ? m[1] : ''; };
@@ -58,6 +59,15 @@
     s.addEventListener('click', e => { if (e.target === s || e.target.closest('[data-x]')) s.remove(); });
     D.body.appendChild(s); if (wire) wire(s); return s;
   }
+  function inAppHelp() {
+    const steps = ios
+      ? '<ol><li>Bấm nút <b>⋯</b> hoặc biểu tượng <b>la bàn / Safari</b> ở góc màn hình.</li><li>Chọn <b>Mở bằng trình duyệt</b> (Safari).</li><li>Trong Safari: <b>Chia sẻ</b> → <b>Thêm vào MH chính</b>, mở biểu tượng mới rồi bấm <b>🔔 Bật thông báo</b>.</li></ol>'
+      : '<ol><li>Bấm nút <b>⋮</b> (ba chấm) ở góc trên bên phải.</li><li>Chọn <b>Mở bằng trình duyệt</b> / <b>Mở trong Chrome</b>.</li><li>Trong Chrome bấm <b>🔔 Bật thông báo</b> → <b>Cho phép</b>.</li></ol>';
+    sheet('<h3>🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo</h3><p>Trang đang mở bên trong Zalo nên chưa nhận được thông báo. Không cần cài gì, bố mẹ chỉ mở trang bằng trình duyệt của máy:</p>' + steps +
+      '<div class="row"><button class="p" data-copy>Chép link</button><button class="s" data-x>Đóng</button></div>', sh => sh.querySelector('[data-copy]').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(location.origin + path + '#p=' + token()); toast('Đã chép link. Dán vào ' + (ios ? 'Safari' : 'Chrome') + ' là mở được.'); } catch (_) { toast('Bố mẹ bấm giữ thanh địa chỉ để chép link nhé.'); }
+      }));
+  }
   function iosHelp() {
     sheet('<h3>📲 Đưa hồ sơ của con ra màn hình chính</h3><p><b>Không cần cài app.</b> iPhone chỉ báo tin khi trang đã ở màn hình chính, bố mẹ làm một lần:</p><ol><li>Mở trang bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑).</li><li>Chọn <b>Thêm vào MH chính</b> → <b>Thêm</b>.</li><li>Mở app <b>KIDS ' + CLS + '</b> trên màn hình chính rồi bấm <b>🔔 Bật thông báo</b>.</li></ol><div class="row"><button class="p" data-x>Đã hiểu</button></div>');
   }
@@ -98,6 +108,8 @@
     box.innerHTML = '';
     const add = (cls, text, fn) => { const b = D.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; b.addEventListener('click', fn); box.appendChild(b); };
     if (installEvt && !standalone) add('k-inst', '📲 Cài app', async () => { const e = installEvt; installEvt = null; e.prompt(); try { await e.userChoice; } catch (_) {} paint(); });
+    // Links opened inside Zalo / Facebook / Messenger cannot receive notifications (most parents open them there).
+    if (inApp) { add('k-inst', '🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo', inAppHelp); return; }
     if (ios && !standalone && !pushOK) { add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', iosHelp); return; }
     if (android && !standalone && !ls.get(HELPED)) add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', androidHelp);
     if (!pushOK) return;
