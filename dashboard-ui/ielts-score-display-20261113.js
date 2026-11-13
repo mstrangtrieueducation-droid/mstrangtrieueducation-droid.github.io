@@ -170,7 +170,7 @@
   const sig=cls+'|'+location.hash+'|'+name;if(cw.sig===sig)return;
   cw={sig,state:'loading',byLesson:new Map()};const mine=cw;
   const store='isd-cw:'+sig;
-  try{const c=JSON.parse(root.sessionStorage.getItem(store)||'null');if(c&&Date.now()-c.at<600000){c.rows.forEach(r=>{if(!mine.byLesson.has(r.n))mine.byLesson.set(r.n,[]);mine.byLesson.get(r.n).push(r)});mine.state='ready';return;}}catch(_){}
+  try{const c=JSON.parse(root.localStorage.getItem(store)||'null');if(c&&Date.now()-c.at<14*864e5){c.rows.forEach(r=>{if(!mine.byLesson.has(r.n))mine.byLesson.set(r.n,[]);mine.byLesson.get(r.n).push(r)});mine.state='ready';if(Date.now()-c.at<600000)return;}}catch(_){}
   const q=async(action,extra)=>{const u=new URL(ep);Object.entries(Object.assign({api:'parent1',class:cls,action,token,_:String(Date.now())},extra||{})).forEach(([k,v])=>u.searchParams.set(k,v));
    const r=await fetch(u.href,{credentials:'omit',mode:'cors',cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(40000)});const e=await r.json();
    if(!e||!e.ok||!e.data||e.data.className!==cls||nameKey(e.data.studentName)!==nameKey(name))throw Error('x');return e.data;};
@@ -183,8 +183,8 @@
     rows.push({n,key:r.key,verdict:verdict.trim().slice(0,40)});
    }
    if(cw!==mine)return;
-   rows.forEach(r=>{if(!mine.byLesson.has(r.n))mine.byLesson.set(r.n,[]);mine.byLesson.get(r.n).push(r)});mine.state='ready';
-   try{root.sessionStorage.setItem(store,JSON.stringify({at:Date.now(),rows}))}catch(_){}
+   mine.byLesson=new Map();rows.forEach(r=>{if(!mine.byLesson.has(r.n))mine.byLesson.set(r.n,[]);mine.byLesson.get(r.n).push(r)});mine.state='ready';
+   try{root.localStorage.setItem(store,JSON.stringify({at:Date.now(),rows}))}catch(_){}
    scan(doc);
   })().catch(()=>{if(cw===mine)mine.state='error';});
  }
@@ -248,6 +248,32 @@
   wrapped.__isd=true;root[fname]=wrapped;
  }
  patchRecordComments();
+ // IELTS 50/51 (audit 13/11): the Writing payload also carries Listening notebook states (e.g. IELTS-LISTENING-B04).
+ // The frozen Writing reader rejects the whole payload on a non-Writing code, so every Writing card said
+ // "Chưa tải được bài chữa". Only items the reader can use (Writing codes) are passed on; nothing else changes.
+ function patchWritingRequest(){
+  const acc=typeof ieltsParentAccess!=='undefined'?ieltsParentAccess:null;
+  const codeFn=typeof ieltsWritingAssignments_!=='undefined'&&ieltsWritingAssignments_&&ieltsWritingAssignments_.code;
+  if(!acc||acc.__isd||typeof acc.request!=='function'||typeof codeFn!=='function'||Object.isFrozen(acc))return;
+  const r0=acc.request;
+  // Owner 13/11: "bài chữa chữa xong là ít sửa sao không hiện lù lù ở đó luôn". The last good Writing payload of this
+  // pupil is kept on the device; when the live read is slower than 1.2 s the kept copy is shown at once, and the live
+  // answer replaces it on the module's next refresh. The frozen reader still checks class, name and roster revision.
+  const store=()=>{try{return 'isd-wr:'+acc.className+'|'+location.hash}catch(_){return ''}};
+  const keep=d=>{try{if(d&&Array.isArray(d.reviews))root.localStorage.setItem(store(),JSON.stringify({at:Date.now(),d}))}catch(_){}};
+  const kept=()=>{try{const c=JSON.parse(root.localStorage.getItem(store())||'null');return c&&Date.now()-c.at<14*864e5?c.d:null}catch(_){return null}};
+  const clean=d=>{try{if(d&&Array.isArray(d.notebookStates)){const k=d.notebookStates.filter(x=>x&&codeFn(x.assignmentCode));if(k.length!==d.notebookStates.length)return Object.assign({},d,{notebookStates:k});}}catch(_){}return d;};
+  acc.request=function(action,force){
+   const p=r0.apply(this,arguments);
+   if(action!=='writing'||!p||typeof p.then!=='function')return p;
+   const live=p.then(d=>{const c=clean(d);keep(c);return c;});
+   const old=force?null:kept();
+   if(!old)return live;
+   return Promise.race([live.catch(()=>old),new Promise(r=>setTimeout(()=>r(old),1200))]);
+  };
+  acc.__isd=true;
+ }
+ try{patchWritingRequest()}catch(_){}
  // The frozen renderers are defined by inline scripts before this file; patch at once so the first paint uses them.
  patchSpeaking();patchShadowing();
  if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
