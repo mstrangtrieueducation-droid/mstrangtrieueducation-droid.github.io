@@ -98,7 +98,10 @@
   // the page repaints several times while data loads (slower laptops), which used to stack
   // several pop-ups so "Con đã hiểu" seemed not to close it (12/11).
   let reminded = false;
+  // Owner 13/11: "bỏ thông báo bài chưa đạt nổi ở dash fighter" — the pop-up is turned off; chips, card line and strip stay.
+  const REMIND_POPUP = false;
   function remind(bad) {
+    if (!REMIND_POPUP) return;
     if (reminded || D.getElementById('fq-dialog')) return;
     let key = '';
     try {
