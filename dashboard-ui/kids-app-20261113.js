@@ -11,6 +11,9 @@
   const D = document, path = location.pathname.replace(/index\.html$/, ''), LINK = 'kids-app-link:' + path, ON = 'kids-app-push:' + path;
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const inApp = /Zalo|FBAN|FBAV|FB_IAB|Messenger|Instagram|Line\/|; wv\)/i.test(navigator.userAgent);
+  // Samsung Internet takes the subscription but a Samsung phone puts it to sleep, so notices do not ring (owner's
+  // husband, 14/11). Parents on it are sent to Chrome, like in-app browsers.
+  const samsung = /SamsungBrowser/i.test(navigator.userAgent);
   const android = /Android/i.test(navigator.userAgent), HELPED = 'kids-app-home:' + location.pathname;
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const token = () => { const m = /[#&]p=([A-Za-z0-9_-]{16,128})/.exec(location.hash); return m ? m[1] : ''; };
@@ -38,7 +41,7 @@
 
   const css = `#kapp{position:fixed;right:14px;bottom:96px;z-index:2147480000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp button{border:0;border-radius:999px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(12,24,48,.22);display:inline-flex;align-items:center;gap:7px}
-#kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:4px 9px;font-size:11px;font-weight:600;box-shadow:none;border:1px solid #bfe3cc}
+#kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:3px 7px;font-size:13px;font-weight:700;box-shadow:none;border:1px solid #bfe3cc;line-height:1.2}
 @keyframes kappFlash{0%,100%{box-shadow:0 0 0 0 rgba(47,123,208,0)}30%,70%{box-shadow:0 0 0 6px rgba(47,123,208,.35)}}.kapp-flash{animation:kappFlash 1.3s ease-in-out 3;border-radius:16px}
 html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
 #kapp-sheet{position:fixed;inset:0;z-index:2147480001;background:rgba(9,20,40,.5);display:flex;align-items:flex-end;justify-content:center}
@@ -64,8 +67,9 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
   function inAppHelp() {
     const steps = ios
       ? '<ol><li>Bấm nút <b>⋯</b> hoặc biểu tượng <b>la bàn / Safari</b> ở góc màn hình.</li><li>Chọn <b>Mở bằng trình duyệt</b> (Safari).</li><li>Trong Safari: <b>Chia sẻ</b> → <b>Thêm vào MH chính</b>, mở biểu tượng mới rồi bấm <b>🔔 Bật thông báo</b>.</li></ol>'
+      : samsung ? '<ol><li>Bấm <b>Chép link</b> ở dưới.</li><li>Mở ứng dụng <b>Chrome</b> (biểu tượng tròn xanh-đỏ-vàng), bấm vào thanh địa chỉ, <b>dán</b> link rồi mở.</li><li>Trong Chrome bấm <b>🔔 Bật thông báo</b> → <b>Cho phép</b>.</li></ol>'
       : '<ol><li>Bấm nút <b>⋮</b> (ba chấm) ở góc trên bên phải.</li><li>Chọn <b>Mở bằng trình duyệt</b> / <b>Mở trong Chrome</b>.</li><li>Trong Chrome bấm <b>🔔 Bật thông báo</b> → <b>Cho phép</b>.</li></ol>';
-    sheet('<h3>🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo</h3><p>Trang đang mở bên trong Zalo nên chưa nhận được thông báo. Không cần cài gì, bố mẹ chỉ mở trang bằng trình duyệt của máy:</p>' + steps +
+    sheet('<h3>🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo</h3><p>' + (samsung ? 'Trình duyệt Samsung Internet hay bị máy cho ngủ nên thông báo không kêu.' : 'Trang đang mở bên trong Zalo nên chưa nhận được thông báo.') + ' Không cần cài gì, bố mẹ chỉ mở trang bằng ' + (ios ? 'Safari' : 'Chrome') + ':</p>' + steps +
       '<div class="row"><button class="p" data-copy>Chép link</button><button class="s" data-x>Đóng</button></div>', sh => sh.querySelector('[data-copy]').addEventListener('click', async () => {
         try { await navigator.clipboard.writeText(location.origin + path + '#p=' + token()); toast('Đã chép link. Dán vào ' + (ios ? 'Safari' : 'Chrome') + ' là mở được.'); } catch (_) { toast('Bố mẹ bấm giữ thanh địa chỉ để chép link nhé.'); }
       }));
@@ -111,7 +115,7 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
     const add = (cls, text, fn) => { const b = D.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; b.addEventListener('click', fn); box.appendChild(b); };
     if (installEvt && !standalone) add('k-inst', '📲 Cài app', async () => { const e = installEvt; installEvt = null; e.prompt(); try { await e.userChoice; } catch (_) {} paint(); });
     // Links opened inside Zalo / Facebook / Messenger cannot receive notifications (most parents open them there).
-    if (inApp) { add('k-inst', '🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo', inAppHelp); return; }
+    if (inApp || samsung) { add('k-inst', '🔔 Mở bằng ' + (ios ? 'Safari' : 'Chrome') + ' để nhận thông báo', inAppHelp); return; }
     if (ios && !standalone && !pushOK) { add('k-inst', '📲 Đưa ra màn hình chính (không cần cài)', iosHelp); return; }
     // Android: no home-screen step at all (owner 14/11: the menu item was not there on her Samsung). Notifications work
     // in Chrome without it, and a tap opens the pupil's page.
@@ -119,7 +123,7 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
     // Owner 14/11: once notifications are on, the page's pink bell goes away (the phone rings instead) and the
     // "on" mark is a small tag at the top, so it is not tapped by mistake. Turning off needs two taps and a confirmation.
     D.documentElement.classList.toggle('kapp-on', subscribed);
-    if (subscribed) add('k-ok', '🔔 Đã bật thông báo', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại báo giống chiếc chuông trên trang: điểm / sao / nhận xét mới, bài nộp đã nhận, bài học và bài tự luyện mới. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="p" data-x>Đóng</button></div><p style="margin-top:18px;font-size:13px;color:#6b7a8f">Muốn tắt thông báo trên máy này? <button class="d" data-off style="padding:6px 10px;font-size:13px">Tắt</button></p>', s => s.querySelector('[data-off]').addEventListener('click', () => { if (confirm('Tắt thông báo trên máy này?')) { s.remove(); disable(); } })));
+    if (subscribed) add('k-ok', '🔔✓', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại báo giống chiếc chuông trên trang: điểm / sao / nhận xét mới, bài nộp đã nhận, bài học và bài tự luyện mới. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="p" data-x>Đóng</button></div><p style="margin-top:18px;font-size:13px;color:#6b7a8f">Muốn tắt thông báo trên máy này? <button class="d" data-off style="padding:6px 10px;font-size:13px">Tắt</button></p>', s => s.querySelector('[data-off]').addEventListener('click', () => { if (confirm('Tắt thông báo trên máy này?')) { s.remove(); disable(); } })));
     else add('k-on', '🔔 Bật thông báo', enable);
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; paint(); });
