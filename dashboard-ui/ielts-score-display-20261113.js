@@ -228,7 +228,10 @@
  // Only the comment fields are filled in, on a copy; status, attempts and counts stay from the receipt record.
  const COMMENT_FIELDS=['homeworkTeacherComment','homeworkFeedback','lessonFeedback'];
  function patchRecordComments(){
-  const f=root.ielts47RecordForAssignment_;if(typeof f!=='function'||f.__isd)return;
+  for(const n of [45,46,47,48,49,50,51,52])patchRecordFn('ielts'+n+'RecordForAssignment_');
+ }
+ function patchRecordFn(fname){
+  const f=root[fname];if(typeof f!=='function'||f.__isd)return;
   const wrapped=function(item){
    const rec=f.apply(this,arguments);
    try{
@@ -242,7 +245,7 @@
     return merged;
    }catch(_){return rec}
   };
-  wrapped.__isd=true;root.ielts47RecordForAssignment_=wrapped;
+  wrapped.__isd=true;root[fname]=wrapped;
  }
  patchRecordComments();
  // The frozen renderers are defined by inline scripts before this file; patch at once so the first paint uses them.
