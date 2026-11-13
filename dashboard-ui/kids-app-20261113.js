@@ -36,9 +36,10 @@
   }
   ls.set(LINK, token());
 
-  const css = `#kapp{position:fixed;right:14px;bottom:18px;z-index:2147480000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  const css = `#kapp{position:fixed;right:14px;bottom:96px;z-index:2147480000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp button{border:0;border-radius:999px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(12,24,48,.22);display:inline-flex;align-items:center;gap:7px}
 #kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:4px 9px;font-size:11px;font-weight:600;box-shadow:none;border:1px solid #bfe3cc}
+@keyframes kappFlash{0%,100%{box-shadow:0 0 0 0 rgba(47,123,208,0)}30%,70%{box-shadow:0 0 0 6px rgba(47,123,208,.35)}}.kapp-flash{animation:kappFlash 1.3s ease-in-out 3;border-radius:16px}
 html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
 #kapp-sheet{position:fixed;inset:0;z-index:2147480001;background:rgba(9,20,40,.5);display:flex;align-items:flex-end;justify-content:center}
 #kapp-sheet>div{background:#fff;color:#16263b;width:min(520px,100%);border-radius:18px 18px 0 0;padding:20px 20px 26px;box-shadow:0 -8px 30px rgba(0,0,0,.2);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
@@ -125,6 +126,13 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
   window.addEventListener('appinstalled', () => { installEvt = null; paint(); toast('📲 Đã cài app. Mở app KIDS ' + CLS + ' từ màn hình chính.'); });
 
   // Opened from a notification about one piece of work (?mo=<id>): open that work's detail once the page has drawn it.
+  // Opened from a notification: the daily "Con còn n bài cần làm" reminder steps aside this once, so the item the
+  // parent tapped is visible. A normal opening of the page still shows it.
+  function yieldGate() {
+    const gate = D.getElementById('pendingWorkGate');
+    if (gate && !gate.hidden) { gate.hidden = true; D.body.classList.remove('pending-work-locked'); }
+    let n = 0; const keep = setInterval(() => { const g = D.getElementById('pendingWorkGate'); if (g && !g.hidden) { g.hidden = true; D.body.classList.remove('pending-work-locked'); } if (++n > 24) clearInterval(keep); }, 250);
+  }
   let opening = null;
   function openItem(id) {
     if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id || '')) return;
@@ -132,8 +140,22 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
     // An item opened before (or the reminder) must not stand in for the new one.
     D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} });
     // Tests and interviews have no detail of their own: open the results tab ("Kết quả & Xếp hạng").
+    // Interviews and paper tests are shown on the results tab: open it, then bring the exact result into view and
+    // highlight it (interview: article[data-assessment-id]; paper test: the "KIỂM TRA GIẤY" section).
     if (/-test-/.test(id)) {
-      let n = 0; const tt = setInterval(() => { const tab = D.querySelector('[data-tab="journey"]'); if (tab) { tab.click(); D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} }); } if (tab || ++n > 80) clearInterval(tt); }, 250);
+      let n = 0, switched = false;
+      const tt = setInterval(() => {
+        n++;
+        const tab = D.querySelector('[data-tab="journey"]');
+        if (tab && tab.getAttribute('aria-selected') !== 'true') { tab.click(); switched = true; return; }
+        const self = D.querySelector('[data-journey="self"]');
+        if (self && self.getAttribute('aria-selected') !== 'true') { self.click(); return; }
+        D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} });
+        const target = [...D.querySelectorAll('[data-assessment-id]')].find(e => e.getAttribute('data-assessment-id') === id)
+          || [...D.querySelectorAll('#j-panel section')].filter(e => /^\W*KIỂM TRA GIẤY/i.test(e.textContent.trim())).sort((x, y) => x.textContent.length - y.textContent.length)[0];
+        if (target) { clearInterval(tt); yieldGate(); target.scrollIntoView({ block: 'start' }); window.scrollBy(0, -12); target.classList.add('kapp-flash'); setTimeout(() => target.classList.remove('kapp-flash'), 4000); }
+        else if (n > 80) clearInterval(tt);
+      }, 250);
       return;
     }
     // The page draws in steps (journey view, then the reminder gate). Keep the detail open for the first 12 s:
