@@ -20,7 +20,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Ms. Trang Trieu Education', body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Ms. Trang Trieu Education', {
-    body: d.body || '', tag: d.tag || 'kids', renotify: true, data: { open: /^[A-Za-z0-9_.-]{1,80}$/.test(d.open || '') ? d.open : '' },
+    body: d.body || '', tag: d.tag || 'kids', renotify: true, silent: false, vibrate: [200, 100, 200, 100, 300], timestamp: Date.now(), data: { open: /^[A-Za-z0-9_.-]{1,80}$/.test(d.open || '') ? d.open : '' },
     icon: '/dashboard-ui/kids-app/icon-192.png', badge: '/dashboard-ui/kids-app/icon-192.png', lang: 'vi'
   }));
 });
