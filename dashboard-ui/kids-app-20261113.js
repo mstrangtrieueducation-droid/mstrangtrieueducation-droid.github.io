@@ -108,11 +108,12 @@
   window.addEventListener('appinstalled', () => { installEvt = null; paint(); toast('📲 Đã cài app. Mở app KIDS ' + CLS + ' từ màn hình chính.'); });
 
   // Opened from a notification about one piece of work (?mo=<id>): open that work's detail once the page has drawn it.
-  function openFromNotice() {
-    const m = /[?&]mo=([A-Za-z0-9_.-]{1,80})/.exec(location.search);
-    if (!m) return;
-    const id = decodeURIComponent(m[1]);
-    history.replaceState(null, '', path + location.hash);
+  let opening = null;
+  function openItem(id) {
+    if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id || '')) return;
+    if (opening) clearInterval(opening);
+    // An item opened before (or the reminder) must not stand in for the new one.
+    D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} });
     // The page draws in steps (journey view, then the reminder gate). Keep the detail open for the first 12 s:
     // if a later repaint closes it, open it again. The detail is a modal dialog, so it sits above the reminder.
     // Stops once the detail has stayed open for 1.5 s, so a parent closing it is never fought.
@@ -132,16 +133,39 @@
       return null;
     };
     let tries = 0, opened = 0, steady = 0;
-    const t = setInterval(() => {
+    const t = opening = setInterval(() => {
       tries++;
       const open = D.querySelector('dialog[open]');
       if (open) steady++; else { steady = 0; const btn = finder(); if (btn) { btn.click(); opened++; } }
-      if (steady >= 6 || tries > 80 || opened > 6) clearInterval(t);
+      if (steady >= 6 || tries > 80 || opened > 6) { clearInterval(t); if (opening === t) opening = null; }
     }, 250);
   }
+  // Ways a notification tap reaches the page: ?mo=<id> on a fresh start, a message from the service worker, or the
+  // item the worker left in its store (read whenever the app comes to the front; iPhone does not always deliver either).
+  function openFromNotice() {
+    const m = /[?&]mo=([A-Za-z0-9_.-]{1,80})/.exec(location.search);
+    if (!m) return;
+    history.replaceState(null, '', path + location.hash);
+    openItem(decodeURIComponent(m[1]));
+  }
+  async function pendingOpen() {
+    try {
+      if (!('caches' in window)) return;
+      const c = await caches.open('ph-app-v1'), r = await c.match('/__open');
+      if (!r) return;
+      const d = JSON.parse(await r.text()); await c.delete('/__open');
+      if (d && d.id && Date.now() - d.at < 5 * 60e3) openItem(d.id);
+    } catch (_) {}
+  }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'open' && e.data.id) { try { caches.open('ph-app-v1').then(c => c.delete('/__open')); } catch (_) {} openItem(e.data.id); }
+  });
+  D.addEventListener('visibilitychange', () => { if (D.visibilityState === 'visible') pendingOpen(); });
+  window.addEventListener('pageshow', () => pendingOpen());
 
   async function boot() {
     openFromNotice();
+    pendingOpen();
     if ('serviceWorker' in navigator) {
       try {
         reg = await navigator.serviceWorker.register(path + 'ph-sw.js', { scope: path });

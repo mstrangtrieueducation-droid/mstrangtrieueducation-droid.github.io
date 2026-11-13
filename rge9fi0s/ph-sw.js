@@ -32,8 +32,16 @@ self.addEventListener('notificationclick', e => {
     const open = (e.notification.data || {}).open || '';
     let url = await link();
     if (open) url = url.replace(/\?[^#]*/, '').replace('#', '?mo=' + encodeURIComponent(open) + '#');
+    // iPhone (13/11): with the app already open, focus() brought the page back but navigate() did nothing, so the
+    // parent only saw the dashboard. The item to open is now also left in this worker's store; the page reads it when it
+    // becomes visible (and gets a message if it is listening), so it opens whether the app was open or not.
+    if (open) { try { await (await caches.open(STORE)).put('/__open', new Response(JSON.stringify({ id: open, at: Date.now() }))); } catch (_) {} }
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const w of wins) if (w.url.startsWith(self.registration.scope)) { await w.focus(); if (w.url !== url && 'navigate' in w) try { await w.navigate(url); } catch (_) {} return; }
+    for (const w of wins) if (w.url.startsWith(self.registration.scope)) {
+      try { w.postMessage({ type: 'open', id: open }); } catch (_) {}
+      try { await w.focus(); } catch (_) {}
+      return;
+    }
     await self.clients.openWindow(url);
   })());
 });
