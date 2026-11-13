@@ -1,0 +1,35 @@
+name: Writing results follow-up
+# Keeps the parents' prepared Writing data in step with the writing runner: checks every 5 minutes whether the
+# runner put new results on the dash (public stamp, no pupil data) and starts the prepared-data job if so.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7,37 * * * *'   # restarts the follower if a hand-off was ever lost
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: writing-dash-follow
+  cancel-in-progress: false
+jobs:
+  follow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 34
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          sparse-checkout: dashboard-trigger
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Start the prepared-data job when new results are on the dash
+        run: node dashboard-trigger/writing-follow.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WINDOW_MINUTES: '26'
+      - name: Hand off to the next follower
+        if: always()
+        run: node dashboard-trigger/writing-follow.mjs handoff
+        env:
+          GH_TOKEN: ${{ github.token }}
