@@ -124,7 +124,11 @@
       if (lesson) return lesson;
       const row = [...D.querySelectorAll('[data-archive-detail]')].find(b => b.getAttribute('data-archive-detail').endsWith('::' + id));
       if (row) return row;
-      if (!/-L\d+-/.test(id)) {
+      if (/-L\d+-/.test(id)) {
+        // Lesson cards live on the first tab ("Kế hoạch & Lịch học").
+        const week = D.querySelector('[data-tab="week"]');
+        if (week && week.getAttribute('aria-selected') !== 'true') week.click();
+      } else {
         const tab = D.querySelector('[data-tab="library"]');
         if (tab && tab.getAttribute('aria-selected') !== 'true') { tab.click(); return null; }
         const group = D.querySelector('[data-archive-group^="video|"]');
