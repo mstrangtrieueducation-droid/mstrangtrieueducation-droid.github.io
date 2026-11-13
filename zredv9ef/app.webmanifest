@@ -1,0 +1,15 @@
+{
+  "name": "FIGHTER 5 · Ms. Trang Trieu",
+  "short_name": "FIGHTER 5",
+  "description": "Hồ sơ học tập của con: bài tập, nhận xét, điểm và thông báo.",
+  "start_url": "./?app=1",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "lang": "vi",
+  "icons": [
+    { "src": "/dashboard-ui/kids-app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/dashboard-ui/kids-app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

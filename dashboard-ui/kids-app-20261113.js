@@ -7,6 +7,8 @@
 (() => {
   'use strict';
   const me = document.currentScript, CLS = Number(me && me.dataset.cls), SERVER = me && me.dataset.server, VAPID = me && me.dataset.vapid;
+  // Class label shown to parents (KIDS 21, FIGHTER 5…); FIGHTER classes use their own code (1005 = FIGHTER 5).
+  const LABEL = (me && me.dataset.label) || 'KIDS ' + CLS;
   if (!CLS || !SERVER || !VAPID) return;
   const D = document, path = location.pathname.replace(/index\.html$/, ''), LINK = 'kids-app-link:' + path, ON = 'kids-app-push:' + path;
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -27,7 +29,7 @@
   head('link', { rel: 'apple-touch-icon', href: '/dashboard-ui/kids-app/icon-192.png' });
   head('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
   head('meta', { name: 'mobile-web-app-capable', content: 'yes' });
-  head('meta', { name: 'apple-mobile-web-app-title', content: 'KIDS ' + CLS });
+  head('meta', { name: 'apple-mobile-web-app-title', content: LABEL });
   head('meta', { name: 'theme-color', content: '#0F172A' });
 
   // Started from the home screen without a link: reopen the pupil's own page.
@@ -44,7 +46,7 @@
 #kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:3px 7px;font-size:13px;font-weight:700;box-shadow:none;border:1px solid #bfe3cc;line-height:1.2}
 .kapp-spot{position:relative;z-index:2147479000;box-shadow:0 0 0 4px #2f7bd0,0 0 0 100vmax rgba(9,20,40,.55)!important;border-radius:18px;transition:box-shadow .3s}
 @keyframes kappFlash{0%,100%{box-shadow:0 0 0 0 rgba(47,123,208,0)}30%,70%{box-shadow:0 0 0 6px rgba(47,123,208,.35)}}.kapp-flash{animation:kappFlash 1.3s ease-in-out 3;border-radius:16px}
-html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
+html.kapp-on #mtt-native-bell,html.kapp-on .mtt-notice-bubble,html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
 #kapp-sheet{position:fixed;inset:0;z-index:2147480001;background:rgba(9,20,40,.5);display:flex;align-items:flex-end;justify-content:center}
 #kapp-sheet>div{background:#fff;color:#16263b;width:min(520px,100%);border-radius:18px 18px 0 0;padding:20px 20px 26px;box-shadow:0 -8px 30px rgba(0,0,0,.2);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp-sheet h3{margin:0 0 8px;font-size:18px}#kapp-sheet ol{margin:8px 0 14px;padding-left:20px}#kapp-sheet li{margin:4px 0}
@@ -76,7 +78,7 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
       }));
   }
   function iosHelp() {
-    sheet('<h3>📲 Đưa hồ sơ của con ra màn hình chính</h3><p><b>Không cần cài app.</b> iPhone chỉ báo tin khi trang đã ở màn hình chính, bố mẹ làm một lần:</p><ol><li>Mở trang bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑).</li><li>Chọn <b>Thêm vào MH chính</b> → <b>Thêm</b>.</li><li>Mở app <b>KIDS ' + CLS + '</b> trên màn hình chính rồi bấm <b>🔔 Bật thông báo</b>.</li></ol><div class="row"><button class="p" data-x>Đã hiểu</button></div>');
+    sheet('<h3>📲 Đưa hồ sơ của con ra màn hình chính</h3><p><b>Không cần cài app.</b> iPhone chỉ báo tin khi trang đã ở màn hình chính, bố mẹ làm một lần:</p><ol><li>Mở trang bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑).</li><li>Chọn <b>Thêm vào MH chính</b> → <b>Thêm</b>.</li><li>Mở app <b>' + LABEL + '</b> trên màn hình chính rồi bấm <b>🔔 Bật thông báo</b>.</li></ol><div class="row"><button class="p" data-x>Đã hiểu</button></div>');
   }
   function androidHelp() {
     sheet('<h3>📲 Đưa hồ sơ của con ra màn hình chính</h3><p><b>Không cần cài app.</b> Bố mẹ chỉ thêm một biểu tượng ra màn hình chính, bấm vào là mở thẳng hồ sơ của con:</p>' +
@@ -128,7 +130,7 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
     else add('k-on', '🔔 Bật thông báo', enable);
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; paint(); });
-  window.addEventListener('appinstalled', () => { installEvt = null; paint(); toast('📲 Đã cài app. Mở app KIDS ' + CLS + ' từ màn hình chính.'); });
+  window.addEventListener('appinstalled', () => { installEvt = null; paint(); toast('📲 Đã cài app. Mở app ' + LABEL + ' từ màn hình chính.'); });
 
   // Opened from a notification about one piece of work (?mo=<id>): open that work's detail once the page has drawn it.
   // Opened from a notification: the daily "Con còn n bài cần làm" reminder steps aside this once, so the item the
@@ -195,6 +197,10 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
     const finder = () => {
       const lesson = [...D.querySelectorAll('[data-open]')].find(b => b.getAttribute('data-open') === id);
       if (lesson) return lesson;
+      // FIGHTER: every unit card opens its detail from [data-f5-open=<unit key>].
+      const unit = [...D.querySelectorAll('[data-f5-open]')].find(b => b.getAttribute('data-f5-open') === id);
+      if (unit) return unit;
+      if (D.querySelector('[data-f5-open]')) return null;
       const row = [...D.querySelectorAll('[data-archive-detail]')].find(b => b.getAttribute('data-archive-detail').endsWith('::' + id));
       if (row) return row;
       if (/-L\d+-/.test(id)) {
