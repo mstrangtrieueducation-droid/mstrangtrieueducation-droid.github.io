@@ -42,6 +42,7 @@
   const css = `#kapp{position:fixed;right:14px;bottom:96px;z-index:2147480000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp button{border:0;border-radius:999px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(12,24,48,.22);display:inline-flex;align-items:center;gap:7px}
 #kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:3px 7px;font-size:13px;font-weight:700;box-shadow:none;border:1px solid #bfe3cc;line-height:1.2}
+.kapp-spot{position:relative;z-index:2147479000;box-shadow:0 0 0 4px #2f7bd0,0 0 0 100vmax rgba(9,20,40,.55)!important;border-radius:18px;transition:box-shadow .3s}
 @keyframes kappFlash{0%,100%{box-shadow:0 0 0 0 rgba(47,123,208,0)}30%,70%{box-shadow:0 0 0 6px rgba(47,123,208,.35)}}.kapp-flash{animation:kappFlash 1.3s ease-in-out 3;border-radius:16px}
 html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
 #kapp-sheet{position:fixed;inset:0;z-index:2147480001;background:rgba(9,20,40,.5);display:flex;align-items:flex-end;justify-content:center}
@@ -137,6 +138,30 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
     if (gate && !gate.hidden) { gate.hidden = true; D.body.classList.remove('pending-work-locked'); }
     let n = 0; const keep = setInterval(() => { const g = D.getElementById('pendingWorkGate'); if (g && !g.hidden) { g.hidden = true; D.body.classList.remove('pending-work-locked'); } if (++n > 24) clearInterval(keep); }, 250);
   }
+  // Pull the parent straight to one result (owner 14/11: "phải kéo thẳng vào bài"): the page may redraw and jump to
+  // the top after a tab change, so the result is scrolled to again for 3 s; everything else dims until a tap.
+  // The page redraws its panels (data arriving, tab change), which replaces the element: the result is looked up
+  // afresh at each step, scrolled to for 4 s and kept lit until the parent taps (or 20 s).
+  function spotlight(find, tabSel) {
+    let lit = null, stop = false, touched = false, t0 = Date.now();
+    // Only the parent's own touches count (the page's own tab clicks are synthetic).
+    const mark = e => { if (e.isTrusted) touched = true; };
+    ['touchstart', 'wheel', 'keydown', 'mousedown'].forEach(ev => D.addEventListener(ev, mark, { capture: true, passive: true }));
+    const step = () => {
+      if (stop) return;
+      const tab = tabSel && D.querySelector(tabSel);
+      if (tab && tab.getAttribute('aria-selected') !== 'true') tab.click();
+      const el = find();
+      if (el && el !== lit) { if (lit) lit.classList.remove('kapp-spot'); lit = el; el.classList.add('kapp-spot'); }
+      // Keep the result on screen (the page may redraw and jump to the top) until the parent touches or scrolls.
+      if (el && !touched && Date.now() - t0 < 15000) { const r = el.getBoundingClientRect(); if (r.top < 0 || r.top > innerHeight * 0.5) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - 16), behavior: 'instant' }); }
+      if (Date.now() - t0 < 20000) setTimeout(step, 350); else off();
+    };
+    const offEvt = e => { if (e.isTrusted) off(); };
+    const off = () => { stop = true; D.querySelectorAll('.kapp-spot').forEach(x => x.classList.remove('kapp-spot')); D.removeEventListener('click', offEvt, true); D.removeEventListener('touchstart', offEvt, true); ['touchstart', 'wheel', 'keydown', 'mousedown'].forEach(ev => D.removeEventListener(ev, mark, true)); };
+    setTimeout(() => { D.addEventListener('click', offEvt, true); D.addEventListener('touchstart', offEvt, true); }, 4200);
+    step();
+  }
   let opening = null;
   function openItem(id) {
     if (!/^[A-Za-z0-9_.-]{1,80}$/.test(id || '')) return;
@@ -155,9 +180,9 @@ html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!importan
         const self = D.querySelector('[data-journey="self"]');
         if (self && self.getAttribute('aria-selected') !== 'true') { self.click(); return; }
         D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} });
-        const target = [...D.querySelectorAll('[data-assessment-id]')].find(e => e.getAttribute('data-assessment-id') === id)
+        const find = () => [...D.querySelectorAll('[data-assessment-id]')].find(e => e.getAttribute('data-assessment-id') === id)
           || [...D.querySelectorAll('#j-panel section')].filter(e => /^\W*KIỂM TRA GIẤY/i.test(e.textContent.trim())).sort((x, y) => x.textContent.length - y.textContent.length)[0];
-        if (target) { clearInterval(tt); yieldGate(); target.scrollIntoView({ block: 'start' }); window.scrollBy(0, -12); target.classList.add('kapp-flash'); setTimeout(() => target.classList.remove('kapp-flash'), 4000); }
+        if (find()) { clearInterval(tt); yieldGate(); spotlight(find, '[data-tab="journey"]'); }
         else if (n > 80) clearInterval(tt);
       }, 250);
       return;
