@@ -38,7 +38,8 @@
 
   const css = `#kapp{position:fixed;right:14px;bottom:18px;z-index:2147480000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp button{border:0;border-radius:999px;padding:10px 15px;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(12,24,48,.22);display:inline-flex;align-items:center;gap:7px}
-#kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{background:#e9f7ef;color:#17663a;padding:9px 12px}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
+#kapp .k-on{background:#0F172A;color:#fff}#kapp .k-ok{position:fixed;top:8px;right:8px;background:rgba(233,247,239,.92);color:#17663a;padding:4px 9px;font-size:11px;font-weight:600;box-shadow:none;border:1px solid #bfe3cc}
+html.kapp-on #bean-updates,html.kapp-on .kids-notice-label{display:none!important}#kapp .k-inst{background:#fff;color:#0F172A;border:1.5px solid #cdd8e6}
 #kapp-sheet{position:fixed;inset:0;z-index:2147480001;background:rgba(9,20,40,.5);display:flex;align-items:flex-end;justify-content:center}
 #kapp-sheet>div{background:#fff;color:#16263b;width:min(520px,100%);border-radius:18px 18px 0 0;padding:20px 20px 26px;box-shadow:0 -8px 30px rgba(0,0,0,.2);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 #kapp-sheet h3{margin:0 0 8px;font-size:18px}#kapp-sheet ol{margin:8px 0 14px;padding-left:20px}#kapp-sheet li{margin:4px 0}
@@ -114,7 +115,10 @@
     // Android: no home-screen step at all (owner 14/11: the menu item was not there on her Samsung). Notifications work
     // in Chrome without it, and a tap opens the pupil's page.
     if (!pushOK) return;
-    if (subscribed) add('k-ok', '🔔 ✓', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại sẽ báo khi cô nhận xét, có sao/điểm, có bài mới và trước hạn nộp bài. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="s" data-x>Đóng</button><button class="d" data-off>Tắt thông báo</button></div>', s => s.querySelector('[data-off]').addEventListener('click', () => { s.remove(); disable(); })));
+    // Owner 14/11: once notifications are on, the page's pink bell goes away (the phone rings instead) and the
+    // "on" mark is a small tag at the top, so it is not tapped by mistake. Turning off needs two taps and a confirmation.
+    D.documentElement.classList.toggle('kapp-on', subscribed);
+    if (subscribed) add('k-ok', '🔔 Đã bật thông báo', () => sheet('<h3>🔔 Đang nhận thông báo</h3><p>Điện thoại báo giống chiếc chuông trên trang: điểm / sao / nhận xét mới, bài nộp đã nhận, bài học và bài tự luyện mới. Không báo từ 21:30 đến 6:30.</p><div class="row"><button class="p" data-x>Đóng</button></div><p style="margin-top:18px;font-size:13px;color:#6b7a8f">Muốn tắt thông báo trên máy này? <button class="d" data-off style="padding:6px 10px;font-size:13px">Tắt</button></p>', s => s.querySelector('[data-off]').addEventListener('click', () => { if (confirm('Tắt thông báo trên máy này?')) { s.remove(); disable(); } })));
     else add('k-on', '🔔 Bật thông báo', enable);
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; paint(); });
