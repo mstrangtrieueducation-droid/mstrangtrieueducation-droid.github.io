@@ -135,7 +135,9 @@
   const out=[];
   doc.querySelectorAll('.wr-assignment[data-wr-assignment]').forEach(a=>{
    const m=/W0*(\d+)$/i.exec(a.getAttribute('data-wr-assignment')||'');if(!m||Number(m[1])!==n)return;
-   a.querySelectorAll('.wr-summary .wr-verdict').forEach(v=>{const t=v.textContent.trim();const b=/^Band\s*(\d+(?:[.,]\d+)?)/i.exec(t),q=/(\d+(?:[.,]\d+)?)\s*%/.exec(t);
+   // One result per essay: the first summary of each task is the newest; older submissions repeat the same task.
+   const seen=new Set();
+   a.querySelectorAll('.wr-summary').forEach(sm=>{const task=sm.getAttribute('data-wr-task')||'';if(seen.has(task))return;seen.add(task);const v=sm.querySelector('.wr-verdict');if(!v)return;const t=v.textContent.trim();const b=/^Band\s*(\d+(?:[.,]\d+)?)/i.exec(t),q=/(\d+(?:[.,]\d+)?)\s*%/.exec(t);
     if(b&&num(b[1])!=null)out.push(['band',num(b[1])]);else if(q&&num(q[1])!=null)out.push(['pct',num(q[1])]);else if(t)out.push(['word',t]);});
   });
   return out;
@@ -149,11 +151,14 @@
   });
   return out;
  }
+ // Small pills next to the page's own "Đã trả n/n bài chữa" chip (owner 13/11: "nhỏ xinh nhẹ nhàng ở góc").
  function tile(kind,label,value,lvl,onClick){
-  const b=doc.createElement('button');b.type='button';b.className='isd-tile isd-'+lvl;b.setAttribute('data-kind',kind);
-  b.innerHTML='<span class="isd-tile-ico">'+(kind==='home'?'✍️':'🏫')+'</span><span class="isd-tile-txt"><small>'+esc(label)+'</small><b>'+esc(value)+'</b></span><span class="isd-tile-go">›</span>';
+  const b=doc.createElement('button');b.type='button';b.className='isd-mini isd-'+lvl;b.setAttribute('data-kind',kind);
+  b.title=(kind==='home'?'Bài viết về nhà':'Bài viết trên lớp')+': '+value;
+  b.innerHTML=(kind==='home'?'✍️ ':'🏫 ')+'<span>'+esc(label)+'</span> <b>'+esc(value)+'</b>';
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();onClick();});return b;
  }
+ const shortWord=w=>/sửa và viết lại|viết lại/i.test(w)?'Cần viết lại':/sửa và nộp lại|nộp lại/i.test(w)?'Cần nộp lại':w;
  // In-class verdicts read ahead (owner 13/11: show on the card at a glance, even before the homework is handed in).
  // Same read-only parent1 calls the class's own classwork module makes; cached for this tab for 10 minutes.
  const CW_ENDPOINTS={
@@ -202,17 +207,19 @@
    const title=card.querySelector('.master-title');const m=title&&/Buổi\s*0*(\d+)/i.exec(title.textContent);if(!m)return;
    const n=Number(m[1]);const res=writingResults(n);const cwRows=cw.byLesson.get(n)||[];
    const key=JSON.stringify([res,cwRows]);
-   const old=card.querySelector('.isd-tiles');if(old&&old.getAttribute('data-k')===key)return;if(old)old.remove();
+   const host=card.querySelector('.master-result');if(!host)return;
+   const old=[...host.querySelectorAll('.isd-mini')];if(old.length&&host.getAttribute('data-isd-k')===key)return;old.forEach(x=>x.remove());
+   host.setAttribute('data-isd-k',key);
    if(!res.length&&!cwRows.length)return;
-   const row=doc.createElement('div');row.className='isd-tiles';row.setAttribute('data-k',key);
+   const row=doc.createDocumentFragment();
    if(res.length){
     const scored=res.filter(r=>r[0]!=='word'),words=res.filter(r=>r[0]==='word');
     const best=scored[0]||words[0];const lvl=best[0]==='band'?bandLevel(best[1]):best[0]==='pct'?pctLevel(best[1]):wordLevel(best[1]);
-    const value=(scored.length?scored:words.slice(0,1)).map(r=>r[0]==='band'?'Band '+fmtBand(r[1]):r[0]==='pct'?(Math.round(r[1]*10)/10)+'%':r[1]).join(' · ');
-    row.appendChild(tile('home','Bài viết về nhà',value,lvl,()=>{const open=card.querySelector('.master-action[data-master-open],.master-title[data-master-open]');if(open)open.click();}));
+    const value=scored.length?(scored[0][0]==='band'?'Band ':'')+scored.map(r=>r[0]==='band'?fmtBand(r[1]):(Math.round(r[1]*10)/10)+'%').join(' · '):shortWord(words[0][1]);
+    row.appendChild(tile('home','Về nhà',value,lvl,()=>{const open=card.querySelector('.master-action[data-master-open],.master-title[data-master-open]');if(open)open.click();}));
    }
-   cwRows.forEach((r,i)=>row.appendChild(tile('class','Bài viết trên lớp'+(cwRows.length>1?' '+(i+1):''),r.verdict||'Xem bài chữa',r.verdict?wordLevel(r.verdict):'good',()=>openClasswork(r.key))));
-   const host=card.querySelector('.master-card-text')||card;host.appendChild(row);
+   cwRows.forEach((r,i)=>row.appendChild(tile('class','Trên lớp'+(cwRows.length>1?' '+(i+1):''),r.verdict?shortWord(r.verdict):'Xem bài chữa',r.verdict?wordLevel(r.verdict):'good',()=>openClasswork(r.key))));
+   host.insertBefore(row,host.firstChild);
   });
  }
  function scan(scope){try{enhanceWritingCards(scope)}catch(_){}try{enhanceChips(scope)}catch(_){}try{enhanceWriting(scope)}catch(_){}try{tidyFallback(scope)}catch(_){}}
@@ -297,15 +304,9 @@
 .isd-low{--isd-ink:#9b1c3a;--isd-bg:#fdeef2;--isd-line:#f3c2cf;--isd-fill:#d64a6c}
 .isd-bar i.isd-high{--isd-fill:#2e9d5b}.isd-bar i.isd-good{--isd-fill:#2f7bd0}.isd-bar i.isd-mid{--isd-fill:#e39b2d}.isd-bar i.isd-low{--isd-fill:#d64a6c}
 .isd-pill{background:var(--isd-bg)!important;color:var(--isd-ink)!important;border:1px solid var(--isd-line)!important;font-weight:800!important}
-.isd-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.isd-tile{display:inline-flex;align-items:center;gap:10px;min-width:0;padding:8px 12px 8px 10px;border-radius:14px;border:1.5px solid var(--isd-line);background:var(--isd-bg);color:var(--isd-ink);font:inherit;text-align:left;cursor:pointer;box-shadow:0 2px 6px rgba(15,40,80,.06);transition:transform .15s,box-shadow .15s}
-.isd-tile:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(15,40,80,.12)}
-.isd-tile:focus-visible{outline:3px solid #678dad;outline-offset:2px}
-.isd-tile-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:#fff;font-size:18px;flex-shrink:0}
-.isd-tile-txt{display:flex;flex-direction:column;line-height:1.2;white-space:nowrap}
-.isd-tile-txt small{font-size:11px;font-weight:600;color:#5d6b80;letter-spacing:.2px}
-.isd-tile-txt b{font-size:16px;font-weight:800;margin-top:2px}
-.isd-tile-go{font-size:22px;font-weight:700;opacity:.7;margin-left:2px}
+.isd-mini{display:inline-flex;align-items:center;gap:3px;margin:0 6px 6px 0;padding:5px 10px;border-radius:8px;border:0;background:var(--isd-bg);color:var(--isd-ink);font:inherit;font-size:12.5px;line-height:1.3;white-space:nowrap;cursor:pointer;vertical-align:middle}
+.isd-mini span{font-weight:500;opacity:.8}.isd-mini b{font-weight:800}
+.isd-mini:hover{filter:brightness(.96)}.isd-mini:focus-visible{outline:2px solid #678dad;outline-offset:2px}
 /* The in-class reviews now open from the Writing card tiles; the separate list under the cards is redundant (owner 13/11). */
 section[id^="ielts"][id$="-classwork-list"]{display:none!important}
 /* Owner 13/11: remove the "Nhận xét của cô trên bảng theo dõi" block. Hidden until checked; shown (as "Nhận xét của cô") only when the card itself shows no comment. */
