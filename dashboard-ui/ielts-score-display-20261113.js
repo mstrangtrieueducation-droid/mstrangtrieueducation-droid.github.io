@@ -203,6 +203,8 @@
  const wordLevel=w=>/nộp lại|viết lại/i.test(w)?'low':/cần sửa|chưa/i.test(w)?'mid':/đạt|tốt/i.test(w)?'high':'good';
  function enhanceWritingCards(scope){
   cwKick();
+  // Owner 14/11: "bỏ Đã trả 2/2 bài chữa đi" — the small result pills already say it.
+  scope.querySelectorAll('.master-result span:not([data-isd-hid])').forEach(x=>{if(!x.children.length&&/^Đã trả\s+\d+\s*\/\s*\d+\s+bài chữa$/i.test(x.textContent.trim())){x.setAttribute('data-isd-hid','1');x.style.display='none';}});
   scope.querySelectorAll('article.master-card[data-sl-skill="writing"]').forEach(card=>{
    const title=card.querySelector('.master-title');const m=title&&/Buổi\s*0*(\d+)/i.exec(title.textContent);if(!m)return;
    const n=Number(m[1]);const res=writingResults(n);const cwRows=cw.byLesson.get(n)||[];
