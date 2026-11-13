@@ -140,20 +140,38 @@
   });
   return out;
  }
+ function classworkCards(){
+  // In-class reviews: cards of the hidden "Nhận xét bài viết trên lớp" list (IELTS 47/50/51/52 modules), keyed classwork-bNN-…
+  const out=new Map();
+  doc.querySelectorAll('section[id$="-classwork-list"] > section').forEach(c=>{
+   const attr=[...c.attributes].find(a=>/^data-ielts\d+-classwork-host$/.test(a.name));const m=attr&&/^classwork-b0*(\d+)/.exec(attr.value);if(!m)return;
+   const btn=c.querySelector('button');if(!btn)return;const n=Number(m[1]);if(!out.has(n))out.set(n,[]);out.get(n).push(btn);
+  });
+  return out;
+ }
+ function tile(kind,label,value,lvl,onClick){
+  const b=doc.createElement('button');b.type='button';b.className='isd-tile isd-'+lvl;b.setAttribute('data-kind',kind);
+  b.innerHTML='<span class="isd-tile-ico">'+(kind==='home'?'✍️':'🏫')+'</span><span class="isd-tile-txt"><small>'+esc(label)+'</small><b>'+esc(value)+'</b></span><span class="isd-tile-go">›</span>';
+  b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();onClick();});return b;
+ }
  function enhanceWritingCards(scope){
+  const inClass=classworkCards();
   scope.querySelectorAll('article.master-card[data-sl-skill="writing"]').forEach(card=>{
    const title=card.querySelector('.master-title');const m=title&&/Buổi\s*0*(\d+)/i.exec(title.textContent);if(!m)return;
-   const res=writingResults(Number(m[1]));const key=JSON.stringify(res);
-   const old=card.querySelector('.isd-wr-open');if(old&&old.getAttribute('data-k')===key)return;if(old)old.remove();
-   if(!res.length)return;
-   const scored=res.filter(r=>r[0]!=='word'),words=res.filter(r=>r[0]==='word');
-   const wordLevel=w=>/nộp lại/i.test(w)?'low':/cần sửa|chưa/i.test(w)?'mid':/đạt|tốt/i.test(w)?'high':'good';
-   const best=scored[0]||words[0];const lvl=best[0]==='band'?bandLevel(best[1]):best[0]==='pct'?pctLevel(best[1]):wordLevel(best[1]);
-   const label=(scored.length?scored:words.slice(0,1)).map(r=>r[0]==='band'?'Band '+fmtBand(r[1]):r[0]==='pct'?(Math.round(r[1]*10)/10)+'%':r[1]).join(' · ');
-   const btn=doc.createElement('button');btn.type='button';btn.className='isd-wr-open isd-'+lvl;btn.setAttribute('data-k',key);
-   btn.innerHTML='<span>✍️ Bài chữa</span><b>'+esc(label)+'</b><i>Xem →</i>';
-   btn.addEventListener('click',e=>{e.preventDefault();const open=card.querySelector('.master-action[data-master-open],.master-title[data-master-open]');if(open)open.click();});
-   const host=card.querySelector('.master-result')||card;host.appendChild(btn);
+   const n=Number(m[1]);const res=writingResults(n);const cw=inClass.get(n)||[];
+   const key=JSON.stringify([res,cw.length]);
+   const old=card.querySelector('.isd-tiles');if(old&&old.getAttribute('data-k')===key)return;if(old)old.remove();
+   if(!res.length&&!cw.length)return;
+   const row=doc.createElement('div');row.className='isd-tiles';row.setAttribute('data-k',key);
+   if(res.length){
+    const scored=res.filter(r=>r[0]!=='word'),words=res.filter(r=>r[0]==='word');
+    const wordLevel=w=>/nộp lại/i.test(w)?'low':/cần sửa|chưa/i.test(w)?'mid':/đạt|tốt/i.test(w)?'high':'good';
+    const best=scored[0]||words[0];const lvl=best[0]==='band'?bandLevel(best[1]):best[0]==='pct'?pctLevel(best[1]):wordLevel(best[1]);
+    const value=(scored.length?scored:words.slice(0,1)).map(r=>r[0]==='band'?'Band '+fmtBand(r[1]):r[0]==='pct'?(Math.round(r[1]*10)/10)+'%':r[1]).join(' · ');
+    row.appendChild(tile('home','Bài viết về nhà',value,lvl,()=>{const open=card.querySelector('.master-action[data-master-open],.master-title[data-master-open]');if(open)open.click();}));
+   }
+   cw.forEach((btn,i)=>row.appendChild(tile('class','Bài viết trên lớp'+(cw.length>1?' '+(i+1):''),'Xem bài chữa','good',()=>btn.click())));
+   const host=card.querySelector('.master-card-text')||card;host.appendChild(row);
   });
  }
  function scan(scope){try{enhanceWritingCards(scope)}catch(_){}try{enhanceChips(scope)}catch(_){}try{enhanceWriting(scope)}catch(_){}try{tidyFallback(scope)}catch(_){}}
@@ -163,6 +181,29 @@
   new MutationObserver(()=>{if(queued)return;queued=true;(root.requestAnimationFrame||setTimeout)(()=>{queued=false;scan(doc)});})
    .observe(doc.body,{childList:true,subtree:true});
  }
+ // ---------- IELTS 47: a receipt record (from the Nộp bài button) hides the tracker comment of the same lesson ----------
+ // ielts47RecordForAssignment_ returns item.directRecord first. That record carries the submission but no comment, so the
+ // detail said "Chưa có nhận xét" while the tracker held the lesson and homework comments (owner 13/11, IELTS 47.2 Buổi 27).
+ // Only the comment fields are filled in, on a copy; status, attempts and counts stay from the receipt record.
+ const COMMENT_FIELDS=['homeworkTeacherComment','homeworkFeedback','lessonFeedback'];
+ function patchRecordComments(){
+  const f=root.ielts47RecordForAssignment_;if(typeof f!=='function'||f.__isd)return;
+  const wrapped=function(item){
+   const rec=f.apply(this,arguments);
+   try{
+    if(!rec||!item||!item.directRecord||rec!==item.directRecord)return rec;
+    if(COMMENT_FIELDS.some(k=>String(rec[k]||'').trim()))return rec;
+    const copy=Object.assign({},item);delete copy.directRecord;
+    const tracker=f.call(this,copy);
+    if(!tracker||tracker===rec||!COMMENT_FIELDS.some(k=>String(tracker[k]||'').trim()))return rec;
+    const merged=Object.assign({},rec);COMMENT_FIELDS.forEach(k=>{if(!String(merged[k]||'').trim()&&tracker[k])merged[k]=tracker[k];});
+    if(merged.band==null&&Number.isFinite(tracker.band))merged.band=tracker.band;
+    return merged;
+   }catch(_){return rec}
+  };
+  wrapped.__isd=true;root.ielts47RecordForAssignment_=wrapped;
+ }
+ patchRecordComments();
  // The frozen renderers are defined by inline scripts before this file; patch at once so the first paint uses them.
  patchSpeaking();patchShadowing();
  if(doc.readyState==='loading')doc.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
@@ -186,11 +227,17 @@
 .isd-low{--isd-ink:#9b1c3a;--isd-bg:#fdeef2;--isd-line:#f3c2cf;--isd-fill:#d64a6c}
 .isd-bar i.isd-high{--isd-fill:#2e9d5b}.isd-bar i.isd-good{--isd-fill:#2f7bd0}.isd-bar i.isd-mid{--isd-fill:#e39b2d}.isd-bar i.isd-low{--isd-fill:#d64a6c}
 .isd-pill{background:var(--isd-bg)!important;color:var(--isd-ink)!important;border:1px solid var(--isd-line)!important;font-weight:800!important}
-.isd-wr-open{display:inline-flex;align-items:center;gap:8px;margin:6px 6px 0 0;padding:7px 12px;border-radius:12px;border:1.5px solid var(--isd-line);background:var(--isd-bg);color:var(--isd-ink);font:inherit;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(15,40,80,.08);animation:isdPulse 2.4s ease-in-out 2}
-.isd-wr-open b{font-size:16px;font-weight:800}.isd-wr-open i{font-style:normal;font-weight:700;font-size:12px}
-.isd-wr-open:hover{filter:brightness(.97);transform:translateY(-1px)}
-@keyframes isdPulse{50%{box-shadow:0 0 0 4px var(--isd-line)}}
-@media(prefers-reduced-motion:reduce){.isd-wr-open{animation:none}}
+.isd-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.isd-tile{display:inline-flex;align-items:center;gap:10px;min-width:0;padding:8px 12px 8px 10px;border-radius:14px;border:1.5px solid var(--isd-line);background:var(--isd-bg);color:var(--isd-ink);font:inherit;text-align:left;cursor:pointer;box-shadow:0 2px 6px rgba(15,40,80,.06);transition:transform .15s,box-shadow .15s}
+.isd-tile:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(15,40,80,.12)}
+.isd-tile:focus-visible{outline:3px solid #678dad;outline-offset:2px}
+.isd-tile-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:#fff;font-size:18px;flex-shrink:0}
+.isd-tile-txt{display:flex;flex-direction:column;line-height:1.2;white-space:nowrap}
+.isd-tile-txt small{font-size:11px;font-weight:600;color:#5d6b80;letter-spacing:.2px}
+.isd-tile-txt b{font-size:16px;font-weight:800;margin-top:2px}
+.isd-tile-go{font-size:22px;font-weight:700;opacity:.7;margin-left:2px}
+/* The in-class reviews now open from the Writing card tiles; the separate list under the cards is redundant (owner 13/11). */
+section[id^="ielts"][id$="-classwork-list"]{display:none!important}
 /* Owner 13/11: remove the "Nhận xét của cô trên bảng theo dõi" block. Hidden until checked; shown (as "Nhận xét của cô") only when the card itself shows no comment. */
 section.native-tracker-teacher-comment:not(.isd-keep){display:none!important}
 @media(max-width:520px){.isd-score{gap:10px;padding:10px 12px}.isd-num{min-width:64px}.isd-num b{font-size:28px}}`;
