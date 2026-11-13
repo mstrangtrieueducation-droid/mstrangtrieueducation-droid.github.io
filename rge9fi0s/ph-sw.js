@@ -20,7 +20,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: 'Ms. Trang Trieu Education', body: e.data ? e.data.text() : '' }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Ms. Trang Trieu Education', {
-    body: d.body || '', tag: d.tag || 'kids', renotify: true,
+    body: d.body || '', tag: d.tag || 'kids', renotify: true, data: { open: /^[A-Za-z0-9_.-]{1,80}$/.test(d.open || '') ? d.open : '' },
     icon: '/dashboard-ui/kids-app/icon-192.png', badge: '/dashboard-ui/kids-app/icon-192.png', lang: 'vi'
   }));
 });
@@ -28,7 +28,10 @@ self.addEventListener('push', e => {
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   e.waitUntil((async () => {
-    const url = await link();
+    // A notification about one piece of work opens that work's detail: ?mo=<id> before the pupil's #p= link.
+    const open = (e.notification.data || {}).open || '';
+    let url = await link();
+    if (open) url = url.replace(/\?[^#]*/, '').replace('#', '?mo=' + encodeURIComponent(open) + '#');
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const w of wins) if (w.url.startsWith(self.registration.scope)) { await w.focus(); if (w.url !== url && 'navigate' in w) try { await w.navigate(url); } catch (_) {} return; }
     await self.clients.openWindow(url);

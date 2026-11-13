@@ -107,7 +107,41 @@
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; paint(); });
   window.addEventListener('appinstalled', () => { installEvt = null; paint(); toast('📲 Đã cài app. Mở app KIDS ' + CLS + ' từ màn hình chính.'); });
 
+  // Opened from a notification about one piece of work (?mo=<id>): open that work's detail once the page has drawn it.
+  function openFromNotice() {
+    const m = /[?&]mo=([A-Za-z0-9_.-]{1,80})/.exec(location.search);
+    if (!m) return;
+    const id = decodeURIComponent(m[1]);
+    history.replaceState(null, '', path + location.hash);
+    // The page draws in steps (journey view, then the reminder gate). Keep the detail open for the first 12 s:
+    // if a later repaint closes it, open it again. The detail is a modal dialog, so it sits above the reminder.
+    // Stops once the detail has stayed open for 1.5 s, so a parent closing it is never fought.
+    // Lessons open from their card (data-open = id). Video homework opens from the "Bài tập & Video" tab, video group,
+    // row data-archive-detail="video|<series>::<id>".
+    const finder = () => {
+      const lesson = [...D.querySelectorAll('[data-open]')].find(b => b.getAttribute('data-open') === id);
+      if (lesson) return lesson;
+      const row = [...D.querySelectorAll('[data-archive-detail]')].find(b => b.getAttribute('data-archive-detail').endsWith('::' + id));
+      if (row) return row;
+      if (!/-L\d+-/.test(id)) {
+        const tab = D.querySelector('[data-tab="library"]');
+        if (tab && tab.getAttribute('aria-selected') !== 'true') { tab.click(); return null; }
+        const group = D.querySelector('[data-archive-group^="video|"]');
+        if (group && group.getAttribute('aria-selected') !== 'true') group.click();
+      }
+      return null;
+    };
+    let tries = 0, opened = 0, steady = 0;
+    const t = setInterval(() => {
+      tries++;
+      const open = D.querySelector('dialog[open]');
+      if (open) steady++; else { steady = 0; const btn = finder(); if (btn) { btn.click(); opened++; } }
+      if (steady >= 6 || tries > 80 || opened > 6) clearInterval(t);
+    }, 250);
+  }
+
   async function boot() {
+    openFromNotice();
     if ('serviceWorker' in navigator) {
       try {
         reg = await navigator.serviceWorker.register(path + 'ph-sw.js', { scope: path });
