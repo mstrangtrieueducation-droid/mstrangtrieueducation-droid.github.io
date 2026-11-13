@@ -154,23 +154,64 @@
   b.innerHTML='<span class="isd-tile-ico">'+(kind==='home'?'✍️':'🏫')+'</span><span class="isd-tile-txt"><small>'+esc(label)+'</small><b>'+esc(value)+'</b></span><span class="isd-tile-go">›</span>';
   b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();onClick();});return b;
  }
+ // In-class verdicts read ahead (owner 13/11: show on the card at a glance, even before the homework is handed in).
+ // Same read-only parent1 calls the class's own classwork module makes; cached for this tab for 10 minutes.
+ const CW_ENDPOINTS={
+  'IELTS 47':'https://script.google.com/macros/s/AKfycbyv_VgJvYeeTGstj1vw_BH2gpBBid_XcIZ3CpA3Ily92hwAcYPI2Bn55uSQMk4Rg_Cj/exec',
+  'IELTS 50':'https://script.google.com/macros/s/AKfycbyjzCPx_hBh6IghVPvbp7M7UKaIYJZkIo2x8Xgsn-ZVayegrnb5nlpSln-WkLOY-PstlA/exec',
+  'IELTS 51':'https://script.google.com/macros/s/AKfycbwzfiAQHqToF0oIgyvWFXOJ00WvAg-BMH4C_gkBTYwATuMuHHnRI7ZfallYQghkhOSq/exec',
+  'IELTS 52':'https://script.google.com/macros/s/AKfycbxVyYvP4C08eiBdU7adnwKtY1xwplsgTdO45-y9tx7Gq3MhqH2OC_UTTHzqOEn8OoGw/exec'};
+ let cw={sig:'',state:'idle',byLesson:new Map()};
+ const nameKey=v=>String(v||'').normalize('NFC').trim().replace(/\s+/g,' ').toUpperCase();
+ function cwKick(){
+  let cls='',token='',name='';
+  try{const acc=typeof ieltsParentAccess!=='undefined'?ieltsParentAccess:root.ieltsParentAccess;const ps=typeof parentState!=='undefined'?parentState:root.parentState;cls=acc.className;token=acc.token;name=ps&&ps.name||'';}catch(_){return}
+  const ep=CW_ENDPOINTS[cls];if(!ep||!token||!name)return;
+  const sig=cls+'|'+location.hash+'|'+name;if(cw.sig===sig)return;
+  cw={sig,state:'loading',byLesson:new Map()};const mine=cw;
+  const store='isd-cw:'+sig;
+  try{const c=JSON.parse(root.sessionStorage.getItem(store)||'null');if(c&&Date.now()-c.at<600000){c.rows.forEach(r=>{if(!mine.byLesson.has(r.n))mine.byLesson.set(r.n,[]);mine.byLesson.get(r.n).push(r)});mine.state='ready';return;}}catch(_){}
+  const q=async(action,extra)=>{const u=new URL(ep);Object.entries(Object.assign({api:'parent1',class:cls,action,token,_:String(Date.now())},extra||{})).forEach(([k,v])=>u.searchParams.set(k,v));
+   const r=await fetch(u.href,{credentials:'omit',mode:'cors',cache:'no-store',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(40000)});const e=await r.json();
+   if(!e||!e.ok||!e.data||e.data.className!==cls||nameKey(e.data.studentName)!==nameKey(name))throw Error('x');return e.data;};
+  (async()=>{
+   const idx=await q('classwork_index');const reviews=(Array.isArray(idx.reviews)?idx.reviews:[]).filter(r=>/^classwork-b\d{2}-/.test(r.key)).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,8);
+   const rows=[];
+   for(const r of reviews){
+    const n=Number(/^classwork-b0*(\d+)/.exec(r.key)[1]);let verdict='';
+    try{const d=await q('classwork_review',{reviewKey:r.key,reviewHash:r.hash});const v=d.review&&d.review.learningVerdict;verdict=typeof v==='string'?v:(v&&typeof v.label==='string'?v.label:'');}catch(_){}
+    rows.push({n,key:r.key,verdict:verdict.trim().slice(0,40)});
+   }
+   if(cw!==mine)return;
+   rows.forEach(r=>{if(!mine.byLesson.has(r.n))mine.byLesson.set(r.n,[]);mine.byLesson.get(r.n).push(r)});mine.state='ready';
+   try{root.sessionStorage.setItem(store,JSON.stringify({at:Date.now(),rows}))}catch(_){}
+   scan(doc);
+  })().catch(()=>{if(cw===mine)mine.state='error';});
+ }
+ function openClasswork(key){
+  const find=()=>{for(const c of doc.querySelectorAll('section[id$="-classwork-list"] > section')){if([...c.attributes].some(a=>/^data-ielts\d+-classwork-host$/.test(a.name)&&a.value===key))return c.querySelector('button')}return null};
+  let b=find();if(b){b.click();return}
+  // The class module builds its list only while the Writing filter is on: switch to it, then open.
+  const w=[...doc.querySelectorAll('[data-view="writing"],button')].find(x=>x.offsetParent&&(x.getAttribute('data-view')==='writing'||x.textContent.trim()==='Writing'));if(w)w.click();
+  let tries=0;const t=setInterval(()=>{b=find();if(b||++tries>40){clearInterval(t);if(b)b.click();}},250);
+ }
+ const wordLevel=w=>/nộp lại|viết lại/i.test(w)?'low':/cần sửa|chưa/i.test(w)?'mid':/đạt|tốt/i.test(w)?'high':'good';
  function enhanceWritingCards(scope){
-  const inClass=classworkCards();
+  cwKick();
   scope.querySelectorAll('article.master-card[data-sl-skill="writing"]').forEach(card=>{
    const title=card.querySelector('.master-title');const m=title&&/Buổi\s*0*(\d+)/i.exec(title.textContent);if(!m)return;
-   const n=Number(m[1]);const res=writingResults(n);const cw=inClass.get(n)||[];
-   const key=JSON.stringify([res,cw.length]);
+   const n=Number(m[1]);const res=writingResults(n);const cwRows=cw.byLesson.get(n)||[];
+   const key=JSON.stringify([res,cwRows]);
    const old=card.querySelector('.isd-tiles');if(old&&old.getAttribute('data-k')===key)return;if(old)old.remove();
-   if(!res.length&&!cw.length)return;
+   if(!res.length&&!cwRows.length)return;
    const row=doc.createElement('div');row.className='isd-tiles';row.setAttribute('data-k',key);
    if(res.length){
     const scored=res.filter(r=>r[0]!=='word'),words=res.filter(r=>r[0]==='word');
-    const wordLevel=w=>/nộp lại/i.test(w)?'low':/cần sửa|chưa/i.test(w)?'mid':/đạt|tốt/i.test(w)?'high':'good';
     const best=scored[0]||words[0];const lvl=best[0]==='band'?bandLevel(best[1]):best[0]==='pct'?pctLevel(best[1]):wordLevel(best[1]);
     const value=(scored.length?scored:words.slice(0,1)).map(r=>r[0]==='band'?'Band '+fmtBand(r[1]):r[0]==='pct'?(Math.round(r[1]*10)/10)+'%':r[1]).join(' · ');
     row.appendChild(tile('home','Bài viết về nhà',value,lvl,()=>{const open=card.querySelector('.master-action[data-master-open],.master-title[data-master-open]');if(open)open.click();}));
    }
-   cw.forEach((btn,i)=>row.appendChild(tile('class','Bài viết trên lớp'+(cw.length>1?' '+(i+1):''),'Xem bài chữa','good',()=>btn.click())));
+   cwRows.forEach((r,i)=>row.appendChild(tile('class','Bài viết trên lớp'+(cwRows.length>1?' '+(i+1):''),r.verdict||'Xem bài chữa',r.verdict?wordLevel(r.verdict):'good',()=>openClasswork(r.key))));
    const host=card.querySelector('.master-card-text')||card;host.appendChild(row);
   });
  }
@@ -242,5 +283,5 @@ section[id^="ielts"][id$="-classwork-list"]{display:none!important}
 section.native-tracker-teacher-comment:not(.isd-keep){display:none!important}
 @media(max-width:520px){.isd-score{gap:10px;padding:10px 12px}.isd-num{min-width:64px}.isd-num b{font-size:28px}}`;
  const st=doc.createElement('style');st.id='ielts-score-display-v1';st.textContent=css;(doc.head||doc.documentElement).appendChild(st);
- root.IeltsScoreDisplay={version:1,speakingNormalize,writingCriteria};
+ root.IeltsScoreDisplay={version:1,debugCw:()=>({sig:cw.sig.length,state:cw.state,lessons:[...cw.byLesson.keys()]}),speakingNormalize,writingCriteria};
 })(window);
