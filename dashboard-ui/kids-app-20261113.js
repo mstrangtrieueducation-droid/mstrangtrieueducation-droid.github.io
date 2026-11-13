@@ -127,6 +127,11 @@
     if (opening) clearInterval(opening);
     // An item opened before (or the reminder) must not stand in for the new one.
     D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} });
+    // Tests and interviews have no detail of their own: open the results tab ("Kết quả & Xếp hạng").
+    if (/-test-/.test(id)) {
+      let n = 0; const tt = setInterval(() => { const tab = D.querySelector('[data-tab="journey"]'); if (tab) { tab.click(); D.querySelectorAll('dialog[open]').forEach(d => { try { d.close(); } catch (_) {} }); } if (tab || ++n > 80) clearInterval(tt); }, 250);
+      return;
+    }
     // The page draws in steps (journey view, then the reminder gate). Keep the detail open for the first 12 s:
     // if a later repaint closes it, open it again. The detail is a modal dialog, so it sits above the reminder.
     // Stops once the detail has stayed open for 1.5 s, so a parent closing it is never fought.
