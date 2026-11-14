@@ -238,7 +238,7 @@
     var t = today(), due = 0; Object.keys(S.w).forEach(function (id) { if (S.w[id][1] <= t) due++; });
     var ripe = 0; Object.keys(S.w).forEach(function (id) { if (S.w[id][0] >= 3 && S.w[id][1] > t) ripe++; });
     var n = Object.keys(S.w).length, lw = S.lw, dueDay = lw + RHYTHM, o = { due: due, n: n, ripe: ripe };
-    if (!n && !lw) { o.mood = 'seed'; o.need = true; o.title = 'Cô Titi tặng em một vườn từ vựng 🌱'; o.text = 'Gieo những hạt từ đầu tiên hôm nay nhé!'; }
+    if (!n && !lw) { o.mood = 'seed'; o.need = true; o.title = 'Vườn từ vựng của em đã sẵn sàng 🌱'; o.text = 'Gieo những hạt từ đầu tiên hôm nay nhé!'; }
     else if (S.days[t]) { o.mood = ripe ? 'ripe' : 'ok'; o.need = false; o.title = 'Giỏi lắm! Vườn đã được tưới hôm nay 🌳'; o.text = 'Lần tưới tới: trước hết ' + wd(dueDay) + ' ' + dm(dueDay); }
     else if (t > dueDay) { o.mood = 'due'; o.need = true; o.title = '🥀 Vườn trễ ' + (t - dueDay) + ' ngày rồi!'; o.text = (due ? due + ' cây đang héo — ' : '') + 'vào tưới cứu cây ngay nhé 💧'; }
     else if (t === dueDay || due) { o.mood = 'due'; o.need = true; o.title = 'Tưới cây hôm nay nhé! 💧'; o.text = due ? due + ' cây đang héo chờ em' : 'Hôm nay đến hạn tưới vườn'; }
@@ -251,9 +251,9 @@
     var c = cls(); if (!/^(IELTS|FIGHTER) \d+$/.test(c) || d.getElementById('vg-fab')) return;
     var st = d.createElement('style'); st.id = 'vg-style'; st.textContent = css + fabCss; d.head.appendChild(st);
     var titiGames = d.getElementById('titi-games');
-    var fab = d.createElement('div'); fab.id = 'vg-fab'; fab.hidden = true;
+    var fab = d.createElement('div'); fab.id = 'vg-fab'; fab.hidden = true; fab.className = 'no-titi';   // Cô 14/11: bỏ hẳn cô Titi
     fab.innerHTML = '<div class="vg-bub" role="status" hidden><button type="button" class="vg-bx" aria-label="Ẩn lời nhắc">✕</button><b></b><span></span></div>' +
-      '<button type="button" class="vg-fbtn" aria-label="Mở Vườn từ vựng"><span class="vg-titi" aria-hidden="true"></span>' +
+      '<button type="button" class="vg-fbtn" aria-label="Mở Vườn từ vựng">' +
       '<span class="vg-stage"><span class="vg-disc"></span><span class="vg-tree"></span></span>' +
       '<span class="vg-n" hidden></span><span class="vg-cap">🌳 Vườn từ vựng</span></button>';
     d.body.appendChild(fab);
@@ -264,7 +264,7 @@
     var panel = pop.querySelector('#panel-vocab');
     function lift() {   // nút trò chơi của cô Titi đang hiện (FIGHTER): vườn đứng ngay trên nó; không có (IELTS): cô Titi đứng cạnh vườn
       var g = titiGames && root.getComputedStyle(titiGames).display !== 'none' && titiGames.getBoundingClientRect(), on = !!(g && g.height);
-      fab.style.setProperty('--vg-lift', on ? Math.round(g.height + 14) + 'px' : '0px'); fab.classList.toggle('no-titi', on);
+      fab.style.setProperty('--vg-lift', on ? Math.round(g.height + 14) + 'px' : '0px');
     }
     var mood = '', shownAt = 0;
     function paint() {
