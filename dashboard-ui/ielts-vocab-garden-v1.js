@@ -67,7 +67,7 @@
   var loaded = null;
   function script(src) { return new Promise(function (ok, bad) { var s = d.createElement('script'); s.src = src; s.onload = ok; s.onerror = bad; d.head.appendChild(s); }); }
   function words() {
-    if (!loaded) loaded = Promise.all([root.RT_CONFIG ? 1 : script(BASE + 'config.js?v=7'), root.RT_UNITS ? 1 : script(BASE + 'data.js?v=7')]).then(function () {
+    if (!loaded) loaded = Promise.all([root.RT_CONFIG ? 1 : script(BASE + 'config.js?v=9'), root.RT_UNITS ? 1 : script(BASE + 'data.js?v=9')]).then(function () {
       var W = {}, order = [], pos = {}, units = root.RT_UNITS || [];
       units.forEach(function (u, ui) { u.words.forEach(function (w) { W[w.id] = w; w._u = ui; pos[w.id] = order.length; order.push(w.id); }); });
       return { W: W, order: order, pos: pos, units: units, api: (root.RT_CONFIG || {}).API || '' };
@@ -86,7 +86,7 @@
   }
   function kind(w, t) { if (w[1] <= t) return 'due'; if (w[0] >= 3) return 'ripe'; if (w[0] >= 2) return 'grow'; return 'new'; }
   var right = function (w) { return w[4] != null ? +w[4] : Math.max(0, +w[0] || 0); };
-  function say(t) { try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(String(t).replace(/·/g, ',')); u.lang = 'en-GB'; u.rate = .88; var v = speechSynthesis.getVoices(); u.voice = v.filter(function (x) { return /^en-gb/i.test(x.lang); })[0] || v.filter(function (x) { return /^en/i.test(x.lang); })[0] || null; speechSynthesis.speak(u); } catch (e) {} }
+  function say(t) { try { if (!root.speechSynthesis) return; speechSynthesis.cancel(); if (speechSynthesis.paused) speechSynthesis.resume(); var u = new SpeechSynthesisUtterance(String(t).replace(/·/g, ',')); u.lang = 'en-GB'; u.rate = .9; var v = speechSynthesis.getVoices(); var e = v.filter(function (x) { return /^en-gb/i.test(x.lang); })[0] || v.filter(function (x) { return /^en/i.test(x.lang); })[0]; if (e) { u.voice = e; u.lang = e.lang; } setTimeout(function () { speechSynthesis.speak(u); }, 60); } catch (e2) {} }
 
   /* ---------- render ---------- */
   var cur = { key: '', filter: 'all', unit: '', q: '', limit: 48, data: null, S: null };
@@ -185,27 +185,36 @@
     var panel = d.createElement('section'); panel.className = 'panel'; panel.id = 'panel-vocab'; panel.hidden = true; panel.setAttribute('aria-label', 'Vườn từ vựng');
     wrap.appendChild(panel); ref.parentNode.insertBefore(wrap, ref.nextSibling);
     var group = null;
-    function open() {
+    var sticky = false, lastOut = 0;
+    function open(quiet) {
+      sticky = true;
       nav.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('is-active', b === tab); });
       nav.querySelectorAll('[data-group]').forEach(function (b) { var on = b === group; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on); });
       var tools = nav.nextElementSibling; if (tools && /group-tools$/.test(tools.id || '')) tools.querySelectorAll('[data-tools]').forEach(function (x) { x.hidden = true; });
       d.querySelectorAll('.panel').forEach(function (p) { p.hidden = p !== panel; });
       var master = d.getElementById('panel-homework'); if (master) master.hidden = true;
       refresh(panel, tab); if (cur.data && cur.S) render(panel, pupil(), cls());
-      try { panel.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+      if (quiet !== true) try { panel.scrollIntoView({ block: 'nearest' }); } catch (e) {}
     }
-    tab.addEventListener('click', open);
+    tab.addEventListener('click', function () { open(); });
     // the IELTS pages group their tabs into 3 big buttons (📅 / 📚 / 🏆); ours becomes the 4th
     function placeGroup() {
       if (group || !nav.classList.contains('grouped-navigation') || !nav.querySelector('[data-group]')) return;
       group = d.createElement('button'); group.type = 'button'; group.setAttribute('data-group', 'vocab'); group.setAttribute('aria-pressed', 'false'); group.textContent = '🌳 Vườn từ vựng';
       var work = nav.querySelector('[data-group="work"]');   // Cô 14/11: ngay bên trái "📚 Bài tập 4 kỹ năng"
-      if (work) nav.insertBefore(group, work); else nav.appendChild(group); nav.classList.add('vg-has'); group.addEventListener('click', open); dot(group, cur.S ? needs(cur.S) : false);
+      if (work) nav.insertBefore(group, work); else nav.appendChild(group);
+      nav.classList.add('vg-has'); group.addEventListener('click', function () { open(); }); dot(group, cur.S ? needs(cur.S) : false);
     }
     placeGroup();
     if (root.MutationObserver) new MutationObserver(placeGroup).observe(nav, { attributes: true, attributeFilter: ['class'], childList: true });
     // a native tab/group hides every .panel (ours too) and moves is-active; keep our buttons in step
-    nav.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.tab,[data-group]'); if (b && b !== tab && b !== group) { tab.classList.remove('is-active'); if (group) { group.classList.remove('is-active'); group.setAttribute('aria-pressed', 'false'); } } });
+    nav.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.tab,[data-group]'); if (b && b !== tab && b !== group) { sticky = false; tab.classList.remove('is-active'); if (group) { group.classList.remove('is-active'); group.setAttribute('aria-pressed', 'false'); } } });
+    // the page's quiet data refresh re-opens the last native tab (Cô 14/11: "đang ở vườn nó tự nhảy sang tab bài tập"):
+    // while the pupil stays in the garden, put the garden back; any click of theirs outside it releases it
+    d.addEventListener('click', function (e) { var t = e.target; if (!(t.closest && (t.closest('#panel-vocab') || t.closest('[data-vg-tab]') || t.closest('[data-group="vocab"]') || t.closest('.vg-modal')))) { lastOut = Date.now(); sticky = false; } }, true);
+    if (root.MutationObserver) new MutationObserver(function () {
+      if (panel.hidden && sticky && Date.now() - lastOut > 1500) setTimeout(function () { if (panel.hidden && sticky) open(true); }, 0);
+    }).observe(panel, { attributes: true, attributeFilter: ['hidden'] });
     var nameEl = d.getElementById('portal-student-name');
     function rf() { refresh(panel, tab); }
     if (nameEl && root.MutationObserver) new MutationObserver(rf).observe(nameEl, { childList: true, characterData: true, subtree: true });
