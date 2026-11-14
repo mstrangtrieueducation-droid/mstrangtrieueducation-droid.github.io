@@ -6619,7 +6619,7 @@ function applyNativeScheduleTransport(packet){
       try {
 
 
-      if (!included(item, student) || item.noHomework || item.nativeTrackerRecordAvailable===false&&!item.isSelfStudy&&!item.isShadowing || adapters.includeAssignment && !adapters.includeAssignment(item)) return;
+      if (!included(item, student) || item.noHomework || /* IELTS_SCHEDULE_HOMEWORK_V1: owner 15/11 - homework comes from the Schedule parent message, never from a tracker column */ adapters.includeAssignment && !adapters.includeAssignment(item)) return;
 
 
       var release = timestamp(item.assignedAt || item.releaseDate || item.lessonDate, false);
@@ -11210,6 +11210,8 @@ if(typeof module==='object'&&module.exports)module.exports={recomputeSummaryCoun
 
  const list=v=>Array.isArray(v)?v:[];
 
+ const days=v=>{const out=[];String(v||'').replace(/(\d{1,2})(?:\s*-\s*(\d{1,2}))?\/(\d{1,2})\/(\d{4})/g,(m,a,b,mo,y)=>{[a,b].filter(Boolean).forEach(d=>out.push(Number(d)+'/'+Number(mo)+'/'+y));return m;});return out;};
+ const sameDay=(record,item)=>{const a=days(record.date),b=days(item.lessonDate);return !a.length||!b.length||a.some(d=>b.includes(d));};
  const due=record=>{const text=String(record.homeworkSourceHeader||record.sourceHeader||'');const m=text.match(/Hạn\s*:[\s\S]*?(\d{1,2}\/\d{1,2}\/\d{4})/i);return m?m[1]:record.dueDate||'';};
 
  function bind(target){
@@ -11222,7 +11224,7 @@ if(typeof module==='object'&&module.exports)module.exports={recomputeSummaryCoun
 
    let record=records.find(r=>r.directAssignmentId===item.id);
 
-   if(!record){const same=records.filter(r=>Number(r.sessionNumber)>0&&Number(r.sessionNumber)===Number(item.sessionNumber));if(same.length===1)record=same[0];}
+   if(!record){const same=records.filter(r=>Number(r.sessionNumber)>0&&Number(r.sessionNumber)===Number(item.sessionNumber)&&sameDay(r,item));if(same.length===1)record=same[0];}
 
    item.nativeTrackerRecordAvailable=Boolean(record);
 
@@ -11230,13 +11232,14 @@ if(typeof module==='object'&&module.exports)module.exports={recomputeSummaryCoun
 
    record.directAssignmentId=item.id;
 
-   const deadline=due(record);if(deadline)item.dueDate=deadline;
+   /* IELTS_SCHEDULE_HOMEWORK_V1: the Schedule message owns the deadline and lesson day; a tracker value only fills a blank. */
+   const deadline=due(record);if(deadline&&!item.dueDate)item.dueDate=deadline;
 
-   if(record.date)item.lessonDate=record.date;
+   if(record.date&&!item.lessonDate)item.lessonDate=record.date;
 
-   if(record.assignmentCode)item.assignmentCode=record.assignmentCode;
+   if(record.assignmentCode&&!item.assignmentCode)item.assignmentCode=record.assignmentCode;
 
-   if(record.sourceCode)item.sourceCode=record.sourceCode;
+   if(record.sourceCode&&!item.sourceCode)item.sourceCode=record.sourceCode;
 
   }
 

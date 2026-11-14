@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "tag": "stable-20261112b",
+  "tag": "stable-20261115",
   "sourceCommit": "cdd8e0955d63faae66a20ec675309e6360c67ae8",
   "policy": "Only explicit user instruction: sá»­a lÃµi nháº­n bÃ i permits changing this frozen baseline. UI/CSS uses dashboard-ui/.",
   "classes": 45,
@@ -2414,10 +2414,10 @@
         "sha256": "36d880f55fa48245a65724f79924e3f3d1c6d5f4ee86f4251977beb752bb181d"
       },
       {
-        "sha256": "52981520dfd643c2aa28be6d1d5b07c5f8c7bb0e508ea3423a0be5cceb89c076"
+        "sha256": "247436db20731ac88818f1a8e1261d479e845122da72cc6b2094ea224963ed4c"
       },
       {
-        "sha256": "6dd6dab2ab4a149069da2237dad8a38a8c76c5dd25fe9214160d48386cc45eb8"
+        "sha256": "6d6d39191be195d8ccfd0bd0fd07cb95c74ba5261a3adf7d6868457f3c0993bd"
       },
       {
         "sha256": "a7b7dd7d45ebb0d5ce9946e37e18f760396c2016b1c893aa43a8933e82704d64"
@@ -2494,10 +2494,10 @@
         "sha256": "9d83a3ee2383a1018d61fd9334455637f46c0ac38cc6a4c2ba414394fcb072c9"
       },
       {
-        "sha256": "973102bff6c627559d4ee9e698887ab56228900b2d1b7cf83267624a59361a88"
+        "sha256": "0d45a09308cd9e41b96d923a6dbfc920b5c79c47a4b99f7c7605f5b48ca9a67c"
       },
       {
-        "sha256": "883ae5548fc7dc9424942f459d47dd7c71929a68cd98092f8814d7e352be17ce"
+        "sha256": "6a0be77b145b305404913741c9014c390a0f860dbd9c1a317c2b756f2e83db31"
       },
       {
         "sha256": "f8eca7eed6c844819d4899a816a74a6bc43fe3c6419286979f318c36a28602b7"
@@ -2577,10 +2577,10 @@
         "sha256": "1e72083b5eef75134c9395a4f1b24e59e0d04119dc460c67fa6d4c0427507c3a"
       },
       {
-        "sha256": "0d6310f3216920772d4b8f566951d0d5c5f4ac39c961b310344d4708a2df41f4"
+        "sha256": "0b5322901bc11d86e0d50d838d96660eda3d8dc965c3fb9286af53eb09a8515e"
       },
       {
-        "sha256": "22b42cf66ae5caa1bef51d201bccaba10e0526ee1178f4e90dc05dc886c24710"
+        "sha256": "4159283a65e0b36546952130a3470ac5a6404220c36f600532af8c5d024766ac"
       },
       {
         "sha256": "9bcbb23d6f371de4c0ca0b39b906bf3a802467e4c340a1e0160b4eb13de12e4e"
@@ -2657,10 +2657,10 @@
         "sha256": "93cb4bf837f54456b6373b6e3313075c843563087fa68b7f356ccf92bf26f4b1"
       },
       {
-        "sha256": "26dfa38ad24a493af3a8a46102cdd8b62da4987dcdefeeca562c7848c4860369"
+        "sha256": "5ed63928083ffbf23d8099c28ea2544c34779531dc0eb4d0d9d700e62bb03ac3"
       },
       {
-        "sha256": "42da2bfedd75af4dd799ece782631127b5818a795f96308b1de370d70bdfe34c"
+        "sha256": "ed472ec473423751461025547ccea79e5619926746dfb1d0bf53e069479776c8"
       },
       {
         "sha256": "2e52dea8cfb3087f276784cf797bbde45aaa3f98938922409e81047ab882184d"
@@ -2740,10 +2740,10 @@
         "sha256": "dfa0206eac2eca25f41e1201ebf205265d980048a2d325204aa158006444d2ba"
       },
       {
-        "sha256": "c2632d816cda8fe3eb0e899ee3a809e425cda243d403614244f2444967ea61d5"
+        "sha256": "2d1f04c0d1b36e77d6fc6d9afba1fb0304aaa0e9a48adabc8281cefea40de7b5"
       },
       {
-        "sha256": "6c55d9cd531a448f55d59a3c7ad5211a44fd1829b62e15ebf442a177c0cc866a"
+        "sha256": "1491b4fcc3520340e40d0e7774e5b41330682ddefe2ae96c0635f7f1b729b740"
       },
       {
         "sha256": "81cfd0016066dd9fbd5ffdd5438d0f98233a5275db24a3995daf1ed8ddcf9a33"
@@ -2820,10 +2820,10 @@
         "sha256": "cbb73151005d0319a3d11f15e3dcea55cfea239289b80285501fa33defc3fc6f"
       },
       {
-        "sha256": "3683bd002b37694e596c592c334451b3055a604d211aaa187784d0c02614c14e"
+        "sha256": "36831eb50b9b294bea3bfecb32ef30279c9952754492d80cc1722c78d73286be"
       },
       {
-        "sha256": "15bf9fc6d0a4d70b29a1feb2a13b5d0e649d4d79e38257d6a3bcadabfb9c54b6"
+        "sha256": "8c17b9d6b6178181d63f383a27c22eb4a744c6b1830585a106f0ea1a7f10e527"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
@@ -2900,10 +2900,10 @@
         "sha256": "be7562ae15cbc9eda3d7ed241be3d19f6fa624e114cafb63bb9036ddf022bf55"
       },
       {
-        "sha256": "451b7dcde90f593e17b4cd4aff4b9151140f840355cce2cbfae7991bf3b52483"
+        "sha256": "a910249edbbcd1e9eda5770b5ec1785f1b0c36dfc2241561cc185d79592995f2"
       },
       {
-        "sha256": "aab056bbb35d74758efd51e645a828f3e5e456b1b4b4141c452a642c7dc5e799"
+        "sha256": "33a11aab28d570992134171575510a704fe0ddb9fc495e33d7fa55a846a209a8"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
@@ -2977,10 +2977,10 @@
         "sha256": "bd2be0da7753d2e3d9ffe3f51c402cac777151b2e87aaa4742b9479606ee8504"
       },
       {
-        "sha256": "341569e0f40ee485c5fd068bc621acdc18e07c06ec65abeeed1593ebd3f435f6"
+        "sha256": "af402144322f1b542f99286fccda3c8b40a510997d6bec0228869f42c57d56de"
       },
       {
-        "sha256": "4b4cc32629437aad37dc6c515ee575ecffa18502d455045d71e50d08bae988c3"
+        "sha256": "8373d3531e78ced52d6509bba4da1c756954a9c4652dbb95cf10a4fa4ceea6e4"
       },
       {
         "src": "/vanlang-on-thi-lop-6/game-kit/student-context.js?v=classroom-4"
