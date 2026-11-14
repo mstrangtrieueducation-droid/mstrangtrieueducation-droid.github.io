@@ -171,7 +171,7 @@
     var L = mood === 'due' ? ['#f3e3a0', '#c9b04a', '#7a6a22'] : ['#d9f99d', '#4ade80', '#15803d'];
     var B = mood === 'due' ? ['#c2a83e', '#6b5b1c'] : ['#22c55e', '#14532d'];
     var crown = mood === 'seed'
-      ? '<path d="M60 72V50" stroke="url(#vgT)" stroke-width="4.5" stroke-linecap="round"/><path d="M60 56c-4-12-15-16-25-12 2 11 13 17 25 12z" fill="url(#vgL)"/><path d="M60 51c4-12 15-15 25-11-3 11-13 16-25 11z" fill="url(#vgL)"/><ellipse cx="45" cy="47" rx="5" ry="2" fill="#fff" opacity=".5" transform="rotate(20 45 47)"/>'
+      ? '<path d="M60 73V50" stroke="#4d7c0f" stroke-width="4.5" stroke-linecap="round"/><path d="M60 56c-4-12-15-16-25-12 2 11 13 17 25 12z" fill="url(#vgL)"/><path d="M60 51c4-12 15-15 25-11-3 11-13 16-25 11z" fill="url(#vgL)"/><ellipse cx="45" cy="47" rx="5" ry="2" fill="#fff" opacity=".5" transform="rotate(20 45 47)"/>'
       : '<path d="M60 74V46M60 60l-12-10M60 54l11-9" stroke="url(#vgT)" stroke-width="6.5" stroke-linecap="round"/>' +
         '<g' + (mood === 'due' ? ' transform="rotate(6 60 70)"' : '') + '>' +
         '<circle cx="36" cy="46" r="15" fill="url(#vgB)"/><circle cx="84" cy="46" r="15" fill="url(#vgB)"/><circle cx="60" cy="54" r="16" fill="url(#vgB)"/>' +
