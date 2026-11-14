@@ -6,7 +6,10 @@
    badge text (Cô cho phép ghi đè trạng thái thẻ PRON). Never changes native counts, receipts, marks or comments. */
 (function (root) {
   'use strict';
-  if (root.IeltsPronBox) return;
+  // Cô 15/11/2026 ("dừng luyện phát âm, khi nào cần tôi chọn ở schedule sau"): the weekly card is off. Pronunciation work
+  // released on the Schedule still shows as its own homework card; set ON = true to bring this card back.
+  var ON = false;
+  if (!ON || root.IeltsPronBox) return;
   root.IeltsPronBox = {};
   var d = root.document;
   var API = 'https://script.google.com/macros/s/AKfycbzbIthv3oCEXfF93pXF6k4xzhU-9r7uQvrJyRBRIum6vV2iUXQsh7PYILyzt7Y0PaztIg/exec';
