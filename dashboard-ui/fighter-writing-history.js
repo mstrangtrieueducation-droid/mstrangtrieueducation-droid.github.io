@@ -157,3 +157,24 @@
   rootObserver.observe(document.documentElement, {childList: true, subtree: true});
   connect();
 })();
+
+/* Cô 15/11/2026: on every Fighter page a graded paper goes straight to the dash — in-class paragraphs
+   (fighter-paragraph-review-v1) and KT papers with their detailed correction (fighter-assessment-review-v1) —
+   and the raw "Xem ghi nhận trên bảng" block is removed from the writing cards. Pages that do not list a module
+   get it here, so new Fighter classes need no page edit. */
+(() => {
+  'use strict';
+  const style = document.createElement('style');
+  style.textContent = 'details[data-history-section^="f5-raw-"]{display:none!important}';
+  document.head.append(style);
+  ['fighter-paragraph-review-v1', 'fighter-assessment-review-v1'].forEach(name => {
+    if (document.querySelector('script[src*="/dashboard-ui/' + name + '.js"]')) return;
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/dashboard-ui/' + name + '.css';
+    document.head.append(css);
+    const js = document.createElement('script');
+    js.src = '/dashboard-ui/' + name + '.js';
+    document.head.append(js);
+  });
+})();

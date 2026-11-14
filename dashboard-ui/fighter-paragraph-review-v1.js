@@ -36,6 +36,7 @@
     document.body.append(dialog);images(r);dialog.showModal();
   }
   function render(){if(!owner||identity()!==owner)return;reviews.forEach(r=>{
+    if(r.scored)return; // KT papers (scored /1) are shown by fighter-assessment-review-v1.js on the KT card
     const destinations=new Set();
     document.querySelectorAll('#assignment-list [data-assignment-id]').forEach(card=>{if(card.dataset.assignmentId===r.assignmentCode)destinations.add(card.querySelector('.f9-inline-task-state'));});
     // Bind only to the exact assignment already rendered by the native detail view.
