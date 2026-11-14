@@ -199,7 +199,8 @@
     function placeGroup() {
       if (group || !nav.classList.contains('grouped-navigation') || !nav.querySelector('[data-group]')) return;
       group = d.createElement('button'); group.type = 'button'; group.setAttribute('data-group', 'vocab'); group.setAttribute('aria-pressed', 'false'); group.textContent = '🌳 Vườn từ vựng';
-      nav.appendChild(group); nav.classList.add('vg-has'); group.addEventListener('click', open); dot(group, cur.S ? needs(cur.S) : false);
+      var work = nav.querySelector('[data-group="work"]');   // Cô 14/11: ngay bên trái "📚 Bài tập 4 kỹ năng"
+      if (work) nav.insertBefore(group, work); else nav.appendChild(group); nav.classList.add('vg-has'); group.addEventListener('click', open); dot(group, cur.S ? needs(cur.S) : false);
     }
     placeGroup();
     if (root.MutationObserver) new MutationObserver(placeGroup).observe(nav, { attributes: true, attributeFilter: ['class'], childList: true });
