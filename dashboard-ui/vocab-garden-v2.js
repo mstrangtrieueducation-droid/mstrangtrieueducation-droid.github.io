@@ -197,7 +197,7 @@
       '<path d="M45 92c8 3 22 3 30 0" stroke="#fff" stroke-opacity=".28" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
       crown + can + '</svg>';
   }
-  var fabCss = '#vg-fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + var(--vg-lift,0px));z-index:2147482000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;pointer-events:none}' +
+  var fabCss = '#vg-fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + var(--vg-lift,0px));z-index:80;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;pointer-events:none}' +
     '#vg-fab[hidden]{display:none!important}#vg-fab>*{pointer-events:auto}' +
     '#vg-fab .vg-fbtn{position:relative;display:flex;align-items:flex-end;justify-content:flex-end;height:124px;padding:0;border:0;background:none;cursor:pointer;perspective:420px;-webkit-tap-highlight-color:transparent}' +
     '#vg-fab .vg-fbtn:focus-visible{outline:3px solid #10b981;outline-offset:4px;border-radius:24px}' +
