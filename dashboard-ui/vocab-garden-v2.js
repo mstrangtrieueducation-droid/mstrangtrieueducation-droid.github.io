@@ -13,10 +13,10 @@
   var API = 'https://script.google.com/macros/s/AKfycbzbIthv3oCEXfF93pXF6k4xzhU-9r7uQvrJyRBRIum6vV2iUXQsh7PYILyzt7Y0PaztIg/exec';
   var PROGS = {
     IELTS: { name: 'IELTS', base: '/vocabulary-reading-web/dab51bda4e22754ff9e263b66c755077/', v: '9', dv: '9', sub: 'từ học thuật cho mọi kỹ năng' },
-    FIGHTER: { name: 'FIGHTER', base: '/vocabulary-reading-web/3ef8b052b433d8de39f85ec421f43a1a/', v: '1', dv: '1', sub: 'từ Vocabulary Foundation 1 + 2' }
+    FIGHTER: { name: 'FIGHTER', base: '/vocabulary-reading-web/3ef8b052b433d8de39f85ec421f43a1a/', v: '1', dv: '2', sub: 'từ vựng khoá Fighter' }
   };
   var TITI = '/vanlang-on-thi-lop-6/game-kit/adventures/teacher-titi-idle.webp';
-  var DAY = 864e5, RHYTHM = 2;
+  var DAY = 864e5, RHYTHM = 2, START = 20772;   // Cô 15/11: tính trễ từ hôm nay (15/11/2026) trở đi
   var esc = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var today = function () { return Math.floor((Date.now() + 7 * 3600e3) / DAY); };
   var dm = function (n) { var x = new Date(n * DAY); return ('0' + x.getUTCDate()).slice(-2) + '/' + ('0' + (x.getUTCMonth() + 1)).slice(-2); };
@@ -110,7 +110,7 @@
     if (!data || !S) { panel.innerHTML = '<p class="vg-empty">Đang tải vườn của em…</p>'; return; }
     var total = data.order.length, ids = Object.keys(S.w).filter(function (id) { return data.W[id]; });
     var cnt = { due: 0, new: 0, grow: 0, ripe: 0 }; ids.forEach(function (id) { cnt[kind(S.w[id], t)]++; });
-    var lw = S.lw, due = lw + RHYTHM, chip;
+    var lw = S.lw, due = Math.max(lw + RHYTHM, START), chip;
     if (!lw) chip = '<span class="vg-chip vg-info">🌱 Chưa bắt đầu — gieo hạt đầu tiên hôm nay</span>';
     else if (lw === t) chip = '<span class="vg-chip vg-ok">✓ Đã tưới hôm nay · lần tới trước hết ' + wd(due) + ' ' + dm(due) + '</span>';
     else if (t <= due) chip = t === due ? '<span class="vg-chip vg-warn">⏰ Hôm nay là hạn tưới</span>' : '<span class="vg-chip vg-ok">💧 Đúng nhịp · hạn tưới ' + wd(due) + ' ' + dm(due) + '</span>';
@@ -237,7 +237,7 @@
   function status(S) {
     var t = today(), due = 0; Object.keys(S.w).forEach(function (id) { if (S.w[id][1] <= t) due++; });
     var ripe = 0; Object.keys(S.w).forEach(function (id) { if (S.w[id][0] >= 3 && S.w[id][1] > t) ripe++; });
-    var n = Object.keys(S.w).length, lw = S.lw, dueDay = lw + RHYTHM, o = { due: due, n: n, ripe: ripe };
+    var n = Object.keys(S.w).length, lw = S.lw, dueDay = Math.max(lw ? lw + RHYTHM : t, START), o = { due: due, n: n, ripe: ripe };   // chưa tưới xong lần nào: hạn là hôm nay
     if (!n && !lw) { o.mood = 'seed'; o.need = true; o.title = 'Vườn từ vựng của em đã sẵn sàng 🌱'; o.text = 'Gieo những hạt từ đầu tiên hôm nay nhé!'; }
     else if (S.days[t]) { o.mood = ripe ? 'ripe' : 'ok'; o.need = false; o.title = 'Giỏi lắm! Vườn đã được tưới hôm nay 🌳'; o.text = 'Lần tưới tới: trước hết ' + wd(dueDay) + ' ' + dm(dueDay); }
     else if (t > dueDay) { o.mood = 'due'; o.need = true; o.title = '🥀 Vườn trễ ' + (t - dueDay) + ' ngày rồi!'; o.text = (due ? due + ' cây đang héo — ' : '') + 'vào tưới cứu cây ngay nhé 💧'; }
