@@ -199,9 +199,9 @@
   }
   var fabCss = '#vg-fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + var(--vg-lift,0px));z-index:2147482000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;pointer-events:none}' +
     '#vg-fab[hidden]{display:none!important}#vg-fab>*{pointer-events:auto}' +
-    '#vg-fab .vg-fbtn{position:relative;display:flex;align-items:flex-end;justify-content:flex-end;width:124px;height:124px;padding:0;border:0;background:none;cursor:pointer;perspective:420px;-webkit-tap-highlight-color:transparent}' +
+    '#vg-fab .vg-fbtn{position:relative;display:flex;align-items:flex-end;justify-content:flex-end;height:124px;padding:0;border:0;background:none;cursor:pointer;perspective:420px;-webkit-tap-highlight-color:transparent}' +
     '#vg-fab .vg-fbtn:focus-visible{outline:3px solid #10b981;outline-offset:4px;border-radius:24px}' +
-    '#vg-fab .vg-fbtn.titi{width:178px}#vg-fab .vg-stage{position:relative;width:112px;height:112px;margin-bottom:6px;transform-style:preserve-3d;animation:vg-bob 3.6s ease-in-out infinite;transition:transform .25s}' +
+    '#vg-fab .vg-fbtn{width:178px}#vg-fab.no-titi .vg-fbtn{width:124px}#vg-fab.no-titi .vg-titi{display:none}#vg-fab .vg-stage{position:relative;width:112px;height:112px;margin-bottom:6px;transform-style:preserve-3d;animation:vg-bob 3.6s ease-in-out infinite;transition:transform .25s}' +
     '#vg-fab .vg-fbtn:hover .vg-stage{transform:rotateX(10deg) rotateY(-14deg) scale(1.06)}' +
     '#vg-fab .vg-disc{position:absolute;left:4px;right:4px;bottom:2px;height:34px;border-radius:50%;background:radial-gradient(ellipse at 50% 35%,#ecfdf5 0,#a7f3d0 45%,#34d399 75%,#047857 100%);box-shadow:0 10px 18px rgba(4,120,87,.35),inset 0 -4px 8px rgba(6,78,59,.35),inset 0 3px 6px rgba(255,255,255,.7);transform:rotateX(58deg)}' +
     '#vg-fab .vg-tree{position:absolute;left:0;right:0;bottom:8px;margin:auto;width:104px;height:100px;filter:drop-shadow(0 8px 6px rgba(15,23,42,.22))}#vg-fab .vg-tree svg{width:100%;height:100%;display:block;overflow:visible}' +
@@ -218,7 +218,7 @@
     '@keyframes vg-drip{0%{transform:translateY(-6px);opacity:0}30%{opacity:1}100%{transform:translateY(14px);opacity:0}}@keyframes vg-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}' +
     '@keyframes vg-pop{from{transform:translateY(8px) scale(.9);opacity:0}}@keyframes vg-nudge{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) scale(1.04)}40%{transform:rotate(3deg)}60%{transform:rotate(-2deg)}80%{transform:rotate(1deg)}}' +
     '@media(prefers-reduced-motion:reduce){#vg-fab *{animation:none!important}}' +
-    '@media(max-width:640px){#vg-fab .vg-fbtn{width:104px;height:108px}#vg-fab .vg-fbtn.titi{width:150px}#vg-fab .vg-stage{width:94px;height:94px}#vg-fab .vg-tree{width:88px;height:85px}#vg-fab .vg-titi{width:60px;height:80px;bottom:16px}#vg-fab .vg-n{left:calc(100% - 98px)}#vg-fab .vg-bub{font-size:12.5px;max-width:220px}}' +
+    '@media(max-width:640px){#vg-fab .vg-fbtn{width:150px;height:108px}#vg-fab.no-titi .vg-fbtn{width:104px}#vg-fab .vg-stage{width:94px;height:94px}#vg-fab .vg-tree{width:88px;height:85px}#vg-fab .vg-titi{width:60px;height:80px;bottom:16px}#vg-fab .vg-n{left:calc(100% - 98px)}#vg-fab .vg-bub{font-size:12.5px;max-width:220px}}' +
     '.vg-pop{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.42);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px;animation:vgf .18s ease-out}' +
     '.vg-pop[hidden]{display:none}.vg-card{position:relative;width:min(1080px,100%);max-height:calc(100dvh - 36px);overflow:auto;overscroll-behavior:contain;border-radius:26px;background:#f9f8f4;box-shadow:0 30px 90px rgba(15,23,42,.35);animation:vgu .24s ease-out}' +
     '.vg-card .vg-close{position:sticky;top:12px;float:right;margin:12px 12px -46px 0;z-index:2;width:38px;height:38px;border-radius:50%;border:0;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.14);font-size:17px;cursor:pointer}' +
@@ -251,10 +251,9 @@
     var c = cls(); if (!/^(IELTS|FIGHTER) \d+$/.test(c) || d.getElementById('vg-fab')) return;
     var st = d.createElement('style'); st.id = 'vg-style'; st.textContent = css + fabCss; d.head.appendChild(st);
     var titiGames = d.getElementById('titi-games');
-    var withTiti = P.name === 'IELTS';   // IELTS: cô Titi (trò chơi) đã ẩn → cô đứng cạnh vườn; FIGHTER: vườn đứng trên nút trò chơi của cô
     var fab = d.createElement('div'); fab.id = 'vg-fab'; fab.hidden = true;
     fab.innerHTML = '<div class="vg-bub" role="status" hidden><button type="button" class="vg-bx" aria-label="Ẩn lời nhắc">✕</button><b></b><span></span></div>' +
-      '<button type="button" class="vg-fbtn' + (withTiti ? ' titi' : '') + '" aria-label="Mở Vườn từ vựng">' + (withTiti ? '<span class="vg-titi" aria-hidden="true"></span>' : '') +
+      '<button type="button" class="vg-fbtn" aria-label="Mở Vườn từ vựng"><span class="vg-titi" aria-hidden="true"></span>' +
       '<span class="vg-stage"><span class="vg-disc"></span><span class="vg-tree"></span></span>' +
       '<span class="vg-n" hidden></span><span class="vg-cap">🌳 Vườn từ vựng</span></button>';
     d.body.appendChild(fab);
@@ -263,15 +262,15 @@
     pop.innerHTML = '<div class="vg-card"><button type="button" class="vg-close" aria-label="Đóng Vườn từ vựng">✕</button><section id="panel-vocab" aria-label="Vườn từ vựng"></section></div>';
     d.body.appendChild(pop);
     var panel = pop.querySelector('#panel-vocab');
-    function lift() {   // FIGHTER: đứng ngay trên nút trò chơi của cô Titi
-      var g = titiGames && root.getComputedStyle(titiGames).display !== 'none' && titiGames.getBoundingClientRect();
-      fab.style.setProperty('--vg-lift', g && g.height ? Math.round(g.height + 14) + 'px' : '0px');
+    function lift() {   // nút trò chơi của cô Titi đang hiện (FIGHTER): vườn đứng ngay trên nó; không có (IELTS): cô Titi đứng cạnh vườn
+      var g = titiGames && root.getComputedStyle(titiGames).display !== 'none' && titiGames.getBoundingClientRect(), on = !!(g && g.height);
+      fab.style.setProperty('--vg-lift', on ? Math.round(g.height + 14) + 'px' : '0px'); fab.classList.toggle('no-titi', on);
     }
     var mood = '', shownAt = 0;
     function paint() {
       var name = pupil(); fab.hidden = !name || !cur.S || cur.key !== name + '|' + c; if (fab.hidden) return;
       var o = status(cur.S);
-      if (o.mood !== mood) { mood = o.mood; treeEl.innerHTML = tree3d(mood); fab.className = mood === 'due' || mood === 'seed' ? 'due' : ''; }
+      if (o.mood !== mood) { mood = o.mood; treeEl.innerHTML = tree3d(mood); fab.classList.toggle('due', mood === 'due' || mood === 'seed'); }
       cnt.hidden = !o.due; cnt.textContent = o.due > 99 ? '99+' : String(o.due);
       btn.setAttribute('aria-label', 'Mở Vườn từ vựng — ' + o.title + (o.due ? ' · ' + o.due + ' cây đang héo' : ''));
       bub.querySelector('b').textContent = o.title; bub.querySelector('span').textContent = o.text;
@@ -301,7 +300,7 @@
     pop.addEventListener('click', function (e) { if (e.target === pop) close(); });
     d.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !pop.hidden && !d.querySelector('.vg-modal')) close(); });
     // nhắc liên tục: lắc bong bóng mỗi 25 giây khi vườn đến hạn tưới
-    setInterval(function () { if (!bub.hidden && fab.className === 'due' && pop.hidden) { bub.classList.remove('nudge'); void bub.offsetWidth; bub.classList.add('nudge'); } }, 25000);
+    setInterval(function () { if (!bub.hidden && fab.classList.contains('due') && pop.hidden) { bub.classList.remove('nudge'); void bub.offsetWidth; bub.classList.add('nudge'); } }, 25000);
     setInterval(refresh, 10 * 60e3);
     d.addEventListener('visibilitychange', function () { if (d.visibilityState === 'visible') refresh(); });   // em tưới ở tab khác rồi quay lại
     root.addEventListener('resize', lift);
@@ -309,7 +308,7 @@
     var seen = '';
     function watch() { var n = pupil(); if (n !== seen) { seen = n; refresh(); } }
     if (root.MutationObserver) new MutationObserver(function () { clearTimeout(watch._t); watch._t = setTimeout(watch, 250); }).observe(d.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
-    setInterval(watch, 3000);
+    setInterval(function () { watch(); if (!fab.hidden) lift(); }, 3000);
     root.VocabGarden = { open: open, refresh: refresh, program: P.name };
     watch();
   }
