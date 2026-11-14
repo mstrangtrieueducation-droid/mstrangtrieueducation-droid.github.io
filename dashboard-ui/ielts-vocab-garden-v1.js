@@ -6,7 +6,7 @@
 (function (root) {
   'use strict';
   if (root.IeltsVocabGarden) return;
-  root.IeltsVocabGarden = 1;
+  root.IeltsVocabGarden = {};
   var d = root.document;
   var BASE = '/vocabulary-reading-web/dab51bda4e22754ff9e263b66c755077/';
   var DAY = 864e5, RHYTHM = 2;
@@ -169,29 +169,49 @@
     }).catch(function () { panel.innerHTML = '<p class="vg-empty">Chưa tải được Vườn từ vựng — em kiểm tra mạng rồi bấm lại tab này.</p>'; loaded = null; });
   }
   function needs(S) { var t = today(); return !S.days[t] && (!S.lw || S.lw + RHYTHM <= t); }
-  function dot(tab, on) { var x = tab.querySelector('.vg-tab-dot'); if (on && !x) tab.insertAdjacentHTML('beforeend', '<span class="vg-tab-dot" aria-label="đến hạn tưới"></span>'); if (!on && x) x.remove(); }
+  function dot(tab, on) { var g = root.IeltsVocabGarden && root.IeltsVocabGarden.groupButton && root.IeltsVocabGarden.groupButton(); if (g && g !== tab) dot(g, on); var x = tab.querySelector('.vg-tab-dot'); if (on && !x) tab.insertAdjacentHTML('beforeend', '<span class="vg-tab-dot" aria-label="đến hạn tưới"></span>'); if (!on && x) x.remove(); }
 
   function install() {
     var nav = d.getElementById('class-tabs'), ref = d.getElementById('panel-overview') || d.querySelector('.panel');
     if (!nav || !ref || d.getElementById('panel-vocab') || !/^IELTS \d+$/.test(cls())) return;
-    var st = d.createElement('style'); st.textContent = css; d.head.appendChild(st);
+    var st = d.createElement('style');
+    st.textContent = css + '#class-tabs.grouped-navigation.vg-has{grid-template-columns:repeat(4,minmax(0,1fr))!important}#class-tabs [data-group="vocab"]{background:#ecfdf5;color:#047857}#class-tabs [data-group="vocab"].is-active{background:#047857;color:#fff}';
+    d.head.appendChild(st);
     var tab = d.createElement('button'); tab.type = 'button'; tab.className = 'tab'; tab.setAttribute('data-vg-tab', '1'); tab.textContent = '🌳 Vườn từ vựng';
     var after = nav.querySelector('[data-tab="planner"]');
     if (after) after.parentNode.insertBefore(tab, after.nextSibling); else nav.appendChild(tab);
+    // a wrapper keeps our panel out of "main > .panel" (the grouped layout rewrites those in place)
+    var wrap = d.createElement('div'); wrap.className = 'vg-host';
     var panel = d.createElement('section'); panel.className = 'panel'; panel.id = 'panel-vocab'; panel.hidden = true; panel.setAttribute('aria-label', 'Vườn từ vựng');
-    ref.parentNode.insertBefore(panel, ref.nextSibling);
-    tab.addEventListener('click', function () {
+    wrap.appendChild(panel); ref.parentNode.insertBefore(wrap, ref.nextSibling);
+    var group = null;
+    function open() {
       nav.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('is-active', b === tab); });
+      nav.querySelectorAll('[data-group]').forEach(function (b) { var on = b === group; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', on); });
+      var tools = nav.nextElementSibling; if (tools && /group-tools$/.test(tools.id || '')) tools.querySelectorAll('[data-tools]').forEach(function (x) { x.hidden = true; });
       d.querySelectorAll('.panel').forEach(function (p) { p.hidden = p !== panel; });
+      var master = d.getElementById('panel-homework'); if (master) master.hidden = true;
       refresh(panel, tab); if (cur.data && cur.S) render(panel, pupil(), cls());
-    });
-    // a native tab hides every .panel (ours too) and moves is-active; keep our tab in step
-    nav.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.tab'); if (b && b !== tab) tab.classList.remove('is-active'); });
+      try { panel.scrollIntoView({ block: 'nearest' }); } catch (e) {}
+    }
+    tab.addEventListener('click', open);
+    // the IELTS pages group their tabs into 3 big buttons (📅 / 📚 / 🏆); ours becomes the 4th
+    function placeGroup() {
+      if (group || !nav.classList.contains('grouped-navigation') || !nav.querySelector('[data-group]')) return;
+      group = d.createElement('button'); group.type = 'button'; group.setAttribute('data-group', 'vocab'); group.setAttribute('aria-pressed', 'false'); group.textContent = '🌳 Vườn từ vựng';
+      nav.appendChild(group); nav.classList.add('vg-has'); group.addEventListener('click', open); dot(group, cur.S ? needs(cur.S) : false);
+    }
+    placeGroup();
+    if (root.MutationObserver) new MutationObserver(placeGroup).observe(nav, { attributes: true, attributeFilter: ['class'], childList: true });
+    // a native tab/group hides every .panel (ours too) and moves is-active; keep our buttons in step
+    nav.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.tab,[data-group]'); if (b && b !== tab && b !== group) { tab.classList.remove('is-active'); if (group) { group.classList.remove('is-active'); group.setAttribute('aria-pressed', 'false'); } } });
     var nameEl = d.getElementById('portal-student-name');
-    if (nameEl && root.MutationObserver) new MutationObserver(function () { refresh(panel, tab); }).observe(nameEl, { childList: true, characterData: true, subtree: true });
+    function rf() { refresh(panel, tab); }
+    if (nameEl && root.MutationObserver) new MutationObserver(rf).observe(nameEl, { childList: true, characterData: true, subtree: true });
     // the pupil may water in another tab: refresh when coming back
-    d.addEventListener('visibilitychange', function () { if (d.visibilityState === 'visible' && !panel.hidden) refresh(panel, tab); });
-    refresh(panel, tab);
+    d.addEventListener('visibilitychange', function () { if (d.visibilityState === 'visible' && !panel.hidden) rf(); });
+    root.IeltsVocabGarden = { open: open, groupButton: function () { return group; } };
+    rf();
   }
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', install); else install();
 })(window);
