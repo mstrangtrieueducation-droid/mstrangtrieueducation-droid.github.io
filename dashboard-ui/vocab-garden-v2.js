@@ -167,50 +167,58 @@
     d.addEventListener('keydown', onKey); d.body.appendChild(m); m.querySelector('.vg-x').focus(); say(w.w);
   }
   /* ---------- floating 3D garden + pop-up ---------- */
-  function tree3d(mood) {   // mood: due (héo, có bình tưới) · ok (xanh) · ripe (ra quả) · seed (chưa gieo)
-    var leaf = mood === 'due' ? ['#fde68a', '#d9a53a', '#9a6a17'] : ['#bbf7d0', '#22c55e', '#166534'];
+  function tree3d(mood) {   // mood: due (héo, bình tưới đang rót) · ok (xanh) · ripe (ra quả) · seed (mầm)
+    var L = mood === 'due' ? ['#f3e3a0', '#c9b04a', '#7a6a22'] : ['#d9f99d', '#4ade80', '#15803d'];
+    var B = mood === 'due' ? ['#c2a83e', '#6b5b1c'] : ['#22c55e', '#14532d'];
     var crown = mood === 'seed'
-      ? '<path d="M60 70V52" stroke="#4d7c0f" stroke-width="4" stroke-linecap="round"/><path d="M60 56c-3-11-13-15-22-12 2 10 11 15 22 12z" fill="url(#vgL)"/><path d="M60 52c3-11 13-14 22-11-2 10-11 14-22 11z" fill="url(#vgL)"/>'
-      : '<path d="M60 72V44M60 58l-11-9M60 52l10-8" stroke="url(#vgT)" stroke-width="6" stroke-linecap="round"/>' +
-        '<circle cx="40" cy="44" r="16" fill="url(#vgL)"/><circle cx="80" cy="44" r="16" fill="url(#vgL)"/><circle cx="60" cy="50" r="17" fill="url(#vgL)"/><circle cx="60" cy="28" r="21" fill="url(#vgL)"/>' +
-        '<ellipse cx="51" cy="19" rx="8" ry="4.6" fill="#fff" opacity=".55" transform="rotate(-24 51 19)"/><ellipse cx="34" cy="38" rx="4" ry="2.4" fill="#fff" opacity=".4" transform="rotate(-30 34 38)"/>' +
-        (mood === 'ripe' ? '<g class="vg-fruit"><circle cx="44" cy="48" r="4.6" fill="url(#vgF)"/><circle cx="74" cy="34" r="4.6" fill="url(#vgF)"/><circle cx="66" cy="55" r="4.6" fill="url(#vgF)"/><circle cx="52" cy="30" r="4" fill="url(#vgF)"/></g>' : '');
-    var water = mood === 'due' ? '<g class="vg-drops"><path d="M95 30c-2 3-3.4 5-3.4 6.6a3.4 3.4 0 0 0 6.8 0c0-1.6-1.4-3.6-3.4-6.6z" fill="#38bdf8"/><path d="M86 18c-1.6 2.4-2.6 4-2.6 5.2a2.6 2.6 0 0 0 5.2 0c0-1.2-1-2.8-2.6-5.2z" fill="#7dd3fc"/></g>' : '';
-    return '<svg viewBox="0 0 120 120" aria-hidden="true"><defs>' +
-      '<radialGradient id="vgL" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="' + leaf[0] + '"/><stop offset=".5" stop-color="' + leaf[1] + '"/><stop offset="1" stop-color="' + leaf[2] + '"/></radialGradient>' +
-      '<linearGradient id="vgP" x1="0" x2="1"><stop offset="0" stop-color="#9a3412"/><stop offset=".35" stop-color="#f08a4b"/><stop offset=".6" stop-color="#d9622b"/><stop offset="1" stop-color="#7c2d12"/></linearGradient>' +
-      '<linearGradient id="vgR" x1="0" x2="1"><stop offset="0" stop-color="#b4471d"/><stop offset=".4" stop-color="#fdba8c"/><stop offset="1" stop-color="#9a3412"/></linearGradient>' +
-      '<linearGradient id="vgT" x1="0" x2="1"><stop offset="0" stop-color="#6b3f1d"/><stop offset=".5" stop-color="#b07a46"/><stop offset="1" stop-color="#5b3416"/></linearGradient>' +
-      '<radialGradient id="vgF" cx="35%" cy="30%"><stop offset="0" stop-color="#fecdd3"/><stop offset=".45" stop-color="#f43f5e"/><stop offset="1" stop-color="#9f1239"/></radialGradient>' +
-      '<radialGradient id="vgS" cx="50%" cy="50%"><stop offset="0" stop-color="#0f172a" stop-opacity=".35"/><stop offset="1" stop-color="#0f172a" stop-opacity="0"/></radialGradient></defs>' +
-      '<ellipse cx="60" cy="112" rx="38" ry="7" fill="url(#vgS)"/>' +
-      '<path d="M33 78h54l-6.5 29a5 5 0 0 1-4.9 3.9H44.4a5 5 0 0 1-4.9-3.9z" fill="url(#vgP)"/>' +
-      '<rect x="28" y="70" width="64" height="12" rx="6" fill="url(#vgR)"/><ellipse cx="60" cy="71.5" rx="28" ry="3.6" fill="#4a2c14"/>' +
-      '<path d="M44 90c8 3 24 3 32 0" stroke="#fff" stroke-opacity=".25" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
-      crown + water + '</svg>';
+      ? '<path d="M60 72V50" stroke="url(#vgT)" stroke-width="4.5" stroke-linecap="round"/><path d="M60 56c-4-12-15-16-25-12 2 11 13 17 25 12z" fill="url(#vgL)"/><path d="M60 51c4-12 15-15 25-11-3 11-13 16-25 11z" fill="url(#vgL)"/><ellipse cx="45" cy="47" rx="5" ry="2" fill="#fff" opacity=".5" transform="rotate(20 45 47)"/>'
+      : '<path d="M60 74V46M60 60l-12-10M60 54l11-9" stroke="url(#vgT)" stroke-width="6.5" stroke-linecap="round"/>' +
+        '<g' + (mood === 'due' ? ' transform="rotate(6 60 70)"' : '') + '>' +
+        '<circle cx="36" cy="46" r="15" fill="url(#vgB)"/><circle cx="84" cy="46" r="15" fill="url(#vgB)"/><circle cx="60" cy="54" r="16" fill="url(#vgB)"/>' +
+        '<circle cx="44" cy="34" r="17" fill="url(#vgL)"/><circle cx="77" cy="34" r="17" fill="url(#vgL)"/><circle cx="60" cy="22" r="19" fill="url(#vgL)"/><circle cx="60" cy="42" r="17" fill="url(#vgL)"/>' +
+        '<ellipse cx="52" cy="13" rx="8" ry="4.4" fill="#fff" opacity=".6" transform="rotate(-24 52 13)"/><ellipse cx="36" cy="28" rx="4.4" ry="2.4" fill="#fff" opacity=".45" transform="rotate(-34 36 28)"/><ellipse cx="70" cy="30" rx="3.6" ry="2" fill="#fff" opacity=".4" transform="rotate(-20 70 30)"/>' +
+        (mood === 'ripe' ? '<g class="vg-fruit"><circle cx="42" cy="44" r="4.8" fill="url(#vgF)"/><circle cx="78" cy="40" r="4.8" fill="url(#vgF)"/><circle cx="64" cy="50" r="4.8" fill="url(#vgF)"/><circle cx="54" cy="26" r="4.2" fill="url(#vgF)"/><circle cx="72" cy="20" r="4" fill="url(#vgF)"/></g>' : '') +
+        (mood === 'due' ? '<path d="M30 58c-3 4-3 8-1 10M90 58c3 4 3 8 1 10" stroke="#a8862c" stroke-width="2.4" fill="none" stroke-linecap="round"/>' : '') + '</g>';
+    var can = mood === 'due' || mood === 'seed'
+      ? '<g class="vg-can"><path d="M101 2h14a5 5 0 0 1 5 5v13a5 5 0 0 1-5 5h-14a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z" fill="url(#vgC)" transform="rotate(-28 108 14)"/><path d="M98 18L82 28" stroke="#0284c7" stroke-width="4" stroke-linecap="round"/><path d="M80 25l5 6" stroke="#0369a1" stroke-width="3.4" stroke-linecap="round"/><path d="M110 0c7 0 10 5 9 10" stroke="#0369a1" stroke-width="2.6" fill="none" stroke-linecap="round" transform="rotate(-28 108 14)"/></g>' +
+        '<g class="vg-drops"><path d="M80 34c-1.6 2.6-2.6 4.2-2.6 5.4a2.6 2.6 0 0 0 5.2 0c0-1.2-1-2.8-2.6-5.4z" fill="#38bdf8"/><path d="M74 42c-1.4 2.2-2.2 3.6-2.2 4.6a2.2 2.2 0 0 0 4.4 0c0-1-.8-2.4-2.2-4.6z" fill="#7dd3fc"/><path d="M85 44c-1.4 2.2-2.2 3.6-2.2 4.6a2.2 2.2 0 0 0 4.4 0c0-1-.8-2.4-2.2-4.6z" fill="#0ea5e9"/></g>' : '';
+    return '<svg viewBox="0 0 124 120" aria-hidden="true"><defs>' +
+      '<radialGradient id="vgL" cx="32%" cy="26%" r="85%"><stop offset="0" stop-color="' + L[0] + '"/><stop offset=".48" stop-color="' + L[1] + '"/><stop offset="1" stop-color="' + L[2] + '"/></radialGradient>' +
+      '<radialGradient id="vgB" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="' + B[0] + '"/><stop offset="1" stop-color="' + B[1] + '"/></radialGradient>' +
+      '<linearGradient id="vgP" x1="0" x2="1"><stop offset="0" stop-color="#9a3412"/><stop offset=".33" stop-color="#f6a06a"/><stop offset=".62" stop-color="#dc6a32"/><stop offset="1" stop-color="#7c2d12"/></linearGradient>' +
+      '<linearGradient id="vgR" x1="0" x2="1"><stop offset="0" stop-color="#b4471d"/><stop offset=".38" stop-color="#ffc59c"/><stop offset="1" stop-color="#9a3412"/></linearGradient>' +
+      '<linearGradient id="vgT" x1="0" x2="1"><stop offset="0" stop-color="#6b3f1d"/><stop offset=".5" stop-color="#b98450"/><stop offset="1" stop-color="#5b3416"/></linearGradient>' +
+      '<linearGradient id="vgC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#0284c7"/></linearGradient>' +
+      '<radialGradient id="vgF" cx="35%" cy="30%"><stop offset="0" stop-color="#ffe4e6"/><stop offset=".45" stop-color="#f43f5e"/><stop offset="1" stop-color="#9f1239"/></radialGradient>' +
+      '<radialGradient id="vgS"><stop offset="0" stop-color="#0f172a" stop-opacity=".35"/><stop offset="1" stop-color="#0f172a" stop-opacity="0"/></radialGradient></defs>' +
+      '<ellipse cx="60" cy="113" rx="38" ry="6.5" fill="url(#vgS)"/>' +
+      '<path d="M34 80h52l-6.2 27.6a5 5 0 0 1-4.9 3.9H45.1a5 5 0 0 1-4.9-3.9z" fill="url(#vgP)"/>' +
+      '<rect x="29" y="71" width="62" height="12" rx="6" fill="url(#vgR)"/><ellipse cx="60" cy="72.6" rx="27" ry="3.4" fill="#4a2c14"/>' +
+      '<path d="M45 92c8 3 22 3 30 0" stroke="#fff" stroke-opacity=".28" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+      crown + can + '</svg>';
   }
   var fabCss = '#vg-fab{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:calc(max(18px,env(safe-area-inset-bottom)) + var(--vg-lift,0px));z-index:2147482000;display:flex;flex-direction:column;align-items:flex-end;gap:8px;font-family:inherit;pointer-events:none}' +
     '#vg-fab[hidden]{display:none!important}#vg-fab>*{pointer-events:auto}' +
-    '#vg-fab .vg-fbtn{position:relative;display:flex;align-items:flex-end;justify-content:center;width:132px;height:118px;padding:0;border:0;background:none;cursor:pointer;perspective:420px;-webkit-tap-highlight-color:transparent}' +
+    '#vg-fab .vg-fbtn{position:relative;display:flex;align-items:flex-end;justify-content:flex-end;width:124px;height:124px;padding:0;border:0;background:none;cursor:pointer;perspective:420px;-webkit-tap-highlight-color:transparent}' +
     '#vg-fab .vg-fbtn:focus-visible{outline:3px solid #10b981;outline-offset:4px;border-radius:24px}' +
-    '#vg-fab .vg-stage{position:relative;width:104px;height:104px;transform-style:preserve-3d;animation:vg-bob 3.6s ease-in-out infinite;transition:transform .25s}' +
+    '#vg-fab .vg-fbtn.titi{width:178px}#vg-fab .vg-stage{position:relative;width:112px;height:112px;margin-bottom:6px;transform-style:preserve-3d;animation:vg-bob 3.6s ease-in-out infinite;transition:transform .25s}' +
     '#vg-fab .vg-fbtn:hover .vg-stage{transform:rotateX(10deg) rotateY(-14deg) scale(1.06)}' +
     '#vg-fab .vg-disc{position:absolute;left:4px;right:4px;bottom:2px;height:34px;border-radius:50%;background:radial-gradient(ellipse at 50% 35%,#ecfdf5 0,#a7f3d0 45%,#34d399 75%,#047857 100%);box-shadow:0 10px 18px rgba(4,120,87,.35),inset 0 -4px 8px rgba(6,78,59,.35),inset 0 3px 6px rgba(255,255,255,.7);transform:rotateX(58deg)}' +
-    '#vg-fab .vg-tree{position:absolute;left:0;right:0;bottom:6px;margin:auto;width:96px;height:96px;filter:drop-shadow(0 8px 6px rgba(15,23,42,.22))}#vg-fab .vg-tree svg{width:100%;height:100%;display:block;overflow:visible}' +
-    '#vg-fab.due .vg-tree svg{transform-origin:50% 92%;animation:vg-wilt 2.8s ease-in-out infinite}#vg-fab .vg-drops{animation:vg-drip 1.4s ease-in infinite}' +
-    '#vg-fab .vg-titi{position:absolute;left:-30px;bottom:-4px;width:72px;height:auto;filter:drop-shadow(0 6px 6px rgba(15,23,42,.25));animation:vg-bob 3.6s ease-in-out -1.2s infinite;pointer-events:none}' +
-    '#vg-fab .vg-cap{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);white-space:nowrap;padding:5px 11px;border-radius:999px;background:linear-gradient(180deg,#065f46,#064e3b);color:#fff;border:1px solid #6ee7b7;font-size:11.5px;font-weight:800;box-shadow:0 3px 0 #022c22,0 8px 18px rgba(2,44,34,.28)}' +
+    '#vg-fab .vg-tree{position:absolute;left:0;right:0;bottom:8px;margin:auto;width:104px;height:100px;filter:drop-shadow(0 8px 6px rgba(15,23,42,.22))}#vg-fab .vg-tree svg{width:100%;height:100%;display:block;overflow:visible}' +
+    '#vg-fab.due .vg-tree svg{transform-origin:50% 92%;animation:vg-wilt 2.8s ease-in-out infinite}#vg-fab .vg-drops{animation:vg-drip 1.3s ease-in infinite}#vg-fab .vg-can{transform-origin:108px 14px;animation:vg-pour 2.6s ease-in-out infinite}' +
+    '#vg-fab .vg-titi{position:absolute;left:0;bottom:14px;width:74px;height:99px;background:url(\'' + TITI + '\') 0 0/400% 100% no-repeat;filter:drop-shadow(0 6px 6px rgba(15,23,42,.25));animation:vg-wave 5.6s steps(1,end) infinite;pointer-events:none}' +
+    '#vg-fab .vg-cap{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);white-space:nowrap;padding:5px 11px;border-radius:999px;background:linear-gradient(180deg,#065f46,#064e3b);color:#fff;border:1px solid #6ee7b7;font-size:11.5px;font-weight:800;box-shadow:0 3px 0 #022c22,0 8px 18px rgba(2,44,34,.28)}' +
     '#vg-fab .vg-n{position:absolute;right:6px;top:4px;min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:linear-gradient(180deg,#fb7185,#e11d48);color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;border:2px solid #fff;box-shadow:0 4px 10px rgba(225,29,72,.4);animation:vg-pulse 1.8s ease-in-out infinite}#vg-fab .vg-n[hidden]{display:none}' +
     '#vg-fab .vg-bub{position:relative;max-width:min(250px,calc(100vw - 40px));background:#fff;color:#1e1b4b;border-radius:18px;padding:11px 34px 11px 14px;box-shadow:0 14px 34px rgba(15,23,42,.18),0 2px 0 #d1fae5;border:1px solid #d1fae5;font-size:13.5px;line-height:1.4;text-align:left;cursor:pointer;animation:vg-pop .35s cubic-bezier(.2,1.4,.4,1)}' +
     '#vg-fab .vg-bub:after{content:"";position:absolute;right:52px;bottom:-8px;width:16px;height:16px;background:#fff;border-right:1px solid #d1fae5;border-bottom:1px solid #d1fae5;transform:rotate(45deg)}' +
     '#vg-fab .vg-bub b{display:block;font-size:14.5px;color:#047857}#vg-fab.due .vg-bub b{color:#c2410c}#vg-fab .vg-bub span{display:block;color:#475569;font-size:12.5px;margin-top:2px}' +
     '#vg-fab .vg-bub .vg-bx{position:absolute;right:6px;top:6px;width:24px;height:24px;border:0;border-radius:50%;background:#f1f5f9;color:#64748b;font-size:13px;line-height:24px;cursor:pointer;padding:0}' +
     '#vg-fab .vg-bub.nudge{animation:vg-nudge .9s ease-in-out}' +
-    '@keyframes vg-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes vg-wilt{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2.5deg)}}' +
+    '@keyframes vg-wave{0%,100%{background-position:0 0}18%,23%{background-position:33.3333% 0}27%,45%{background-position:0 0}50%,69%{background-position:100% 0}73%,78%{background-position:33.3333% 0}82%{background-position:0 0}}@keyframes vg-pour{0%,100%{transform:rotate(0)}40%,70%{transform:rotate(-10deg)}}@keyframes vg-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}@keyframes vg-wilt{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2.5deg)}}' +
     '@keyframes vg-drip{0%{transform:translateY(-6px);opacity:0}30%{opacity:1}100%{transform:translateY(14px);opacity:0}}@keyframes vg-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}' +
     '@keyframes vg-pop{from{transform:translateY(8px) scale(.9);opacity:0}}@keyframes vg-nudge{0%,100%{transform:rotate(0)}20%{transform:rotate(-4deg) scale(1.04)}40%{transform:rotate(3deg)}60%{transform:rotate(-2deg)}80%{transform:rotate(1deg)}}' +
     '@media(prefers-reduced-motion:reduce){#vg-fab *{animation:none!important}}' +
-    '@media(max-width:640px){#vg-fab .vg-fbtn{width:108px;height:98px}#vg-fab .vg-stage{width:86px;height:86px}#vg-fab .vg-tree{width:80px;height:80px}#vg-fab .vg-titi{width:58px;left:-24px}#vg-fab .vg-bub{font-size:12.5px;max-width:220px}}' +
+    '@media(max-width:640px){#vg-fab .vg-fbtn{width:104px;height:108px}#vg-fab .vg-fbtn.titi{width:150px}#vg-fab .vg-stage{width:94px;height:94px}#vg-fab .vg-tree{width:88px;height:85px}#vg-fab .vg-titi{width:60px;height:80px;bottom:16px}#vg-fab .vg-bub{font-size:12.5px;max-width:220px}}' +
     '.vg-pop{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.42);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px;animation:vgf .18s ease-out}' +
     '.vg-pop[hidden]{display:none}.vg-card{position:relative;width:min(1080px,100%);max-height:calc(100dvh - 36px);overflow:auto;overscroll-behavior:contain;border-radius:26px;background:#f9f8f4;box-shadow:0 30px 90px rgba(15,23,42,.35);animation:vgu .24s ease-out}' +
     '.vg-card .vg-close{position:sticky;top:12px;float:right;margin:12px 12px -46px 0;z-index:2;width:38px;height:38px;border-radius:50%;border:0;background:#fff;box-shadow:0 4px 14px rgba(15,23,42,.14);font-size:17px;cursor:pointer}' +
@@ -246,8 +254,8 @@
     var withTiti = P.name === 'IELTS';   // IELTS: cô Titi (trò chơi) đã ẩn → cô đứng cạnh vườn; FIGHTER: vườn đứng trên nút trò chơi của cô
     var fab = d.createElement('div'); fab.id = 'vg-fab'; fab.hidden = true;
     fab.innerHTML = '<div class="vg-bub" role="status" hidden><button type="button" class="vg-bx" aria-label="Ẩn lời nhắc">✕</button><b></b><span></span></div>' +
-      '<button type="button" class="vg-fbtn" aria-label="Mở Vườn từ vựng"><span class="vg-stage"><span class="vg-disc"></span><span class="vg-tree"></span></span>' +
-      (withTiti ? '<img class="vg-titi" alt="" src="' + TITI + '" onerror="this.remove()">' : '') +
+      '<button type="button" class="vg-fbtn' + (withTiti ? ' titi' : '') + '" aria-label="Mở Vườn từ vựng">' + (withTiti ? '<span class="vg-titi" aria-hidden="true"></span>' : '') +
+      '<span class="vg-stage"><span class="vg-disc"></span><span class="vg-tree"></span></span>' +
       '<span class="vg-n" hidden></span><span class="vg-cap">🌳 Vườn từ vựng</span></button>';
     d.body.appendChild(fab);
     var bub = fab.querySelector('.vg-bub'), btn = fab.querySelector('.vg-fbtn'), cnt = fab.querySelector('.vg-n'), treeEl = fab.querySelector('.vg-tree');
